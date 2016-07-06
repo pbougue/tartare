@@ -16,7 +16,7 @@ CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERYBEAT_SCHEDULE = {
     'udpate-data-every-n-seconds': {
-        'task': 'datahub.tasks.update_data',
+        'task': 'datahub.tasks.update_data_task',
         'schedule': timedelta(seconds=2),
         'options': {'expires': 25}
     },
