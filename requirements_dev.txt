@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest==2.9.2
 docker-py==1.8.1
+honcho==0.7.1

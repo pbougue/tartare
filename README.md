@@ -16,19 +16,17 @@ workon tartare
 
 Installation of dependencies
 ```
-pip install -r requirements.txt
+pip install -r requirements_dev.txt
 ```
 
-## Run the application
+## Run the application (for development)
 ```
-pip install honcho
 cd path/to/tartare
 honcho start
 ```
 
 ## Tests
 ```
-pip install -r requirements_dev.txt
 cd path/to/tartare
 PYTHONPATH=. py.test tests
 ```
