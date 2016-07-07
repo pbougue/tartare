@@ -10,7 +10,6 @@ data integration
 You can use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) for creating virtual environments.
 
 ```
-cd path/to/tartare
 mkvirtualenv tartare
 workon tartare
 ```
@@ -23,11 +22,13 @@ pip install -r requirements.txt
 ## Run the application
 ```
 pip install honcho
+cd path/to/tartare
 honcho start
 ```
 
 ## Tests
 ```
 pip install -r requirements_dev.txt
+cd path/to/tartare
 PYTHONPATH=. py.test tests
 ```
