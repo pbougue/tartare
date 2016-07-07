@@ -10,7 +10,7 @@ data integration
 You can use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) for creating virtual environments.
 
 ```
-mkvirtualenv tartare
+mkvirtualenv tartare -p python3.4
 workon tartare
 ```
 
