@@ -16,7 +16,7 @@ CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERYBEAT_SCHEDULE = {
     'udpate-data-every-n-seconds': {
-        'task': 'datahub.tasks.update_data_task',
+        'task': 'tartare.tasks.update_data_task',
         'schedule': timedelta(seconds=2),
         'options': {'expires': 25}
     },
@@ -30,3 +30,30 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 
 INPUT_DIR = './input'
 OUTPUT_DIR='./output'
+CURRENT_DATA_DIR='./current'
+
+LOGGER = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] [%(levelname)5s] [%(process)5s] [%(name)25s] %(message)s',
+        },
+    },
+    'handlers': {
+        'default': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['default'],
+            'level': 'DEBUG',
+        },
+        'celery':{
+            'level': 'INFO',
+        },
+    }
+}
