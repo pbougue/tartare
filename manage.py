@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-#coding: utf-8
+# coding=utf-8
 
-# Copyright (c) 2001-2014, Canal TP and/or its affiliates. All rights reserved.
+#  Copyright (c) 2001-2014, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -30,4 +30,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.api import grid_calendar
+from tartare import app
+from tartare.api.grid_calendar import GridCalendar
+import sys
+from flask_restful import Api
+
+api = Api(app)
+api.add_resource(GridCalendar, '/grid_calendar')
+
+if __name__ == '__main__':
+    app.config['DEBUG'] = True
+    app.run()

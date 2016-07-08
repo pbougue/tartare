@@ -29,18 +29,12 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from flask.globals import request
-from flask_restful import Resource, Api
-from tartare import app
 
-api = Api(app)
+from flask.globals import request
+from flask_restful import Resource
 
 class GridCalendar(Resource):
     def post(self):
         content = request.data
         print("content received: {}".format(content))
-        return '', 200
-
-api.add_resource(GridCalendar, '/grid_calendar')
-
-app.run()
+        return {'status': 'OK'}, 200
