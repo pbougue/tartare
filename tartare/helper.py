@@ -32,16 +32,14 @@ import logging.config
 import celery
 import sys
 
-def configure_logger(app):
+def configure_logger(app_config):
     """
     initialize logging
     """
-    if 'LOGGER' in app.config:
-        logging.config.dictConfig(app.config['LOGGER'])
+    if 'LOGGER' in app_config:
+        logging.config.dictConfig(app_config['LOGGER'])
     else:  # Default is std out
-        handler = logging.StreamHandler(stream=sys.stdout)
-        app.logger.addHandler(handler)
-        app.logger.setLevel('INFO')
+        logging.basicConfig(level='INFO')
 
 def make_celery(app):
     celery_app = celery.Celery(app.import_name,
