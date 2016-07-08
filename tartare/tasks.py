@@ -1,5 +1,6 @@
 import glob
 import logging
+import shutil
 import zipfile
 
 from tartare import app
@@ -102,4 +103,4 @@ def handle_data(input_dir, output_dir, current_data_dir):
         # copy data interesting data
         if is_accepted_data(input_file):
             copyfile(input_file, os.path.join(current_data_dir, filename))
-        os.rename(input_file, output_file)
+        shutil.move(input_file, output_file)
