@@ -28,26 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
-import logging.config
 
-import sys
 from flask import Flask
 
-from tartare.helper import make_celery
+from tartare.helper import configure_logger, make_celery
 from celery.signals import setup_logging
-
-def configure_logger(app):
-    """
-    initialize logging
-    """
-    if 'LOGGER' in app.config:
-        logging.config.dictConfig(app.config['LOGGER'])
-    else:  # Default is std out
-        handler = logging.StreamHandler(stream=sys.stdout)
-        app.logger.addHandler(handler)
-        app.logger.setLevel('INFO')
-
 
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')

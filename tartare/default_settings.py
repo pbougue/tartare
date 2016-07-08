@@ -39,9 +39,6 @@ LOGGER = {
         'default': {
             'format': '[%(asctime)s] [%(levelname)5s] [%(process)5s] [%(name)25s] %(message)s',
         },
-        'instance': {
-            'format': '%(name)s: [%(asctime)s] [%(levelname)5s] [%(process)5s] %(message)s',
-        }
     },
     'handlers': {
         'default': {

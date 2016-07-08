@@ -12,7 +12,8 @@ def update_data_task():
     input_dir = app.config.get("INPUT_DIR")
     output_dir = app.config.get("OUTPUT_DIR")
     current_data_dir = app.config.get("CURRENT_DATA_DIR")
-    logging.info('scanning directory {}'.format(input_dir))
+    logger = logging.getLogger(__name__)
+    logging.info('scanning directory %s', input_dir)
     handle_data(input_dir, output_dir, current_data_dir)
 
 def type_of_data(filename):

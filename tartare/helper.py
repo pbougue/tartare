@@ -27,7 +27,21 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import logging
+import logging.config
 import celery
+import sys
+
+def configure_logger(app):
+    """
+    initialize logging
+    """
+    if 'LOGGER' in app.config:
+        logging.config.dictConfig(app.config['LOGGER'])
+    else:  # Default is std out
+        handler = logging.StreamHandler(stream=sys.stdout)
+        app.logger.addHandler(handler)
+        app.logger.setLevel('INFO')
 
 def make_celery(app):
     celery_app = celery.Celery(app.import_name,
