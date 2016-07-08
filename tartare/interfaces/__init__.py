@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 #coding: utf-8
 
-# Copyright (c) 2001-2014, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -29,12 +28,3 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from flask.globals import request
-from flask_restful import Resource
-
-class GridCalendar(Resource):
-    def post(self):
-        content = request.data
-        print("content received: {}".format(content))
-        return {'status': 'OK'}, 200

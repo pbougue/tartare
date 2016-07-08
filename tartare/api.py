@@ -1,6 +1,6 @@
-#coding: utf-8
+# coding=utf-8
 
-# Copyright (c) 2001-2014, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -28,3 +28,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
+from tartare import app
+from tartare.interfaces.grid_calendar import GridCalendar
+from flask_restful import Api
+
+api = Api(app)
+api.add_resource(GridCalendar, '/grid_calendar')
