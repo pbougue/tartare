@@ -1,0 +1,26 @@
+tartare_worker:
+  build: .
+  environment:
+    - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+  command: celery -A tartare.tasks.celery worker
+  volumes:
+    - /tmp/tartare/input:/var/tartare/input
+    - /tmp/tartare/output:/var/tartare/output
+    - /tmp/tartare/current:/var/tartare/current
+  links:
+    - rabbitmq
+
+tartare_beat:
+  build: .
+  environment:
+    - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+  command: celery -A tartare.tasks.celery beat
+  volumes:
+    - /tmp/tartare/input:/var/tartare/input
+    - /tmp/tartare/output:/var/tartare/output
+    - /tmp/tartare/current:/var/tartare/current
+  links:
+    - rabbitmq
+
+rabbitmq:
+  image: rabbitmq:management
