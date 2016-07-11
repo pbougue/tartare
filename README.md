@@ -25,6 +25,25 @@ cd path/to/tartare
 honcho start
 ```
 
+## Run the application with [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
+
+We use a docker image for deployment purpose.
+
+``` bash
+cd path/to/tartare
+docker-compose up -d
+```
+
+Affect rights to input/output folders
+```
+sudo chmod o+rwx -R /tmp/tartare/*
+```
+
+To watch logs output:
+ ```
+ docker-compose logs -f
+ ```
+
 ## Tests
 ```
 cd path/to/tartare

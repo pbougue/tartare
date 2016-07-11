@@ -1,5 +1,6 @@
 #encoding: utf-8
 import logging
+import os
 from datetime import timedelta
 
 #URL for the brokker, by default it's the local rabbitmq
@@ -7,7 +8,7 @@ from datetime import timedelta
 #amqp://<user>:<password>@<host>:<port>/<vhost>
 #the default vhost is "/" so the URL end with *two* slash
 #http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
-CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+CELERY_BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
 
 CELERY_DEFAULT_QUEUE = 'tartare'
 
@@ -28,9 +29,9 @@ CELERYBEAT_SCHEDULE_FILENAME = '/tmp/celerybeat-schedule'
 
 CELERYD_HIJACK_ROOT_LOGGER = False
 
-INPUT_DIR = './input'
-OUTPUT_DIR='./output'
-CURRENT_DATA_DIR='./current'
+INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
+OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
+CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
 
 LOGGER = {
     'version': 1,
