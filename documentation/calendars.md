@@ -32,11 +32,28 @@ grid_calendar_id | string | Required | Identifier of the calendar
 start_date | date | Required | Date de début
 end_date | date | Required | Date de fin
 
-### grid_rel_calendar_network.txt (required)
+### grid_rel_calendar_to_network_and_line.txt (required)
 This file contains the netwoks associated to the calendar defined in the grid_calendars.txt file.
 Several networks can be associated to a calendar, each association beeing writen in a different line of the file.
 
 Column | Type | Constraint | Comment
 --- | --- | --- | ---
 grid_calendar_id | string | Required | Identifier of the calendar
-network_id | string | Required | Identifier of the network associated to the calendar, as described in the networks.txt file of the NTFS (without the "network:" prefix).
+network_id | string | Required | Identifier of the network associated to the calendar, as described in the networks.txt file of the NTFS (without the "network:" prefix)
+line_code | string | Optionnal | Commercial code of the line of the specified network.
+
+**_Examples_**  
+
+_Example 1:_ associating a calendar to 2 networks will be described as :
+
+grid_calendar_id | network_id | line_code
+--- | --- | ---
+calendar_id_1 | network_id_1 | empty or colum unavailable
+calendar_id_1 | network_id_2 | empty or colum unavailable
+
+_Example 2:_ associating a calendar to 2 lines of the same network will be described as :
+
+grid_calendar_id | network_id | line_code
+--- | --- | ---
+calendar_id_1 | network_id_1 | line_code_1
+calendar_id_1 | network_id_1 | line_code_2
