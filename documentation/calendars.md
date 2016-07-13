@@ -29,8 +29,8 @@ Several periods can be associated to a calendar, each period beeing writen in a 
 Column | Type | Constraint | Comment
 --- | --- | --- | ---
 grid_calendar_id | string | Required | Identifier of the calendar
-start_date | date | Required | Date de début
-end_date | date | Required | Date de fin
+start_date | date | Required | Start date of the period. The format is the same as the NTFS date format.
+end_date | date | Required | End date of the period. The format is the same as the NTFS date format.
 
 ### grid_rel_calendar_to_network_and_line.txt (required)
 This file contains the netwoks associated to the calendar defined in the grid_calendars.txt file.
