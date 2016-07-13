@@ -45,6 +45,35 @@ To watch logs output:
  docker-compose logs -f
  ```
 
+## Rest Api
+
+Tartare provides an Api to POST Navitia data to update.
+
+### Run the Rest Api
+
+The Rest Api is based on Flask. To run only the rest API:
+
+``` bash
+cd path/to/tartare
+honcho start web
+```
+
+*Logs:*
+
+```
+Serving Flask app "tartare.api"
+Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+```
+
+
+### Use the Rest Api
+
+POST a file:
+
+``` bash
+curl -X POST -d @path/to/your-file.csv http://127.0.0.1:5000/grid_calendar
+```
+
 ## Tests
 ```
 cd path/to/tartare
