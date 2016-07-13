@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -27,36 +29,16 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
-import logging.config
-import celery
-import sys
+import pytest
+import tartare
+import tartare.api
 
-def configure_logger(app_config):
-    """
-    initialize logging
-    """
-    if 'LOGGER' in app_config:
-        logging.config.dictConfig(app_config['LOGGER'])
-    else:  # Default is std out
-        logging.basicConfig(level='INFO')
 
-def make_celery(app):
-    celery_app = celery.Celery(app.import_name,
-                               broker=app.config['CELERY_BROKER_URL'])
-    celery_app.conf.update(app.config)
-    TaskBase = celery_app.Task
+@pytest.fixture(scope="module")
+def app():
+    return tartare.app.test_client()
 
-    class ContextTask(TaskBase):
-        abstract = True
 
-        def __init__(self):
-            pass
-
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-
-    celery_app.Task = ContextTask
-    return celery_app
-
+def test_post_grid_calendar_returns_success_status(app):
+    r = app.post('/grid_calendar')
+    assert '200 OK' in r.status
