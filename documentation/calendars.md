@@ -10,7 +10,7 @@ The ZIP data archive contains 3 different CSV files. The format of the CSV is co
 ### grid_calendars.txt (required)
 Tihs file contains the definition of the calendars.
 
-Colonne | Type | Contrainte | Commentaire
+Column | Type | Constraint | Comment
 --- | --- | --- | ---
 grid_calendar_id | string | Required | Identifier of the calendar
 name | string | Required | Name of the calendar
@@ -26,7 +26,7 @@ sunday | integer | Required | 0 : This calendar is not active <br> 1 : This cale
 This file contains the periods associated to the calendar defined in the grid_calendars.txt file.
 Several periods can be associated to a calendar, each period beeing writen in a different line of the file.
 
-Colonne | Type | Contrainte | Commentaire
+Column | Type | Constraint | Comment
 --- | --- | --- | ---
 grid_calendar_id | string | Required | Identifier of the calendar
 start_date | date | Required | Date de début
@@ -36,7 +36,7 @@ end_date | date | Required | Date de fin
 This file contains the netwoks associated to the calendar defined in the grid_calendars.txt file.
 Several networks can be associated to a calendar, each association beeing writen in a different line of the file.
 
-Colonne | Type | Contrainte | Commentaire
+Column | Type | Constraint | Comment
 --- | --- | --- | ---
 grid_calendar_id | string | Required | Identifier of the calendar
 network_id | string | Required | Identifier of the network associated to the calendar, as described in the networks.txt file of the NTFS (without the "network:" prefix).
