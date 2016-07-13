@@ -31,6 +31,7 @@ We use a docker image for deployment purpose.
 
 ``` bash
 cd path/to/tartare
+docker-compose build
 docker-compose up -d
 ```
 
