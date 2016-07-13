@@ -29,22 +29,16 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import unittest
+import pytest
 import tartare
 import tartare.api
 
 
-class RestApiTestCase(unittest.TestCase):
+@pytest.fixture(scope="module")
+def app():
+    return tartare.app.test_client()
 
-    def setUp(self):
-        self.app = tartare.app.test_client()
 
-    def tearDown(self):
-        pass
-
-    def test_post_grid_calendar_returns_success_status(self):
-        r = self.app.post('/grid_calendar')
-        assert '200 OK' in r.status
-
-if __name__ == '__main__':
-    unittest.main()
+def test_post_grid_calendar_returns_success_status(app):
+    r = app.post('/grid_calendar')
+    assert '200 OK' in r.status
