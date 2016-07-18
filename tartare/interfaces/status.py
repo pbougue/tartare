@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env python
+#coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -29,11 +30,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
-from tartare.interfaces.grid_calendar import GridCalendar
-from flask_restful import Api
-from tartare.interfaces.status import Status
+import logging
+import flask_restful
+import os
 
-api = Api(app)
-api.add_resource(GridCalendar, '/grid_calendar')
-api.add_resource(Status, '/status')
+
+class Status(flask_restful.Resource):
+    def get(self):
+        version = os.getenv('TARTARE_VERSION', 'unknown_version')
+        return {
+                   'version': version
+               }, 200
