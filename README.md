@@ -29,6 +29,9 @@ honcho start
 
 We use a docker image for deployment purpose.
 
+Note: we use the new interface version of docker-compose, so docker version needs to be >= 1.10,
+ docker-compose version needs to be >= 1.6
+ 
 ``` bash
 cd path/to/tartare
 docker-compose build
