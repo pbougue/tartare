@@ -8,6 +8,7 @@ from tartare import celery
 from shutil import copyfile
 import os
 
+
 @celery.task()
 def update_data_task():
     input_dir = app.config.get("INPUT_DIR")
@@ -16,6 +17,7 @@ def update_data_task():
     logger = logging.getLogger(__name__)
     logger.info('scanning directory %s', input_dir)
     handle_data(input_dir, output_dir, current_data_dir)
+
 
 def type_of_data(filename):
     """
@@ -35,7 +37,7 @@ def type_of_data(filename):
     for 'fusio', 'gtfs', 'fares' and 'poi', we return the directory since there are several file to load
     """
     def files_type(files):
-        #first we try fusio, because it can load fares too
+        # first we try fusio, because it can load fares too
         if any(f for f in files if f.endswith("contributors.txt")):
             return 'fusio'
         if any(f for f in files if f.endswith("fares.csv")):
@@ -81,13 +83,16 @@ def type_of_data(filename):
 
     return None, None
 
+
 def is_accepted_data(input_file):
     return type_of_data(input_file)[0] == 'fusio'
+
 
 def create_dir(directory):
     """create directory if needed"""
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 
 def handle_data(input_dir, output_dir, current_data_dir):
     """
