@@ -28,10 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+import os
 import pytest
 import tartare
 import tartare.api
+import json
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +40,27 @@ def app():
     return tartare.app.test_client()
 
 
+def to_json(response):
+    return json.loads(response.data.decode('utf-8'))
+
+
 def test_post_grid_calendar_returns_success_status(app):
     r = app.post('/grid_calendar')
     assert '200 OK' in r.status
+
+
+def test_unkown_version_status(app):
+    raw = app.get('/status')
+    r = to_json(raw)
+    assert raw.status_code == 200
+    assert r.get('version') == 'unknown_version'
+
+
+def test_kown_version_status(app, monkeypatch):
+    """if TARTARE_VERSION is given at startup, a version is available"""
+    version = 'v1.42.12'
+    monkeypatch.setitem(os.environ, 'TARTARE_VERSION', version)
+    raw = app.get('/status')
+    r = to_json(raw)
+    assert raw.status_code == 200
+    assert r.get('version') == version
