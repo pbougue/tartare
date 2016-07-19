@@ -44,9 +44,24 @@ def to_json(response):
     return json.loads(response.data.decode('utf-8'))
 
 
-def test_post_grid_calendar_returns_success_status(app):
-    r = app.post('/grid_calendar')
-    assert '200 OK' in r.status
+def test_post_grid_calendar_returns_archive_missing_status(app):
+    path= os.path.join(os.path.dirname(os.path.dirname(__file__)),'fixtures/gridcalendar/export_calendars.zip')
+    files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
+    raw = app.post('/grid_calendar', data=files)
+    r = to_json(raw)
+    assert '200 OK' in raw.status
+    assert raw.status_code == 200
+    assert r.get('message') == 'OK'
+    assert r.get('status') == 200
+
+
+def test_post_grid_calendar_returns_ko_status(app):
+    raw = app.post('/grid_calendar')
+    r = to_json(raw)
+    assert '400 BAD REQUEST' in raw.status
+    assert raw.status_code == 400
+    assert r.get('message') == 'the archive is missing'
+    assert r.get('status') == 400
 
 
 def test_unkown_version_status(app):
