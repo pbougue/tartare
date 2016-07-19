@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#coding: utf-8
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -38,6 +38,4 @@ import os
 class Status(flask_restful.Resource):
     def get(self):
         version = os.getenv('TARTARE_VERSION', 'unknown_version')
-        return {
-                   'version': version
-               }, 200
+        return {'version': version}, 200

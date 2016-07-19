@@ -32,6 +32,7 @@ import logging.config
 import celery
 import sys
 
+
 def configure_logger(app_config):
     """
     initialize logging
@@ -41,13 +42,14 @@ def configure_logger(app_config):
     else:  # Default is std out
         logging.basicConfig(level='INFO')
 
+
 def make_celery(app):
     celery_app = celery.Celery(app.import_name,
                                broker=app.config['CELERY_BROKER_URL'])
     celery_app.conf.update(app.config)
-    TaskBase = celery_app.Task
+    taskbase = celery_app.Task
 
-    class ContextTask(TaskBase):
+    class ContextTask(taskbase):
         abstract = True
 
         def __init__(self):
@@ -55,7 +57,7 @@ def make_celery(app):
 
         def __call__(self, *args, **kwargs):
             with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
+                return taskbase.__call__(self, *args, **kwargs)
 
     celery_app.Task = ContextTask
     return celery_app

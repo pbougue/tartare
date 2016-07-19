@@ -104,7 +104,7 @@ class GridCalendar(Resource):
                     bck_dir = os.path.join(work_dir, 'backup')
                     if not os.path.exists(bck_dir):
                         os.makedirs(bck_dir)
-                    file_list= [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
+                    file_list = [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
                     for filename in file_list:
                         input_file = os.path.join(work_dir, filename)
                         output_file = os.path.join(bck_dir, filename)
