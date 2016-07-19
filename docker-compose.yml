@@ -1,22 +1,46 @@
-tartare_worker:
-  build: .
-  environment:
-    - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
-  command: celery -A tartare.tasks.celery worker
-  volumes:
-    - /tmp/tartare/input:/var/tartare/input
-    - /tmp/tartare/output:/var/tartare/output
-    - /tmp/tartare/current:/var/tartare/current
-  links:
-    - rabbitmq
+version: '2'
 
-tartare_beat:
-  build: .
-  environment:
-    - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
-  command: celery -A tartare.tasks.celery beat
-  links:
-    - rabbitmq
+services:
+  tartare_worker:
+    build:
+      context: .
+      args:
+        TARTARE_VERSION: ${TARTARE_VERSION}
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+    command: celery -A tartare.tasks.celery worker
+    volumes:
+      - /tmp/tartare/input:/var/tartare/input
+      - /tmp/tartare/output:/var/tartare/output
+      - /tmp/tartare/current:/var/tartare/current
+    links:
+      - rabbitmq
 
-rabbitmq:
-  image: rabbitmq:management
+  tartare_beat:
+    build:
+      context: .
+      args:
+        TARTARE_VERSION: ${TARTARE_VERSION}
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+    command: celery -A tartare.tasks.celery beat
+    links:
+      - rabbitmq
+
+  tartare_webservice:
+    build:
+      context: .
+      args:
+        TARTARE_VERSION: ${TARTARE_VERSION}
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - FLASK_APP=tartare/api.py
+    command: flask run --host=0.0.0.0
+    links:
+      - rabbitmq
+    ports:
+      - "5000:5000"
+
+  rabbitmq:
+    image: rabbitmq:management
+

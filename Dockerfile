@@ -16,4 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV TARTARE_RABBITMQ_HOST amqp://guest:guest@localhost:5672//
 RUN chown -R daemon:daemon /usr/src/app
 USER daemon
+
+# you can pass a TARTARE_VERSION to the build (with cli argument --build-arg or in docker-compose)
+ARG TARTARE_VERSION
+ENV TARTARE_VERSION ${TARTARE_VERSION:-unknown_version}
+
 CMD ["celery", "-A", "tartare.tasks.celery", "worker"]
