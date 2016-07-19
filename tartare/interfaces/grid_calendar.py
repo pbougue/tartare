@@ -36,6 +36,7 @@ import os
 import shutil
 from flask.globals import request
 from flask_restful import Resource
+from flask import jsonify
 from tartare import app
 
 GRID_CALENDARS = "grid_calendars.txt"
@@ -49,7 +50,7 @@ CALENDAR_REQUESTED_FILE = {GRID_CALENDARS, GRID_PERIODS, GRID_CALENDAR_NETWORK_L
 
 
 def is_valid_file(zip_file):
-    files = zip_file.namelist()
+    files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
     for request_file in CALENDAR_REQUESTED_FILE:
         valid_file = valid_file and request_file in files
@@ -78,24 +79,41 @@ def check_files_header(work_dir):
     return valid_header
 
 
+def make_response(status_code, message):
+    response = jsonify({
+        'status': status_code,
+        'message': message
+    })
+    print(response)
+    response.status_code = status_code
+    return response
+
+
 class GridCalendar(Resource):
     def post(self):
-        content = request.data
-        logger = logging.getLogger(__name__)
-        logger.info('content received: {}'.format(content))
-        if zipfile.is_zipfile(content) and is_valid_file(content):
-            work_dir = app.config.get("GRID_CALENDAR_DIR")
-            content.extractall(work_dir)
-            # check files header
-            if check_files_header(work_dir):
-                # backup content
-                bck_dir = os.path.join(work_dir, 'backup')
-                for filename in os.listdir(work_dir):
-                    input_file = os.path.join(work_dir, filename)
-                    output_file = os.path.join(bck_dir, filename)
-                    shutil.move(input_file, output_file)
-                return {'status': 'OK'}, 200
+        if request.files:
+            content = request.files['file']
+            logger = logging.getLogger(__name__)
+            logger.info('content received: {}'.format(content))
+            if zipfile.is_zipfile(content) and is_valid_file(content):
+                work_dir = app.config.get("GRID_CALENDAR_DIR")
+                zipfile.ZipFile(content, 'r').extractall(work_dir)
+                # check files header
+                if check_files_header(work_dir):
+                    # backup content
+                    bck_dir = os.path.join(work_dir, 'backup')
+                    if not os.path.exists(bck_dir):
+                        os.makedirs(bck_dir)
+                    file_list= [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
+                    for filename in file_list:
+                        input_file = os.path.join(work_dir, filename)
+                        output_file = os.path.join(bck_dir, filename)
+                        shutil.move(input_file, output_file)
+                    return make_response(200, 'OK')
+                else:
+                    return make_response(400, 'non-compliant file')
             else:
-                return {'status': 'non-compliant file'}, 400
+                return make_response(400, 'file(s) missing')
         else:
-            return {'status': 'file(s) missing'}, 400
+            return make_response(400, 'the archive is missing')
+
