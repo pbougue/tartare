@@ -8,6 +8,20 @@ ENV TARTARE_INPUT /var/tartare/input
 ENV TARTARE_OUTPUT /var/tartare/output
 ENV TARTARE_CURRENT /var/tartare/current
 
+# those are needed for uwsgi
+RUN apk --update add \
+        gcc \
+        build-base \
+        python-dev \
+        zlib-dev \
+        linux-headers \
+        musl \
+        musl-dev \
+        memcached \
+        libmemcached-dev
+
+RUN pip install uwsgi
+
 COPY ./tartare /usr/src/app/tartare
 COPY requirements.txt /usr/src/app
 WORKDIR /usr/src/app

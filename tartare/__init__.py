@@ -45,3 +45,5 @@ def celery_setup_logging(*args, **kwargs):
     pass
 
 celery = make_celery(app)
+
+from tartare import api
