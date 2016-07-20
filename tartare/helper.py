@@ -47,9 +47,9 @@ def make_celery(app):
     celery_app = celery.Celery(app.import_name,
                                broker=app.config['CELERY_BROKER_URL'])
     celery_app.conf.update(app.config)
-    taskbase = celery_app.Task
+    TaskBase = celery_app.Task
 
-    class ContextTask(taskbase):
+    class ContextTask(TaskBase):
         abstract = True
 
         def __init__(self):
@@ -57,7 +57,7 @@ def make_celery(app):
 
         def __call__(self, *args, **kwargs):
             with app.app_context():
-                return taskbase.__call__(self, *args, **kwargs)
+                return TaskBase.__call__(self, *args, **kwargs)
 
     celery_app.Task = ContextTask
     return celery_app

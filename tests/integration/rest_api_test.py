@@ -50,10 +50,8 @@ def test_post_grid_calendar_returns_success_status(app):
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
     backup_dir = os.path.join(tartare.app.config.get("GRID_CALENDAR_DIR"), 'backup')
-    assert '200 OK' in raw.status
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
-    assert r.get('status') == 200
     assert len(os.listdir(backup_dir)) == 3
 
 
@@ -63,10 +61,8 @@ def test_post_grid_calendar_returns_non_compliant_file_status(app):
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
-    assert '400 BAD REQUEST' in raw.status
     assert raw.status_code == 400
     assert r.get('message') == 'non-compliant file'
-    assert r.get('status') == 400
 
 
 def test_post_grid_calendar_returns_file_missing_status(app):
@@ -75,19 +71,15 @@ def test_post_grid_calendar_returns_file_missing_status(app):
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
-    assert '400 BAD REQUEST' in raw.status
     assert raw.status_code == 400
     assert r.get('message') == 'file(s) missing'
-    assert r.get('status') == 400
 
 
 def test_post_grid_calendar_returns_archive_missing_message(app):
     raw = app.post('/grid_calendar')
     r = to_json(raw)
-    assert '400 BAD REQUEST' in raw.status
     assert raw.status_code == 400
     assert r.get('message') == 'the archive is missing'
-    assert r.get('status') == 400
 
 
 def test_unkown_version_status(app):

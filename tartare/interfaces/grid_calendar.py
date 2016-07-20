@@ -46,13 +46,15 @@ GRID_PERIODS = "grid_periods.txt"
 GRID_PERIODS_HEADER = {'grid_calendar_id', 'start_date', 'end_date'}
 GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
 GRID_CALENDAR_NETWORK_LINE_HEADER = {'grid_calendar_id', 'network_id', 'line_code'}
-CALENDAR_REQUESTED_FILE = {GRID_CALENDARS, GRID_PERIODS, GRID_CALENDAR_NETWORK_LINE}
+CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
+                           GRID_PERIODS: GRID_PERIODS_HEADER,
+                           GRID_CALENDAR_NETWORK_LINE: GRID_CALENDAR_NETWORK_LINE_HEADER}
 
 
 def is_valid_file(zip_file):
     files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
-    for request_file in CALENDAR_REQUESTED_FILE:
+    for request_file in CALENDAR_REQUESTED_FILE.keys():
         file_exist = request_file in files
         if not file_exist:
             logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
@@ -60,21 +62,14 @@ def is_valid_file(zip_file):
     return valid_file
 
 
-def get_header(file):
-    if file == GRID_CALENDARS:
-        return GRID_CALENDARS_HEADER
-    if file == GRID_PERIODS:
-        return GRID_PERIODS_HEADER
-    if file == GRID_CALENDAR_NETWORK_LINE:
-        return GRID_CALENDAR_NETWORK_LINE_HEADER
-
-
 def check_files_header(work_dir):
     valid_header = True
-    for request_file in CALENDAR_REQUESTED_FILE:
+    for request_file in CALENDAR_REQUESTED_FILE.keys():
         valid_file_header = True
-        header = get_header(request_file)
-        file_columns = open(os.path.join(work_dir, request_file), 'r').readline().rstrip().split(',')
+        header = CALENDAR_REQUESTED_FILE[request_file]
+        with open(os.path.join(work_dir, request_file), 'r') as f:
+            file_columns = f.readline().rstrip().split(',')
+            f.close()
         for column in header:
             valid_file_header = valid_file_header and (column in file_columns)
         if not valid_file_header:
@@ -83,41 +78,27 @@ def check_files_header(work_dir):
     return valid_header
 
 
-def make_response(status_code, message):
-    response = jsonify({
-        'status': status_code,
-        'message': message
-    })
-    print(response)
-    response.status_code = status_code
-    return response
-
-
 class GridCalendar(Resource):
     def post(self):
-        if request.files:
-            content = request.files['file']
-            logger = logging.getLogger(__name__)
-            logger.info('content received: {}'.format(content))
-            if zipfile.is_zipfile(content) and is_valid_file(content):
-                work_dir = app.config.get("GRID_CALENDAR_DIR")
-                zipfile.ZipFile(content, 'r').extractall(work_dir)
-                # check files header
-                if check_files_header(work_dir):
-                    # backup content
-                    bck_dir = os.path.join(work_dir, 'backup')
-                    if not os.path.exists(bck_dir):
-                        os.makedirs(bck_dir)
-                    file_list = [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
-                    for filename in file_list:
-                        input_file = os.path.join(work_dir, filename)
-                        output_file = os.path.join(bck_dir, filename)
-                        shutil.move(input_file, output_file)
-                    return make_response(200, 'OK')
-                else:
-                    return make_response(400, 'non-compliant file')
-            else:
-                return make_response(400, 'file(s) missing')
-        else:
-            return make_response(400, 'the archive is missing')
-
+        if not request.files:
+            return {'message': 'the archive is missing'}, 400
+        content = request.files['file']
+        logger = logging.getLogger(__name__)
+        logger.info('content received: {}'.format(content))
+        if not (zipfile.is_zipfile(content) and is_valid_file(content)):
+            return {'message': 'file(s) missing'}, 400
+        work_dir = app.config.get("GRID_CALENDAR_DIR")
+        zipfile.ZipFile(content, 'r').extractall(work_dir)
+        # check files header
+        if not check_files_header(work_dir):
+            return {'message': 'non-compliant file'}, 400
+        # backup content
+        bck_dir = os.path.join(work_dir, 'backup')
+        if not os.path.exists(bck_dir):
+            os.makedirs(bck_dir)
+        file_list = [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
+        for filename in file_list:
+            input_file = os.path.join(work_dir, filename)
+            output_file = os.path.join(bck_dir, filename)
+            shutil.move(input_file, output_file)
+        return {'message': 'OK'}, 200

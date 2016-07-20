@@ -39,11 +39,11 @@ app.config.from_object('tartare.default_settings')
 app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
 
 configure_logger(app.config)
-# we don't want celery to mess with our logging configuration
 
 
 @setup_logging.connect
 def celery_setup_logging(*args, **kwargs):
+    # we don't want celery to mess with our logging configuration
     pass
 
 celery = make_celery(app)
