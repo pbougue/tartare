@@ -53,9 +53,10 @@ def is_valid_file(zip_file):
     files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
     for request_file in CALENDAR_REQUESTED_FILE:
-        valid_file = valid_file and request_file in files
-        if not valid_file:
+        file_exist = request_file in files
+        if not file_exist:
             logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
+        valid_file = valid_file and file_exist
     return valid_file
 
 
@@ -71,11 +72,14 @@ def get_header(file):
 def check_files_header(work_dir):
     valid_header = True
     for request_file in CALENDAR_REQUESTED_FILE:
+        valid_file_header = True
         header = get_header(request_file)
-        columns = open(os.path.join(work_dir, request_file), 'r').readline().split(',')
-        valid_header = valid_header and (column in header for column in columns)
-        if not valid_header:
+        file_columns = open(os.path.join(work_dir, request_file), 'r').readline().rstrip().split(',')
+        for column in header:
+            valid_file_header = valid_file_header and (column in file_columns)
+        if not valid_file_header:
             logging.getLogger(__name__).warning('invalid header for {}'.format(request_file))
+        valid_header = valid_header and valid_file_header
     return valid_header
 
 
