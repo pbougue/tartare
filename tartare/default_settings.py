@@ -34,7 +34,7 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
 OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
 CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
-GRID_CALENDAR_DIR = str(os.path.join(CURRENT_DATA_DIR, 'GridCalendar'))
+GRID_CALENDAR_DIR = str(os.path.join(CURRENT_DATA_DIR, 'gridcalendar'))
 
 LOGGER = {
     'version': 1,
