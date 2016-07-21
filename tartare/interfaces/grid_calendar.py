@@ -33,11 +33,10 @@
 import logging
 import zipfile
 import os
-import shutil
 from flask.globals import request
 from flask_restful import Resource
-from flask import jsonify
 from tartare import app
+from werkzeug.utils import secure_filename
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_CALENDARS_HEADER = {'grid_calendar_id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
@@ -52,11 +51,10 @@ CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
 
 
 def is_valid_file(zip_file):
-    files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
     missing_file = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
-        file_exist = request_file in files
+        file_exist = request_file in zip_file.namelist()
         if not file_exist:
             missing_file.append(request_file)
             logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
@@ -64,13 +62,14 @@ def is_valid_file(zip_file):
     return valid_file, missing_file
 
 
-def check_files_header(work_dir):
+def check_files_header(zip_file):
     valid_header = True
     unvalid_file = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
         valid_file_header = True
-        with open(os.path.join(work_dir, request_file), 'r') as f:
-            file_columns = f.readline().rstrip().split(',')
+        with zip_file.open(request_file) as f:
+            line = next(line for line in f).decode("utf-8")
+            file_columns = line.rstrip().split(',')
         for column in header:
             valid_file_header = valid_file_header and (column in file_columns)
         if not valid_file_header:
@@ -89,22 +88,18 @@ class GridCalendar(Resource):
         logger.info('content received: {}'.format(content))
         if not zipfile.is_zipfile(content):
             return {'message': ' unvalid ZIP'}, 400
-        valid_file, missing_file = is_valid_file(content)
+        zip_file = zipfile.ZipFile(content)
+        valid_file, missing_file = is_valid_file(zip_file)
         if not valid_file:
             return {'message': 'file(s) missing : {}'.format(''.join(missing_file))}, 400
-        work_dir = app.config.get("GRID_CALENDAR_DIR")
-        zipfile.ZipFile(content, 'r').extractall(work_dir)
         # check files header
-        valid_header, unvalid_file = check_files_header(work_dir)
+        valid_header, unvalid_file = check_files_header(zip_file)
         if not valid_header:
             return {'message': 'non-compliant file(s) : {}'.format(''.join(unvalid_file))}, 400
         # backup content
-        bck_dir = os.path.join(work_dir, 'backup')
+        bck_dir = app.config.get("GRID_CALENDAR_DIR")
         if not os.path.exists(bck_dir):
             os.makedirs(bck_dir)
-        file_list = [f for f in os.listdir(work_dir) if os.path.isfile(os.path.join(work_dir, f))]
-        for filename in file_list:
-            input_file = os.path.join(work_dir, filename)
-            output_file = os.path.join(bck_dir, filename)
-            shutil.move(input_file, output_file)
+        content.save(os.path.join(bck_dir, secure_filename(content.filename))
+)
         return {'message': 'OK'}, 200

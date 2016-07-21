@@ -45,14 +45,15 @@ def to_json(response):
 
 
 def test_post_grid_calendar_returns_success_status(app):
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixtures/gridcalendar/export_calendars.zip')
+    filename = 'export_calendars.zip'
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixtures/gridcalendar/', filename)
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
-    backup_dir = os.path.join(tartare.app.config.get("GRID_CALENDAR_DIR"), 'backup')
+    backup_dir = os.path.join(tartare.app.config.get("GRID_CALENDAR_DIR"))
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
-    assert len(os.listdir(backup_dir)) == 3
+    assert os.path.exists(os.path.join(backup_dir, filename))
 
 
 def test_post_grid_calendar_returns_non_compliant_file_status(app):
