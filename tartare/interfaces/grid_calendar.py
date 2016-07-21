@@ -54,16 +54,19 @@ CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
 def is_valid_file(zip_file):
     files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
+    missing_file = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
         file_exist = request_file in files
         if not file_exist:
+            missing_file.append(request_file)
             logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
         valid_file = valid_file and file_exist
-    return valid_file
+    return valid_file, missing_file
 
 
 def check_files_header(work_dir):
     valid_header = True
+    unvalid_file = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
         valid_file_header = True
         with open(os.path.join(work_dir, request_file), 'r') as f:
@@ -71,9 +74,10 @@ def check_files_header(work_dir):
         for column in header:
             valid_file_header = valid_file_header and (column in file_columns)
         if not valid_file_header:
+            unvalid_file.append(request_file)
             logging.getLogger(__name__).warning('invalid header for {}'.format(request_file))
         valid_header = valid_header and valid_file_header
-    return valid_header
+    return valid_header, unvalid_file
 
 
 class GridCalendar(Resource):
@@ -83,13 +87,17 @@ class GridCalendar(Resource):
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
-        if not (zipfile.is_zipfile(content) and is_valid_file(content)):
-            return {'message': 'file(s) missing'}, 400
+        if not zipfile.is_zipfile(content):
+            return {'message': ' unvalid ZIP'}, 400
+        valid_file, missing_file = is_valid_file(content)
+        if not valid_file:
+            return {'message': 'file(s) missing : {}'.format(''.join(missing_file))}, 400
         work_dir = app.config.get("GRID_CALENDAR_DIR")
         zipfile.ZipFile(content, 'r').extractall(work_dir)
         # check files header
-        if not check_files_header(work_dir):
-            return {'message': 'non-compliant file'}, 400
+        valid_header, unvalid_file = check_files_header(work_dir)
+        if not valid_header:
+            return {'message': 'non-compliant file(s) : {}'.format(''.join(unvalid_file))}, 400
         # backup content
         bck_dir = os.path.join(work_dir, 'backup')
         if not os.path.exists(bck_dir):

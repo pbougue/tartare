@@ -62,7 +62,7 @@ def test_post_grid_calendar_returns_non_compliant_file_status(app):
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message') == 'non-compliant file'
+    assert r.get('message') == 'non-compliant file(s) : grid_periods.txt'
 
 
 def test_post_grid_calendar_returns_file_missing_status(app):
@@ -72,7 +72,7 @@ def test_post_grid_calendar_returns_file_missing_status(app):
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message') == 'file(s) missing'
+    assert r.get('message') == 'file(s) missing : grid_calendars.txt'
 
 
 def test_post_grid_calendar_returns_archive_missing_message(app):
