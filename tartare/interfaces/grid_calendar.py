@@ -69,7 +69,6 @@ def check_files_header(work_dir):
         header = CALENDAR_REQUESTED_FILE[request_file]
         with open(os.path.join(work_dir, request_file), 'r') as f:
             file_columns = f.readline().rstrip().split(',')
-            f.close()
         for column in header:
             valid_file_header = valid_file_header and (column in file_columns)
         if not valid_file_header:
