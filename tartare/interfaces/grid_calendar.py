@@ -54,7 +54,7 @@ CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
 def is_valid_file(zip_file):
     files = zipfile.ZipFile(zip_file, 'r').namelist()
     valid_file = True
-    for request_file in CALENDAR_REQUESTED_FILE.keys():
+    for request_file, header in CALENDAR_REQUESTED_FILE.items():
         file_exist = request_file in files
         if not file_exist:
             logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
@@ -64,9 +64,8 @@ def is_valid_file(zip_file):
 
 def check_files_header(work_dir):
     valid_header = True
-    for request_file in CALENDAR_REQUESTED_FILE.keys():
+    for request_file, header in CALENDAR_REQUESTED_FILE.items():
         valid_file_header = True
-        header = CALENDAR_REQUESTED_FILE[request_file]
         with open(os.path.join(work_dir, request_file), 'r') as f:
             file_columns = f.readline().rstrip().split(',')
         for column in header:
