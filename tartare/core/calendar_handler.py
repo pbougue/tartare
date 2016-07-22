@@ -52,7 +52,44 @@ def _merge_calendar(calendar_zip, ntfs_zip):
         for line in lines_file:
             print(line)
 
+    grid_calendar_data = GridCalendarData()
+    grid_calendar_data.load_zips(calendar_zip, ntfs_zip)
+    grid_calendar_data.update_ntfs()
+    grid_calendar_data.save_as_file()
+
 
 def _last_ntfs_zip():
     ntfs_filepath = os.path.join(app.config.get("CURRENT_DATA_DIR"), 'ntfs', 'ntfs.zip')
     return ZipFile(ntfs_filepath, 'r')
+
+
+def _write_csv(csv, pathfile):
+    pass
+
+
+class GridCalendarData:
+    def __init__(self):
+        self.grid_calendars_csv = []
+        self.grid_periods_csv = []
+        self.grid_rel_calendar_line_csv = []
+
+    """
+    Load zip and fill arrays,
+    and join calendar lines
+    """
+    def load_zips(self, calendar_zip, ntfs_zip):
+        pass
+
+
+    """
+    Replace calendar file in ntfs
+    """
+    def update_ntfs(self):
+        pass
+
+
+    """
+    Save to updated ntfs file
+    """
+    def save_as_file(self):
+        pass
