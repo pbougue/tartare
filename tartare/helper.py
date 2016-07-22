@@ -32,6 +32,7 @@ import logging.config
 import celery
 import sys
 
+
 def configure_logger(app_config):
     """
     initialize logging
@@ -40,6 +41,7 @@ def configure_logger(app_config):
         logging.config.dictConfig(app_config['LOGGER'])
     else:  # Default is std out
         logging.basicConfig(level='INFO')
+
 
 def make_celery(app):
     celery_app = celery.Celery(app.import_name,

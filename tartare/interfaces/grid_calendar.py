@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#coding: utf-8
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -31,12 +31,74 @@
 # www.navitia.io
 
 import logging
+import zipfile
+import os
 from flask.globals import request
 from flask_restful import Resource
+from tartare import app
+from werkzeug.utils import secure_filename
+
+GRID_CALENDARS = "grid_calendars.txt"
+GRID_CALENDARS_HEADER = {'grid_calendar_id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
+                         'sunday'}
+GRID_PERIODS = "grid_periods.txt"
+GRID_PERIODS_HEADER = {'grid_calendar_id', 'start_date', 'end_date'}
+GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
+GRID_CALENDAR_NETWORK_LINE_HEADER = {'grid_calendar_id', 'network_id', 'line_code'}
+CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
+                           GRID_PERIODS: GRID_PERIODS_HEADER,
+                           GRID_CALENDAR_NETWORK_LINE: GRID_CALENDAR_NETWORK_LINE_HEADER}
+
+
+def is_valid_file(zip_file):
+    valid_file = True
+    missing_files = []
+    for request_file, header in CALENDAR_REQUESTED_FILE.items():
+        file_exist = request_file in zip_file.namelist()
+        if not file_exist:
+            missing_files.append(request_file)
+            logging.getLogger(__name__).warning('file {} is missing'.format(request_file))
+        valid_file = valid_file and file_exist
+    return valid_file, missing_files
+
+
+def check_files_header(zip_file):
+    valid_header = True
+    invalid_files = []
+    for request_file, header in CALENDAR_REQUESTED_FILE.items():
+        valid_file_header = True
+        with zip_file.open(request_file) as f:
+            line = next(line for line in f).decode("utf-8")
+            file_columns = line.rstrip().split(',')
+        for column in header:
+            valid_file_header = valid_file_header and (column in file_columns)
+        if not valid_file_header:
+            invalid_files.append(request_file)
+            logging.getLogger(__name__).warning('invalid header for {}'.format(request_file))
+        valid_header = valid_header and valid_file_header
+    return valid_header, invalid_files
+
 
 class GridCalendar(Resource):
     def post(self):
-        content = request.data
+        if not request.files:
+            return {'message': 'the archive is missing'}, 400
+        content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
-        return {'status': 'OK'}, 200
+        if not zipfile.is_zipfile(content):
+            return {'message': ' invalid ZIP'}, 400
+        zip_file = zipfile.ZipFile(content)
+        valid_file, missing_files = is_valid_file(zip_file)
+        if not valid_file:
+            return {'message': 'file(s) missing : {}'.format(''.join(missing_files))}, 400
+        # check files header
+        valid_header, invalid_files = check_files_header(zip_file)
+        if not valid_header:
+            return {'message': 'non-compliant file(s) : {}'.format(''.join(invalid_files))}, 400
+        # backup content
+        bck_dir = app.config.get("GRID_CALENDAR_DIR")
+        if not os.path.exists(bck_dir):
+            os.makedirs(bck_dir)
+        content.save(os.path.join(bck_dir, secure_filename(content.filename)))
+        return {'message': 'OK'}, 200

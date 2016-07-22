@@ -74,7 +74,7 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 POST a file:
 
 ``` bash
-curl -X POST -d @path/to/your-file.csv http://127.0.0.1:5000/grid_calendar
+curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/grid_calendar
 ```
 
 ## Tests
