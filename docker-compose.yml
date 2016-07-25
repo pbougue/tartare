@@ -10,9 +10,8 @@ services:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
     command: celery -A tartare.tasks.celery worker
     volumes:
-      - /tmp/tartare/input:/var/tartare/input
-      - /tmp/tartare/output:/var/tartare/output
-      - /tmp/tartare/current:/var/tartare/current
+      - /tmp/tartare/input:/var/tartare/input:rw
+      - /tmp/tartare/output:/var/tartare/output:rw
     links:
       - rabbitmq
 
@@ -34,8 +33,7 @@ services:
         TARTARE_VERSION: ${TARTARE_VERSION}
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
-      - FLASK_APP=tartare/api.py
-    command: flask run --host=0.0.0.0
+    command: uwsgi --mount /=tartare:app --http 0.0.0.0:5000
     links:
       - rabbitmq
     ports:
