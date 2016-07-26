@@ -85,12 +85,20 @@ def get_calendar_zip():
     calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
     return ZipFile(calendar_path, 'r')
 
-def test_merge_calendar():
-    pwd = os.path.dirname(os.path.dirname(__file__))
-    calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
-    ntfs_zip = get_ntfs_zip()
-    with ZipFile(calendar_path, 'r') as calendar_zip:
-        calendar_handler._merge_calendar(calendar_zip, ntfs_zip)
+
+def test_merge_calendar_take_all_lines_if_no_line_code():
+    calendar_lines = [
+        {
+            'grid_calendar_id': 1,
+            'network_id': 'network:A',
+            'line_code': 1,
+        },
+        {
+            'grid_calendar_id': 2,
+            'network_id': 'network:A',
+            'line_code': '',
+        }
+    ]
 
     lines = [
         {
