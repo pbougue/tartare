@@ -29,22 +29,37 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import os
+from glob import glob
+from io import BytesIO, StringIO
 from tartare.core import calendar_handler
+from zipfile import ZipFile, ZIP_DEFLATED
 
 
-def test_merge_calendar_join_with_line_code():
-    calendar_lines = [
-        {
-            'grid_calendar_id': 1,
-            'network_id': 'network:A',
-            'line_code': 1,
-        },
-        {
-            'grid_calendar_id': 2,
-            'network_id': 'network:A',
-            'line_code': 2,
-        }
+def mock_grid_calendar():
+    response = [
+        {'grid_calendar_id': 1,
+         'name': 'Calendar1',
+         'monday': 1,
+         'tuesday': 1,
+         'wednesday:': 1,
+         'thursday': 1,
+         'friday': 1,
+         'saturday': 1,
+         'sunday': 0
+         },
+        {'grid_calendar_id': 2,
+         'name': 'Calendar2',
+         'monday': 0,
+         'tuesday': 0,
+         'wednesday:': 0,
+         'thursday': 0,
+         'friday': 0,
+         'saturday': 1,
+         'sunday': 0
+         }
     ]
+    return response
 
     lines = [
         {
@@ -64,19 +79,17 @@ def test_merge_calendar_join_with_line_code():
         }
     ]
 
-    grid_rel_calendar_line = calendar_handler._join_calendar_lines(calendar_lines, lines)
+def get_ntfs_zip():
+    pwd = os.path.dirname(os.path.dirname(__file__))
 
-    assert grid_rel_calendar_line == [
-        {
-            'grid_calendar_id': 1,
-            'line_id': 'l1',
-        },
-        {
-            'grid_calendar_id': 2,
-            'line_id': 'l2',
-        }
-    ]
+    ntfs_path = os.path.join(pwd, 'fixtures/ntfs/*.txt')
 
+    ntfs_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
+    ntfs_zip.filename = 'ntfs.zip'
+    for filename in glob(ntfs_path):
+        with open(filename, 'r') as file:
+            ntfs_zip.writestr(os.path.basename(filename), file.read())
+    return ntfs_zip
 
 def test_merge_calendar_take_all_lines_if_no_line_code():
     calendar_lines = [
