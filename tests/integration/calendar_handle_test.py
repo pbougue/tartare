@@ -41,32 +41,6 @@ GRID_PERIODS = "grid_periods.txt"
 GRID_CALENDAR_LINE = "grid_rel_calendar_line.txt"
 
 
-def mock_grid_calendar():
-    response = [
-        {'grid_calendar_id': 1,
-         'name': 'Calendar1',
-         'monday': 1,
-         'tuesday': 1,
-         'wednesday:': 1,
-         'thursday': 1,
-         'friday': 1,
-         'saturday': 1,
-         'sunday': 0
-         },
-        {'grid_calendar_id': 2,
-         'name': 'Calendar2',
-         'monday': 0,
-         'tuesday': 0,
-         'wednesday:': 0,
-         'thursday': 0,
-         'friday': 0,
-         'saturday': 1,
-         'sunday': 0
-         }
-    ]
-    return response
-
-
 def get_ntfs_zip():
     pwd = os.path.dirname(os.path.dirname(__file__))
 
@@ -143,3 +117,21 @@ def test_merge_calendar_take_all_lines_if_no_line_code():
             'line_id': 'l3',
         }
     ]
+
+
+def test_merge_ntfs_calendar_file():
+    ntfs_zip = get_ntfs_zip()
+    calendars_zip = get_calendar_zip()
+    grid_calendar_data = GridCalendarData()
+    grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
+    new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
+
+    assert GRID_CALENDARS in new_ntfs_zip.namelist()
+    assert GRID_PERIODS in new_ntfs_zip.namelist()
+    assert GRID_CALENDAR_LINE in new_ntfs_zip.namelist()
+
+    new_ntfs_files = [s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')]
+    valid_ntfs = True
+    for file in ntfs_zip.namelist():
+        valid_ntfs = valid_ntfs and file in new_ntfs_files
+    assert valid_ntfs
