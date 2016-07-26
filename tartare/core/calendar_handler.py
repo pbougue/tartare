@@ -59,6 +59,21 @@ def _write_csv(csv, pathfile):
     pass
 
 
+def _join_calendar_lines(calendar_lines, lines):
+    grid_rel_calendar_line = []
+
+    for calendar_line in calendar_lines:
+        for line in lines:
+            if calendar_line['network_id'] == line['network_id']:
+                if '' == calendar_line['line_code'] or line['line_code'] == calendar_line['line_code']:
+                    grid_rel_calendar_line.append({
+                        'grid_calendar_id': calendar_line['grid_calendar_id'],
+                        'line_id': line['line_id'],
+                    })
+
+    return grid_rel_calendar_line
+
+
 class GridCalendarData:
     def __init__(self):
         self.grid_calendars_csv = []
@@ -72,7 +87,6 @@ class GridCalendarData:
     def load_zips(self, calendar_zip, ntfs_zip):
         calendar_lines = []
         lines = []
-        grid_rel_calendar_line = []
 
         with calendar_zip.open('grid_rel_calendar_to_network_and_line.txt') as grid_calendar:
             for line in csv.DictReader(grid_calendar):
@@ -82,15 +96,7 @@ class GridCalendarData:
             for line in csv.DictReader(grid_lines):
                 lines.append(line)
 
-        for calendar_line in calendar_lines:
-            for line in lines:
-                if calendar_line['network_id'] == line['network_id']:
-                    if '' == calendar_line['line_code'] or line['line_code'] == calendar_line['line_code']:
-                        grid_rel_calendar_line.append({
-                            'grid_calendar_id': calendar_line['grid_calendar_id'],
-                            'line_id': line['line_id'],
-                        })
-
+        _join_calendar_lines(calendar_lines, lines)
 
     """
     Replace calendar file in ntfs

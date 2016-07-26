@@ -29,25 +29,109 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
-from glob import glob
-from io import BytesIO
 from tartare.core import calendar_handler
-from zipfile import ZipFile, ZIP_DEFLATED
 
 
+def test_merge_calendar_join_with_line_code():
+    calendar_lines = [
+        {
+            'grid_calendar_id': 1,
+            'network_id': 'network:A',
+            'line_code': 1,
+        },
+        {
+            'grid_calendar_id': 2,
+            'network_id': 'network:A',
+            'line_code': 2,
+        }
+    ]
 
-def test_merge_calendar():
-    pwd = os.path.dirname(os.path.dirname(__file__))
+    lines = [
+        {
+            'line_id': 'l1',
+            'network_id': 'network:A',
+            'line_code': 1,
+        },
+        {
+            'line_id': 'l2',
+            'network_id': 'network:A',
+            'line_code': 2,
+        },
+        {
+            'line_id': 'l3',
+            'network_id': 'network:B',
+            'line_code': 3,
+        }
+    ]
 
-    calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
-    ntfs_path = os.path.join(pwd, 'fixtures/ntfs/*.txt')
+    grid_rel_calendar_line = calendar_handler._join_calendar_lines(calendar_lines, lines)
 
-    ntfs_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
+    assert grid_rel_calendar_line == [
+        {
+            'grid_calendar_id': 1,
+            'line_id': 'l1',
+        },
+        {
+            'grid_calendar_id': 2,
+            'line_id': 'l2',
+        }
+    ]
 
-    for filename in glob(ntfs_path):
-        with open(filename, 'r') as file:
-            ntfs_zip.writestr(os.path.basename(filename), file.read())
 
-    with ZipFile(calendar_path, 'r') as calendar_zip:
-        calendar_handler._merge_calendar(calendar_zip, ntfs_zip)
+def test_merge_calendar_take_all_lines_if_no_line_code():
+    calendar_lines = [
+        {
+            'grid_calendar_id': 1,
+            'network_id': 'network:A',
+            'line_code': 1,
+        },
+        {
+            'grid_calendar_id': 2,
+            'network_id': 'network:A',
+            'line_code': '',
+        }
+    ]
+
+    lines = [
+        {
+            'line_id': 'l1',
+            'network_id': 'network:A',
+            'line_code': 1,
+        },
+        {
+            'line_id': 'l2',
+            'network_id': 'network:A',
+            'line_code': 2,
+        },
+        {
+            'line_id': 'l3',
+            'network_id': 'network:A',
+            'line_code': 3,
+        },
+        {
+            'line_id': 'l4',
+            'network_id': 'network:B',
+            'line_code': 4,
+        }
+    ]
+
+    grid_rel_calendar_line = calendar_handler._join_calendar_lines(calendar_lines, lines)
+
+    assert grid_rel_calendar_line == [
+        {
+            'grid_calendar_id': 1,
+            'line_id': 'l1',
+        },
+        {
+            'grid_calendar_id': 2,
+            'line_id': 'l1',
+        },
+        {
+            'grid_calendar_id': 2,
+            'line_id': 'l2',
+        },
+        {
+            'grid_calendar_id': 2,
+            'line_id': 'l3',
+        }
+    ]
