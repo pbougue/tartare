@@ -34,6 +34,11 @@ from glob import glob
 from io import BytesIO, StringIO
 from tartare.core import calendar_handler
 from zipfile import ZipFile, ZIP_DEFLATED
+from tartare.core.calendar_handler import GridCalendarData
+
+GRID_CALENDARS = "grid_calendars.txt"
+GRID_PERIODS = "grid_periods.txt"
+GRID_CALENDAR_LINE = "grid_rel_calendar_line.txt"
 
 
 def mock_grid_calendar():
@@ -75,19 +80,17 @@ def get_ntfs_zip():
     return ntfs_zip
 
 
-def test_merge_calendar_take_all_lines_if_no_line_code():
-    calendar_lines = [
-        {
-            'grid_calendar_id': 1,
-            'network_id': 'network:A',
-            'line_code': 1,
-        },
-        {
-            'grid_calendar_id': 2,
-            'network_id': 'network:A',
-            'line_code': '',
-        }
-    ]
+def get_calendar_zip():
+    pwd = os.path.dirname(os.path.dirname(__file__))
+    calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
+    return ZipFile(calendar_path, 'r')
+
+def test_merge_calendar():
+    pwd = os.path.dirname(os.path.dirname(__file__))
+    calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
+    ntfs_zip = get_ntfs_zip()
+    with ZipFile(calendar_path, 'r') as calendar_zip:
+        calendar_handler._merge_calendar(calendar_zip, ntfs_zip)
 
     lines = [
         {
