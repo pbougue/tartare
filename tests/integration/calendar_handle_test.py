@@ -61,23 +61,6 @@ def mock_grid_calendar():
     ]
     return response
 
-    lines = [
-        {
-            'line_id': 'l1',
-            'network_id': 'network:A',
-            'line_code': 1,
-        },
-        {
-            'line_id': 'l2',
-            'network_id': 'network:A',
-            'line_code': 2,
-        },
-        {
-            'line_id': 'l3',
-            'network_id': 'network:B',
-            'line_code': 3,
-        }
-    ]
 
 def get_ntfs_zip():
     pwd = os.path.dirname(os.path.dirname(__file__))
@@ -90,6 +73,7 @@ def get_ntfs_zip():
         with open(filename, 'r') as file:
             ntfs_zip.writestr(os.path.basename(filename), file.read())
     return ntfs_zip
+
 
 def test_merge_calendar_take_all_lines_if_no_line_code():
     calendar_lines = [

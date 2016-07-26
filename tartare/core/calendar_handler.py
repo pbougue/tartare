@@ -1,4 +1,4 @@
-#coding: utf-8
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -47,9 +47,7 @@ def _merge_calendar(calendar_zip, ntfs_zip):
     grid_calendar_data = GridCalendarData()
     grid_calendar_data.load_zips(calendar_zip, ntfs_zip)
     merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
-    # grid_calendar_data.update_ntfs()
     save_zip_as_file(ntfs_zip, 'new_ntfs.zip')
-    # grid_calendar_data.save_as_file()
 
 
 def _last_ntfs_zip():
@@ -65,6 +63,7 @@ def dic_to_memory_csv(dic):
     w.writerows(dic)
     return f
 
+
 def _join_calendar_lines(calendar_lines, lines):
     grid_rel_calendar_line = []
 
@@ -78,6 +77,7 @@ def _join_calendar_lines(calendar_lines, lines):
                     })
 
     return grid_rel_calendar_line
+
 
 def merge_calendars_ntfs(grid_calendar_data, ntfs_zip):
     file_list = [(s, ntfs_zip.read(s)) for s in ntfs_zip.namelist() if not s.startswith('grid_')]
@@ -137,16 +137,3 @@ class GridCalendarData(object):
                             'line_id': line['line_id'],
                         })
 
-
-    """
-    Replace calendar file in ntfs
-    """
-    def update_ntfs(self):
-        pass
-
-
-    """
-    Save to updated ntfs file
-    """
-    def save_as_file(self):
-        pass
