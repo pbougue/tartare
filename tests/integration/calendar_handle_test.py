@@ -31,14 +31,10 @@
 
 import os
 from glob import glob
-from io import BytesIO, StringIO
+from io import BytesIO
 from tartare.core import calendar_handler
 from zipfile import ZipFile, ZIP_DEFLATED
 from tartare.core.calendar_handler import GridCalendarData
-
-GRID_CALENDARS = "grid_calendars.txt"
-GRID_PERIODS = "grid_periods.txt"
-GRID_CALENDAR_LINE = "grid_rel_calendar_line.txt"
 
 
 def get_ntfs_zip():
@@ -126,9 +122,44 @@ def test_merge_ntfs_calendar_file():
     grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
     new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
 
-    assert GRID_CALENDARS in new_ntfs_zip.namelist()
-    assert GRID_PERIODS in new_ntfs_zip.namelist()
-    assert GRID_CALENDAR_LINE in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_CALENDARS in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_PERIODS in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_CALENDAR_REL_LINE in new_ntfs_zip.namelist()
+
+    new_ntfs_files = [s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')]
+    valid_ntfs = True
+    for file in ntfs_zip.namelist():
+        valid_ntfs = valid_ntfs and file in new_ntfs_files
+    assert valid_ntfs
+
+
+def test_merge_ntfs_without_calendar_file():
+    ntfs_zip = get_ntfs_zip()
+    grid_calendar_data = GridCalendarData()
+    new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
+
+    assert calendar_handler.GRID_CALENDARS not in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_PERIODS not in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_CALENDAR_REL_LINE not in new_ntfs_zip.namelist()
+
+    new_ntfs_files = [s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')]
+    valid_ntfs = True
+    for file in ntfs_zip.namelist():
+        valid_ntfs = valid_ntfs and file in new_ntfs_files
+    assert valid_ntfs
+
+
+def test_merge_ntfs_no_calendar_file():
+    ntfs_zip = get_ntfs_zip()
+    calendars_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
+    calendars_zip.writestr('foo.txt', 'foo')
+    grid_calendar_data = GridCalendarData()
+    grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
+    new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
+
+    assert calendar_handler.GRID_CALENDARS not in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_PERIODS not in new_ntfs_zip.namelist()
+    assert calendar_handler.GRID_CALENDAR_REL_LINE not in new_ntfs_zip.namelist()
 
     new_ntfs_files = [s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')]
     valid_ntfs = True
