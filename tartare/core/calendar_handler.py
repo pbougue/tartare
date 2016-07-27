@@ -112,17 +112,17 @@ class GridCalendarData(object):
                 and (GRID_CALENDAR_NETWORK_LINE not in file_list or GRID_CALENDAR_REL_LINE not in file_list):
             return
 
-        with calendar_zip.open(GRID_CALENDARS, mode='rU') as grid_calendars:
+        with calendar_zip.open(GRID_CALENDARS) as grid_calendars:
             self.grid_calendars = [l for l in csv.DictReader(TextIOWrapper(grid_calendars, 'utf8'))]
 
-        with calendar_zip.open(GRID_PERIODS, mode='rU') as grid_periods:
+        with calendar_zip.open(GRID_PERIODS) as grid_periods:
             self.grid_periods = [l for l in csv.DictReader(TextIOWrapper(grid_periods, 'utf8'))]
 
         if GRID_CALENDAR_REL_LINE not in file_list:
-            with calendar_zip.open(GRID_CALENDAR_NETWORK_LINE, mode='rU') as grid_rel_calendar:
+            with calendar_zip.open(GRID_CALENDAR_NETWORK_LINE) as grid_rel_calendar:
                 calendar_lines = [l for l in csv.DictReader(TextIOWrapper(grid_rel_calendar, 'utf8'))]
 
-            with ntfs_zip.open('lines.txt', mode='rU') as grid_lines:
+            with ntfs_zip.open('lines.txt') as grid_lines:
                 lines = [l for l in csv.DictReader(TextIOWrapper(grid_lines, 'utf8'))]
 
             for calendar_line in calendar_lines:
@@ -134,5 +134,5 @@ class GridCalendarData(object):
                                 'line_id': line['line_id'],
                             })
         else:
-            with calendar_zip.open(GRID_CALENDAR_REL_LINE, mode='rU') as grid_rel_calendar_line:
+            with calendar_zip.open(GRID_CALENDAR_REL_LINE) as grid_rel_calendar_line:
                 self.grid_rel_calendar_line = [l for l in csv.DictReader(TextIOWrapper(grid_rel_calendar_line, 'utf8'))]

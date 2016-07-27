@@ -45,7 +45,7 @@ def get_ntfs_zip():
     ntfs_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
     ntfs_zip.filename = 'ntfs.zip'
     for filename in glob(ntfs_path):
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             ntfs_zip.writestr(os.path.basename(filename), file.read())
     return ntfs_zip
 
