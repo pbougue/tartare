@@ -118,6 +118,7 @@ def test_merge_calendar_take_all_lines_if_no_line_code():
     ]
 
 
+# we want to find all ntfs file from the input and calendars file
 def test_merge_ntfs_calendar_file(ntfs_zip, calendars_zip):
     grid_calendar_data = GridCalendarData()
     grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
@@ -131,6 +132,7 @@ def test_merge_ntfs_calendar_file(ntfs_zip, calendars_zip):
     assert set(ntfs_zip.namelist()) == {s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')}
 
 
+# we want to find only all ntfs file from the input because we don't load calendar archive
 def test_merge_ntfs_without_calendar_file(ntfs_zip):
     grid_calendar_data = GridCalendarData()
     new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
@@ -143,6 +145,7 @@ def test_merge_ntfs_without_calendar_file(ntfs_zip):
     assert set(ntfs_zip.namelist()) == {s for s in new_ntfs_zip.namelist() if not s.startswith('grid_')}
 
 
+# we want to find only all ntfs file from the input because calendar archive don't contains valid files
 def test_merge_ntfs_no_calendar_file(ntfs_zip):
     calendars_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
     calendars_zip.writestr('foo.txt', 'foo')
