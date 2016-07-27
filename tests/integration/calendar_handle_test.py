@@ -35,9 +35,11 @@ from io import BytesIO
 from tartare.core import calendar_handler
 from zipfile import ZipFile, ZIP_DEFLATED
 from tartare.core.calendar_handler import GridCalendarData
+import pytest
 
 
-def get_ntfs_zip():
+@pytest.fixture(scope="module")
+def ntfs_zip():
     pwd = os.path.dirname(os.path.dirname(__file__))
 
     ntfs_path = os.path.join(pwd, 'fixtures/ntfs/*.txt')
@@ -50,7 +52,8 @@ def get_ntfs_zip():
     return ntfs_zip
 
 
-def get_calendar_zip():
+@pytest.fixture(scope="module")
+def calendars_zip():
     pwd = os.path.dirname(os.path.dirname(__file__))
     calendar_path = os.path.join(pwd, 'fixtures/gridcalendar/export_calendars.zip')
     return ZipFile(calendar_path, 'r')
@@ -115,9 +118,7 @@ def test_merge_calendar_take_all_lines_if_no_line_code():
     ]
 
 
-def test_merge_ntfs_calendar_file():
-    ntfs_zip = get_ntfs_zip()
-    calendars_zip = get_calendar_zip()
+def test_merge_ntfs_calendar_file(ntfs_zip, calendars_zip):
     grid_calendar_data = GridCalendarData()
     grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
     new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
@@ -133,8 +134,7 @@ def test_merge_ntfs_calendar_file():
     assert valid_ntfs
 
 
-def test_merge_ntfs_without_calendar_file():
-    ntfs_zip = get_ntfs_zip()
+def test_merge_ntfs_without_calendar_file(ntfs_zip):
     grid_calendar_data = GridCalendarData()
     new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
 
@@ -149,8 +149,7 @@ def test_merge_ntfs_without_calendar_file():
     assert valid_ntfs
 
 
-def test_merge_ntfs_no_calendar_file():
-    ntfs_zip = get_ntfs_zip()
+def test_merge_ntfs_no_calendar_file(ntfs_zip):
     calendars_zip = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
     calendars_zip.writestr('foo.txt', 'foo')
     grid_calendar_data = GridCalendarData()
