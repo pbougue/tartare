@@ -29,33 +29,19 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
 from io import StringIO, BytesIO, TextIOWrapper
 import csv
-from zipfile import ZipFile, ZIP_DEFLATED
-from tartare import app
+from zipfile import ZipFile, ZIP_DEFLATED, is_zipfile
 
-
-def handle_calendar(calendar_zip):
-    with _last_ntfs_zip() as last_ntfs_zip:
-        modified_ntfs = _merge_calendar(calendar_zip, last_ntfs_zip)
-
-    return modified_ntfs
-
-
-def _merge_calendar(calendar_zip, ntfs_zip):
-    grid_calendar_data = GridCalendarData()
-    grid_calendar_data.load_zips(calendar_zip, ntfs_zip)
-    merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
-    save_zip_as_file(ntfs_zip, 'new_ntfs.zip')
-
-
-def _last_ntfs_zip():
-    ntfs_filepath = os.path.join(app.config.get("CURRENT_DATA_DIR"), 'ntfs', 'ntfs.zip')
-    return ZipFile(ntfs_filepath, 'r')
+GRID_CALENDARS = "grid_calendars.txt"
+GRID_PERIODS = "grid_periods.txt"
+GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
+GRID_CALENDAR_REL_LINE = "grid_rel_calendar_line.txt"
 
 
 def dic_to_memory_csv(dic):
+    if len(dic) == 0:
+        return None
     keys = dic[0].keys()
     f = StringIO()
     w = csv.DictWriter(f, keys)
@@ -86,13 +72,16 @@ def merge_calendars_ntfs(grid_calendar_data, ntfs_zip):
         zip_out.writestr(file_name, content)
 
     file = dic_to_memory_csv(grid_calendar_data.grid_calendars)
-    zip_out.writestr('grid_calendars.txt', file.getvalue())
+    if file:
+        zip_out.writestr(GRID_CALENDARS, file.getvalue())
 
     file = dic_to_memory_csv(grid_calendar_data.grid_periods)
-    zip_out.writestr('grid_periods.txt', file.getvalue())
+    if file:
+        zip_out.writestr(GRID_PERIODS, file.getvalue())
 
     file = dic_to_memory_csv(grid_calendar_data.grid_rel_calendar_line)
-    zip_out.writestr('grid_rel_calendar_line.txt', file.getvalue())
+    if file:
+        zip_out.writestr(GRID_CALENDAR_REL_LINE, file.getvalue())
 
     return zip_out
 
@@ -115,31 +104,35 @@ class GridCalendarData(object):
     Load zip and fill arrays,
     and join calendar lines
     """
+
     def load_zips(self, calendar_zip, ntfs_zip):
-        calendar_lines = []
-        lines = []
+        file_list = calendar_zip.namelist()
+        if GRID_CALENDARS not in file_list \
+                and GRID_PERIODS not in file_list \
+                and (GRID_CALENDAR_NETWORK_LINE not in file_list or GRID_CALENDAR_REL_LINE not in file_list):
+            return
 
-        with calendar_zip.open('grid_calendars.txt', mode='rU') as grid_calendars:
-            for line in csv.DictReader(TextIOWrapper(grid_calendars, 'utf8')):
-                self.grid_calendars.append(line)
+        with calendar_zip.open(GRID_CALENDARS, mode='rU') as grid_calendars:
+            self.grid_calendars = [l for l in csv.DictReader(TextIOWrapper(grid_calendars, 'utf8'))]
 
-        with calendar_zip.open('grid_periods.txt', mode='rU') as grid_periods:
-            for line in csv.DictReader(TextIOWrapper(grid_periods, 'utf8')):
-                self.grid_periods.append(line)
+        with calendar_zip.open(GRID_PERIODS, mode='rU') as grid_periods:
+            self.grid_periods = [l for l in csv.DictReader(TextIOWrapper(grid_periods, 'utf8'))]
 
-        with calendar_zip.open('grid_rel_calendar_to_network_and_line.txt', mode='rU') as grid_rel_calendar:
-            for line in csv.DictReader(TextIOWrapper(grid_rel_calendar, 'utf8')):
-                calendar_lines.append(line)
+        if GRID_CALENDAR_REL_LINE not in file_list:
+            with calendar_zip.open(GRID_CALENDAR_NETWORK_LINE, mode='rU') as grid_rel_calendar:
+                calendar_lines = [l for l in csv.DictReader(TextIOWrapper(grid_rel_calendar, 'utf8'))]
 
-        with ntfs_zip.open('lines.txt', mode='rU') as grid_lines:
-            for line in csv.DictReader(TextIOWrapper(grid_lines, 'utf8')):
-                lines.append(line)
+            with ntfs_zip.open('lines.txt', mode='rU') as grid_lines:
+                lines = [l for l in csv.DictReader(TextIOWrapper(grid_lines, 'utf8'))]
 
-        for calendar_line in calendar_lines:
-            for line in lines:
-                if calendar_line['network_id'] == line['network_id']:
-                    if '' == calendar_line['line_code'] or line['line_code'] == calendar_line['line_code']:
-                        self.grid_rel_calendar_line.append({
-                            'grid_calendar_id': calendar_line['grid_calendar_id'],
-                            'line_id': line['line_id'],
-                        })
+            for calendar_line in calendar_lines:
+                for line in lines:
+                    if calendar_line['network_id'] == line['network_id']:
+                        if '' == calendar_line['line_code'] or line['line_code'] == calendar_line['line_code']:
+                            self.grid_rel_calendar_line.append({
+                                'grid_calendar_id': calendar_line['grid_calendar_id'],
+                                'line_id': line['line_id'],
+                            })
+        else:
+            with calendar_zip.open(GRID_CALENDAR_REL_LINE, mode='rU') as grid_rel_calendar_line:
+                self.grid_rel_calendar_line = [l for l in csv.DictReader(TextIOWrapper(grid_rel_calendar_line, 'utf8'))]
