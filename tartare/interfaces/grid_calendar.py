@@ -44,7 +44,7 @@ GRID_CALENDARS_HEADER = {'grid_calendar_id', 'name', 'monday', 'tuesday', 'wedne
 GRID_PERIODS = "grid_periods.txt"
 GRID_PERIODS_HEADER = {'grid_calendar_id', 'start_date', 'end_date'}
 GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
-GRID_CALENDAR_NETWORK_LINE_HEADER = {'grid_calendar_id', 'network_id', 'line_code'}
+GRID_CALENDAR_NETWORK_LINE_HEADER = {'grid_calendar_id', 'network_id'}
 CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
                            GRID_PERIODS: GRID_PERIODS_HEADER,
                            GRID_CALENDAR_NETWORK_LINE: GRID_CALENDAR_NETWORK_LINE_HEADER}
