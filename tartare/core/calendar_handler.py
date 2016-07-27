@@ -31,7 +31,7 @@
 
 from io import StringIO, BytesIO, TextIOWrapper
 import csv
-from zipfile import ZipFile, ZIP_DEFLATED, is_zipfile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_PERIODS = "grid_periods.txt"
@@ -94,6 +94,11 @@ def save_zip_as_file(zip, filepath):
     zip_out.close()
 
 
+def set_dic_from_zip(calendar_zip, file_name):
+    with calendar_zip.open(file_name) as file:
+        return [l for l in csv.DictReader(TextIOWrapper(file, 'utf8'))]
+
+
 class GridCalendarData(object):
     def __init__(self):
         self.grid_calendars = []
@@ -112,11 +117,8 @@ class GridCalendarData(object):
                 and (GRID_CALENDAR_NETWORK_LINE not in file_list or GRID_CALENDAR_REL_LINE not in file_list):
             return
 
-        with calendar_zip.open(GRID_CALENDARS) as grid_calendars:
-            self.grid_calendars = [l for l in csv.DictReader(TextIOWrapper(grid_calendars, 'utf8'))]
-
-        with calendar_zip.open(GRID_PERIODS) as grid_periods:
-            self.grid_periods = [l for l in csv.DictReader(TextIOWrapper(grid_periods, 'utf8'))]
+        self.grid_calendars = set_dic_from_zip(calendar_zip, GRID_CALENDARS)
+        self.grid_periods = set_dic_from_zip(calendar_zip, GRID_PERIODS)
 
         if GRID_CALENDAR_REL_LINE not in file_list:
             with calendar_zip.open(GRID_CALENDAR_NETWORK_LINE) as grid_rel_calendar:
@@ -134,5 +136,4 @@ class GridCalendarData(object):
                                 'line_id': line['line_id'],
                             })
         else:
-            with calendar_zip.open(GRID_CALENDAR_REL_LINE) as grid_rel_calendar_line:
-                self.grid_rel_calendar_line = [l for l in csv.DictReader(TextIOWrapper(grid_rel_calendar_line, 'utf8'))]
+            self.grid_rel_calendar_line = set_dic_from_zip(calendar_zip, GRID_CALENDAR_REL_LINE)
