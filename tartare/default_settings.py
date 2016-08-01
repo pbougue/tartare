@@ -2,6 +2,7 @@
 import logging
 import os
 from datetime import timedelta
+from kombu import Exchange, Queue
 
 # URL for the brokker, by default it's the local rabbitmq
 # For amqp (rabbitMQ) the syntax is:
@@ -13,6 +14,11 @@ CELERY_BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@l
 CELERY_DEFAULT_QUEUE = 'tartare'
 
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
+
+CELERY_QUEUES = (
+    Queue(CELERY_DEFAULT_QUEUE, Exchange(CELERY_DEFAULT_EXCHANGE), routing_key='celery'),
+)
+
 
 # configuration of celery, don't edit
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
