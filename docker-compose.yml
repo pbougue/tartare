@@ -12,6 +12,7 @@ services:
     volumes:
       - /tmp/tartare/input:/var/tartare/input:rw
       - /tmp/tartare/output:/var/tartare/output:rw
+      - /tmp/tartare/current:/var/tartare/current:rw
     links:
       - rabbitmq
 
