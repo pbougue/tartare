@@ -39,6 +39,10 @@ services:
       - rabbitmq
     ports:
       - "5000:5000"
+    volumes:
+      - {{env.input_dir}}:/var/tartare/input:rw
+      - {{env.output_dir}}:/var/tartare/output:rw
+      - {{env.current_dir}}:/var/tartare/current:rw
 
   rabbitmq:
     image: rabbitmq:management
