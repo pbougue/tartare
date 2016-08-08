@@ -8,7 +8,6 @@ from tartare import celery
 from shutil import copyfile
 import os
 
-
 @celery.task()
 def update_data_task():
     input_dir = app.config.get("INPUT_DIR")
@@ -84,9 +83,17 @@ def type_of_data(filename):
     return None, None
 
 
-def is_accepted_data(input_file):
+def is_ntfs_data(input_file):
     return type_of_data(input_file)[0] == 'fusio'
 
+def remove_old_ntfs_files(directory):
+    files = glob.glob(os.path.join(directory, "*"))
+
+    for f in files:
+        if os.path.isfile(f):
+            if f.endswith('.zip') and (type_of_data(f)[0] == 'fusio'):
+                logger.debug("Cleaning NTFS file {}".format(f))
+                os.remove(f)
 
 def create_dir(directory):
     """create directory if needed"""
@@ -106,6 +113,8 @@ def handle_data(input_dir, output_dir, current_data_dir):
         input_file = os.path.join(input_dir, filename)
         output_file = os.path.join(output_dir, filename)
         # copy data interesting data
-        if is_accepted_data(input_file):
+        if is_ntfs_data(input_file):
+            #NTFS file is moved to the CURRENT_DATA_DIR, old NTFS file is deleted
+            remove_old_ntfs_files(current_data_dir)
             copyfile(input_file, os.path.join(current_data_dir, filename))
         shutil.move(input_file, output_file)
