@@ -7,13 +7,19 @@ from tartare import app
 from tartare import celery
 from shutil import copyfile
 import os
+from tartare.core import calendar_handler
+from tartare.core.calendar_handler import GridCalendarData
+from zipfile import ZipFile
+import datetime
+
+logger = logging.getLogger(__name__)
+
 
 @celery.task()
 def update_data_task():
     input_dir = app.config.get("INPUT_DIR")
     output_dir = app.config.get("OUTPUT_DIR")
     current_data_dir = app.config.get("CURRENT_DATA_DIR")
-    logger = logging.getLogger(__name__)
     logger.info('scanning directory %s', input_dir)
     handle_data(input_dir, output_dir, current_data_dir)
 
@@ -39,6 +45,8 @@ def type_of_data(filename):
         # first we try fusio, because it can load fares too
         if any(f for f in files if f.endswith("contributors.txt")):
             return 'fusio'
+        if any(f for f in files if f.endswith("grid_rel_calendar_to_network_and_line.txt")):
+            return 'calendar'
         if any(f for f in files if f.endswith("fares.csv")):
             return 'fare'
         if any(f for f in files if f.endswith("stops.txt")):
@@ -65,6 +73,8 @@ def type_of_data(filename):
     for filename in files:
         if filename.endswith('.pbf'):
             return 'osm', filename
+        if filename.endswith('.tmp'):
+            return 'tmp', filename
         if filename.endswith('.zip'):
             zipf = zipfile.ZipFile(filename)
             pt_type = files_type(zipf.namelist())
@@ -86,6 +96,11 @@ def type_of_data(filename):
 def is_ntfs_data(input_file):
     return type_of_data(input_file)[0] == 'fusio'
 
+
+def is_calendar_data(input_file):
+    return type_of_data(input_file)[0] == 'calendar'
+
+
 def remove_old_ntfs_files(directory):
     files = glob.glob(os.path.join(directory, "*"))
 
@@ -95,10 +110,25 @@ def remove_old_ntfs_files(directory):
                 logger.debug("Cleaning NTFS file {}".format(f))
                 os.remove(f)
 
+
 def create_dir(directory):
     """create directory if needed"""
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+
+def _do_merge_calendar(calendar_file, ntfs_file, output_file):
+    with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
+        grid_calendar_data = GridCalendarData()
+        grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
+        new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
+        calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
+
+
+def _get_current_nfts_file(current_data_dir):
+    files = glob.glob(os.path.join(current_data_dir, "*"))
+
+    return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
 
 
 def handle_data(input_dir, output_dir, current_data_dir):
@@ -111,10 +141,36 @@ def handle_data(input_dir, output_dir, current_data_dir):
 
     for filename in os.listdir(input_dir):
         input_file = os.path.join(input_dir, filename)
+        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
         output_file = os.path.join(output_dir, filename)
+        logger.debug("Working on [{}] to generate [{}]".format(input_file, output_file))
         # copy data interesting data
+
+        calendar_dir = os.path.join(current_data_dir,
+                                    app.config.get("GRID_CALENDAR_DIR"))
+        calendar_file = os.path.join(calendar_dir, app.config.get("CALENDAR_FILE"))
         if is_ntfs_data(input_file):
-            #NTFS file is moved to the CURRENT_DATA_DIR, old NTFS file is deleted
+            # NTFS file is moved to the CURRENT_DATA_DIR, old NTFS file is deleted
             remove_old_ntfs_files(current_data_dir)
             copyfile(input_file, os.path.join(current_data_dir, filename))
-        shutil.move(input_file, output_file)
+            if os.path.isfile(calendar_file):
+                # Merge
+                _do_merge_calendar(calendar_file, input_file, output_ntfs_file)
+                os.remove(input_file)
+            else:
+                shutil.move(input_file, output_ntfs_file)
+        elif is_calendar_data(input_file):
+            if not os.path.exists(calendar_dir):
+                os.makedirs(calendar_dir)
+            shutil.move(input_file, calendar_file)
+
+            # Merge with last NTFS
+            current_ntfs = _get_current_nfts_file(current_data_dir)
+            if current_ntfs:
+                _do_merge_calendar(calendar_file, current_ntfs, output_ntfs_file)
+            else:
+                logger.info("No NTFS file to compute the calendar data")
+        elif input_file.endswith(".tmp"):
+            pass
+        else:
+            shutil.move(input_file, output_file)

@@ -15,6 +15,9 @@ CELERY_DEFAULT_QUEUE = 'tartare'
 
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
 
+# Temporary, to be deleted soon
+CELERYD_CONCURRENCY = 1
+
 CELERY_QUEUES = (
     Queue(CELERY_DEFAULT_QUEUE, Exchange(CELERY_DEFAULT_EXCHANGE), routing_key='celery'),
 )
@@ -40,7 +43,10 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
 OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
 CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
-GRID_CALENDAR_DIR = str(os.path.join(CURRENT_DATA_DIR, 'grid_calendar'))
+# GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
+# The absolute path is CURRENT_DATA_DIR/grid_calendar
+GRID_CALENDAR_DIR = 'grid_calendar'
+CALENDAR_FILE = 'export_calendars.zip'
 
 LOGGER = {
     'version': 1,

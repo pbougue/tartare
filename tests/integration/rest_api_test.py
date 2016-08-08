@@ -50,10 +50,10 @@ def test_post_grid_calendar_returns_success_status(app):
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/grid_calendar', data=files)
     r = to_json(raw)
-    backup_dir = os.path.join(tartare.app.config.get("GRID_CALENDAR_DIR"))
+    input_dir = os.path.join(tartare.app.config.get("INPUT_DIR"))
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
-    assert os.path.exists(os.path.join(backup_dir, filename))
+    assert os.path.exists(os.path.join(input_dir, filename))
 
 
 def test_post_grid_calendar_returns_non_compliant_file_status(app):

@@ -56,7 +56,7 @@ def _join_calendar_lines(calendar_lines, lines):
     for calendar_line in calendar_lines:
         for line in lines:
             if calendar_line['network_id'] == line['network_id']:
-                if '' == calendar_line['line_code'] or line['line_code'] == calendar_line['line_code']:
+                if not calendar_line.get('line_code') or line['line_code'] == calendar_line['line_code']:
                     grid_rel_calendar_line.append({
                         'grid_calendar_id': calendar_line['grid_calendar_id'],
                         'line_id': line['line_id'],
