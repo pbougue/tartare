@@ -4,7 +4,7 @@
 To send new calendar to navitia, use the API with the ZIP data archive in POST.
 
 ##Format of the calendar files
-The ZIP data archive contains 3 different CSV files. The format of the CSV is consistant with the NTFS definition : https://github.com/CanalTP/navitia/blob/dev/documentation/ntfs/ntfs_0.6.md.
+The ZIP data archive contains 3 different CSV files.
 
 
 ### grid_calendars.txt (required)
@@ -12,7 +12,7 @@ Tihs file contains the definition of the calendars.
 
 Column | Type | Constraint | Comment
 --- | --- | --- | ---
-grid_calendar_id | string | Required | Identifier of the calendar
+id | string | Required | Identifier of the calendar
 name | string | Required | Name of the calendar
 monday | integer | Required | 0 : This calendar is not active <br> 1 : This calendar is active
 tuesday | integer | Required | 0 : This calendar is not active <br> 1 : This calendar is active
@@ -28,8 +28,8 @@ Several periods can be associated to a calendar, each period beeing writen in a 
 
 Column | Type | Constraint | Comment
 --- | --- | --- | ---
-grid_calendar_id | string | Required | Identifier of the calendar
-start_date | date | Required | Start date of the period. The format is the same as the NTFS date format.
+calendar_id | string | Required | Identifier of the calendar
+begin_date | date | Required | Start date of the period. The format is the same as the NTFS date format.
 end_date | date | Required | End date of the period. The format is the same as the NTFS date format.
 
 ### grid_rel_calendar_to_network_and_line.txt (required)
