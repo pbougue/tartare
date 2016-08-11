@@ -40,10 +40,10 @@ from werkzeug.utils import secure_filename
 import shutil
 
 GRID_CALENDARS = "grid_calendars.txt"
-GRID_CALENDARS_HEADER = {'grid_calendar_id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
+GRID_CALENDARS_HEADER = {'id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
                          'sunday'}
 GRID_PERIODS = "grid_periods.txt"
-GRID_PERIODS_HEADER = {'grid_calendar_id', 'start_date', 'end_date'}
+GRID_PERIODS_HEADER = {'calendar_id', 'begin_date', 'end_date'}
 GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
 GRID_CALENDAR_NETWORK_LINE_HEADER = {'grid_calendar_id', 'network_id'}
 CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
