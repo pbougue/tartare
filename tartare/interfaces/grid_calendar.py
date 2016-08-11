@@ -37,6 +37,7 @@ from flask.globals import request
 from flask_restful import Resource
 from tartare import app
 from werkzeug.utils import secure_filename
+import shutil
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_CALENDARS_HEADER = {'grid_calendar_id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
@@ -96,9 +97,16 @@ class GridCalendar(Resource):
         valid_header, invalid_files = check_files_header(zip_file)
         if not valid_header:
             return {'message': 'non-compliant file(s) : {}'.format(''.join(invalid_files))}, 400
+
         # backup content
-        bck_dir = app.config.get("GRID_CALENDAR_DIR")
-        if not os.path.exists(bck_dir):
-            os.makedirs(bck_dir)
-        content.save(os.path.join(bck_dir, secure_filename(content.filename)))
+        input_dir = app.config.get("INPUT_DIR")
+        if not os.path.exists(input_dir):
+            os.makedirs(input_dir)
+        content.stream.seek(0)
+        content.save(os.path.join(input_dir, content.filename + ".tmp"))
+        zip_file.close()
+        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
+
+        shutil.move(full_file_name + ".tmp", full_file_name)
+
         return {'message': 'OK'}, 200
