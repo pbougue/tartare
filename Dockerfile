@@ -14,6 +14,10 @@ RUN adduser -H -D -u 8110 -G tartare tartare
 RUN mkdir -p /var/tartare/
 RUN chown -R tartare:tartare /var/tartare/
 
+COPY ./tartare /usr/src/app/tartare
+COPY requirements.txt /usr/src/app
+WORKDIR /usr/src/app
+
 # those are needed for uwsgi
 RUN apk --update add \
         g++ \
@@ -24,16 +28,10 @@ RUN apk --update add \
         musl \
         musl-dev \
         memcached \
-        libmemcached-dev
-
-RUN pip install uwsgi
-
-COPY ./tartare /usr/src/app/tartare
-COPY requirements.txt /usr/src/app
-WORKDIR /usr/src/app
-RUN pip install --no-cache-dir -r requirements.txt
-
-RUN apk del \
+        libmemcached-dev && \
+    pip install uwsgi && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apk del \
         g++ \
         build-base \
         python-dev \
@@ -42,7 +40,8 @@ RUN apk del \
         musl \
         musl-dev \
         memcached \
-        libmemcached-dev
+        libmemcached-dev && \
+    rm -rf /var/apk/cache/*
 
 ENV TARTARE_RABBITMQ_HOST amqp://guest:guest@localhost:5672//
 RUN chown -R tartare:tartare /usr/src/app
