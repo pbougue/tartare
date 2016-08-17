@@ -1,5 +1,6 @@
 # tartare
 data integration
+The global architecture is available in the [architecture.md](documentation/architecture.md) file.
 
 ## Requirements
 - python 3.4
@@ -31,7 +32,7 @@ We use a docker image for deployment purpose.
 
 Note: we use the new interface version of docker-compose, so docker version needs to be >= 1.10,
  docker-compose version needs to be >= 1.6
- 
+
 ``` bash
 cd path/to/tartare
 docker-compose build
