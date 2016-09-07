@@ -30,6 +30,7 @@
 # www.navitia.io
 
 from tartare import app
+from tartare.interfaces.coverages import Coverage
 from tartare.interfaces.grid_calendar import GridCalendar
 from flask_restful import Api
 from tartare.interfaces.status import Status
@@ -37,3 +38,4 @@ from tartare.interfaces.status import Status
 api = Api(app)
 api.add_resource(GridCalendar, '/grid_calendar')
 api.add_resource(Status, '/status')
+api.add_resource(Coverage, '/coverages', '/coverages/<string:coverage_id>')
