@@ -26,11 +26,14 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from flask_restful import reqparse
+from flask_restful import reqparse, abort
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare import mongo
+from tartare.core import models
 import logging
+from tartare.interfaces import schema
+from tartare.interfaces.schema import serialize_with
 
 
 class Coverage(flask_restful.Resource):
@@ -43,22 +46,22 @@ class Coverage(flask_restful.Resource):
 
         args = parser.parse_args()
 
-        coverage = {
-            'name': args['name'],
-            '_id': args['id']
-        }
+        coverage = models.Coverage(_id=args['id'], name=args['name'])
         try:
-            inserted_id = mongo.db.coverages.insert_one(coverage).inserted_id
+            inserted_id = mongo.db.coverages.insert_one(coverage.__dict__).inserted_id
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
             return {'error': str(e)}, 400
 
         logging.getLogger(__name__).info("inserted id = {}".format(inserted_id))
 
-        return {'inserted_id': str(inserted_id)}, 200
+        return {'coverage': schema.CoverageSchema().dump(coverage)}, 200
 
     def get(self, coverage_id=None):
         if coverage_id:
-            return mongo.db.coverages.find_one_or_404({'_id': coverage_id})
+            c = models.Coverage.get(coverage_id)
+            if c is None:
+                abort(404)
+            return {'coverage': schema.CoverageSchema().dump(c)}, 200
 
-        return list(mongo.db.coverages.find()), 200
+        return {'coverages': schema.CoverageSchema(many=True).dump(list(models.Coverage.find()))}, 200
