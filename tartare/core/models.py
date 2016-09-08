@@ -38,19 +38,23 @@ def get_as_obj(cls, cursor):
 
 
 class Coverage(object):
+    mongo_collection = 'coverages'
     def __init__(self, _id, name):
         self._id = _id
         self.name = name
 
+    def save(self):
+        mongo.db[self.mongo_collection].insert_one(self.__dict__)
+
     @classmethod
     def get(cls, coverage_id=None):
-        raw = mongo.db.coverages.find_one({'_id': coverage_id})
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
 
         return cls.create_from_mongo(raw)
 
     @classmethod
     def find(cls, filter={}):
-        return get_as_obj(cls, mongo.db.coverages.find(filter))
+        return get_as_obj(cls, mongo.db[cls.mongo_collection].find(filter))
 
     @classmethod
     def create_from_mongo(cls, raw):

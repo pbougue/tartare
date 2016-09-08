@@ -33,29 +33,24 @@ from tartare import mongo
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
-from tartare.interfaces.schema import serialize_with
 
 
 class Coverage(flask_restful.Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('id', required=True, help='id is required',
-                            case_sensitive=False, location=('json', 'values'))
-        parser.add_argument('name', required=True,
-                            case_sensitive=False, help='name is required', location=('json', 'values'))
+        parser.add_argument('id', required=True, help='id is required', location='json')
+        parser.add_argument('name', required=True, help='name is required', location='json')
 
         args = parser.parse_args()
 
         coverage = models.Coverage(_id=args['id'], name=args['name'])
         try:
-            inserted_id = mongo.db.coverages.insert_one(coverage.__dict__).inserted_id
+            coverage.save()
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
             return {'error': str(e)}, 400
 
-        logging.getLogger(__name__).info("inserted id = {}".format(inserted_id))
-
-        return {'coverage': schema.CoverageSchema().dump(coverage)}, 200
+        return {'coverage': schema.CoverageSchema().dump(coverage)}, 201
 
     def get(self, coverage_id=None):
         if coverage_id:
