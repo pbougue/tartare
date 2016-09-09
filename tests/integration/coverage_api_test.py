@@ -43,6 +43,7 @@ def app():
 def to_json(response):
     return json.loads(response.data.decode('utf-8'))
 
+@pytest.fixture(scope="function", autouse=True)
 def empty_mongo():
     client = MongoClient("mongodb://localhost:27017")
     db = client['tartare']
@@ -61,51 +62,39 @@ def test_get_coverage_non_exist(app):
     assert raw.status_code == 404
 
 def test_add_coverage_returns_sucess(app):
-    try:
-        raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
-        assert raw.status_code == 201
-        raw = app.get('/coverages')
-        r = to_json(raw)
-        assert len(r["coverages"]) == 1
-    finally:
-        empty_mongo()
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    assert raw.status_code == 201
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 1
 
 def test_add_coverage_no_id(app):
-    try:
-        raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"name_test"}))
-        assert raw.status_code == 400
-        raw = app.get('/coverages')
-        r = to_json(raw)
-        assert len(r["coverages"]) == 0
-    finally:
-        empty_mongo()
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"name_test"}))
+    assert raw.status_code == 400
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 0
 
 def test_add_coverage_no_name(app):
-    try:
-        raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test"}))
-        assert raw.status_code == 400
-        raw = app.get('/coverages')
-        r = to_json(raw)
-        assert len(r["coverages"]) == 0
-    finally:
-        empty_mongo()
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test"}))
+    assert raw.status_code == 400
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 0
 
 def test_delete_coverage_returns_sucess(app):
-    try:
-        raw = app.get('/coverages/id_test')
-        assert raw.status_code == 404
+    raw = app.get('/coverages/id_test')
+    assert raw.status_code == 404
 
-        raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
-        assert raw.status_code == 201
-        raw = app.delete('/coverages/id_test')
-        assert raw.status_code == 204
-        raw = app.get('/coverages/id_test')
-        assert raw.status_code == 404
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    assert raw.status_code == 201
+    raw = app.delete('/coverages/id_test')
+    assert raw.status_code == 204
+    raw = app.get('/coverages/id_test')
+    assert raw.status_code == 404
 
-        raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test2", "name":"name_test2"}))
-        assert raw.status_code == 201
-        raw = app.get('/coverages')
-        r = to_json(raw)
-        assert len(r["coverages"]) == 1
-    finally:
-        empty_mongo()
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test2", "name":"name_test2"}))
+    assert raw.status_code == 201
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 1
