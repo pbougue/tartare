@@ -1,4 +1,4 @@
-# coding=utf-8
+#coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -29,13 +29,34 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.grid_calendar import GridCalendar
-from flask_restful import Api
-from tartare.interfaces.status import Status
+from tartare import mongo
 
-api = Api(app)
-api.add_resource(GridCalendar, '/grid_calendar')
-api.add_resource(Status, '/status')
-api.add_resource(Coverage, '/coverages', '/coverages/<string:coverage_id>')
+
+def get_as_obj(cls, cursor):
+    for o in cursor:
+        yield cls.create_from_mongo(o)
+
+
+class Coverage(object):
+    mongo_collection = 'coverages'
+    def __init__(self, _id, name):
+        self._id = _id
+        self.name = name
+
+    def save(self):
+        mongo.db[self.mongo_collection].insert_one(self.__dict__)
+
+    @classmethod
+    def get(cls, coverage_id=None):
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
+
+        return cls.create_from_mongo(raw)
+
+    @classmethod
+    def find(cls, filter={}):
+        return get_as_obj(cls, mongo.db[cls.mongo_collection].find(filter))
+
+    @classmethod
+    def create_from_mongo(cls, raw):
+        return Coverage(_id=raw['_id'], name=raw['name'])
+

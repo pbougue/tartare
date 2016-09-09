@@ -1,4 +1,4 @@
-# coding=utf-8
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -28,14 +28,31 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from functools import wraps
+from flask_restful import unpack
+from lima import Schema, fields
 
-from tartare import app
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.grid_calendar import GridCalendar
-from flask_restful import Api
-from tartare.interfaces.status import Status
 
-api = Api(app)
-api.add_resource(GridCalendar, '/grid_calendar')
-api.add_resource(Status, '/status')
-api.add_resource(Coverage, '/coverages', '/coverages/<string:coverage_id>')
+class serialize_with(object):
+    def __init__(self, serializer):
+        self.serializer = serializer
+
+    def __call__(self, f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            resp = f(*args, **kwargs)
+            if isinstance(resp, tuple):
+                data, code, headers = unpack(resp)
+                return self.serializer.dump(data), code, headers
+            return self.serializer.dump(resp)
+        return wrapper
+
+
+class CoverageSchema(Schema):
+    id = fields.String(attr='_id')
+    name = fields.String()
+
+
+class CoveragesSchema(Schema):
+    coverages = fields.Embed(schema=CoverageSchema, many=True)
+
