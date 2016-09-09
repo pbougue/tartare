@@ -66,3 +66,10 @@ class Coverage(object):
             return Coverage(_id=raw['_id'], name=raw['name'])
         else:
             return None
+
+    @classmethod
+    def update(self, dataset):
+        result = mongo.db[self.mongo_collection].update_one({'_id': dataset['id']}, {'$set': {'name': dataset['name']}})
+        return result.raw_result
+
+

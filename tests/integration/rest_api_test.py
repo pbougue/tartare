@@ -90,3 +90,10 @@ def test_kown_version_status(app, monkeypatch):
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('version') == version
+
+def test_update_coverage_returns_success_status(app):
+    raw = app.put('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"new_name_test"}))
+    r = to_json(raw)
+
+    assert raw.status_code == 200
+    assert raw.get('coverage') == json.dumps({"id": "id_test", "name":"new_name_test"})

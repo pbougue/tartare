@@ -66,3 +66,18 @@ class Coverage(flask_restful.Resource):
         if c == 0:
             abort(404)
         return {'coverage': None}, 204
+
+    def put(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('id', required=True, help='id is required', location='json')
+        parser.add_argument('name', required=True, help='name is required', location='json')
+
+        args = parser.parse_args()
+
+        try:
+            coverage = models.Coverage.update(args)
+        except PyMongoError as e:
+            logging.getLogger(__name__).exception('impossible to update coverage with dataset{}'.format(args))
+            return {'error': str(e)}, 400
+
+        return {'coverage': coverage}, 200
