@@ -44,10 +44,9 @@ def to_json(response):
     return json.loads(response.data.decode('utf-8'))
 
 @pytest.fixture(scope="function", autouse=True)
-def empty_mongo():
-    client = MongoClient("mongodb://localhost:27017")
-    db = client['tartare']
-    db["coverages"].delete_many({})
+def empty_mongo(docker):
+    client = MongoClient("mongodb://{ip_addr}:27017".format(ip_addr=docker.ip_addr))
+    client.drop_database(docker.DBNAME)
 
 def test_get_coverage_empty_sucess(app):
     raw = app.get('/coverages')
