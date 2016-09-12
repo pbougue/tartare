@@ -86,3 +86,14 @@ def test_delete_coverage_returns_sucess(app):
     raw = app.get('/coverages')
     r = to_json(raw)
     assert len(r["coverages"]) == 1
+
+
+def test_update_coverage_returns_success_status(app):
+    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    assert raw.status_code == 201
+
+    raw = app.put('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"new_name_test"}))
+    r = to_json(raw)
+
+    assert raw.status_code == 200
+    assert r["coverage"] == {"id": "id_test", "name":"new_name_test"}

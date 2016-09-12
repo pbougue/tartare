@@ -80,4 +80,6 @@ class Coverage(flask_restful.Resource):
             logging.getLogger(__name__).exception('impossible to update coverage with dataset{}'.format(args))
             return {'error': str(e)}, 400
 
-        return {'coverage': coverage}, 200
+        if coverage is None:
+            abort(404)
+        return {'coverage': schema.CoverageSchema().dump(coverage)}, 200

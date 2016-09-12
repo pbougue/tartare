@@ -69,7 +69,9 @@ class Coverage(object):
 
     @classmethod
     def update(self, dataset):
-        result = mongo.db[self.mongo_collection].update_one({'_id': dataset['id']}, {'$set': {'name': dataset['name']}})
-        return result.raw_result
+        raw = mongo.db[self.mongo_collection].update_one({'_id': dataset['id']}, {'$set': {'name': dataset['name']}})
+        if raw.modified_count == 1:
+            return Coverage(_id=dataset['id'], name=dataset['name'])
+        return None
 
 
