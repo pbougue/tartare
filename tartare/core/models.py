@@ -28,6 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import json
+import logging
 
 from tartare import mongo
 from tartare.interfaces import schema
@@ -36,12 +38,17 @@ from tartare.interfaces import schema
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, _id, name):
+    def __init__(self, _id, name, technical_conf):
         self._id = _id
         self.name = name
+        self.technical_conf = technical_conf
 
     def save(self):
-        mongo.db[self.mongo_collection].insert_one(self.__dict__)
+        mongo.db[self.mongo_collection].insert_one({
+            '_id': self._id,
+            'name': self.name,
+            'technical_conf': vars(self.technical_conf),
+        })
 
     @classmethod
     def get(cls, coverage_id=None):
@@ -59,8 +66,13 @@ class Coverage(object):
     @classmethod
     def find(cls, filter={}):
         raw = mongo.db[cls.mongo_collection].find(filter)
-
+        
         return schema.CoverageSchema(many=True).load(raw).data
+
+    @classmethod
+    def all(cls):
+        return cls.find(filter={})
+
 
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
@@ -69,3 +81,10 @@ class Coverage(object):
             return None
 
         return cls.get(coverage_id)
+
+
+    class TechnicalConfiguration(object):
+        def __init__(self, input_dir, output_dir, current_data_dir):
+            self.input_dir = input_dir
+            self.output_dir = output_dir
+            self.current_data_dir = current_data_dir

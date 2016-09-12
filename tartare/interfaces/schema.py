@@ -48,9 +48,16 @@ class serialize_with(object):
         return wrapper
 
 
+class CoverageTechnicalConfSchema(Schema):
+    input_dir = fields.String()
+    output_dir = fields.String()
+    current_data_dir = fields.String()
+
+
 class CoverageSchema(Schema):
     id = fields.String(attribute='_id', required=True, load_from='_id')
     name = fields.String(required=True)
+    technical_conf = fields.Embed(schema=CoverageTechnicalConfSchema)
 
     @post_load
     def make_coverage(self, data):

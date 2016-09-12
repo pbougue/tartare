@@ -26,13 +26,18 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import os
 from flask_restful import reqparse, abort
 import flask_restful
 from pymongo.errors import PyMongoError
+from tartare import app
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
-from marshmallow import ValidationError
+
+
+def _default_dir(var, coverage_id):
+    return os.path.join(app.config.get(var), coverage_id)
 
 
 class Coverage(flask_restful.Resource):
@@ -40,6 +45,10 @@ class Coverage(flask_restful.Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('id', location='json')
         parser.add_argument('name', location='json')
+        parser.add_argument('input_dir', location='json')
+        parser.add_argument('output_dir', location='json')
+        parser.add_argument('current_data_dir', location='json')
+
         args = parser.parse_args()
         coverageSchema = schema.CoverageSchema(strict=True)
 
@@ -63,7 +72,7 @@ class Coverage(flask_restful.Resource):
             result = schema.CoverageSchema().dump(c)
             return {'coverage': result.data}, 200
 
-        coverages = models.Coverage.find()
+        coverages = models.Coverage.all()
 
         return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
 
