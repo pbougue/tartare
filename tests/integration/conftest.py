@@ -26,26 +26,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app, mongo
+import tartare
 import pytest
 
-from tests.docker_wrapper import MongoDocker
 
+@pytest.fixture(scope="module")
+def app():
+    """ Return a handler over flask API """
+    return tartare.app.test_client()
 
-@pytest.yield_fixture(scope="session", autouse=True)
-def docker():
-    """
-    a docker providing a database is started once for all tests
-    """
-    with MongoDocker() as database:
-        yield database
-
-
-@pytest.fixture(scope="session", autouse=True)
-def init_flask_db(docker):
-    """
-    when the docker is started, we init flask once for the new database
-    """
-    app.config['MONGO_TEST_DBNAME'] = docker.DBNAME
-    app.config['MONGO_TEST_HOST'] = docker.ip_addr
-    mongo.init_app(app, 'MONGO_TEST')
