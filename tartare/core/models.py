@@ -68,10 +68,13 @@ class Coverage(object):
             return None
 
     @classmethod
-    def update(self, dataset):
-        raw = mongo.db[self.mongo_collection].update_one({'_id': dataset['id']}, {'$set': {'name': dataset['name']}})
+    def update(cls, coverage_id=None, dataset={}):
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': dataset})
         if raw.modified_count == 1:
-            return Coverage(_id=dataset['id'], name=dataset['name'])
-        return None
+            dataset['_id'] = coverage_id
+            raw = dataset
+        else:
+            raw = {}
+        return cls.create_from_mongo(raw)
 
 

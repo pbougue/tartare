@@ -92,7 +92,7 @@ def test_update_coverage_returns_success_status(app):
     raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
     assert raw.status_code == 201
 
-    raw = app.put('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"new_name_test"}))
+    raw = app.patch('/coverages/id_test', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"new_name_test"}))
     r = to_json(raw)
 
     assert raw.status_code == 200
