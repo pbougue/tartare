@@ -60,3 +60,9 @@ class Coverage(flask_restful.Resource):
             return {'coverage': schema.CoverageSchema().dump(c)}, 200
 
         return {'coverages': schema.CoverageSchema(many=True).dump(list(models.Coverage.find()))}, 200
+
+    def delete(self, coverage_id):
+        c = models.Coverage.delete(coverage_id)
+        if c == 0:
+            abort(404)
+        return {'coverage': None}, 204

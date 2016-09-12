@@ -38,4 +38,4 @@ from tartare.interfaces.status import Status
 api = Api(app)
 api.add_resource(GridCalendar, '/grid_calendar')
 api.add_resource(Status, '/status')
-api.add_resource(Coverage, '/coverages', '/coverages/<string:coverage_id>')
+api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>')

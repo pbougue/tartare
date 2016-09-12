@@ -49,8 +49,12 @@ class Coverage(object):
     @classmethod
     def get(cls, coverage_id=None):
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
-
         return cls.create_from_mongo(raw)
+
+    @classmethod
+    def delete(cls, coverage_id=None):
+        raw = mongo.db[cls.mongo_collection].delete_one({'_id': coverage_id})
+        return raw.deleted_count
 
     @classmethod
     def find(cls, filter={}):
@@ -58,5 +62,7 @@ class Coverage(object):
 
     @classmethod
     def create_from_mongo(cls, raw):
-        return Coverage(_id=raw['_id'], name=raw['name'])
-
+        if raw:
+            return Coverage(_id=raw['_id'], name=raw['name'])
+        else:
+            return None
