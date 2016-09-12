@@ -32,7 +32,7 @@ import json
 from tests.utils import to_json
 
 
-def test_get_coverage_empty_sucess(app):
+def test_get_coverage_empty_success(app):
     raw = app.get('/coverages')
     assert raw.status_code == 200
     raw = app.get('/coverages/')
@@ -46,12 +46,16 @@ def test_get_coverage_non_exist(app):
     assert raw.status_code == 404
 
 
-def test_add_coverage_returns_sucess(app):
+def test_add_coverage_returns_success(app):
     raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
+
     assert len(r["coverages"]) == 1
+    assert isinstance(r["coverages"], list)
+    assert r["coverages"][0]["id"] == "id_test"
+    assert r["coverages"][0]["name"] == "name_test"
 
 
 def test_add_coverage_no_id(app):
@@ -70,7 +74,7 @@ def test_add_coverage_no_name(app):
     assert len(r["coverages"]) == 0
 
 
-def test_delete_coverage_returns_sucess(app):
+def test_delete_coverage_returns_success(app):
     raw = app.get('/coverages/id_test')
     assert raw.status_code == 404
 
