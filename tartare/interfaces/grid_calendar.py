@@ -36,7 +36,6 @@ import os
 from flask.globals import request
 from flask_restful import Resource
 from tartare import app
-from werkzeug.utils import secure_filename
 import shutil
 
 GRID_CALENDARS = "grid_calendars.txt"
@@ -81,7 +80,7 @@ def check_files_header(zip_file):
 
 
 class GridCalendar(Resource):
-    def post(self):
+    def post(self, coverage_id):
         if not request.files:
             return {'message': 'the archive is missing'}, 400
         content = request.files['file']
