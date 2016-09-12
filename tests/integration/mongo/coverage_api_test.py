@@ -28,25 +28,9 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import os
-import pytest
-import tartare
-import tartare.api
 import json
-from pymongo import MongoClient
+from tests.utils import to_json
 
-
-@pytest.fixture(scope="module")
-def app():
-    return tartare.app.test_client()
-
-def to_json(response):
-    return json.loads(response.data.decode('utf-8'))
-
-@pytest.fixture(scope="function", autouse=True)
-def empty_mongo(docker):
-    client = MongoClient("mongodb://{ip_addr}:27017".format(ip_addr=docker.ip_addr))
-    client.drop_database(docker.DBNAME)
 
 def test_get_coverage_empty_sucess(app):
     raw = app.get('/coverages')
@@ -56,9 +40,11 @@ def test_get_coverage_empty_sucess(app):
     r = to_json(raw)
     assert len(r["coverages"]) == 0
 
+
 def test_get_coverage_non_exist(app):
     raw = app.get('/coverages/id_test')
     assert raw.status_code == 404
+
 
 def test_add_coverage_returns_sucess(app):
     raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
@@ -67,6 +53,7 @@ def test_add_coverage_returns_sucess(app):
     r = to_json(raw)
     assert len(r["coverages"]) == 1
 
+
 def test_add_coverage_no_id(app):
     raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"name_test"}))
     assert raw.status_code == 400
@@ -74,12 +61,14 @@ def test_add_coverage_no_id(app):
     r = to_json(raw)
     assert len(r["coverages"]) == 0
 
+
 def test_add_coverage_no_name(app):
     raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test"}))
     assert raw.status_code == 400
     raw = app.get('/coverages')
     r = to_json(raw)
     assert len(r["coverages"]) == 0
+
 
 def test_delete_coverage_returns_sucess(app):
     raw = app.get('/coverages/id_test')

@@ -33,15 +33,7 @@ import pytest
 import tartare
 import tartare.api
 import json
-
-
-@pytest.fixture(scope="module")
-def app():
-    return tartare.app.test_client()
-
-
-def to_json(response):
-    return json.loads(response.data.decode('utf-8'))
+from tests.utils import to_json
 
 
 def test_post_grid_calendar_returns_success_status(app):
