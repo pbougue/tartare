@@ -30,15 +30,12 @@
 # www.navitia.io
 
 from tartare import mongo
-
-
-def get_as_obj(cls, cursor):
-    for o in cursor:
-        yield cls.create_from_mongo(o)
+from tartare.interfaces import schema
 
 
 class Coverage(object):
     mongo_collection = 'coverages'
+
     def __init__(self, _id, name):
         self._id = _id
         self.name = name
@@ -49,7 +46,10 @@ class Coverage(object):
     @classmethod
     def get(cls, coverage_id=None):
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
-        return cls.create_from_mongo(raw)
+        if raw is None:
+            return None
+
+        return schema.CoverageSchema().load(raw).data
 
     @classmethod
     def delete(cls, coverage_id=None):
@@ -58,23 +58,14 @@ class Coverage(object):
 
     @classmethod
     def find(cls, filter={}):
-        return get_as_obj(cls, mongo.db[cls.mongo_collection].find(filter))
+        raw = mongo.db[cls.mongo_collection].find(filter)
 
-    @classmethod
-    def create_from_mongo(cls, raw):
-        if raw:
-            return Coverage(_id=raw['_id'], name=raw['name'])
-        else:
-            return None
+        return schema.CoverageSchema(many=True).load(raw).data
 
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
         raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': dataset})
-        if raw.modified_count == 1:
-            dataset['_id'] = coverage_id
-            raw = dataset
-        else:
-            raw = {}
-        return cls.create_from_mongo(raw)
+        if raw.matched_count == 0:
+            return None
 
-
+        return cls.get(coverage_id)

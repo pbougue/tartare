@@ -32,33 +32,40 @@ from pymongo.errors import PyMongoError
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
+from marshmallow import ValidationError
 
 
 class Coverage(flask_restful.Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('id', required=True, help='id is required', location='json')
-        parser.add_argument('name', required=True, help='name is required', location='json')
-
+        parser.add_argument('id', location='json')
+        parser.add_argument('name', location='json')
         args = parser.parse_args()
+        coverageSchema = schema.CoverageSchema(strict=True)
 
-        coverage = models.Coverage(_id=args['id'], name=args['name'])
         try:
+            coverage = coverageSchema.load(args).data
             coverage.save()
+        except ValidationError as err:
+            return {'error': err.messages}, 400
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
             return {'error': str(e)}, 400
 
-        return {'coverage': schema.CoverageSchema().dump(coverage)}, 201
+        return {'coverage': coverageSchema.dump(coverage).data}, 201
 
     def get(self, coverage_id=None):
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
                 abort(404)
-            return {'coverage': schema.CoverageSchema().dump(c)}, 200
 
-        return {'coverages': schema.CoverageSchema(many=True).dump(list(models.Coverage.find()))}, 200
+            result = schema.CoverageSchema().dump(c)
+            return {'coverage': result.data}, 200
+
+        coverages = models.Coverage.find()
+
+        return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
 
     def delete(self, coverage_id):
         c = models.Coverage.delete(coverage_id)
@@ -80,4 +87,5 @@ class Coverage(flask_restful.Resource):
 
         if coverage is None:
             abort(404)
-        return {'coverage': schema.CoverageSchema().dump(coverage)}, 200
+
+        return {'coverage': schema.CoverageSchema().dump(coverage).data}, 200
