@@ -28,8 +28,25 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import json
 from tests.utils import to_json
+
+
+def post(app, url, params):
+    """
+    post on API with params as json
+    """
+    return app.post(url,
+                    headers={'Content-Type': 'application/json'},
+                    data=params)
+
+
+def patch(app, url, params):
+    """
+    patch on API with params as json
+    """
+    return app.patch(url,
+                    headers={'Content-Type': 'application/json'},
+                    data=params)
 
 
 def test_get_coverage_empty_success(app):
@@ -44,10 +61,12 @@ def test_get_coverage_empty_success(app):
 def test_get_coverage_non_exist(app):
     raw = app.get('/coverages/id_test')
     assert raw.status_code == 404
+    r = to_json(raw)
+    assert 'message' in r
 
 
 def test_add_coverage_returns_success(app):
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    raw = post(app, '/coverages', '{"id": "id_test", "name":"name_test"}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -59,7 +78,9 @@ def test_add_coverage_returns_success(app):
 
 
 def test_add_coverage_no_id(app):
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"name_test"}))
+    raw = post(app, '/coverages', '{"name":"name_test"}')
+    r = to_json(raw)
+    assert 'error' in r
     assert raw.status_code == 400
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -67,7 +88,9 @@ def test_add_coverage_no_id(app):
 
 
 def test_add_coverage_no_name(app):
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test"}))
+    raw = post(app, '/coverages', '{"id": "id_test"}')
+    r = to_json(raw)
+    assert 'error' in r
     assert raw.status_code == 400
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -78,14 +101,14 @@ def test_delete_coverage_returns_success(app):
     raw = app.get('/coverages/id_test')
     assert raw.status_code == 404
 
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    raw = post(app, '/coverages', '{"id": "id_test", "name":"name_test"}')
     assert raw.status_code == 201
     raw = app.delete('/coverages/id_test')
     assert raw.status_code == 204
     raw = app.get('/coverages/id_test')
     assert raw.status_code == 404
 
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test2", "name":"name_test2"}))
+    raw = post(app, '/coverages', '{"id": "id_test2", "name":"name_test2"}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -93,11 +116,18 @@ def test_delete_coverage_returns_success(app):
 
 
 def test_update_coverage_returns_success_status(app):
-    raw = app.post('/coverages', headers={'Content-Type':'application/json'}, data=json.dumps({"id": "id_test", "name":"name_test"}))
+    raw = post(app, '/coverages', '{"id": "id_test", "name":"name_test"}')
     assert raw.status_code == 201
 
-    raw = app.patch('/coverages/id_test', headers={'Content-Type':'application/json'}, data=json.dumps({"name":"new_name_test"}))
+    raw = patch(app, '/coverages/id_test', '{"name":"new_name_test"}')
     r = to_json(raw)
 
     assert raw.status_code == 200
     assert r["coverage"] == {"id": "id_test", "name":"new_name_test"}
+
+
+def test_update_unknown_coverage(app):
+    raw = patch(app, '/coverages/unknown', '{"name":"new_name_test"}')
+    r = to_json(raw)
+    assert 'message' in r
+    assert raw.status_code == 404

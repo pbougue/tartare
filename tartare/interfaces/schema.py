@@ -30,7 +30,7 @@
 # www.navitia.io
 from functools import wraps
 from flask_restful import unpack
-from lima import Schema, fields
+from marshmallow import Schema, fields, post_load
 
 
 class serialize_with(object):
@@ -49,10 +49,10 @@ class serialize_with(object):
 
 
 class CoverageSchema(Schema):
-    id = fields.String(attr='_id')
-    name = fields.String()
+    id = fields.String(attribute='_id', required=True, load_from='_id')
+    name = fields.String(required=True)
 
-
-class CoveragesSchema(Schema):
-    coverages = fields.Embed(schema=CoverageSchema, many=True)
-
+    @post_load
+    def make_coverage(self, data):
+        from tartare.core import models
+        return models.Coverage(**data)
