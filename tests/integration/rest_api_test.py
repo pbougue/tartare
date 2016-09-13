@@ -90,3 +90,4 @@ def test_kown_version_status(app, monkeypatch):
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('version') == version
+
