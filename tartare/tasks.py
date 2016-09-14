@@ -7,7 +7,7 @@ from tartare import app
 from tartare import celery
 from shutil import copyfile
 import os
-from tartare.core import calendar_handler
+from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from zipfile import ZipFile
 import datetime
@@ -16,12 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 @celery.task()
-def update_data_task():
-    input_dir = app.config.get("INPUT_DIR")
-    output_dir = app.config.get("OUTPUT_DIR")
-    current_data_dir = app.config.get("CURRENT_DATA_DIR")
+def update_all_data_task():
+    for coverage in models.Coverage.all():
+        update_data(coverage)
+
+
+@celery.task()
+def update_data(coverage):
+    input_dir = coverage.technical_conf.input_dir
     logger.info('scanning directory %s', input_dir)
-    handle_data(input_dir, output_dir, current_data_dir)
+    handle_data(input_dir, coverage.technical_conf.output_dir, coverage.technical_conf.current_data_dir)
 
 
 def type_of_data(filename):

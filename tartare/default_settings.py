@@ -28,7 +28,7 @@ CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERYBEAT_SCHEDULE = {
     'udpate-data-every-n-seconds': {
-        'task': 'tartare.tasks.update_data_task',
+        'task': 'tartare.tasks.update_all_data_task',
         'schedule': timedelta(seconds=2),
         'options': {'expires': 25}
     },

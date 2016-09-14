@@ -1,5 +1,3 @@
-#coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,20 +26,29 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+import json
+import logging
 from tartare import mongo
-from tartare.interfaces import schema
+from marshmallow import Schema, fields, post_load
 
 
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, _id, name):
-        self._id = _id
+    class TechnicalConfiguration(object):
+        def __init__(self, input_dir, output_dir, current_data_dir):
+            self.input_dir = input_dir
+            self.output_dir = output_dir
+            self.current_data_dir = current_data_dir
+
+    def __init__(self, id, name, technical_conf):
+        self.id = id
         self.name = name
+        self.technical_conf = technical_conf
 
     def save(self):
-        mongo.db[self.mongo_collection].insert_one(self.__dict__)
+        raw = MongoCoverageSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
     def get(cls, coverage_id=None):
@@ -49,7 +56,7 @@ class Coverage(object):
         if raw is None:
             return None
 
-        return schema.CoverageSchema().load(raw).data
+        return MongoCoverageSchema().load(raw).data
 
     @classmethod
     def delete(cls, coverage_id=None):
@@ -59,8 +66,11 @@ class Coverage(object):
     @classmethod
     def find(cls, filter={}):
         raw = mongo.db[cls.mongo_collection].find(filter)
+        return MongoCoverageSchema(many=True).load(raw).data
 
-        return schema.CoverageSchema(many=True).load(raw).data
+    @classmethod
+    def all(cls):
+        return cls.find(filter={})
 
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
@@ -69,3 +79,19 @@ class Coverage(object):
             return None
 
         return cls.get(coverage_id)
+
+
+class MongoCoverageTechnicalConfSchema(Schema):
+    input_dir = fields.String()
+    output_dir = fields.String()
+    current_data_dir = fields.String()
+
+
+class MongoCoverageSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    name = fields.String(required=True)
+    technical_conf = fields.Nested(MongoCoverageTechnicalConfSchema)
+
+    @post_load
+    def make_coverage(self, data):
+        return Coverage(**data)
