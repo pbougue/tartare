@@ -40,7 +40,7 @@ CELERYBEAT_SCHEDULE_FILENAME = '/tmp/celerybeat-schedule'
 
 CELERYD_HIJACK_ROOT_LOGGER = False
 
-MONGO_URI = 'mongodb://localhost/tartare'
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost/tartare')
 
 INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
 OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
