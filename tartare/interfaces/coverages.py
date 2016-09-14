@@ -34,10 +34,11 @@ from tartare import app
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
+from marshmallow import ValidationError
 
 
 def _default_dir(var, coverage_id):
-    return os.path.join(app.config.get(var), coverage_id)
+    return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
 
 
 class Coverage(flask_restful.Resource):
@@ -50,18 +51,28 @@ class Coverage(flask_restful.Resource):
         parser.add_argument('current_data_dir', location='json')
 
         args = parser.parse_args()
-        coverageSchema = schema.CoverageSchema(strict=True)
+        coverage_schema = schema.CoverageSchema(strict=True)
+
+        # TODO remove this after webargs use
+        coverage_id = args['id']
+        args['technical_conf'] = {}
+        for arg, env_var in (('input_dir', 'INPUT_DIR'),
+                             ('output_dir', 'OUTPUT_DIR'),
+                             ('current_data_dir', 'CURRENT_DATA_DIR')):
+            args['technical_conf'][arg] = args[arg] or _default_dir(env_var, coverage_id)
 
         try:
-            coverage = coverageSchema.load(args).data
-            coverage.save()
+            coverage = coverage_schema.load(args).data
         except ValidationError as err:
             return {'error': err.messages}, 400
+
+        try:
+            coverage.save()
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
             return {'error': str(e)}, 400
 
-        return {'coverage': coverageSchema.dump(coverage).data}, 201
+        return {'coverage': coverage_schema.dump(coverage).data}, 201
 
     def get(self, coverage_id=None):
         if coverage_id:
@@ -85,13 +96,22 @@ class Coverage(flask_restful.Resource):
     def patch(self, coverage_id):
         parser = reqparse.RequestParser()
         parser.add_argument('name', location='json')
+        parser.add_argument('input_dir', location='json', dest='technical_conf.input_dir')
+        parser.add_argument('output_dir', location='json', dest='technical_conf.output_dir',
+                            store_missing=False)
+        parser.add_argument('current_data_dir', location='json', dest='technical_conf.current_data_dir',
+                            store_missing=False)
 
         args = parser.parse_args()
+
+        # we remove the null values in the parser to keep only setted values
+        # (else mongo will erase the other values)
+        args = {k: v for k, v in args.items() if v}
 
         try:
             coverage = models.Coverage.update(coverage_id, args)
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update coverage with dataset{}'.format(args))
+            logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(args))
             return {'error': str(e)}, 400
 
         if coverage is None:

@@ -102,7 +102,7 @@ def test_add_coverage_no_name(app):
 
 def test_add_coverage_with_input_path(app):
     raw = post(app, '/coverages',
-               {"id": "id_test", "name": "name of the coverage", "input_dir": "/srv/tartare/id_test/input"})
+               '{"id": "id_test", "name": "name of the coverage", "input_dir": "/srv/tartare/id_test/input"}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -139,7 +139,8 @@ def test_update_coverage_returns_success_status(app):
     r = to_json(raw)
 
     assert raw.status_code == 200
-    assert r["coverage"] == {"id": "id_test", "name": "new_name_test"}
+    assert r["coverage"]['id'] == "id_test"
+    assert r["coverage"]['name'] == "new_name_test"
 
 
 def test_update_unknown_coverage(app):
