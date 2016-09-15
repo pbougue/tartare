@@ -1,3 +1,4 @@
+
 # Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -25,40 +26,29 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from tartare import app, mongo
-import pytest
-
-from tests.docker_wrapper import MongoDocker
+from tartare.core import models
 
 
-@pytest.yield_fixture(scope="session", autouse=True)
-def docker():
+def test_coverage_fetch(get_app_context):
     """
-    a docker providing a mongo database is started once for all tests
+    basic use of mnogo, we create a Coverage and persist it, we should be able to get it back
     """
-    with MongoDocker() as docker:
-        yield docker
+    assert len(models.Coverage.all()) == 0
+    coverage = models.Coverage(id='id_of_the_coverage',
+                               name='name of the coverage',
+                               technical_conf=models.Coverage.TechnicalConfiguration(
+                                   input_dir='bob_the_input_dir',
+                                   output_dir='bobette_the_output_dir',
+                                   current_data_dir='bobitto_the_current_dir',
+                                   ))
+    coverage.save()
 
+    persisted_coverages = list(models.Coverage.all())
+    assert len(persisted_coverages) == 1
 
-@pytest.fixture(scope="session", autouse=True)
-def init_mongo_db(docker):
-    """
-    when the docker is started, we init flask once for the new database
-    """
-    app.config['MONGO_TEST_DBNAME'] = docker.DBNAME
-    app.config['MONGO_TEST_HOST'] = docker.ip_addr
-    mongo.init_app(app, 'MONGO_TEST')
-
-
-@pytest.fixture(scope="function", autouse=True)
-def empty_mongo(docker):
-    """Empty mongo db before each tests"""
-    with app.app_context():
-        mongo.db.client.drop_database(docker.DBNAME)
-
-
-@pytest.yield_fixture(scope="function")
-def get_app_context():
-    with app.app_context():
-        yield
+    assert persisted_coverages[0].id == 'id_of_the_coverage'
+    assert persisted_coverages[0].name == 'name of the coverage'
+    conf = persisted_coverages[0].technical_conf
+    assert conf.input_dir == 'bob_the_input_dir'
+    assert conf.output_dir == 'bobette_the_output_dir'
+    assert conf.current_data_dir == 'bobitto_the_current_dir'
