@@ -36,20 +36,29 @@ import json
 from tests.utils import to_json
 
 
-def test_post_grid_calendar_returns_success_status(app):
+@pytest.fixture(scope="function")
+def coverage(app):
+    coverage = app.post('/coverages',
+                headers={'Content-Type': 'application/json'},
+               data='{"id": "jdr", "name": "name of the coverage jdr"}')
+    return to_json(coverage)['coverage']
+
+
+def test_post_grid_calendar_returns_success_status(app, coverage):
     filename = 'export_calendars.zip'
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixtures/gridcalendar/', filename)
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/gridcalendar/', filename)
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
     r = to_json(raw)
-    input_dir = os.path.join(tartare.app.config.get("INPUT_DIR"))
+    input_dir = coverage['technical_conf']['input_dir']
+    assert input_dir == './input/jdr'
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
     assert os.path.exists(os.path.join(input_dir, filename))
 
 
-def test_post_grid_calendar_returns_non_compliant_file_status(app):
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+def test_post_grid_calendar_returns_non_compliant_file_status(app, coverage):
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                         'fixtures/gridcalendar/export_calendars_with_invalid_header.zip')
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
@@ -58,8 +67,8 @@ def test_post_grid_calendar_returns_non_compliant_file_status(app):
     assert r.get('message') == 'non-compliant file(s) : grid_periods.txt'
 
 
-def test_post_grid_calendar_returns_file_missing_status(app):
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+def test_post_grid_calendar_returns_file_missing_status(app, coverage):
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                         'fixtures/gridcalendar/export_calendars_without_grid_calendars.zip')
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
@@ -68,7 +77,7 @@ def test_post_grid_calendar_returns_file_missing_status(app):
     assert r.get('message') == 'file(s) missing : grid_calendars.txt'
 
 
-def test_post_grid_calendar_returns_archive_missing_message(app):
+def test_post_grid_calendar_returns_archive_missing_message(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar')
     r = to_json(raw)
     assert raw.status_code == 400
