@@ -36,6 +36,7 @@ import os
 from flask.globals import request
 from flask_restful import Resource
 from tartare import app
+from tartare.core import models
 import shutil
 
 GRID_CALENDARS = "grid_calendars.txt"
@@ -81,6 +82,10 @@ def check_files_header(zip_file):
 
 class GridCalendar(Resource):
     def post(self, coverage_id):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            return {'message': 'bad coverage {}'.format(coverage_id)}, 400
+
         if not request.files:
             return {'message': 'the archive is missing'}, 400
         content = request.files['file']
@@ -98,7 +103,7 @@ class GridCalendar(Resource):
             return {'message': 'non-compliant file(s) : {}'.format(''.join(invalid_files))}, 400
 
         # backup content
-        input_dir = app.config.get("INPUT_DIR")
+        input_dir = coverage.technical_conf.input_dir
         if not os.path.exists(input_dir):
             os.makedirs(input_dir)
         content.stream.seek(0)
