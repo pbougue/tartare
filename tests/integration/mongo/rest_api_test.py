@@ -36,7 +36,7 @@ import json
 from tests.utils import to_json
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def coverage(app):
     coverage = app.post('/coverages',
                 headers={'Content-Type': 'application/json'},
@@ -51,7 +51,7 @@ def test_post_grid_calendar_returns_success_status(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
     r = to_json(raw)
     input_dir = coverage['technical_conf']['input_dir']
-    assert input_dir == './input'
+    assert input_dir == './input/jdr'
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
     assert os.path.exists(os.path.join(input_dir, filename))
