@@ -64,7 +64,7 @@ class Coverage(object):
         return raw.deleted_count
 
     @classmethod
-    def find(cls, filter={}):
+    def find(cls, filter):
         raw = mongo.db[cls.mongo_collection].find(filter)
         return MongoCoverageSchema(many=True).load(raw).data
 
@@ -85,6 +85,9 @@ class MongoCoverageTechnicalConfSchema(Schema):
     input_dir = fields.String()
     output_dir = fields.String()
     current_data_dir = fields.String()
+    @post_load
+    def make_technical_conf(self, data):
+        return Coverage.TechnicalConfiguration(**data)
 
 
 class MongoCoverageSchema(Schema):
