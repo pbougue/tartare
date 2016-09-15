@@ -140,6 +140,10 @@ def handle_data(input_dir, output_dir, current_data_dir):
     Move all file from the input_dir to output_dir
     All interesting data are also moved to the current_dir
     """
+    if not os.path.exists(input_dir):
+        logger.debug('directory {} does not exists, skipping scan'.format(input_dir))
+        return
+
     create_dir(output_dir)
     create_dir(current_data_dir)
 
