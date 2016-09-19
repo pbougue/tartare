@@ -104,6 +104,15 @@ def test_post_osm_returns_invalid_file_extension_message(app, coverage):
     assert raw.status_code == 400
     assert r.get('message') == 'invalid extension (*.osm.pbf expected)'
 
+def test_post_osm_returns_invalid_coverage(app, coverage):
+    filename = 'empty_pbf.osm.pbf'
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+    files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
+    raw = app.post('/coverages/jdr_bug/geo_data', data=files)
+    r = to_json(raw)
+    assert raw.status_code == 400
+    assert r.get('message') == 'bad coverage jdr_bug'
+
 def test_post_pbf_returns_file_missing_message(app, coverage):
     raw = app.post('/coverages/jdr/geo_data')
     r = to_json(raw)
