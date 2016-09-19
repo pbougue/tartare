@@ -51,7 +51,7 @@ class GeoData(Resource):
         logger.info('content received: {}'.format(content))
         extension = content.filename[-8:]
         if extension != ".osm.pbf" :
-            return {'message': ' invalid extension (*.osm.pbf expected)'}, 400
+            return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
 
         # backup content
         input_dir = coverage.technical_conf.input_dir
