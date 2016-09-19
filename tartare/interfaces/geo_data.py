@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env python
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -29,15 +30,36 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import logging
+import os
+from flask.globals import request
+from flask_restful import Resource
 from tartare import app
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.grid_calendar import GridCalendar
-from tartare.interfaces.geo_data import GeoData
-from flask_restful import Api
-from tartare.interfaces.status import Status
+from tartare.core import models
+import shutil
 
-api = Api(app)
-api.add_resource(GridCalendar, '/coverages/<string:coverage_id>/grid_calendar')
-api.add_resource(Status, '/status')
-api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>')
-api.add_resource(GeoData, '/coverages/<string:coverage_id>/geo_data')
+class GeoData(Resource):
+    def post(self, coverage_id):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            return {'message': 'bad coverage {}'.format(coverage_id)}, 400
+
+        if not request.files:
+            return {'message': 'the pbf is missing'}, 400
+        content = request.files['file']
+        logger = logging.getLogger(__name__)
+        logger.info('content received: {}'.format(content))
+        extension = content.filename[-8:]
+        if extension != ".osm.pbf" :
+            return {'message': ' invalid extension (*.osm.pbf expected)'}, 400
+
+        # backup content
+        input_dir = coverage.technical_conf.input_dir
+        if not os.path.exists(input_dir):
+            os.makedirs(input_dir)
+        content.save(os.path.join(input_dir, content.filename + ".tmp"))
+        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
+
+        shutil.move(full_file_name + ".tmp", full_file_name)
+
+        return {'message': 'OK'}, 200
