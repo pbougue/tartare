@@ -51,7 +51,7 @@ To watch logs output:
 
 ## Rest Api
 
-Tartare provides an API to enable coverage declatation and configuration, and to POST data to update.
+Tartare provides an API to enable coverage declaration and configuration, and to POST data to update.
 
 ### Run the Rest Api
 
@@ -74,30 +74,36 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 #### Configuration of coverages
 
-To list the coverages available :
+##### List the available coverages
+
 ``` bash
-curl -X GET -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/
+curl -X GET http://127.0.0.1:5000/coverages/
 ```
 
-To create a new coverage in tartare (data folders need to be created previously)
+##### Create a new coverage
+
 ``` bash
+# using curl
 curl -X POST http://127.0.0.1:5000/coverages/ -H "Content-Type: application/json" -d '{"name":"coverage_name", "id":"coverage_id" }'
-```
-or
-``` bash
+# using http
 http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
 ```
+
 There are optionnal parameters :
 * input_dir : scanned directoy for NTFS Data file
 * output_dir : output directoy of the processed Data (should be configured to the input directoy of Tyr module)
 * current_data_dir : used to keep trace of the manipulated Data files
 
-To make a modification of the configuration of a coverage :
+Data folders need to be created previously
+
+##### Modify a coverage configuration
+
 ``` bash
 curl -X PATCH http://127.0.0.1:5000/coverages/coverage_id/ -H "Content-Type: application/json" -d '{"name":"coverage_new_name"}'
 ```
 
-To delete a coverage :
+##### Delete a coverage
+
 ``` bash
 curl -X DELETE http://127.0.0.1:5000/coverages/coverage_id
 ```
@@ -106,19 +112,17 @@ curl -X DELETE http://127.0.0.1:5000/coverages/coverage_id
 #### Sending Data to a specific coverage
 POST grid calendars to a specific coverage :
 ``` bash
+# using curl
 curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
-```
-or
-``` bash
+# using http
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path/to/your-file.zip --form
 ```
 
 POST geographic Data (actually OSM PBF files only) :
 ``` bash
+# using curl
 curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
-```
-or
-``` bash
+# using http
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/geo_data' file@/path/to/your-file.osm.pbf --form
 ```
 
