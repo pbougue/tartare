@@ -85,7 +85,7 @@ curl -X GET http://127.0.0.1:5000/coverages/
 ``` bash
 # using curl
 curl -X POST http://127.0.0.1:5000/coverages/ -H "Content-Type: application/json" -d '{"name":"coverage_name", "id":"coverage_id" }'
-# using http
+# using HTTPie python package
 http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
 ```
 
@@ -114,7 +114,7 @@ POST grid calendars to a specific coverage :
 ``` bash
 # using curl
 curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
-# using http
+# using HTTPie python package
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path/to/your-file.zip --form
 ```
 
@@ -122,7 +122,7 @@ POST geographic Data (actually OSM PBF files only) :
 ``` bash
 # using curl
 curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
-# using http
+# using HTTPie python package
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/geo_data' file@/path/to/your-file.osm.pbf --form
 ```
 
