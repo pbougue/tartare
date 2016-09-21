@@ -61,4 +61,3 @@ def make_celery(app):
 
     celery_app.Task = ContextTask
     return celery_app
-

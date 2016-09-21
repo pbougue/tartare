@@ -34,6 +34,8 @@ from flask import Flask
 from tartare.helper import configure_logger, make_celery
 from celery.signals import setup_logging
 from flask_pymongo import PyMongo
+from tartare import api
+
 
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')
@@ -50,6 +52,3 @@ def celery_setup_logging(*args, **kwargs):
     pass
 
 celery = make_celery(app)
-
-
-from tartare import api

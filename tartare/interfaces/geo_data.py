@@ -38,6 +38,7 @@ from tartare import app
 from tartare.core import models
 import shutil
 
+
 class GeoData(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
@@ -50,7 +51,7 @@ class GeoData(Resource):
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
         extension = content.filename[-8:]
-        if extension != ".osm.pbf" :
+        if extension != ".osm.pbf":
             return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
 
         # backup content
