@@ -34,7 +34,6 @@ import logging
 import os
 from flask.globals import request
 from flask_restful import Resource
-from tartare import app
 from tartare.core import models
 import shutil
 

@@ -90,9 +90,9 @@ http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
 ```
 
 There are optionnal parameters :
-* input_dir : scanned directoy for NTFS Data file
+* input_dir : scanned directoy for NTFS Data file (provided by Fusio)
 * output_dir : output directoy of the processed Data (should be configured to the input directoy of Tyr module)
-* current_data_dir : used to keep trace of the manipulated Data files
+* current_data_dir : used to keep trace of the manipulated Data files (backup of the last version of the files)
 
 Data folders need to be created previously
 
@@ -118,7 +118,7 @@ curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/cove
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path/to/your-file.zip --form
 ```
 
-POST geographic Data (actually OSM PBF files only) :
+POST geographic Data (currently OSM PBF files only) :
 ``` bash
 # using curl
 curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
