@@ -110,7 +110,7 @@ def test_post_osm_returns_invalid_coverage(app, coverage):
     files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
     raw = app.post('/coverages/jdr_bug/geo_data', data=files)
     r = to_json(raw)
-    assert raw.status_code == 400
+    assert raw.status_code == 404
     assert r.get('message') == 'bad coverage jdr_bug'
 
 def test_post_pbf_returns_file_missing_message(app, coverage):

@@ -42,15 +42,14 @@ class GeoData(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            return {'message': 'bad coverage {}'.format(coverage_id)}, 400
+            return {'message': 'bad coverage {}'.format(coverage_id)}, 404
 
         if not request.files:
             return {'message': 'the pbf is missing'}, 400
         content = request.files['file']
         logger = logging.getLogger(__name__)
-        logger.info('content received: {}'.format(content))
-        extension = content.filename[-8:]
-        if extension != ".osm.pbf":
+        logger.info('content received: %s', content)
+        if not content.filename.endswith(".osm.pbf") :
             return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
 
         # backup content
