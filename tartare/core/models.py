@@ -85,6 +85,7 @@ class MongoCoverageTechnicalConfSchema(Schema):
     input_dir = fields.String()
     output_dir = fields.String()
     current_data_dir = fields.String()
+
     @post_load
     def make_technical_conf(self, data):
         return Coverage.TechnicalConfiguration(**data)

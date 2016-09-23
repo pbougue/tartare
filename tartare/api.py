@@ -32,6 +32,7 @@
 from tartare import app
 from tartare.interfaces.coverages import Coverage
 from tartare.interfaces.grid_calendar import GridCalendar
+from tartare.interfaces.geo_data import GeoData
 from flask_restful import Api
 from tartare.interfaces.status import Status
 
@@ -39,3 +40,4 @@ api = Api(app)
 api.add_resource(GridCalendar, '/coverages/<string:coverage_id>/grid_calendar')
 api.add_resource(Status, '/status')
 api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>')
+api.add_resource(GeoData, '/coverages/<string:coverage_id>/geo_data')

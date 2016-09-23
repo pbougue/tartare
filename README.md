@@ -51,7 +51,7 @@ To watch logs output:
 
 ## Rest Api
 
-Tartare provides an Api to POST Navitia data to update.
+Tartare provides an API to enable coverage declaration and configuration, and to POST data to update.
 
 ### Run the Rest Api
 
@@ -72,11 +72,60 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 ### Use the Rest Api
 
-POST a file:
+#### Configuration of coverages
+
+##### List the available coverages
 
 ``` bash
-curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/grid_calendar
+curl -X GET http://127.0.0.1:5000/coverages/
 ```
+
+##### Create a new coverage
+
+``` bash
+# using curl
+curl -X POST http://127.0.0.1:5000/coverages/ -H "Content-Type: application/json" -d '{"name":"coverage_name", "id":"coverage_id" }'
+# using HTTPie python package
+http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
+```
+
+There are optionnal parameters :
+* input_dir : scanned directoy for NTFS Data file (provided by Fusio)
+* output_dir : output directoy of the processed Data (should be configured to the input directoy of Tyr module)
+* current_data_dir : used to keep trace of the manipulated Data files (backup of the last version of the files)
+
+Data folders need to be created previously
+
+##### Modify a coverage configuration
+
+``` bash
+curl -X PATCH http://127.0.0.1:5000/coverages/coverage_id/ -H "Content-Type: application/json" -d '{"name":"coverage_new_name"}'
+```
+
+##### Delete a coverage
+
+``` bash
+curl -X DELETE http://127.0.0.1:5000/coverages/coverage_id
+```
+
+
+#### Sending Data to a specific coverage
+POST grid calendars to a specific coverage :
+``` bash
+# using curl
+curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
+# using HTTPie python package
+http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path/to/your-file.zip --form
+```
+
+POST geographic Data (currently OSM PBF files only) :
+``` bash
+# using curl
+curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
+# using HTTPie python package
+http POST 'http://127.0.0.1:5000/coverages/coverage_id/geo_data' file@/path/to/your-file.osm.pbf --form
+```
+
 
 ## Tests
 ```

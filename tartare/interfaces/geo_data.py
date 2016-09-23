@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,36 +31,34 @@
 # www.navitia.io
 
 import logging
-import logging.config
-import celery
-import sys
+import os
+from flask.globals import request
+from flask_restful import Resource
+from tartare.core import models
+import shutil
 
 
-def configure_logger(app_config):
-    """
-    initialize logging
-    """
-    if 'LOGGER' in app_config:
-        logging.config.dictConfig(app_config['LOGGER'])
-    else:  # Default is std out
-        logging.basicConfig(level='INFO')
+class GeoData(Resource):
+    def post(self, coverage_id):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            return {'message': 'bad coverage {}'.format(coverage_id)}, 404
 
+        if not request.files:
+            return {'message': 'the pbf is missing'}, 400
+        content = request.files['file']
+        logger = logging.getLogger(__name__)
+        logger.info('content received: %s', content)
+        if not content.filename.endswith(".osm.pbf") :
+            return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
 
-def make_celery(app):
-    celery_app = celery.Celery(app.import_name,
-                               broker=app.config['CELERY_BROKER_URL'])
-    celery_app.conf.update(app.config)
-    TaskBase = celery_app.Task
+        # backup content
+        input_dir = coverage.technical_conf.input_dir
+        if not os.path.exists(input_dir):
+            os.makedirs(input_dir)
+        content.save(os.path.join(input_dir, content.filename + ".tmp"))
+        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
 
-    class ContextTask(TaskBase):
-        abstract = True
+        shutil.move(full_file_name + ".tmp", full_file_name)
 
-        def __init__(self):
-            pass
-
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-
-    celery_app.Task = ContextTask
-    return celery_app
+        return {'message': 'OK'}, 200
