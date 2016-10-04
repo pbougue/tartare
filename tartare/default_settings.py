@@ -46,10 +46,6 @@ INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
 OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
 CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
 
-TYR_INTEGRATION_URL = "https://localhost:5000/"
-TYR_PREPROD_URL = "https://localhost:5000/"
-TYR_PROD_URL = "https://localhost:5000/"
-
 # GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
 # The absolute path is CURRENT_DATA_DIR/grid_calendar
 GRID_CALENDAR_DIR = 'grid_calendar'

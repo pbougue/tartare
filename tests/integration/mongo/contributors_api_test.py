@@ -165,7 +165,7 @@ def test_update_contributor_data_prefix_error(app):
     raw = patch(app, '/contributors/id_test', '{"data_prefix": "AAB"}')
     r = to_json(raw)
 
-    assert raw.status_code == 403
+    assert raw.status_code == 400
 
 
 def test_update_unknown_coverage(app):
@@ -177,6 +177,8 @@ def test_update_unknown_coverage(app):
 
 def test_update_contributor_id_impossible(app):
     """It should not be possible to update the id of an object"""
+    raw = post(app, '/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
+    assert raw.status_code == 201
     raw = patch(app, '/contributors/id_test', '{"id": "bob"}')
     r = to_json(raw)
     assert 'error' in r

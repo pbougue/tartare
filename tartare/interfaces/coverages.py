@@ -49,9 +49,6 @@ class Coverage(flask_restful.Resource):
         parser.add_argument('input_dir', location='json')
         parser.add_argument('output_dir', location='json')
         parser.add_argument('current_data_dir', location='json')
-        parser.add_argument('tyr_integration_url', location='json')
-        parser.add_argument('tyr_preprod_url', location='json')
-        parser.add_argument('tyr_prod_url', location='json')
 
         args = parser.parse_args()
         coverage_schema = schema.CoverageSchema(strict=True)
@@ -61,10 +58,7 @@ class Coverage(flask_restful.Resource):
         args['technical_conf'] = {}
         for arg, env_var in (('input_dir', 'INPUT_DIR'),
                              ('output_dir', 'OUTPUT_DIR'),
-                             ('current_data_dir', 'CURRENT_DATA_DIR'),
-                             ('tyr_integration_url', 'TYR_INTEGRATION_URL'),
-                             ('tyr_preprod_url', 'TYR_PREPROD_URL'),
-                             ('tyr_prod_url', 'TYR_PROD_URL')):
+                             ('current_data_dir', 'CURRENT_DATA_DIR')):
             args['technical_conf'][arg] = args[arg] or _default_dir(env_var, coverage_id)
 
         try:
@@ -76,7 +70,7 @@ class Coverage(flask_restful.Resource):
             coverage.save()
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
-            return {'error': str(e)}, 400
+            return {'error': str(e)}, 500
 
         return {'coverage': coverage_schema.dump(coverage).data}, 201
 
@@ -102,28 +96,28 @@ class Coverage(flask_restful.Resource):
     def patch(self, coverage_id):
         parser = reqparse.RequestParser()
         parser.add_argument('name', location='json')
+        parser.add_argument('id', location='json')
         parser.add_argument('input_dir', location='json', dest='technical_conf.input_dir')
         parser.add_argument('output_dir', location='json', dest='technical_conf.output_dir',
                             store_missing=False)
         parser.add_argument('current_data_dir', location='json', dest='technical_conf.current_data_dir',
                             store_missing=False)
-        parser.add_argument('tyr_integration_url', location='json', dest='technical_conf.tyr_integration_url')
-        parser.add_argument('tyr_preprod_url', location='json', dest='technical_conf.tyr_preprod_url')
-        parser.add_argument('tyr_prod_url', location='json', dest='technical_conf.tyr_prod_url')
 
         args = parser.parse_args()
 
         # we remove the null values in the parser to keep only setted values
         # (else mongo will erase the other values)
         args = {k: v for k, v in args.items() if v}
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            abort(404)
+        if ('id' in args) and (coverage.id != args['id']):
+            return {'error': 'The modification of the id is not possible'}, 400
 
         try:
             coverage = models.Coverage.update(coverage_id, args)
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(args))
-            return {'error': str(e)}, 400
-
-        if coverage is None:
-            abort(404)
+            return {'error': str(e)}, 500
 
         return {'coverage': schema.CoverageSchema().dump(coverage).data}, 200

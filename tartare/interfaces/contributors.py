@@ -30,7 +30,7 @@
 import os
 from flask_restful import reqparse, abort
 import flask_restful
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare import app
 from tartare.core import models
 import logging
@@ -55,9 +55,12 @@ class Contributor(flask_restful.Resource):
 
         try:
             contributor.save()
+        except DuplicateKeyError as e:
+            logging.getLogger(__name__).exception('impossible to add contributor {}, data_prefix already used ({})'.format(contributor, args['data_prefix']))
+            return {'error': str(e)}, 400
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add contributor {}'.format(contributor))
-            return {'error': str(e)}, 400
+            return {'error': str(e)}, 500
 
         return {'contributor': contributor_schema.dump(contributor).data}, 201
 
@@ -66,12 +69,9 @@ class Contributor(flask_restful.Resource):
             c = models.Contributor.get(contributor_id)
             if c is None:
                 abort(404)
-
             result = schema.ContributorSchema().dump(c)
             return {'contributor': result.data}, 200
-
         contributors = models.Contributor.all()
-
         return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
 
     def delete(self, contributor_id):
@@ -82,6 +82,7 @@ class Contributor(flask_restful.Resource):
 
     def patch(self, contributor_id):
         parser = reqparse.RequestParser()
+        parser.add_argument('id', location='json')
         parser.add_argument('name', location='json')
         parser.add_argument('data_prefix', location='json')
         args = parser.parse_args()
@@ -92,16 +93,18 @@ class Contributor(flask_restful.Resource):
 
         # "data_prefix" field is not modifiable, impacts of the modification need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
+        if contributor is None:
+            abort(404)
+
         if ('data_prefix' in args) and (contributor.data_prefix != args['data_prefix']):
-            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(contributor.data_prefix, args['data_prefix'])}, 403
+            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(contributor.data_prefix, args['data_prefix'])}, 400
+        if ('id' in args) and (contributor.id != args['id']):
+            return {'error': 'The modification of the id is not possible'}, 400
 
         try:
             contributor = models.Contributor.update(contributor_id, args)
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to update contributor with dataset {}'.format(args))
-            return {'error': str(e)}, 400
-
-        if contributor is None:
-            abort(404)
+            return {'error': str(e)}, 500
 
         return {'contributor': schema.ContributorSchema().dump(contributor).data}, 200
