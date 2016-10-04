@@ -44,6 +44,11 @@ configure_logger(app.config)
 mongo = PyMongo(app)
 
 
+@app.before_first_request
+def init_mongo():
+    mongo.db['contributors'].ensure_index("data_prefix", unique=True)
+
+
 @setup_logging.connect
 def celery_setup_logging(*args, **kwargs):
     # we don't want celery to mess with our logging configuration

@@ -49,6 +49,9 @@ class Coverage(flask_restful.Resource):
         parser.add_argument('input_dir', location='json')
         parser.add_argument('output_dir', location='json')
         parser.add_argument('current_data_dir', location='json')
+        parser.add_argument('tyr_integration_url', location='json')
+        parser.add_argument('tyr_preprod_url', location='json')
+        parser.add_argument('tyr_prod_url', location='json')
 
         args = parser.parse_args()
         coverage_schema = schema.CoverageSchema(strict=True)
@@ -58,7 +61,10 @@ class Coverage(flask_restful.Resource):
         args['technical_conf'] = {}
         for arg, env_var in (('input_dir', 'INPUT_DIR'),
                              ('output_dir', 'OUTPUT_DIR'),
-                             ('current_data_dir', 'CURRENT_DATA_DIR')):
+                             ('current_data_dir', 'CURRENT_DATA_DIR'),
+                             ('tyr_integration_url', 'TYR_INTEGRATION_URL'),
+                             ('tyr_preprod_url', 'TYR_PREPROD_URL'),
+                             ('tyr_prod_url', 'TYR_PROD_URL')):
             args['technical_conf'][arg] = args[arg] or _default_dir(env_var, coverage_id)
 
         try:
@@ -101,6 +107,9 @@ class Coverage(flask_restful.Resource):
                             store_missing=False)
         parser.add_argument('current_data_dir', location='json', dest='technical_conf.current_data_dir',
                             store_missing=False)
+        parser.add_argument('tyr_integration_url', location='json', dest='technical_conf.tyr_integration_url')
+        parser.add_argument('tyr_preprod_url', location='json', dest='technical_conf.tyr_preprod_url')
+        parser.add_argument('tyr_prod_url', location='json', dest='technical_conf.tyr_prod_url')
 
         args = parser.parse_args()
 

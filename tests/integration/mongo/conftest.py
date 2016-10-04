@@ -56,6 +56,11 @@ def empty_mongo(docker):
     """Empty mongo db before each tests"""
     with app.app_context():
         mongo.db.client.drop_database(docker.DBNAME)
+    #TODO try to remove the code below
+    # problem is the empty_mongo function is called after each tests, which errase the indexes  previously created (cf. tartare.__init__.py)
+    with app.app_context():
+        db = mongo.db.client[docker.DBNAME]
+        db['contributors'].ensure_index("data_prefix", unique=True)
 
 
 @pytest.yield_fixture(scope="function")
