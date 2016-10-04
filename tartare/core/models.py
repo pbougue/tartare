@@ -30,6 +30,12 @@ import json
 import logging
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
+from tartare import app
+
+
+@app.before_first_request
+def init_mongo():
+    mongo.db['contributors'].ensure_index("data_prefix", unique=True)
 
 
 class Coverage(object):
