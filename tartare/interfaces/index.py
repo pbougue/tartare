@@ -1,4 +1,5 @@
-# coding=utf-8
+#!/usr/bin/env python
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -29,17 +30,13 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.grid_calendar import GridCalendar
-from tartare.interfaces.geo_data import GeoData
-from flask_restful import Api
-from tartare.interfaces.status import Status
-from tartare.interfaces.index import Index
+import flask_restful
+from flask import url_for
 
-api = Api(app)
-api.add_resource(GridCalendar, '/coverages/<string:coverage_id>/grid_calendar', endpoint='grid_calendar')
-api.add_resource(Status, '/status', endpoint='status')
-api.add_resource(Index, '/', endpoint='index')
-api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>', endpoint='coverages')
-api.add_resource(GeoData, '/coverages/<string:coverage_id>/geo_data', endpoint='geo_data')
+
+class Index(flask_restful.Resource):
+    def get(self):
+        return ({'_links':
+                    {'coverages': {'href': url_for('coverages', _external=True)},
+                     'status': {'href': url_for('status', _external=True)}}},
+                200)
