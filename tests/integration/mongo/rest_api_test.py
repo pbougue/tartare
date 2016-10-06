@@ -134,3 +134,9 @@ def test_kown_version_status(app, monkeypatch):
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('version') == version
+
+def test_index(app):
+    response = app.get('/')
+    assert response.status_code == 200
+    r = to_json(response)
+    assert '_links' in r
