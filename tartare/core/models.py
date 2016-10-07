@@ -26,8 +26,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import json
-import logging
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
@@ -42,7 +40,7 @@ class Coverage(object):
     mongo_collection = 'coverages'
 
     class TechnicalConfiguration(object):
-        def __init__(self, input_dir, output_dir, current_data_dir):
+        def __init__(self, input_dir=None, output_dir=None, current_data_dir=None):
             self.input_dir = input_dir
             self.output_dir = output_dir
             self.current_data_dir = current_data_dir
@@ -62,7 +60,7 @@ class Coverage(object):
         if raw is None:
             return None
 
-        return MongoCoverageSchema().load(raw).data
+        return MongoCoverageSchema(strict=True).load(raw).data
 
     @classmethod
     def delete(cls, coverage_id=None):
@@ -80,6 +78,11 @@ class Coverage(object):
 
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
+        #we have to use "doted notation' to only update some fields of a nested object
+        if 'technical_conf' in dataset:
+            for key, value in dataset['technical_conf'].items():
+                dataset['technical_conf.{}'.format(key)] = value
+            del dataset['technical_conf']
         raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': dataset})
         if raw.matched_count == 0:
             return None

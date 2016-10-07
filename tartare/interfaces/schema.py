@@ -30,9 +30,11 @@
 # www.navitia.io
 from functools import wraps
 from flask_restful import unpack
-from marshmallow import Schema, fields, post_load
-from tartare.core.models import MongoCoverageSchema
+from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
+from tartare.core.models import MongoCoverageSchema, Coverage
 from tartare.core.models import MongoContributorSchema
+import os
+from tartare import app
 
 
 class serialize_with(object):
@@ -51,8 +53,31 @@ class serialize_with(object):
 
 
 class CoverageSchema(MongoCoverageSchema):
-    id = fields.String()
+    id = fields.String(required=True)
 
+    @validates_schema(pass_original=True)
+    def check_unknown_fields(self, data, original_data):
+        for key in original_data:
+            if key not in self.fields:
+                raise ValidationError('Unknown field name {}'.format(key))
+
+    @post_load
+    def make_coverage(self, data):
+        """
+        we override the make coverage from the schema model, this way we can add some specific logic
+        This method need to have the same name as the one in the modelSchema else they will both be called
+        """
+        def _default_dir(var, coverage_id):
+            return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
+
+        if 'technical_conf' not in data:
+            data['technical_conf'] = Coverage.TechnicalConfiguration()
+        for arg, env_var in (('input_dir', 'INPUT_DIR'),
+                             ('output_dir', 'OUTPUT_DIR'),
+                             ('current_data_dir', 'CURRENT_DATA_DIR')):
+            setattr(data['technical_conf'], arg, getattr(data.get('technical_conf', {}), arg) \
+                                                 or _default_dir(env_var, data['id']))
+        return Coverage(**data)
 
 class ContributorSchema(MongoContributorSchema):
     id = fields.String()

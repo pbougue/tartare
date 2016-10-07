@@ -102,7 +102,7 @@ def test_add_coverage_no_name(app):
 
 def test_add_coverage_with_input_path(app):
     raw = post(app, '/coverages',
-               '{"id": "id_test", "name": "name of the coverage", "input_dir": "/srv/tartare/id_test/input"}')
+            '{"id": "id_test", "name": "name of the coverage", "technical_conf" : {"input_dir": "/srv/tartare/id_test/input"}}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -115,10 +115,10 @@ def test_add_coverage_with_input_path(app):
 
 def test_patch_complex_coverage(app):
     raw = post(app, '/coverages',
-               '{"id": "id_test", "name": "name of the coverage", '
-               '"current_data_dir": "/srv/tartare/id_test/current_data_dir",'
-               '"output_dir": "/srv/tartare/id_test/output_dir"'
-               '}')
+               '''{"id": "id_test", "name": "name of the coverage",
+                   "technical_conf": {"current_data_dir": "/srv/tartare/id_test/current_data_dir",
+                                      "output_dir": "/srv/tartare/id_test/output_dir"}
+               }''')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -132,7 +132,8 @@ def test_patch_complex_coverage(app):
     assert conf["current_data_dir"] == "/srv/tartare/id_test/current_data_dir"
     assert conf["output_dir"] == "/srv/tartare/id_test/output_dir"
 
-    raw = patch(app, '/coverages/id_test', '{"output_dir": "/srv/bob"}')
+    raw = patch(app, '/coverages/id_test', '{"technical_conf": {"output_dir": "/srv/bob"}}')
+    assert raw.status_code == 200
     r = to_json(raw)
     assert r["coverage"]["id"] == "id_test"
     assert r["coverage"]["name"] == "name of the coverage"
