@@ -181,6 +181,8 @@ def test_update_unknown_coverage(app):
 
 def test_update_id_impossible(app):
     """It should not be possible to update the id of an object"""
+    raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
+    assert raw.status_code == 201
     raw = patch(app, '/coverages/id_test', '{"id": "bob"}')
     r = to_json(raw)
     assert 'error' in r

@@ -30,6 +30,12 @@ import json
 import logging
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
+from tartare import app
+
+
+@app.before_first_request
+def init_mongo():
+    mongo.db['contributors'].ensure_index("data_prefix", unique=True)
 
 
 class Coverage(object):
@@ -99,3 +105,55 @@ class MongoCoverageSchema(Schema):
     @post_load
     def make_coverage(self, data):
         return Coverage(**data)
+
+
+class Contributor(object):
+    mongo_collection = 'contributors'
+
+    def __init__(self, id, name, data_prefix):
+        self.id = id
+        self.name = name
+        self.data_prefix = data_prefix
+
+    def save(self):
+        raw = MongoContributorSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get(cls, contributor_id=None):
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
+        if raw is None:
+            return None
+        return MongoContributorSchema().load(raw).data
+
+    @classmethod
+    def delete(cls, contributor_id=None):
+        raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
+        return raw.deleted_count
+
+    @classmethod
+    def find(cls, filter):
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        return MongoContributorSchema(many=True).load(raw).data
+
+    @classmethod
+    def all(cls):
+        return cls.find(filter={})
+
+    @classmethod
+    def update(cls, contributor_id=None, dataset={}):
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': dataset})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor_id)
+
+
+class MongoContributorSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    name = fields.String(required=True)
+    data_prefix = fields.String(required=True)
+
+    @post_load
+    def make_contributor(self, data):
+        return Contributor(**data)

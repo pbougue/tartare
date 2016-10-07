@@ -70,7 +70,7 @@ class Coverage(flask_restful.Resource):
             coverage.save()
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
-            return {'error': str(e)}, 400
+            return {'error': str(e)}, 500
 
         return {'coverage': coverage_schema.dump(coverage).data}, 201
 
@@ -96,6 +96,7 @@ class Coverage(flask_restful.Resource):
     def patch(self, coverage_id):
         parser = reqparse.RequestParser()
         parser.add_argument('name', location='json')
+        parser.add_argument('id', location='json')
         parser.add_argument('input_dir', location='json', dest='technical_conf.input_dir')
         parser.add_argument('output_dir', location='json', dest='technical_conf.output_dir',
                             store_missing=False)
@@ -107,14 +108,16 @@ class Coverage(flask_restful.Resource):
         # we remove the null values in the parser to keep only setted values
         # (else mongo will erase the other values)
         args = {k: v for k, v in args.items() if v}
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            abort(404)
+        if ('id' in args) and (coverage.id != args['id']):
+            return {'error': 'The modification of the id is not possible'}, 400
 
         try:
             coverage = models.Coverage.update(coverage_id, args)
         except PyMongoError as e:
             logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(args))
-            return {'error': str(e)}, 400
-
-        if coverage is None:
-            abort(404)
+            return {'error': str(e)}, 500
 
         return {'coverage': schema.CoverageSchema().dump(coverage).data}, 200

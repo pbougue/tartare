@@ -32,6 +32,7 @@ from functools import wraps
 from flask_restful import unpack
 from marshmallow import Schema, fields, post_load
 from tartare.core.models import MongoCoverageSchema
+from tartare.core.models import MongoContributorSchema
 
 
 class serialize_with(object):
@@ -50,4 +51,8 @@ class serialize_with(object):
 
 
 class CoverageSchema(MongoCoverageSchema):
+    id = fields.String()
+
+
+class ContributorSchema(MongoContributorSchema):
     id = fields.String()
