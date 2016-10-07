@@ -93,7 +93,7 @@ class Coverage(flask_restful.Resource):
         try:
             coverage = models.Coverage.update(coverage_id, request.json)
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(args))
+            logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(request.json))
             return {'error': str(e)}, 500
 
         return {'coverage': schema.CoverageSchema().dump(coverage).data}, 200
