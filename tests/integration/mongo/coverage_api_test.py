@@ -188,3 +188,23 @@ def test_update_id_impossible(app):
     r = to_json(raw)
     assert 'error' in r
     assert raw.status_code == 400
+
+def test_update_coverage_forbid_unkown_field(app):
+    raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
+    assert raw.status_code == 201
+
+    raw = patch(app, '/coverages/id_test', '{"name": "new_name_test", "foo": "bar"}')
+    r = to_json(raw)
+
+    assert raw.status_code == 400
+    assert 'error' in r
+
+def test_update_coverage_forbid_unkown_field_techconf(app):
+    raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
+    assert raw.status_code == 201
+
+    raw = patch(app, '/coverages/id_test', '{"name": "new_name_test", "technical_conf": {"foo": "bar"}}')
+    r = to_json(raw)
+
+    assert raw.status_code == 400
+    assert 'error' in r

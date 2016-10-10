@@ -31,7 +31,7 @@
 from functools import wraps
 from flask_restful import unpack
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
-from tartare.core.models import MongoCoverageSchema, Coverage
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoCoverageTechnicalConfSchema
 from tartare.core.models import MongoContributorSchema
 import os
 from tartare import app
@@ -52,14 +52,23 @@ class serialize_with(object):
         return wrapper
 
 
-class CoverageSchema(MongoCoverageSchema):
-    id = fields.String(required=True)
-
+class NoUnknownFieldMixin(Schema):
     @validates_schema(pass_original=True)
     def check_unknown_fields(self, data, original_data):
         for key in original_data:
             if key not in self.fields:
                 raise ValidationError('Unknown field name {}'.format(key))
+
+
+class CoverageTechnicalConfSchema(MongoCoverageTechnicalConfSchema, NoUnknownFieldMixin):
+    #we just need NoUnknownFieldMixin for validation purpose
+    pass
+
+class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
+    id = fields.String(required=True)
+    #we have to override nested field to add validation on input
+    technical_conf = fields.Nested(CoverageTechnicalConfSchema)
+
 
     @post_load
     def make_coverage(self, data):
@@ -79,5 +88,6 @@ class CoverageSchema(MongoCoverageSchema):
                                                  or _default_dir(env_var, data['id']))
         return Coverage(**data)
 
-class ContributorSchema(MongoContributorSchema):
+class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
     id = fields.String()
+

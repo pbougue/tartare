@@ -83,7 +83,7 @@ class Contributor(flask_restful.Resource):
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request.json, partial=True)
         if errors:
-            return {'error': err.messages}, 400
+            return {'error': errors}, 400
 
         if 'data_prefix' in request.json and contributor.data_prefix != request.json['data_prefix']:
             return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(contributor.data_prefix, request.json['data_prefix'])}, 400

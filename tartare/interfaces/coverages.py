@@ -87,7 +87,7 @@ class Coverage(flask_restful.Resource):
         coverage_schema = schema.CoverageSchema(partial=True)
         errors = coverage_schema.validate(request.json, partial=True)
         if errors:
-            return {'error': err.messages}, 400
+            return {'error': errors}, 400
 
         logging.debug(request.json)
         try:
