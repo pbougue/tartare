@@ -30,13 +30,13 @@
 # www.navitia.io
 
 from tartare import app
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.grid_calendar import GridCalendar
-from tartare.interfaces.geo_data import GeoData
-from tartare.interfaces.contributors import Contributor
 from flask_restful import Api
 from tartare.interfaces.status import Status
 from tartare.interfaces.index import Index
+from tartare.interfaces.coverages import Coverage
+from tartare.interfaces.contributors import Contributor
+from tartare.interfaces.grid_calendar import GridCalendar
+from tartare.interfaces.data_update import DataUpdate
 
 
 api = Api(app)
@@ -46,5 +46,5 @@ api.add_resource(Index, '/', endpoint='index')
 api.add_resource(Status, '/status', endpoint='status')
 api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>', endpoint='coverages')
 api.add_resource(GridCalendar, '/coverages/<string:coverage_id>/grid_calendar', endpoint='grid_calendar')
-api.add_resource(GeoData, '/coverages/<string:coverage_id>/geo_data', endpoint='geo_data')
+api.add_resource(DataUpdate, '/coverages/<string:coverage_id>/data_update', endpoint='data_update')
 api.add_resource(Contributor, '/contributors', '/contributors/<string:contributor_id>')

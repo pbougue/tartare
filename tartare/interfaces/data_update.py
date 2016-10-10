@@ -34,23 +34,25 @@ import logging
 import os
 from flask.globals import request
 from flask_restful import Resource
-from tartare.core import models
+from tartare.core import models, data_handler
 import shutil
 
 
-class GeoData(Resource):
+class DataUpdate(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404
 
         if not request.files:
-            return {'message': 'the pbf is missing'}, 400
+            return {'message': 'no file provided'}, 400
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: %s', content)
-        if not content.filename.endswith(".osm.pbf") :
-            return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
+
+        file_type, file_name = data_handler.type_of_data(content.filename)
+        if file_type in [None, "tmp"] :
+            return {'message': 'invalid file provided : {}'.format(content.filename)}, 400
 
         # backup content
         input_dir = coverage.technical_conf.input_dir
@@ -61,4 +63,4 @@ class GeoData(Resource):
 
         shutil.move(full_file_name + ".tmp", full_file_name)
 
-        return {'message': 'OK'}, 200
+        return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200

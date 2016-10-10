@@ -33,3 +33,21 @@ import json
 
 def to_json(response):
     return json.loads(response.data.decode('utf-8'))
+
+
+def post(app, url, params):
+    """
+    post on API with params as json
+    """
+    return app.post(url,
+                    headers={'Content-Type': 'application/json'},
+                    data=params)
+
+
+def patch(app, url, params):
+    """
+    patch on API with params as json
+    """
+    return app.patch(url,
+                     headers={'Content-Type': 'application/json'},
+                     data=params)

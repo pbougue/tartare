@@ -30,6 +30,7 @@ from tartare import app, mongo
 import pytest
 from tartare.core import models
 from tests.docker_wrapper import MongoDocker
+from tests.utils import to_json
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -63,3 +64,11 @@ def empty_mongo(docker):
 def get_app_context():
     with app.app_context():
         yield
+
+
+@pytest.fixture(scope="function")
+def coverage(app):
+    coverage = app.post('/coverages',
+                headers={'Content-Type': 'application/json'},
+               data='{"id": "jdr", "name": "name of the coverage jdr"}')
+    return to_json(coverage)['coverage']
