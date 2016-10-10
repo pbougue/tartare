@@ -31,6 +31,7 @@ import logging
 import logging.config
 import celery
 import sys
+from collections.abc import Mapping
 
 
 def configure_logger(app_config):
@@ -61,3 +62,17 @@ def make_celery(app):
 
     celery_app.Task = ContextTask
     return celery_app
+
+
+def _make_doted_key(*args):
+    return '.'.join([e for e in args if e])
+
+def to_doted_notation(data, prefix=None):
+    result = {}
+    for k,v in data.items():
+        key = _make_doted_key(prefix, k)
+        if isinstance(v, Mapping):
+            result.update(to_doted_notation(v, key))
+        else:
+            result[key] = v
+    return result

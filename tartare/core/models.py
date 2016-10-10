@@ -29,6 +29,7 @@
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
+from tartare.helper import to_doted_notation
 
 
 @app.before_first_request
@@ -79,11 +80,7 @@ class Coverage(object):
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
         #we have to use "doted notation' to only update some fields of a nested object
-        if 'technical_conf' in dataset:
-            for key, value in dataset['technical_conf'].items():
-                dataset['technical_conf.{}'.format(key)] = value
-            del dataset['technical_conf']
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': dataset})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(dataset)})
         if raw.matched_count == 0:
             return None
 
