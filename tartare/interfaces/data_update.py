@@ -35,6 +35,7 @@ import os
 from flask.globals import request
 from flask_restful import Resource
 from tartare.core import models, data_handler
+import tempfile
 import shutil
 
 
@@ -49,18 +50,21 @@ class DataUpdate(Resource):
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: %s', content)
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tmp_file = os.path.join(tmpdirname, content.filename)
+            content.save(tmp_file)
 
-        file_type, file_name = data_handler.type_of_data(content.filename)
-        if file_type in [None, "tmp"] :
-            return {'message': 'invalid file provided : {}'.format(content.filename)}, 400
+            file_type, file_name = data_handler.type_of_data(tmp_file)
+            if file_type in [None, "tmp"] :
+                logger.warning('invalid file provided: %s', content.filename)
+                return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
 
-        # backup content
-        input_dir = coverage.technical_conf.input_dir
-        if not os.path.exists(input_dir):
-            os.makedirs(input_dir)
-        content.save(os.path.join(input_dir, content.filename + ".tmp"))
-        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
-
-        shutil.move(full_file_name + ".tmp", full_file_name)
+            # backup content
+            input_dir = coverage.technical_conf.input_dir
+            if not os.path.exists(input_dir):
+                os.makedirs(input_dir)
+            full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
+            shutil.move(tmp_file, full_file_name + ".tmp")
+            shutil.move(full_file_name + ".tmp", full_file_name)
 
         return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
