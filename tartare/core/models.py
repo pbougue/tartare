@@ -37,6 +37,11 @@ def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
 
 
+class Environmnent(object):
+    def __init__(self, tyr_url=None, name=None):
+        self.name = name
+        self.tyr_url = tyr_url
+
 class Coverage(object):
     mongo_collection = 'coverages'
 
@@ -46,10 +51,14 @@ class Coverage(object):
             self.output_dir = output_dir
             self.current_data_dir = current_data_dir
 
-    def __init__(self, id, name, technical_conf):
+    def __init__(self, id=None, name=None, technical_conf=None, environments=None):
         self.id = id
         self.name = name
         self.technical_conf = technical_conf
+        if environments:
+            self.environments = environments
+        else:
+            self.environments = {}
 
     def save(self):
         raw = MongoCoverageSchema().dump(self).data
@@ -96,11 +105,25 @@ class MongoCoverageTechnicalConfSchema(Schema):
     def make_technical_conf(self, data):
         return Coverage.TechnicalConfiguration(**data)
 
+class MongoEnvironmentSchema(Schema):
+    name = fields.String(required=True)
+    tyr_url = fields.Url()
+
+    @post_load
+    def make_environment(self, data):
+        return Environmnent(**data)
+
+class MongoEnvironmentListSchema(Schema):
+    production = fields.Nested(MongoEnvironmentSchema)
+    preproduction = fields.Nested(MongoEnvironmentSchema)
+    integration = fields.Nested(MongoEnvironmentSchema)
+
 
 class MongoCoverageSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     technical_conf = fields.Nested(MongoCoverageTechnicalConfSchema)
+    environments = fields.Nested(MongoEnvironmentListSchema)
 
     @post_load
     def make_coverage(self, data):
