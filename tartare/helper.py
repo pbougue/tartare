@@ -32,6 +32,15 @@ import logging.config
 import celery
 import sys
 from collections.abc import Mapping
+import requests
+from requests_toolbelt.multipart import encoder
+
+def upload_file(url, filename, file):
+    form = encoder.MultipartEncoder({
+        'file': (filename, file, 'application/octet-stream')
+    })
+    headers =  {'Content-Type': form.content_type}
+    return requests.post(url, headers=headers, data=form)
 
 
 def configure_logger(app_config):
