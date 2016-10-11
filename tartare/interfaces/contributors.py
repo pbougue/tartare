@@ -27,8 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
-from flask_restful import reqparse, abort
+from flask_restful import abort
 import flask_restful
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare import app

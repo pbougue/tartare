@@ -26,8 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import os
-from flask_restful import reqparse, abort
+from flask_restful import abort
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare import app
@@ -38,14 +37,9 @@ from marshmallow import ValidationError
 from flask import request
 
 
-def _default_dir(var, coverage_id):
-    return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
-
-
 class Coverage(flask_restful.Resource):
     def post(self):
         coverage_schema = schema.CoverageSchema(strict=True)
-        # TODO remove this after webargs use
         try:
             coverage = coverage_schema.load(request.json).data
         except ValidationError as err:
