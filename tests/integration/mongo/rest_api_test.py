@@ -33,15 +33,7 @@ import pytest
 import tartare
 import tartare.api
 import json
-from tests.utils import to_json
-
-
-@pytest.fixture(scope="function")
-def coverage(app):
-    coverage = app.post('/coverages',
-                headers={'Content-Type': 'application/json'},
-               data='{"id": "jdr", "name": "name of the coverage jdr"}')
-    return to_json(coverage)['coverage']
+from tests.utils import to_json, post, patch
 
 
 def test_post_grid_calendar_returns_success_status(app, coverage):
@@ -83,41 +75,6 @@ def test_post_grid_calendar_returns_archive_missing_message(app, coverage):
     assert raw.status_code == 400
     assert r.get('message') == 'the archive is missing'
 
-def test_post_pbf_returns_success_status(app, coverage):
-    filename = 'empty_pbf.osm.pbf'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
-    files = {'file': (open(path, 'rb'), 'empty_pbf.osm.pbf')}
-    raw = app.post('/coverages/jdr/geo_data', data=files)
-    r = to_json(raw)
-    input_dir = coverage['technical_conf']['input_dir']
-    assert input_dir == './input/jdr'
-    assert raw.status_code == 200
-    assert r.get('message') == 'OK'
-    assert os.path.exists(os.path.join(input_dir, filename))
-
-def test_post_osm_returns_invalid_file_extension_message(app, coverage):
-    filename = 'empty_pbf.funky_extension'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
-    files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
-    raw = app.post('/coverages/jdr/geo_data', data=files)
-    r = to_json(raw)
-    assert raw.status_code == 400
-    assert r.get('message') == 'invalid extension (*.osm.pbf expected)'
-
-def test_post_osm_returns_invalid_coverage(app, coverage):
-    filename = 'empty_pbf.osm.pbf'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
-    files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
-    raw = app.post('/coverages/jdr_bug/geo_data', data=files)
-    r = to_json(raw)
-    assert raw.status_code == 404
-    assert r.get('message') == 'bad coverage jdr_bug'
-
-def test_post_pbf_returns_file_missing_message(app, coverage):
-    raw = app.post('/coverages/jdr/geo_data')
-    r = to_json(raw)
-    assert raw.status_code == 400
-    assert r.get('message') == 'the pbf is missing'
 
 def test_unkown_version_status(app):
     raw = app.get('/status')

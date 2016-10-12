@@ -29,7 +29,41 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-
+from io import BytesIO
+from zipfile import ZipFile, ZIP_DEFLATED
+from glob import glob
+from contextlib import contextmanager
+import os
 
 def to_json(response):
     return json.loads(response.data.decode('utf-8'))
+
+
+def post(app, url, params):
+    """
+    post on API with params as json
+    """
+    return app.post(url,
+                    headers={'Content-Type': 'application/json'},
+                    data=params)
+
+
+def patch(app, url, params):
+    """
+    patch on API with params as json
+    """
+    return app.patch(url,
+                     headers={'Content-Type': 'application/json'},
+                     data=params)
+
+@contextmanager
+def get_valid_ntfs_memory_archive():
+    ntfs_file_name = 'ntfs.zip'
+    ntfs_path = os.path.join(os.path.dirname(__file__), 'fixtures/ntfs/*.txt')
+    with BytesIO() as ntfs_zip_memory:
+        ntfs_zip = ZipFile(ntfs_zip_memory, 'a', ZIP_DEFLATED, False)
+        for filename in glob(ntfs_path):
+            ntfs_zip.write(filename, os.path.basename(filename))
+        ntfs_zip.close()
+        ntfs_zip_memory.seek(0)
+        yield (ntfs_file_name, ntfs_zip_memory)

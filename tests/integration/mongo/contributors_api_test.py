@@ -28,25 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json
-
-
-def post(app, url, params):
-    """
-    post on API with params as json
-    """
-    return app.post(url,
-                    headers={'Content-Type': 'application/json'},
-                    data=params)
-
-
-def patch(app, url, params):
-    """
-    patch on API with params as json
-    """
-    return app.patch(url,
-                     headers={'Content-Type': 'application/json'},
-                     data=params)
+from tests.utils import to_json, post, patch
 
 
 def test_get_contributors_empty_success(app):

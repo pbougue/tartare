@@ -34,31 +34,39 @@ import logging
 import os
 from flask.globals import request
 from flask_restful import Resource
-from tartare.core import models
+from tartare.core import models, data_handler
+import tempfile
 import shutil
 
 
-class GeoData(Resource):
+class DataUpdate(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404
 
-        if not request.files:
-            return {'message': 'the pbf is missing'}, 400
+        if not request.files :
+            return {'message': 'no file provided'}, 400
+        if request.files and 'file' not in request.files:
+            return {'message': 'file provided with bad param ("file" param expected)'}, 400
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: %s', content)
-        if not content.filename.endswith(".osm.pbf") :
-            return {'message': 'invalid extension (*.osm.pbf expected)'}, 400
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tmp_file = os.path.join(tmpdirname, content.filename)
+            content.save(tmp_file)
 
-        # backup content
-        input_dir = coverage.technical_conf.input_dir
-        if not os.path.exists(input_dir):
-            os.makedirs(input_dir)
-        content.save(os.path.join(input_dir, content.filename + ".tmp"))
-        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
+            file_type, file_name = data_handler.type_of_data(tmp_file)
+            if file_type in [None, "tmp"] :
+                logger.warning('invalid file provided: %s', content.filename)
+                return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
 
-        shutil.move(full_file_name + ".tmp", full_file_name)
+            # backup content
+            input_dir = coverage.technical_conf.input_dir
+            if not os.path.exists(input_dir):
+                os.makedirs(input_dir)
+            full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
+            shutil.move(tmp_file, full_file_name + ".tmp")
+            shutil.move(full_file_name + ".tmp", full_file_name)
 
-        return {'message': 'OK'}, 200
+        return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
