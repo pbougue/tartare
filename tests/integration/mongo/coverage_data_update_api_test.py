@@ -30,8 +30,9 @@
 # www.navitia.io
 import os
 from glob import glob
-from tests.utils import to_json, post, patch
+from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
 from zipfile import ZipFile, ZIP_DEFLATED
+from io import BytesIO
 
 
 def test_post_pbf_returns_success_status(app, coverage):
@@ -45,6 +46,15 @@ def test_post_pbf_returns_success_status(app, coverage):
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')
     assert os.path.exists(os.path.join(input_dir, filename))
+
+def test_post_pbf_with_bad_param(app, coverage):
+    filename = 'empty_pbf.osm.pbf'
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+    files = {'file_name': (open(path, 'rb'), 'empty_pbf.osm.pbf')}
+    raw = app.post('/coverages/jdr/data_update', data=files)
+    r = to_json(raw)
+    assert raw.status_code == 400
+    assert r.get('message') == 'file provided with bad param ("file" param expected)'
 
 def test_post_osm_returns_invalid_file_extension_message(app, coverage):
     filename = 'empty_pbf.funky_extension'
@@ -68,25 +78,19 @@ def test_post_pbf_returns_file_missing_message(app, coverage):
     raw = app.post('/coverages/jdr/data_update')
     r = to_json(raw)
     assert raw.status_code == 400
+    print("--------------")
+    print(r.get('message'))
     assert r.get('message') == 'no file provided'
 
 def test_post_ntfs_success(tmpdir, app, coverage):
     #create ZIP file with fixture before sending it
     input = tmpdir.mkdir('input')
-    ntfs_file_name = 'ntfs.zip'
-    ntfs_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/ntfs/*.txt')
-    ntfs_zip = ZipFile(os.path.join(str(input), ntfs_file_name), 'a', ZIP_DEFLATED, False)
-    for filename in glob(ntfs_path):
-        ntfs_zip.write(filename, os.path.basename(filename))
-    ntfs_zip.close()
-    ntfs_path = os.path.join(os.path.join(str(input), ntfs_file_name))
-    assert os.path.isfile(ntfs_path)
-
-    files = {'file': (open(ntfs_path, 'rb'), ntfs_file_name)}
-    raw = app.post('/coverages/jdr/data_update', data=files)
-    r = to_json(raw)
-    input_dir = coverage['technical_conf']['input_dir']
-    assert input_dir == './input/jdr'
-    assert raw.status_code == 200
-    assert r.get('message').startswith('Valid fusio file provided')
-    assert os.path.exists(os.path.join(input_dir, filename))
+    with get_valid_ntfs_memory_archive() as (ntfs_file_name, ntfs_zip_memory):
+        files = {'file': (ntfs_zip_memory, ntfs_file_name)}
+        raw = app.post('/coverages/jdr/data_update', data=files)
+        r = to_json(raw)
+        input_dir = coverage['technical_conf']['input_dir']
+        assert input_dir == './input/jdr'
+        assert raw.status_code == 200
+        assert r.get('message').startswith('Valid fusio file provided')
+        assert os.path.exists(os.path.join(input_dir, ntfs_file_name))

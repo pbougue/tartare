@@ -45,8 +45,10 @@ class DataUpdate(Resource):
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404
 
-        if not request.files:
+        if not request.files :
             return {'message': 'no file provided'}, 400
+        if request.files and 'file' not in request.files:
+            return {'message': 'file provided with bad param ("file" param expected)'}, 400
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: %s', content)
