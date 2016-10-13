@@ -73,11 +73,18 @@ def test_add_coverage_returns_success(app):
 
     assert len(r["coverages"]) == 1
     assert isinstance(r["coverages"], list)
-    assert r["coverages"][0]["id"] == "id_test"
-    assert r["coverages"][0]["name"] == "name_test"
+    coverage = r["coverages"][0]
+    assert coverage["id"] == "id_test"
+    assert coverage["name"] == "name_test"
     # the input_dir, output_dir and current_data_dir shouldn't be null
     for d in('input_dir', 'output_dir', 'current_data_dir'):
-        assert r["coverages"][0]["technical_conf"].get(d)
+        assert coverage["technical_conf"].get(d)
+    #A default environment should have been created
+    assert 'environments' in coverage
+    assert 'production' in coverage['environments']
+    assert coverage['environments']['production']['name'] == 'production'
+    assert coverage['environments']['production']['tyr_url'] == 'http://tyr.prod/v0/coverage/id_test/'
+
 
 
 def test_add_coverage_no_id(app):
@@ -111,6 +118,71 @@ def test_add_coverage_with_input_path(app):
     assert r["coverages"][0]["id"] == "id_test"
     assert r["coverages"][0]["name"] == "name of the coverage"
     assert r["coverages"][0]["technical_conf"]["input_dir"] == "/srv/tartare/id_test/input"
+
+def test_add_coverage_with_pre_env(app):
+    raw = post(app, '/coverages',
+            '''{"id": "id_test", "name": "name of the coverage",
+                "environments" : {"preproduction": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
+    assert raw.status_code == 201
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 1
+    assert isinstance(r["coverages"], list)
+    coverage = r["coverages"][0]
+    assert coverage["id"] == "id_test"
+    assert coverage["name"] == "name of the coverage"
+    assert 'environments' in coverage
+    assert 'production' not in coverage['environments']
+    assert 'preproduction' in coverage['environments']
+    assert coverage['environments']['preproduction']['name'] == 'pre'
+    assert coverage['environments']['preproduction']['tyr_url'] == 'http://foo.bar/'
+
+def test_add_coverage_with_no_env(app):
+    raw = post(app, '/coverages',
+            '''{"id": "id_test", "name": "name of the coverage",
+                "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
+    print(raw.data)
+    assert raw.status_code == 400
+    r = to_json(raw)
+    assert 'error' in r
+    assert 'environments' in r['error']
+
+def test_add_coverage_with_env_invalid_url(app):
+    raw = post(app, '/coverages',
+            '''{"id": "id_test", "name": "name of the coverage",
+                "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "foo"}}}''')
+    print(raw.data)
+    assert raw.status_code == 400
+    r = to_json(raw)
+    assert 'error' in r
+    assert 'environments' in r['error']
+
+def test_add_coverage_with_all_env(app):
+    raw = post(app, '/coverages',
+            '''{"id": "id_test", "name": "name of the coverage",
+                "environments" : {
+                    "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
+                    "production": {"name": "prod", "tyr_url": "http://prod.bar/"},
+                    "integration": {"name": "sim", "tyr_url": "http://int.bar/"}
+                }}''')
+    assert raw.status_code == 201
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 1
+    assert isinstance(r["coverages"], list)
+    coverage = r["coverages"][0]
+    assert coverage["id"] == "id_test"
+    assert coverage["name"] == "name of the coverage"
+    assert 'environments' in coverage
+    assert 'production'  in coverage['environments']
+    assert 'preproduction' in coverage['environments']
+    assert 'integration'  in coverage['environments']
+    assert coverage['environments']['preproduction']['name'] == 'pre'
+    assert coverage['environments']['preproduction']['tyr_url'] == 'http://pre.bar/'
+    assert coverage['environments']['production']['name'] == 'prod'
+    assert coverage['environments']['production']['tyr_url'] == 'http://prod.bar/'
+    assert coverage['environments']['integration']['name'] == 'sim'
+    assert coverage['environments']['integration']['tyr_url'] == 'http://int.bar/'
 
 
 def test_patch_complex_coverage(app):
@@ -208,3 +280,27 @@ def test_update_coverage_forbid_unkown_field_techconf(app):
 
     assert raw.status_code == 400
     assert 'error' in r
+
+def test_update_coverage__env(app):
+    raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
+    assert raw.status_code == 201
+
+    raw = patch(app, '/coverages/id_test',
+            '''{"environments" : {
+                    "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
+                    "production": null
+                }}''')
+    print(raw.data)
+    assert raw.status_code == 200
+    raw = app.get('/coverages')
+    r = to_json(raw)
+    assert len(r["coverages"]) == 1
+    assert isinstance(r["coverages"], list)
+    coverage = r["coverages"][0]
+    assert coverage["id"] == "id_test"
+    assert coverage["name"] == "name_test"
+    assert 'environments' in coverage
+    assert 'production' not in coverage['environments']
+    assert 'preproduction' in coverage['environments']
+    assert coverage['environments']['preproduction']['name'] == 'pre'
+    assert coverage['environments']['preproduction']['tyr_url'] == 'http://pre.bar/'

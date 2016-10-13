@@ -46,6 +46,12 @@ INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
 OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
 CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
 
+#If no environment is defined at the creation of a coverage tyr create automaticaly the enviroment typed "production"
+#The folowing parameters will be used for creating it
+DEFAULT_ENVIRONMENT_NAME = str(os.getenv('TARTARE_DEFAULT_ENVIRONMENT_NAME', 'production'))
+#in the URL the placeholder "{coverage}" will be replaced by the coverage name
+DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE = str(os.getenv('TARTARE_DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE', 'http://tyr.prod/v0/coverage/{coverage}/'))
+
 # GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
 # The absolute path is CURRENT_DATA_DIR/grid_calendar
 GRID_CALENDAR_DIR = 'grid_calendar'

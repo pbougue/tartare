@@ -37,7 +37,7 @@ def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
 
 
-class Environmnent(object):
+class Environment(object):
     def __init__(self, tyr_url=None, name=None):
         self.name = name
         self.tyr_url = tyr_url
@@ -111,12 +111,17 @@ class MongoEnvironmentSchema(Schema):
 
     @post_load
     def make_environment(self, data):
-        return Environmnent(**data)
+        return Environment(**data)
 
 class MongoEnvironmentListSchema(Schema):
-    production = fields.Nested(MongoEnvironmentSchema)
-    preproduction = fields.Nested(MongoEnvironmentSchema)
-    integration = fields.Nested(MongoEnvironmentSchema)
+    production = fields.Nested(MongoEnvironmentSchema, allow_none=True)
+    preproduction = fields.Nested(MongoEnvironmentSchema, allow_none=True)
+    integration = fields.Nested(MongoEnvironmentSchema, allow_none=True)
+
+    @post_load
+    def remove_none(self, data):
+        #We don't want to keep removed environments
+        return {key: value for key, value in data.items() if value is not None}
 
 
 class MongoCoverageSchema(Schema):
