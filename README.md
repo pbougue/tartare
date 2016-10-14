@@ -121,7 +121,7 @@ http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path
 POST geographic Data (currently OSM PBF files only) :
 ``` bash
 # using curl
-curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
+curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/geo_data
 # using HTTPie python package
 http POST 'http://127.0.0.1:5000/coverages/coverage_id/geo_data' file@/path/to/your-file.osm.pbf --form
 ```
