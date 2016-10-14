@@ -31,8 +31,9 @@
 from functools import wraps
 from flask_restful import unpack
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoCoverageTechnicalConfSchema
-from tartare.core.models import MongoContributorSchema
+
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoCoverageTechnicalConfSchema, MongoEnvironmentSchema, MongoEnvironmentListSchema
+from tartare.core.models import MongoContributorSchema, Environment
 import os
 from tartare import app
 
@@ -64,10 +65,21 @@ class CoverageTechnicalConfSchema(MongoCoverageTechnicalConfSchema, NoUnknownFie
     #we just need NoUnknownFieldMixin for validation purpose
     pass
 
+class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
+    pass
+
+class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
+    production = fields.Nested(EnvironmentSchema, allow_none=True)
+    preproduction = fields.Nested(EnvironmentSchema, allow_none=True)
+    integration = fields.Nested(EnvironmentSchema, allow_none=True)
+
+
+
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     id = fields.String(required=True)
     #we have to override nested field to add validation on input
     technical_conf = fields.Nested(CoverageTechnicalConfSchema)
+    environments = fields.Nested(EnvironmentListSchema)
 
 
     @post_load
@@ -86,6 +98,13 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
                              ('current_data_dir', 'CURRENT_DATA_DIR')):
             setattr(data['technical_conf'], arg, getattr(data.get('technical_conf', {}), arg) \
                                                  or _default_dir(env_var, data['id']))
+
+        envs = data.get('environments', {})
+        if not envs.get('production') and not envs.get('preproduction') and not envs.get('integration'):
+            env = Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'),
+                        tyr_url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
+            data['environments'] = {}
+            data['environments']['production'] = env
         return Coverage(**data)
 
 class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
