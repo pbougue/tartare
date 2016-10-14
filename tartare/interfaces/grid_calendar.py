@@ -35,7 +35,7 @@ import zipfile
 import os
 from flask.globals import request
 from flask_restful import Resource
-from tartare import app
+from tartare import app, tasks
 from tartare.core import models
 import shutil
 
@@ -105,5 +105,8 @@ class GridCalendar(Resource):
         content.stream.seek(0)
         coverage.save_grid_calendars(content)
         zip_file.close()
+
+        #run the update of navitia in background
+        tasks.update_calendars.delay(coverage.id)
 
         return {'message': 'OK'}, 200

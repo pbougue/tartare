@@ -26,7 +26,7 @@ def update_all_data_task():
 def update_data(coverage):
     input_dir = coverage.technical_conf.input_dir
     logger.info('scanning directory %s', input_dir)
-    handle_data(input_dir, coverage.technical_conf.output_dir, coverage.technical_conf.current_data_dir)
+    handle_data(coverage)
 
 
 def remove_old_ntfs_files(directory):
@@ -59,11 +59,14 @@ def _get_current_nfts_file(current_data_dir):
     return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
 
 
-def handle_data(input_dir, output_dir, current_data_dir):
+def handle_data(coverage):
     """
     Move all file from the input_dir to output_dir
     All interesting data are also moved to the current_dir
     """
+    input_dir = coverage.technical_conf.input_dir
+    current_data_dir = coverage.technical_conf.current_data_dir
+    output_dir = coverage.technical_conf.output_dir
     if not os.path.exists(input_dir):
         logger.debug('directory {} does not exists, skipping scan'.format(input_dir))
         return
@@ -73,7 +76,8 @@ def handle_data(input_dir, output_dir, current_data_dir):
 
     for filename in os.listdir(input_dir):
         input_file = os.path.join(input_dir, filename)
-        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'\
+                .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
         output_file = os.path.join(output_dir, filename)
         logger.debug("Working on [{}] to generate [{}]".format(input_file, output_file))
         # copy data interesting data
@@ -85,24 +89,30 @@ def handle_data(input_dir, output_dir, current_data_dir):
             # NTFS file is moved to the CURRENT_DATA_DIR, old NTFS file is deleted
             remove_old_ntfs_files(current_data_dir)
             copyfile(input_file, os.path.join(current_data_dir, filename))
-            if os.path.isfile(calendar_file):
+            grid_calendars_file = coverage.get_grid_calendars()
+            if grid_calendars_file:
                 # Merge
-                _do_merge_calendar(calendar_file, input_file, output_ntfs_file)
+                _do_merge_calendar(grid_calendars_file, input_file, output_ntfs_file)
                 os.remove(input_file)
             else:
                 shutil.move(input_file, output_ntfs_file)
-        elif is_calendar_data(input_file):
-            if not os.path.exists(calendar_dir):
-                os.makedirs(calendar_dir)
-            shutil.move(input_file, calendar_file)
-
-            # Merge with last NTFS
-            current_ntfs = _get_current_nfts_file(current_data_dir)
-            if current_ntfs:
-                _do_merge_calendar(calendar_file, current_ntfs, output_ntfs_file)
-            else:
-                logger.info("No NTFS file to compute the calendar data")
         elif input_file.endswith(".tmp"):
             pass
         else:
             shutil.move(input_file, output_file)
+
+
+@celery.task(bind=True)
+def update_calendars(self, coverage_id):
+    coverage = models.Coverage.get(coverage_id)
+    input_dir = coverage.technical_conf.input_dir
+    current_data_dir = coverage.technical_conf.current_data_dir
+    output_dir = coverage.technical_conf.output_dir
+    # Merge with last NTFS
+    current_ntfs = _get_current_nfts_file(current_data_dir)
+    grid_calendars_file = coverage.get_grid_calendars()
+    if current_ntfs and grid_calendars_file:
+        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'\
+                .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+        logger.debug("Working to generate [{}]".format(output_ntfs_file))
+        _do_merge_calendar(grid_calendars_file, current_ntfs, output_ntfs_file)

@@ -28,10 +28,26 @@
 
 import tartare
 import pytest
+import os
 
 
 @pytest.fixture(scope="module")
 def app():
     """ Return a handler over flask API """
     return tartare.app.test_client()
+
+
+@pytest.fixture(scope="function")
+def fixture_dir():
+    pwd = os.path.dirname(os.path.dirname(__file__))
+    return os.path.join(pwd, 'fixtures/')
+
+@pytest.fixture(scope="session", autouse=True)
+def local_celery():
+    """
+    celery tasks aren't deferred, they are executed locally by blocking
+    """
+    tartare.app.config['CELERY_ALWAYS_EAGER'] = True
+    tartare.app.config['CELERY_EAGER_PROPAGATES_EXCEPTIONS'] = True
+    tartare.celery.conf.update(tartare.app.config)
 

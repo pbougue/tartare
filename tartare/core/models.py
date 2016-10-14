@@ -65,15 +65,19 @@ class Coverage(object):
         self.grid_calendars_id = grid_calendars_id
 
     def save_grid_calendars(self, file):
-        self.grid_calendars_id
         gridfs = GridFS(mongo.db)
         id = gridfs.put(file)
         Coverage.update(self.id, {'grid_calendars_id': str(id)})
         #when we delete the file all process reading it will get invalid data
-        #TODO: We will need to implements a better solution
+        #TODO: We will need to implement a better solution
         gridfs.delete(ObjectId(self.grid_calendars_id))
         self.grid_calendars_id = id
 
+    def get_grid_calendars(self):
+        if not self.grid_calendars_id:
+            return None
+        gridfs = GridFS(mongo.db)
+        return gridfs.get(ObjectId(self.grid_calendars_id))
 
 
     def save(self):
