@@ -12,6 +12,7 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.data_handler import type_of_data, is_ntfs_data, is_calendar_data
+from tartare.helper import upload_file
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +117,41 @@ def update_calendars(self, coverage_id):
                 .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
         logger.debug("Working to generate [{}]".format(output_ntfs_file))
         _do_merge_calendar(grid_calendars_file, current_ntfs, output_ntfs_file)
+
+@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
+def send_file(self, coverage_id, environment_type, file_id):
+    coverage = models.Coverage.get(coverage_id)
+    url = coverage.environments[environment_type].tyr_url
+    file = models.get_file_from_gridfs(file_id)
+    logging.debug('file: %s', file)
+    logger.info('trying to send %s to %s', file.filename, url)
+    #how to handle the timeout?
+    response = upload_file(url, file.filename, file)
+    if response.status_code != 200:
+        raise self.retry()
+    else:
+        models.delete_file_from_gridfs(file_id)
+
+@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
+def update_ntfs(self, coverage_id, environment_type, file_id):
+    coverage = models.Coverage.get(coverage_id)
+    url = coverage.environments[environment_type].tyr_url
+    ntfs_file = models.get_file_from_gridfs(file_id)
+    grid_calendars_file = coverage.get_grid_calendars()
+    response = None
+    if grid_calendars_file:
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip'\
+                    .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+            logger.debug("Working to generate [{}]".format(output_ntfs_file))
+            _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
+            logger.info('trying to send %s to %s', file.filename, url)
+        #how to handle the timeout?
+        with open(output_ntfs_file, 'rb') as file:
+            response = upload_file(url, output_ntfs_file, file)
+    else:
+        response = upload_file(url, ntfs_file.filename, ntfs_file)
+
+    if response.status_code != 200:
+        raise self.retry()
+

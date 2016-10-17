@@ -37,13 +37,17 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 import shutil
+from tartare import tasks
 
 
 class DataUpdate(Resource):
-    def post(self, coverage_id):
+    def post(self, coverage_id, environment_type):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+
+        if environment_type not in coverage.environments:
+            return {'message': 'bad environment {}'.format(environment_type)}, 404
 
         if not request.files :
             return {'message': 'no file provided'}, 400
@@ -56,17 +60,19 @@ class DataUpdate(Resource):
             tmp_file = os.path.join(tmpdirname, content.filename)
             content.save(tmp_file)
 
+            #TODO: improve this function so we don't have to write the file localy first
             file_type, file_name = data_handler.type_of_data(tmp_file)
             if file_type in [None, "tmp"] :
                 logger.warning('invalid file provided: %s', content.filename)
                 return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
-
-            # backup content
-            input_dir = coverage.technical_conf.input_dir
-            if not os.path.exists(input_dir):
-                os.makedirs(input_dir)
-            full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
-            shutil.move(tmp_file, full_file_name + ".tmp")
-            shutil.move(full_file_name + ".tmp", full_file_name)
+            with open(tmp_file, 'rb') as file:
+                if file_type == 'ntfs':
+                    coverage.save_ntfs(environment_type, file)
+                    tasks.update_ntfs.delay(coverage_id, environment_type)
+                else:
+                    #we need to temporary save the file before sending it
+                    logging.debug('%s', file)
+                    file_id = models.save_file_in_gridfs(file, filename=content.filename)
+                    tasks.send_file.delay(coverage_id, environment_type, file_id)
 
         return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200

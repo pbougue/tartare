@@ -46,5 +46,6 @@ api.add_resource(Index, '/', endpoint='index')
 api.add_resource(Status, '/status', endpoint='status')
 api.add_resource(Coverage, '/coverages', '/coverages/', '/coverages/<string:coverage_id>', endpoint='coverages')
 api.add_resource(GridCalendar, '/coverages/<string:coverage_id>/grid_calendar', endpoint='grid_calendar')
-api.add_resource(DataUpdate, '/coverages/<string:coverage_id>/data_update', endpoint='data_update')
+api.add_resource(DataUpdate, '/coverages/<string:coverage_id>/environments/<string:environment_type>/data_update',
+                             endpoint='data_update')
 api.add_resource(Contributor, '/contributors', '/contributors/<string:contributor_id>')

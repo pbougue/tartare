@@ -82,5 +82,7 @@ def coverage_obj(tmpdir, get_app_context):
                                                   output_dir=str(output),
                                                   current_data_dir=str(current_dir))
     coverage = models.Coverage(id='test', name='test', technical_conf=conf)
+    coverage.environments['production'] = models.Environment(name='prod',
+                                                             tyr_url='http://tyr.prod/v0/instances/test')
     coverage.save()
     return coverage

@@ -66,7 +66,7 @@ class CoverageTechnicalConfSchema(MongoCoverageTechnicalConfSchema, NoUnknownFie
     pass
 
 class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
-    pass
+    current_ntfs_id = fields.String(allow_none=True, dump_only=True)
 
 class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
     production = fields.Nested(EnvironmentSchema, allow_none=True)

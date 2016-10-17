@@ -31,19 +31,41 @@ from marshmallow import Schema, fields, post_load
 from tartare import app
 from tartare.helper import to_doted_notation
 from gridfs import GridFS
+from gridfs.grid_file import GridOut
 from bson.objectid import ObjectId
 import logging
 
+#monkey patching og gridfs file for exposing the size in a standard way
+def grid_out_len(self):
+    return self.length
+GridOut.__len__ = grid_out_len
 
 @app.before_first_request
 def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
 
+def save_file_in_gridfs(file, gridfs=None, **kwargs):
+    if not gridfs:
+        gridfs = GridFS(mongo.db)
+    logging.debug('file: %s, kwargs: %s', file, kwargs)
+    return str(gridfs.put(file, **kwargs))
+
+def get_file_from_gridfs(id, gridfs=None):
+    if not gridfs:
+        gridfs = GridFS(mongo.db)
+    return gridfs.get(ObjectId(id))
+
+def delete_file_from_gridfs(id, gridfs=None):
+    if not gridfs:
+        gridfs = GridFS(mongo.db)
+    return gridfs.delete(ObjectId(id))
+
 
 class Environment(object):
-    def __init__(self, tyr_url=None, name=None):
+    def __init__(self, tyr_url=None, name=None, current_ntfs_id=None):
         self.name = name
         self.tyr_url = tyr_url
+        self.current_ntfs_id = current_ntfs_id
 
 class Coverage(object):
     mongo_collection = 'coverages'
@@ -66,18 +88,19 @@ class Coverage(object):
 
     def save_grid_calendars(self, file):
         gridfs = GridFS(mongo.db)
-        id = gridfs.put(file)
-        Coverage.update(self.id, {'grid_calendars_id': str(id)})
+        filename = '{coverage}_calendars.zip'.format(coverage=self.id)
+        id = save_file_in_gridfs(file, gridfs=gridfs, filename=filename, coverage=self.id)
+        Coverage.update(self.id, {'grid_calendars_id': id})
         #when we delete the file all process reading it will get invalid data
         #TODO: We will need to implement a better solution
-        gridfs.delete(ObjectId(self.grid_calendars_id))
+        delete_file_from_gridfs(self.grid_calendars_id, gridfs=gridfs)
         self.grid_calendars_id = id
 
     def get_grid_calendars(self):
         if not self.grid_calendars_id:
             return None
         gridfs = GridFS(mongo.db)
-        return gridfs.get(ObjectId(self.grid_calendars_id))
+        return get_file_from_gridfs(self.grid_calendars_id)
 
 
     def save(self):
@@ -115,6 +138,18 @@ class Coverage(object):
 
         return cls.get(coverage_id)
 
+    def save_ntfs(self, environment_type, file):
+        if environment_type not in self.environments.keys():
+            raise ValueError('invalid value for environment_type')
+        filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
+        gridfs = GridFS(mongo.db)
+        id = save_file_in_gridfs(file, gridfs=gridfs, filename=filename, coverage=self.id)
+        Coverage.update(self.id, {'Environments.{}.current_ntfs_id'.format(environment_type): id})
+        #when we delete the file all process reading it will get invalid data
+        #TODO: We will need to implements a better solution
+        delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
+        self.environments[environment_type].current_ntfs_id = id
+
 
 class MongoCoverageTechnicalConfSchema(Schema):
     input_dir = fields.String()
@@ -128,6 +163,7 @@ class MongoCoverageTechnicalConfSchema(Schema):
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
     tyr_url = fields.Url()
+    current_ntfs_id = fields.String(allow_none=True)
 
     @post_load
     def make_environment(self, data):
