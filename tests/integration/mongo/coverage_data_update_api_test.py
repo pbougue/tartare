@@ -43,7 +43,6 @@ def test_post_pbf_returns_success_status(app, coverage_obj, fixture_dir):
         m.post('http://tyr.prod/v0/instances/test', text='ok')
         raw = app.post('/coverages/test/environments/production/data_update', data=files)
         assert m.called
-        #TODO check the call
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')

@@ -2,9 +2,9 @@ import os
 from glob import glob
 from shutil import copy
 from zipfile import ZipFile, ZIP_DEFLATED
-from tartare.tasks import handle_data, update_calendars
+from tartare.tasks import handle_data, update_calendars, send_file
 from tartare.core import calendar_handler, models
-
+import requests_mock
 
 def test_handle_not_ntfs_data(coverage_obj):
     """
@@ -108,3 +108,12 @@ def test_update_calendar_data_with_last_ntfs(coverage_obj, fixture_dir):
         assert calendar_handler.GRID_CALENDARS in files_in_zip
         assert calendar_handler.GRID_PERIODS in files_in_zip
         assert calendar_handler.GRID_CALENDAR_REL_LINE in files_in_zip
+
+def test_upload_file_ok(coverage_obj, fixture_dir):
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
+    with open(path, 'rb') as f:
+        file_id = models.save_file_in_gridfs(f, filename='test.osm.pbf')
+    with requests_mock.Mocker() as m:
+        m.post('http://tyr.prod/v0/instances/test', text='ok')
+        send_file(coverage_obj.id, 'production', file_id)
+        assert m.called

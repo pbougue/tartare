@@ -125,7 +125,7 @@ def send_file(self, coverage_id, environment_type, file_id):
     file = models.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
-    #how to handle the timeout?
+    #how to handle timeout?
     response = upload_file(url, file.filename, file)
     if response.status_code != 200:
         raise self.retry()
