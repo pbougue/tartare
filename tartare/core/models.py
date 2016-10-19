@@ -30,6 +30,9 @@ from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
 from tartare.helper import to_doted_notation
+from gridfs import GridFS
+from bson.objectid import ObjectId
+import logging
 
 
 @app.before_first_request
@@ -51,7 +54,7 @@ class Coverage(object):
             self.output_dir = output_dir
             self.current_data_dir = current_data_dir
 
-    def __init__(self, id=None, name=None, technical_conf=None, environments=None):
+    def __init__(self, id, name, technical_conf, environments=None, grid_calendars_id=None):
         self.id = id
         self.name = name
         self.technical_conf = technical_conf
@@ -59,6 +62,23 @@ class Coverage(object):
             self.environments = environments
         else:
             self.environments = {}
+        self.grid_calendars_id = grid_calendars_id
+
+    def save_grid_calendars(self, file):
+        gridfs = GridFS(mongo.db)
+        id = gridfs.put(file)
+        Coverage.update(self.id, {'grid_calendars_id': str(id)})
+        #when we delete the file all process reading it will get invalid data
+        #TODO: We will need to implement a better solution
+        gridfs.delete(ObjectId(self.grid_calendars_id))
+        self.grid_calendars_id = id
+
+    def get_grid_calendars(self):
+        if not self.grid_calendars_id:
+            return None
+        gridfs = GridFS(mongo.db)
+        return gridfs.get(ObjectId(self.grid_calendars_id))
+
 
     def save(self):
         raw = MongoCoverageSchema().dump(self).data
@@ -129,6 +149,7 @@ class MongoCoverageSchema(Schema):
     name = fields.String(required=True)
     technical_conf = fields.Nested(MongoCoverageTechnicalConfSchema)
     environments = fields.Nested(MongoEnvironmentListSchema)
+    grid_calendars_id = fields.String(allow_none=True)
 
     @post_load
     def make_coverage(self, data):

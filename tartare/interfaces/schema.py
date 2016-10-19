@@ -80,6 +80,8 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     #we have to override nested field to add validation on input
     technical_conf = fields.Nested(CoverageTechnicalConfSchema)
     environments = fields.Nested(EnvironmentListSchema)
+    #read only
+    grid_calendars_id = fields.String(dump_only=True)
 
 
     @post_load

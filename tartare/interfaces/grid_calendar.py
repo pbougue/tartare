@@ -35,7 +35,7 @@ import zipfile
 import os
 from flask.globals import request
 from flask_restful import Resource
-from tartare import app
+from tartare import app, tasks
 from tartare.core import models
 import shutil
 
@@ -102,15 +102,11 @@ class GridCalendar(Resource):
         if not valid_header:
             return {'message': 'non-compliant file(s) : {}'.format(''.join(invalid_files))}, 400
 
-        # backup content
-        input_dir = coverage.technical_conf.input_dir
-        if not os.path.exists(input_dir):
-            os.makedirs(input_dir)
         content.stream.seek(0)
-        content.save(os.path.join(input_dir, content.filename + ".tmp"))
+        coverage.save_grid_calendars(content)
         zip_file.close()
-        full_file_name = os.path.join(os.path.realpath(input_dir), content.filename)
 
-        shutil.move(full_file_name + ".tmp", full_file_name)
+        #run the update of navitia in background
+        tasks.update_calendars.delay(coverage.id)
 
         return {'message': 'OK'}, 200
