@@ -28,7 +28,7 @@
 # www.navitia.io
 
 import os
-from flask_restful import reqparse, abort
+from flask_restful import reqparse, abort, request
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare import app
@@ -39,69 +39,67 @@ from marshmallow import ValidationError
 
 
 class DataSource(flask_restful.Resource):
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('id', location='json')
-        parser.add_argument('desc', location='json')
-        parser.add_argument('update_type', location='json')
+    def post(self, contributor_id):
+        contributor = models.Contributor.get(contributor_id)
+        if contributor is None:
+            return {'message': 'bad contributor {}'.format(contributor_id)}, 400
 
-        args = parser.parse_args()
-        data_source_schema = schema.ContributorSchema(strict=True)
-
+        data_source_schema = schema.DataSourceSchema(strict=True)
         try:
-            contributor = contributor_schema.load(args).data
+            d = request.json
+            d['contributor_id'] = contributor_id
+            data_source = data_source_schema.load(d).data
         except ValidationError as err:
             return {'error': err.messages}, 400
 
         try:
-            contributor.save()
+            data_source.save()
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to add contributor {}'.format(contributor))
+            logging.getLogger(__name__).exception('impossible to add data_source {}'.format(data_source))
             return {'error': str(e)}, 400
 
-        return {'contributor': contributor_schema.dump(contributor).data}, 201
+        return {'data_source': data_source_schema.dump(data_source).data}, 201
 
-    def get(self, contributor_id=None):
-        if contributor_id:
-            c = models.Contributor.get(contributor_id)
-            if c is None:
+    def get(self, contributor_id, data_source_id=None):
+        contributor = models.Contributor.get(contributor_id)
+        if contributor is None:
+            return {'message': 'bad contributor {}'.format(contributor_id)}, 400
+
+        if data_source_id:
+            ds = models.DataSoure.get(data_source_id)
+            if ds is None:
                 abort(404)
 
-            result = schema.ContributorSchema().dump(c)
-            return {'contributor': result.data}, 200
+            result = schema.DataSoureSchema().dump(ds)
+            return {'data_source': result.data}, 200
 
-        contributors = models.Contributor.all()
+        data_sources = models.DataSource.all()
 
-        return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200
 
-    def delete(self, contributor_id):
-        c = models.Contributor.delete(contributor_id)
-        if c == 0:
+    def delete(self, data_source_id):
+        ds = models.DataSoure.delete(data_source_id)
+        if ds == 0:
             abort(404)
-        return {'contributor': None}, 204
+        return {'data_source': None}, 204
 
-    def patch(self, contributor_id):
-        parser = reqparse.RequestParser()
-        parser.add_argument('name', location='json')
-        parser.add_argument('data_prefix', location='json')
-        args = parser.parse_args()
+    def patch(self, data_source_id):
+        data_source = models.DataSource.get(data_source_id)
+        if data_source is None:
+            abort(404)
 
-        # we remove the null values in the parser to keep only setted values
-        # (else mongo will erase the other values)
-        args = {k: v for k, v in args.items() if v}
+        schema_data_source = schema.DataSourceSchema(partial=True)
+        errors = schema_data_source.validate(request.json, partial=True)
+        if errors:
+            return {'error': errors}, 400
 
-        # "data_prefix" field is not modifiable, impacts of the modification need to be checked. The previous value needs to be checked for an error
-        contributor = models.Contributor.get(contributor_id)
-        if ('data_prefix' in args) and (contributor.data_prefix != args['data_prefix']):
-            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(contributor.data_prefix, args['data_prefix'])}, 403
+        if 'id' in request.json and contributor.id != request.json['id']:
+            return {'error': 'The modification of the id is not possible'}, 400
 
         try:
-            contributor = models.Contributor.update(contributor_id, args)
+            data_source = models.DataSource.update(data_source_id, request.json)
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update contributor with dataset {}'.format(args))
-            return {'error': str(e)}, 400
+            logging.getLogger(__name__).exception('impossible to update data_source with dataset {}'.format(args))
+            return {'error': str(e)}, 500
 
-        if contributor is None:
-            abort(404)
-
-        return {'contributor': schema.ContributorSchema().dump(contributor).data}, 200
+        return {'data_source': schema.DataSourceSchema().dump(data_source).data}, 200

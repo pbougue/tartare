@@ -33,12 +33,13 @@ from tartare.helper import to_doted_notation
 from gridfs import GridFS
 from bson.objectid import ObjectId
 import logging
-
+import datetime
 
 @app.before_first_request
 def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
     mongo.db['coverages'].update({}, {"$unset": {"technical_conf": ""}}, upsert=False, multi=True)
+    mongo.db['contributors'].ensureIndex({"data_sources.id" : 1}, unique=True)
 
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
@@ -169,14 +170,29 @@ class MongoCoverageSchema(Schema):
     def make_coverage(self, data):
         return Coverage(**data)
 
+class DataSource(object):
+    def __init__(self, id=None, name=None, data_format=None):
+        self.id = id
+        self.name = name
+        self.data_format = data_format
+
+
+class MongoDataSourceSchema(Schema):
+    id = fields.String(required=True)
+    name = fields.String(required=True)
+    data_format = fields.String(default='gtfs')
 
 class Contributor(object):
     mongo_collection = 'contributors'
 
-    def __init__(self, id, name, data_prefix):
+    def __init__(self, id, name, data_prefix, data_sources=None):
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
+        if data_sources:
+            self.data_sources = data_sources
+        else:
+            self.data_sources = {}
 
     def save(self):
         raw = MongoContributorSchema().dump(self).data
@@ -205,7 +221,7 @@ class Contributor(object):
 
     @classmethod
     def update(cls, contributor_id=None, dataset={}):
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': dataset})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': to_doted_notation(dataset)})
         if raw.matched_count == 0:
             return None
 
@@ -216,6 +232,7 @@ class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
+    data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
 
     @post_load
     def make_contributor(self, data):

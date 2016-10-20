@@ -40,9 +40,10 @@ from marshmallow import ValidationError
 
 class Contributor(flask_restful.Resource):
     def post(self):
+        post_data = request.json
         contributor_schema = schema.ContributorSchema(strict=True)
         try:
-            contributor = contributor_schema.load(request.json).data
+            contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
             return {'error': err.messages}, 400
 
