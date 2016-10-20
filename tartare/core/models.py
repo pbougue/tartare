@@ -31,14 +31,9 @@ from marshmallow import Schema, fields, post_load
 from tartare import app
 from tartare.helper import to_doted_notation
 from gridfs import GridFS
-from gridfs.grid_file import GridOut
 from bson.objectid import ObjectId
 import logging
 
-#monkey patching og gridfs file for exposing the size in a standard way
-def grid_out_len(self):
-    return self.length
-GridOut.__len__ = grid_out_len
 
 @app.before_first_request
 def init_mongo():
@@ -47,7 +42,6 @@ def init_mongo():
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
         gridfs = GridFS(mongo.db)
-    logging.debug('file: %s, kwargs: %s', file, kwargs)
     return str(gridfs.put(file, **kwargs))
 
 def get_file_from_gridfs(id, gridfs=None):
