@@ -13,6 +13,7 @@ from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.data_handler import type_of_data, is_ntfs_data, is_calendar_data
 from tartare.helper import upload_file
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -133,10 +134,10 @@ def send_file(self, coverage_id, environment_type, file_id):
         models.delete_file_from_gridfs(file_id)
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def update_ntfs(self, coverage_id, environment_type, file_id):
+def update_ntfs(self, coverage_id, environment_type):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].tyr_url
-    ntfs_file = models.get_file_from_gridfs(file_id)
+    ntfs_file = models.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
     grid_calendars_file = coverage.get_grid_calendars()
     response = None
     if grid_calendars_file:
@@ -145,10 +146,10 @@ def update_ntfs(self, coverage_id, environment_type, file_id):
                     .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
             logger.debug("Working to generate [{}]".format(output_ntfs_file))
             _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
-            logger.info('trying to send %s to %s', file.filename, url)
-        #how to handle the timeout?
-        with open(output_ntfs_file, 'rb') as file:
-            response = upload_file(url, output_ntfs_file, file)
+            logger.info('trying to send data to %s', url)
+            #how to handle the timeout?
+            with open(output_ntfs_file, 'rb') as file:
+                response = upload_file(url, output_ntfs_file, file)
     else:
         response = upload_file(url, ntfs_file.filename, ntfs_file)
 

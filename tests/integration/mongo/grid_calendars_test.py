@@ -29,12 +29,13 @@
 import os
 import pytest
 from tartare import mongo
-from tests.utils import to_json, post, patch
+from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
 from gridfs import GridFS
 from bson.objectid import ObjectId
 from zipfile import ZipFile, ZIP_DEFLATED
 from glob import glob
-from tartare.core import calendar_handler
+from tartare.core import calendar_handler, models
+import requests_mock
 
 
 def test_post_grid_calendar_returns_success_status(app, coverage, get_app_context):
@@ -103,27 +104,20 @@ def test_update_calendar_data_with_last_ntfs_after_post(app, coverage_obj, fixtu
     we have a ntfs for the coverage, when we publish a new gris_calendar we want a ntfs to be generated for tyr
     """
     calendar_file = os.path.join(fixture_dir, 'gridcalendar/export_calendars.zip')
-    print(calendar_file)
-    ntfs_path = os.path.join(fixture_dir, 'ntfs/*.txt')
+    with get_valid_ntfs_memory_archive() as (filename, ntfs_file):
+        coverage_obj.save_ntfs('production', ntfs_file)
 
-    path = os.path.join(coverage_obj.technical_conf.current_data_dir, 'ntfs.zip')
-    ntfs_zip = ZipFile(path, 'a', ZIP_DEFLATED, False)
-    for filename in glob(ntfs_path):
-        ntfs_zip.write(filename, os.path.basename(filename))
-    ntfs_zip.close()
-
-
-    files = {'file': (open(calendar_file, 'rb'), 'export_calendars.zip')}
-    raw = app.post('/coverages/{}/grid_calendar'.format(coverage_obj.id), data=files)
-    print(to_json(raw))
-    assert raw.status_code == 200
-
-    files_in_output_dir = os.listdir(coverage_obj.technical_conf.output_dir)
-
-    assert files_in_output_dir[0].endswith('database.zip')
-
-    with ZipFile(os.path.join(coverage_obj.technical_conf.output_dir, files_in_output_dir[0])) as new_ntfs_zip:
-        files_in_zip = new_ntfs_zip.namelist()
-        assert calendar_handler.GRID_CALENDARS in files_in_zip
-        assert calendar_handler.GRID_PERIODS in files_in_zip
-        assert calendar_handler.GRID_CALENDAR_REL_LINE in files_in_zip
+    import logging
+    logging.debug('file %s',coverage_obj.environments['production'].current_ntfs_id)
+    with requests_mock.Mocker() as m:
+        m.post('http://tyr.prod/v0/instances/test', text='ok')
+        files = {'file': (open(calendar_file, 'rb'), 'export_calendars.zip')}
+        raw = app.post('/coverages/{}/grid_calendar'.format(coverage_obj.id), data=files)
+        assert raw.status_code == 200
+        assert m.called
+        #it doesn't seem possible to get the file sended in the request :(
+        #with ZipFile(os.path.join(coverage_obj.technical_conf.output_dir, files_in_output_dir[0])) as new_ntfs_zip:
+        #    files_in_zip = new_ntfs_zip.namelist()
+        #    assert calendar_handler.GRID_CALENDARS in files_in_zip
+        #    assert calendar_handler.GRID_PERIODS in files_in_zip
+        #    assert calendar_handler.GRID_CALENDAR_REL_LINE in files_in_zip

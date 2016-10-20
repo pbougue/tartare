@@ -144,7 +144,7 @@ class Coverage(object):
         filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
         gridfs = GridFS(mongo.db)
         id = save_file_in_gridfs(file, gridfs=gridfs, filename=filename, coverage=self.id)
-        Coverage.update(self.id, {'Environments.{}.current_ntfs_id'.format(environment_type): id})
+        Coverage.update(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
         #when we delete the file all process reading it will get invalid data
         #TODO: We will need to implements a better solution
         delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)

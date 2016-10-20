@@ -107,6 +107,9 @@ class GridCalendar(Resource):
         zip_file.close()
 
         #run the update of navitia in background
-        tasks.update_calendars.delay(coverage.id)
+        for k, env in coverage.environments.items():
+            if env.current_ntfs_id:
+                #TODO: use a chain later
+                tasks.update_ntfs.delay(coverage.id, k)
 
         return {'message': 'OK'}, 200
