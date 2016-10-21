@@ -120,13 +120,13 @@ def update_calendars(self, coverage_id):
         _do_merge_calendar(grid_calendars_file, current_ntfs, output_ntfs_file)
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file(self, coverage_id, environment_type, file_id):
+def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].tyr_url
     file = models.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
-    #how to handle timeout?
+    #TODO: how to handle timeout?
     response = upload_file(url, file.filename, file)
     if response.status_code != 200:
         raise self.retry()
@@ -134,7 +134,7 @@ def send_file(self, coverage_id, environment_type, file_id):
         models.delete_file_from_gridfs(file_id)
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def update_ntfs(self, coverage_id, environment_type):
+def send_ntfs_to_tyr(self, coverage_id, environment_type):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].tyr_url
     ntfs_file = models.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
@@ -147,7 +147,7 @@ def update_ntfs(self, coverage_id, environment_type):
             logger.debug("Working to generate [{}]".format(output_ntfs_file))
             _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
             logger.info('trying to send data to %s', url)
-            #how to handle the timeout?
+            #TODO: how to handle the timeout?
             with open(output_ntfs_file, 'rb') as file:
                 response = upload_file(url, output_ntfs_file, file)
     else:

@@ -66,13 +66,12 @@ class DataUpdate(Resource):
                 logger.warning('invalid file provided: %s', content.filename)
                 return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
             with open(tmp_file, 'rb') as file:
-                if file_type == 'fusio':
+                if data_handler.is_ntfs_data(file_type):
                     coverage.save_ntfs(environment_type, file)
-                    tasks.update_ntfs.delay(coverage_id, environment_type)
+                    tasks.send_ntfs_to_tyr.delay(coverage_id, environment_type)
                 else:
                     #we need to temporary save the file before sending it
-                    logging.debug('%s', file)
                     file_id = models.save_file_in_gridfs(file, filename=content.filename)
-                    tasks.send_file.delay(coverage_id, environment_type, file_id)
+                    tasks.send_file_to_tyr_and_discard.delay(coverage_id, environment_type, file_id)
 
         return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200

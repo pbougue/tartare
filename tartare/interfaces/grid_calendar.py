@@ -110,6 +110,6 @@ class GridCalendar(Resource):
         for k, env in coverage.environments.items():
             if env.current_ntfs_id:
                 #TODO: use a chain later
-                tasks.update_ntfs.delay(coverage.id, k)
+                tasks.send_ntfs_to_tyr.delay(coverage.id, k)
 
         return {'message': 'OK'}, 200
