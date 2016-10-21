@@ -104,21 +104,6 @@ def handle_data(coverage):
             shutil.move(input_file, output_file)
 
 
-@celery.task(bind=True)
-def update_calendars(self, coverage_id):
-    coverage = models.Coverage.get(coverage_id)
-    input_dir = coverage.technical_conf.input_dir
-    current_data_dir = coverage.technical_conf.current_data_dir
-    output_dir = coverage.technical_conf.output_dir
-    # Merge with last NTFS
-    current_ntfs = _get_current_nfts_file(current_data_dir)
-    grid_calendars_file = coverage.get_grid_calendars()
-    if current_ntfs and grid_calendars_file:
-        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'\
-                .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-        logger.debug("Working to generate [{}]".format(output_ntfs_file))
-        _do_merge_calendar(grid_calendars_file, current_ntfs, output_ntfs_file)
-
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     coverage = models.Coverage.get(coverage_id)
