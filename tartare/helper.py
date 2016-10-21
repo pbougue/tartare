@@ -34,6 +34,12 @@ import sys
 from collections.abc import Mapping
 import requests
 from requests_toolbelt.multipart import encoder
+from gridfs.grid_file import GridOut
+
+#monkey patching of gridfs file for exposing the size in a "standard" way
+def grid_out_len(self):
+    return self.length
+GridOut.__len__ = grid_out_len
 
 def upload_file(url, filename, file):
     form = encoder.MultipartEncoder({

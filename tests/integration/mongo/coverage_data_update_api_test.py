@@ -33,64 +33,60 @@ from glob import glob
 from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
 from zipfile import ZipFile, ZIP_DEFLATED
 from io import BytesIO
+import requests_mock
 
 
-def test_post_pbf_returns_success_status(app, coverage):
-    filename = 'empty_pbf.osm.pbf'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+def test_post_pbf_returns_success_status(app, coverage_obj, fixture_dir):
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
     files = {'file': (open(path, 'rb'), 'empty_pbf.osm.pbf')}
-    raw = app.post('/coverages/jdr/data_update', data=files)
+    with requests_mock.Mocker() as m:
+        m.post('http://tyr.prod/v0/instances/test', text='ok')
+        raw = app.post('/coverages/test/environments/production/data_update', data=files)
+        assert m.called
     r = to_json(raw)
-    input_dir = coverage['technical_conf']['input_dir']
-    assert input_dir == './input/jdr'
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')
-    assert os.path.exists(os.path.join(input_dir, filename))
 
-def test_post_pbf_with_bad_param(app, coverage):
+def test_post_pbf_with_bad_param(app, coverage_obj, fixture_dir):
     filename = 'empty_pbf.osm.pbf'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
     files = {'file_name': (open(path, 'rb'), 'empty_pbf.osm.pbf')}
-    raw = app.post('/coverages/jdr/data_update', data=files)
+    raw = app.post('/coverages/test/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
     assert r.get('message') == 'file provided with bad param ("file" param expected)'
 
-def test_post_osm_returns_invalid_file_extension_message(app, coverage):
+def test_post_osm_returns_invalid_file_extension_message(app, coverage_obj, fixture_dir):
     filename = 'empty_pbf.funky_extension'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.funky_extension')
     files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
-    raw = app.post('/coverages/jdr/data_update', data=files)
+    raw = app.post('/coverages/test/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
     assert r.get('message').startswith('invalid file provided')
 
-def test_post_osm_returns_invalid_coverage(app, coverage):
-    filename = 'empty_pbf.osm.pbf'
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/geo_data/', filename)
+def test_post_osm_returns_invalid_coverage(app, fixture_dir):
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
     files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
-    raw = app.post('/coverages/jdr_bug/data_update', data=files)
+    raw = app.post('/coverages/jdr_bug/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 404
     assert r.get('message') == 'bad coverage jdr_bug'
 
-def test_post_pbf_returns_file_missing_message(app, coverage):
-    raw = app.post('/coverages/jdr/data_update')
+def test_post_pbf_returns_file_missing_message(app, coverage_obj):
+    raw = app.post('/coverages/test/environments/production/data_update')
     r = to_json(raw)
     assert raw.status_code == 400
-    print("--------------")
-    print(r.get('message'))
     assert r.get('message') == 'no file provided'
 
-def test_post_ntfs_success(tmpdir, app, coverage):
+def test_post_ntfs_success(app, coverage_obj):
     #create ZIP file with fixture before sending it
-    input = tmpdir.mkdir('input')
     with get_valid_ntfs_memory_archive() as (ntfs_file_name, ntfs_zip_memory):
         files = {'file': (ntfs_zip_memory, ntfs_file_name)}
-        raw = app.post('/coverages/jdr/data_update', data=files)
+        with requests_mock.Mocker() as m:
+            m.post('http://tyr.prod/v0/instances/test', text='ok')
+            raw = app.post('/coverages/test/environments/production/data_update', data=files)
+            assert m.called
         r = to_json(raw)
-        input_dir = coverage['technical_conf']['input_dir']
-        assert input_dir == './input/jdr'
         assert raw.status_code == 200
         assert r.get('message').startswith('Valid fusio file provided')
-        assert os.path.exists(os.path.join(input_dir, ntfs_file_name))
