@@ -3,3 +3,4 @@ pytest==2.9.2
 docker-py==1.9.0
 honcho==0.7.1
 requests-mock==1.1.0
+pytest-mock==1.2

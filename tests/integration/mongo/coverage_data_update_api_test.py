@@ -34,6 +34,7 @@ from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
 from zipfile import ZipFile, ZIP_DEFLATED
 from io import BytesIO
 import requests_mock
+from tartare.tasks import send_file_to_tyr_and_discard, send_ntfs_to_tyr
 
 
 def test_post_pbf_returns_success_status(app, coverage_obj, fixture_dir):
@@ -43,6 +44,16 @@ def test_post_pbf_returns_success_status(app, coverage_obj, fixture_dir):
         m.post('http://tyr.prod/v0/instances/test', text='ok')
         raw = app.post('/coverages/test/environments/production/data_update', data=files)
         assert m.called
+    r = to_json(raw)
+    assert raw.status_code == 200
+    assert r.get('message').startswith('Valid osm file provided')
+
+def test_post_pbf_mocked(app, coverage_obj, fixture_dir, mocker):
+    m = mocker.patch.object(send_file_to_tyr_and_discard, 'delay')
+    path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
+    files = {'file': (open(path, 'rb'), 'empty_pbf.osm.pbf')}
+    raw = app.post('/coverages/test/environments/production/data_update', data=files)
+    assert m.called
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')
@@ -87,6 +98,17 @@ def test_post_ntfs_success(app, coverage_obj):
             m.post('http://tyr.prod/v0/instances/test', text='ok')
             raw = app.post('/coverages/test/environments/production/data_update', data=files)
             assert m.called
+        r = to_json(raw)
+        assert raw.status_code == 200
+        assert r.get('message').startswith('Valid fusio file provided')
+
+def test_post_ntfs_mocked(app, coverage_obj, mocker):
+    #create ZIP file with fixture before sending it
+    m = mocker.patch.object(send_ntfs_to_tyr, 'delay')
+    with get_valid_ntfs_memory_archive() as (ntfs_file_name, ntfs_zip_memory):
+        files = {'file': (ntfs_zip_memory, ntfs_file_name)}
+        raw = app.post('/coverages/test/environments/production/data_update', data=files)
+        assert m.called
         r = to_json(raw)
         assert raw.status_code == 200
         assert r.get('message').startswith('Valid fusio file provided')
