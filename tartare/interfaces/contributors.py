@@ -49,12 +49,12 @@ class Contributor(flask_restful.Resource):
                     return {'error': 'new data_source id should not be provided.'}, 400
 
         contributor_schema = schema.ContributorSchema(strict=True)
-        contributor_id = post_data["id"]
         try:
             contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
             return {'error': err.messages}, 400
 
+        contributor_id = post_data["id"]
         try:
             contributor.save()
         except DuplicateKeyError as e:
