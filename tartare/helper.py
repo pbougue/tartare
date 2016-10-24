@@ -42,11 +42,13 @@ def grid_out_len(self):
 GridOut.__len__ = grid_out_len
 
 def upload_file(url, filename, file):
-    form = encoder.MultipartEncoder({
-        'file': (filename, file, 'application/octet-stream')
-    })
-    headers =  {'Content-Type': form.content_type}
-    return requests.post(url, headers=headers, data=form)
+    return requests.post(url, files={'file': file}, timeout=120)
+    #TODO: fix interaction between toolbets and gridfs file
+    #form = encoder.MultipartEncoder({
+    #    'file': (filename, file, 'application/octet-stream')
+    #})
+    #headers =  {'Content-Type': form.content_type}
+    #return requests.post(url, headers=headers, data=form, timeout=10)
 
 
 def configure_logger(app_config):

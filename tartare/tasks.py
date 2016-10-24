@@ -112,11 +112,14 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
     #TODO: how to handle timeout?
-    response = upload_file(url, file.filename, file)
-    if response.status_code != 200:
-        raise self.retry()
-    else:
-        models.delete_file_from_gridfs(file_id)
+    try:
+        response = upload_file(url, file.filename, file)
+        if response.status_code != 200:
+            raise self.retry()
+        else:
+            models.delete_file_from_gridfs(file_id)
+    except:
+        logging.exception('error')
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self, coverage_id, environment_type):
