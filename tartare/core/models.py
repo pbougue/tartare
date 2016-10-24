@@ -34,6 +34,8 @@ from gridfs import GridFS
 from bson.objectid import ObjectId
 import logging
 import datetime
+import pymongo
+import uuid
 
 @app.before_first_request
 def init_mongo():
@@ -171,16 +173,24 @@ class MongoCoverageSchema(Schema):
         return Coverage(**data)
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format=None):
-        self.id = id
+    def __init__(self, id=None, name=None, data_format="gtfs"):
+        if not id:
+            self.id = str(uuid.uuid4())
+        else:
+            self.id = id
         self.name = name
         self.data_format = data_format
 
 
 class MongoDataSourceSchema(Schema):
-    id = fields.String(required=True)
+    id = fields.String(required=False)
     name = fields.String(required=True)
-    data_format = fields.String(default='gtfs')
+    data_format = fields.String(required=False)
+
+    @post_load
+    def build_data_source(self, data):
+        return DataSource(**data)
+
 
 class Contributor(object):
     mongo_collection = 'contributors'
@@ -192,7 +202,7 @@ class Contributor(object):
         if data_sources:
             self.data_sources = data_sources
         else:
-            self.data_sources = {}
+            self.data_sources = []
 
     def save(self):
         raw = MongoContributorSchema().dump(self).data
@@ -203,7 +213,7 @@ class Contributor(object):
         raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
         if raw is None:
             return None
-        return MongoContributorSchema().load(raw).data
+        return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
     def delete(cls, contributor_id=None):
@@ -221,12 +231,16 @@ class Contributor(object):
 
     @classmethod
     def update(cls, contributor_id=None, dataset={}):
+        print("dotted", to_doted_notation(dataset))
         raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': to_doted_notation(dataset)})
         if raw.matched_count == 0:
             return None
 
         return cls.get(contributor_id)
 
+    @classmethod
+    def data_source_ids(self):
+        return [d.id for d in self.data_sources]
 
 class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
