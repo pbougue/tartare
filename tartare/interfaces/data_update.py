@@ -66,7 +66,7 @@ class DataUpdate(Resource):
                 logger.warning('invalid file provided: %s', content.filename)
                 return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
             with open(tmp_file, 'rb') as file:
-                if data_handler.is_ntfs_data(file_type):
+                if file_type == 'fusio': #ntfs is called fusio in type_of_data
                     coverage.save_ntfs(environment_type, file)
                     tasks.send_ntfs_to_tyr.delay(coverage_id, environment_type)
                 else:
