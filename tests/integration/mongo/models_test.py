@@ -35,12 +35,7 @@ def test_coverage_fetch(get_app_context):
     """
     assert len(models.Coverage.all()) == 0
     coverage = models.Coverage(id='id_of_the_coverage',
-                               name='name of the coverage',
-                               technical_conf=models.Coverage.TechnicalConfiguration(
-                                   input_dir='bob_the_input_dir',
-                                   output_dir='bobette_the_output_dir',
-                                   current_data_dir='bobitto_the_current_dir',
-                                   ))
+                               name='name of the coverage')
     coverage.save()
 
     persisted_coverages = list(models.Coverage.all())
@@ -48,7 +43,3 @@ def test_coverage_fetch(get_app_context):
 
     assert persisted_coverages[0].id == 'id_of_the_coverage'
     assert persisted_coverages[0].name == 'name of the coverage'
-    conf = persisted_coverages[0].technical_conf
-    assert conf.input_dir == 'bob_the_input_dir'
-    assert conf.output_dir == 'bobette_the_output_dir'
-    assert conf.current_data_dir == 'bobitto_the_current_dir'

@@ -18,29 +18,6 @@ import tempfile
 logger = logging.getLogger(__name__)
 
 
-@celery.task()
-def update_all_data_task():
-    for coverage in models.Coverage.all():
-        update_data(coverage)
-
-
-@celery.task()
-def update_data(coverage):
-    input_dir = coverage.technical_conf.input_dir
-    logger.info('scanning directory %s', input_dir)
-    handle_data(coverage)
-
-
-def remove_old_ntfs_files(directory):
-    files = glob.glob(os.path.join(directory, "*"))
-
-    for f in files:
-        if os.path.isfile(f):
-            if f.endswith('.zip') and (type_of_data(f)[0] == 'fusio'):
-                logger.debug("Cleaning NTFS file {}".format(f))
-                os.remove(f)
-
-
 def create_dir(directory):
     """create directory if needed"""
     if not os.path.exists(directory):
@@ -59,49 +36,6 @@ def _get_current_nfts_file(current_data_dir):
     files = glob.glob(os.path.join(current_data_dir, "*"))
 
     return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
-
-
-def handle_data(coverage):
-    """
-    Move all file from the input_dir to output_dir
-    All interesting data are also moved to the current_dir
-    """
-    input_dir = coverage.technical_conf.input_dir
-    current_data_dir = coverage.technical_conf.current_data_dir
-    output_dir = coverage.technical_conf.output_dir
-    if not os.path.exists(input_dir):
-        logger.debug('directory {} does not exists, skipping scan'.format(input_dir))
-        return
-
-    create_dir(output_dir)
-    create_dir(current_data_dir)
-
-    for filename in os.listdir(input_dir):
-        input_file = os.path.join(input_dir, filename)
-        output_ntfs_file = os.path.join(output_dir, '{}-database.zip'\
-                .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-        output_file = os.path.join(output_dir, filename)
-        logger.debug("Working on [{}] to generate [{}]".format(input_file, output_file))
-        # copy data interesting data
-
-        calendar_dir = os.path.join(current_data_dir,
-                                    app.config.get("GRID_CALENDAR_DIR"))
-        calendar_file = os.path.join(calendar_dir, app.config.get("CALENDAR_FILE"))
-        if is_ntfs_data(input_file):
-            # NTFS file is moved to the CURRENT_DATA_DIR, old NTFS file is deleted
-            remove_old_ntfs_files(current_data_dir)
-            copyfile(input_file, os.path.join(current_data_dir, filename))
-            grid_calendars_file = coverage.get_grid_calendars()
-            if grid_calendars_file:
-                # Merge
-                _do_merge_calendar(grid_calendars_file, input_file, output_ntfs_file)
-                os.remove(input_file)
-            else:
-                shutil.move(input_file, output_ntfs_file)
-        elif input_file.endswith(".tmp"):
-            pass
-        else:
-            shutil.move(input_file, output_file)
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)

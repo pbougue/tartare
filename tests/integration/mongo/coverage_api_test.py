@@ -58,9 +58,6 @@ def test_add_coverage_returns_success(app):
     coverage = r["coverages"][0]
     assert coverage["id"] == "id_test"
     assert coverage["name"] == "name_test"
-    # the input_dir, output_dir and current_data_dir shouldn't be null
-    for d in('input_dir', 'output_dir', 'current_data_dir'):
-        assert coverage["technical_conf"].get(d)
     #A default environment should have been created
     assert 'environments' in coverage
     assert 'production' in coverage['environments']
@@ -89,9 +86,9 @@ def test_add_coverage_no_name(app):
     assert len(r["coverages"]) == 0
 
 
-def test_add_coverage_with_input_path(app):
+def test_add_coverage_with_name(app):
     raw = post(app, '/coverages',
-            '{"id": "id_test", "name": "name of the coverage", "technical_conf" : {"input_dir": "/srv/tartare/id_test/input"}}')
+            '{"id": "id_test", "name": "name of the coverage"}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -99,7 +96,6 @@ def test_add_coverage_with_input_path(app):
     assert isinstance(r["coverages"], list)
     assert r["coverages"][0]["id"] == "id_test"
     assert r["coverages"][0]["name"] == "name of the coverage"
-    assert r["coverages"][0]["technical_conf"]["input_dir"] == "/srv/tartare/id_test/input"
 
 def test_add_coverage_with_pre_env(app):
     raw = post(app, '/coverages',
@@ -169,10 +165,7 @@ def test_add_coverage_with_all_env(app):
 
 def test_patch_complex_coverage(app):
     raw = post(app, '/coverages',
-               '''{"id": "id_test", "name": "name of the coverage",
-                   "technical_conf": {"current_data_dir": "/srv/tartare/id_test/current_data_dir",
-                                      "output_dir": "/srv/tartare/id_test/output_dir"}
-               }''')
+               '''{"id": "id_test", "name": "name of the coverage"}''')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -180,21 +173,12 @@ def test_patch_complex_coverage(app):
     assert isinstance(r["coverages"], list)
     assert r["coverages"][0]["id"] == "id_test"
     assert r["coverages"][0]["name"] == "name of the coverage"
-    # input dir has not been given but should have a default value
-    conf = r["coverages"][0]["technical_conf"]
-    assert conf["input_dir"] != ""
-    assert conf["current_data_dir"] == "/srv/tartare/id_test/current_data_dir"
-    assert conf["output_dir"] == "/srv/tartare/id_test/output_dir"
 
-    raw = patch(app, '/coverages/id_test', '{"technical_conf": {"output_dir": "/srv/bob"}}')
+    raw = patch(app, '/coverages/id_test', '{"name": "new name"}')
     assert raw.status_code == 200
     r = to_json(raw)
     assert r["coverage"]["id"] == "id_test"
-    assert r["coverage"]["name"] == "name of the coverage"
-    updated_conf = r["coverage"]["technical_conf"]
-    assert updated_conf["input_dir"] == conf["input_dir"]
-    assert updated_conf["current_data_dir"] == conf['current_data_dir']
-    assert updated_conf["output_dir"] == "/srv/bob"
+    assert r["coverage"]["name"] == "new name"
 
 
 def test_delete_coverage_returns_success(app):
@@ -253,14 +237,16 @@ def test_update_coverage_forbid_unkown_field(app):
     assert raw.status_code == 400
     assert 'error' in r
 
-def test_update_coverage_forbid_unkown_field_techconf(app):
+def test_update_coverage_forbid_unkown_environments_type(app):
     raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
     assert raw.status_code == 201
 
-    raw = patch(app, '/coverages/id_test', '{"name": "new_name_test", "technical_conf": {"foo": "bar"}}')
-    r = to_json(raw)
+    raw = patch(app, '/coverages/id_test', '{"name": "new_name_test", "environments": {"integration": {"name": "bar"}}}')
+    assert raw.status_code == 200
 
+    raw = patch(app, '/coverages/id_test', '{"name": "new_name_test", "environments": {"bar": {"name": "bar"}}}')
     assert raw.status_code == 400
+    r = to_json(raw)
     assert 'error' in r
 
 def test_update_coverage__env(app):

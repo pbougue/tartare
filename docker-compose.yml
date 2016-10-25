@@ -9,10 +9,6 @@ services:
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
     command: celery -A tartare.tasks.celery worker
-    volumes:
-      - /tmp/tartare/input:/var/tartare/input:rw
-      - /tmp/tartare/output:/var/tartare/output:rw
-      - /tmp/tartare/current:/var/tartare/current:rw
     links:
       - rabbitmq
 
@@ -39,10 +35,6 @@ services:
       - rabbitmq
     ports:
       - "5000:5000"
-    volumes:
-      - /tmp/tartare/input:/var/tartare/input:rw
-      - /tmp/tartare/output:/var/tartare/output:rw
-      - /tmp/tartare/current:/var/tartare/current:rw
 
   rabbitmq:
     image: rabbitmq:management

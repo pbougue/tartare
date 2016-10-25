@@ -1,13 +1,5 @@
 FROM python:3.4-alpine
 
-VOLUME /var/tartare/input
-VOLUME /var/tartare/output
-VOLUME /var/tartare/current
-
-ENV TARTARE_INPUT /var/tartare/input
-ENV TARTARE_OUTPUT /var/tartare/output
-ENV TARTARE_CURRENT /var/tartare/current
-
 RUN addgroup -g 8110 tartare
 RUN adduser -H -D -u 8110 -G tartare tartare
 

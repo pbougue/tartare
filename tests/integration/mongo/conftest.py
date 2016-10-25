@@ -75,13 +75,7 @@ def coverage(app):
 
 @pytest.fixture(scope="function")
 def coverage_obj(tmpdir, get_app_context):
-    input = tmpdir.mkdir('input')
-    output = tmpdir.mkdir('output')
-    current_dir = tmpdir.mkdir('current_dir')
-    conf = models.Coverage.TechnicalConfiguration(input_dir=str(input),
-                                                  output_dir=str(output),
-                                                  current_data_dir=str(current_dir))
-    coverage = models.Coverage(id='test', name='test', technical_conf=conf)
+    coverage = models.Coverage(id='test', name='test')
     coverage.environments['production'] = models.Environment(name='prod',
                                                              tyr_url='http://tyr.prod/v0/instances/test')
     coverage.save()

@@ -26,13 +26,7 @@ CELERY_QUEUES = (
 # configuration of celery, don't edit
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-CELERYBEAT_SCHEDULE = {
-    'udpate-data-every-n-seconds': {
-        'task': 'tartare.tasks.update_all_data_task',
-        'schedule': timedelta(seconds=2),
-        'options': {'expires': 25}
-    },
-}
+CELERYBEAT_SCHEDULE = {}
 CELERY_TIMEZONE = 'UTC'
 
 # http://docs.celeryproject.org/en/master/configuration.html#std:setting-CELERYBEAT_SCHEDULE_FILENAME
@@ -41,10 +35,6 @@ CELERYBEAT_SCHEDULE_FILENAME = '/tmp/celerybeat-schedule'
 CELERYD_HIJACK_ROOT_LOGGER = False
 
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost/tartare')
-
-INPUT_DIR = str(os.getenv('TARTARE_INPUT', './input'))
-OUTPUT_DIR = str(os.getenv('TARTARE_OUTPUT', './output'))
-CURRENT_DATA_DIR = str(os.getenv('TARTARE_CURRENT', './current'))
 
 #If no environment is defined at the creation of a coverage tyr create automaticaly the enviroment typed "production"
 #The folowing parameters will be used for creating it

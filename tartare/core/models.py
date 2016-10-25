@@ -38,6 +38,7 @@ import logging
 @app.before_first_request
 def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
+    mongo.db['coverages'].update({}, {"$unset": {"technical_conf": ""}}, upsert=False, multi=True)
 
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
@@ -64,16 +65,9 @@ class Environment(object):
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    class TechnicalConfiguration(object):
-        def __init__(self, input_dir=None, output_dir=None, current_data_dir=None):
-            self.input_dir = input_dir
-            self.output_dir = output_dir
-            self.current_data_dir = current_data_dir
-
-    def __init__(self, id, name, technical_conf, environments=None, grid_calendars_id=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None):
         self.id = id
         self.name = name
-        self.technical_conf = technical_conf
         if environments:
             self.environments = environments
         else:
@@ -145,15 +139,6 @@ class Coverage(object):
         self.environments[environment_type].current_ntfs_id = id
 
 
-class MongoCoverageTechnicalConfSchema(Schema):
-    input_dir = fields.String()
-    output_dir = fields.String()
-    current_data_dir = fields.String()
-
-    @post_load
-    def make_technical_conf(self, data):
-        return Coverage.TechnicalConfiguration(**data)
-
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
     tyr_url = fields.Url()
@@ -177,7 +162,6 @@ class MongoEnvironmentListSchema(Schema):
 class MongoCoverageSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
-    technical_conf = fields.Nested(MongoCoverageTechnicalConfSchema)
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
 
