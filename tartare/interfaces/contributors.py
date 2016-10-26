@@ -43,10 +43,8 @@ class Contributor(flask_restful.Resource):
         post_data = request.json
         #first a check on the data_sources id
         #if "data_sources" in post_data and 'id' in [ds for ds in post_data["data_sources"]]:
-        if "data_sources" in post_data:
-            for ds in post_data["data_sources"]:
-                if 'id' in ds:
-                    return {'error': 'new data_source id should not be provided.'}, 400
+        if any('id' in ds for ds in post_data.get('data_sources', [])):
+            return {'error': 'new data_source id should not be provided.'}, 400
 
         contributor_schema = schema.ContributorSchema(strict=True)
         try:
@@ -103,19 +101,16 @@ class Contributor(flask_restful.Resource):
         if 'id' in request.json and contributor.id != request.json['id']:
             return {'error': 'The modification of the id is not possible'}, 400
 
-        existing_ds_id = []
-        for data_source in contributor.data_sources:
-            existing_ds_id.append(data_source.id)
+        existing_ds_id = [d.id for d in contributor.data_sources]
         logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
 
         request_data = request.json
+        #checking errors before updating PATCH data
+        if any(('id' in ds and ds["id"] not in existing_ds_id) for ds in request_data.get('data_sources', [])):
+                    return {'error': 'new data_source id should not be provided.'}, 400
+        #constructing PATCH data
         patched_data_sources = None
         if "data_sources" in request_data:
-            #checking errors before updating PATCH data
-            for ds in request_data["data_sources"]:
-                if 'id' in ds and ds["id"] not in existing_ds_id:
-                    return {'error': 'new data_source id should not be provided.'}, 400
-            #constructing PATCH data
             patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
             for ds in request_data["data_sources"]:
                 if 'id' in ds:
@@ -127,9 +122,9 @@ class Contributor(flask_restful.Resource):
                 else:
                     #adding a new data_source
                     patched_data_sources.append(ds)
+        if patched_data_sources:
+            request_data['data_sources'] = patched_data_sources
         try:
-            if patched_data_sources:
-                request_data['data_sources'] = patched_data_sources
             contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError as e:
             logging.getLogger(__name__).exception(

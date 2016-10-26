@@ -195,18 +195,18 @@ class MongoDataSourceSchema(Schema):
 class Contributor(object):
     mongo_collection = 'contributors'
 
-    def __init__(self, id, name, data_prefix, data_sources=None):
+    def __init__(self, id, name, data_prefix, data_sources=[]):
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
-        if data_sources:
-            self.data_sources = data_sources
-        else:
-            self.data_sources = []
+        self.data_sources = data_sources
 
     def save(self):
         raw = MongoContributorSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
+
+    def data_source_ids(self):
+        return [d.id for d in self.data_sources]
 
     @classmethod
     def get(cls, contributor_id=None):
@@ -231,16 +231,12 @@ class Contributor(object):
 
     @classmethod
     def update(cls, contributor_id=None, dataset={}):
-        print("dotted", to_doted_notation(dataset))
         raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': to_doted_notation(dataset)})
         if raw.matched_count == 0:
             return None
 
         return cls.get(contributor_id)
 
-    @classmethod
-    def data_source_ids(self):
-        return [d.id for d in self.data_sources]
 
 class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
