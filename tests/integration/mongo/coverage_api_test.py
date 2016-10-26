@@ -163,7 +163,7 @@ def test_add_coverage_with_all_env(app):
     assert coverage['environments']['integration']['tyr_url'] == 'http://int.bar/'
 
 
-def test_patch_complex_coverage(app):
+def test_patch_simple_coverage(app):
     raw = post(app, '/coverages',
                '''{"id": "id_test", "name": "name of the coverage"}''')
     assert raw.status_code == 201
