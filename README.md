@@ -39,11 +39,6 @@ docker-compose build
 docker-compose up -d
 ```
 
-Affect rights to input/output folders
-```
-sudo chmod o+rwx -R /tmp/tartare/*
-```
-
 To watch logs output:
  ```
  docker-compose logs -f
@@ -89,12 +84,14 @@ curl -X POST http://127.0.0.1:5000/coverages/ -H "Content-Type: application/json
 http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
 ```
 
-There are optionnal parameters :
-* input_dir : scanned directoy for NTFS Data file (provided by Fusio)
-* output_dir : output directoy of the processed Data (should be configured to the input directoy of Tyr module)
-* current_data_dir : used to keep trace of the manipulated Data files (backup of the last version of the files)
-
-Data folders need to be created previously
+There is an optionnal environments section where you can parameter multiple output environments.
+They can can be either:
+* integration
+* preproduction
+* production
+For each you can parameter:
+* name, typically the platforms name
+* tyr_url, the url used to post data output of tartare
 
 ##### Modify a coverage configuration
 
