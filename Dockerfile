@@ -42,5 +42,6 @@ USER tartare
 # you can pass a TARTARE_VERSION to the build (with cli argument --build-arg or in docker-compose)
 ARG TARTARE_VERSION
 ENV TARTARE_VERSION ${TARTARE_VERSION:-unknown_version}
+EXPOSE 5000
 
 CMD ["celery", "-A", "tartare.tasks.celery", "worker"]
