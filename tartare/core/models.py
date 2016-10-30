@@ -41,7 +41,7 @@ import uuid
 def init_mongo():
     mongo.db['contributors'].ensure_index("data_prefix", unique=True)
     mongo.db['coverages'].update({}, {"$unset": {"technical_conf": ""}}, upsert=False, multi=True)
-    mongo.db['contributors'].ensureIndex({"data_sources.id" : 1}, unique=True)
+    mongo.db['contributors'].ensure_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
