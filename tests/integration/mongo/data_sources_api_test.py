@@ -131,7 +131,7 @@ def test_patch_data_source_name_only(app):
     assert patched_data_source["name"] == "name_modified"
     assert patched_data_source["data_format"] == "Neptune"
 
-def test_patch_one_data_source_name_of_two(app):
+def test_patch_one_data_source_name_of_two_and_add_one(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune"})
@@ -146,14 +146,16 @@ def test_patch_one_data_source_name_of_two(app):
     new_data_source["name"] = "name_modified"
     r["contributor"]["data_sources"][0] = new_data_source
     data_source_list = {}
-    data_source_list["data_sources"] = [new_data_source]
+    data_source_list["data_sources"] = [new_data_source, {"name":"data_source_3"}]
     print("patching data with ", json.dumps(data_source_list))
     raw = patch(app, '/contributors/id_test', json.dumps(data_source_list))
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 2
+    assert len(r["contributor"]["data_sources"]) == 3
     patched_data_sources = r["contributor"]["data_sources"]
     assert patched_data_sources[0]["data_format"] == "Neptune"
     assert patched_data_sources[1]["data_format"] == "Neptune"
+    assert patched_data_sources[2]["data_format"] == "gtfs"
     assert patched_data_sources[0]["name"] == "data_source_name"
     assert patched_data_sources[1]["name"] == "name_modified"
+    assert patched_data_sources[2]["name"] == "data_source_3"

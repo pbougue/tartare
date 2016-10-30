@@ -112,13 +112,12 @@ class Contributor(flask_restful.Resource):
         patched_data_sources = None
         if "data_sources" in request_data:
             patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
+
             for ds in request_data["data_sources"]:
                 if 'id' in ds:
-                    #update of existing data_source
-                    for pds_i, pds_l in enumerate(patched_data_sources):
-                        if pds_l["id"] == ds["id"]:
-                            for ds_k, ds_v in ds.items():
-                                patched_data_sources[pds_i][ds_k] = ds_v
+                    pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
+                    if pds:
+                        pds.update(ds)
                 else:
                     #adding a new data_source
                     patched_data_sources.append(ds)
