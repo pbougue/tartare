@@ -1,0 +1,212 @@
+---
+swagger: '2.0'
+info:
+  description: |
+    API managing data integration.
+
+    Enables coverages, contributors declaration and management.
+    Also offers the possibility to POST data to update.
+
+    You can help on [Tartare's github page](https://github.com/CanalTP/tartare).
+
+  version: 0.1.0
+  title: Tartare API
+  contact:
+    name: www.navitia.io
+  license:
+    name: AGPLv3
+    url: http://www.gnu.org/licenses/
+schemes:
+  - http
+  - https
+# format of bodies a client can send (Content-Type)
+consumes:
+  - application/json
+  - application/binary
+# format of the responses to the client (Accepts)
+produces:
+  - application/json
+
+tags:
+  -
+    name: "coverages"
+    description: "Manage coverages"
+  -
+    name: "contributors"
+    description: "Manage contributors"
+
+paths:
+  /:
+    get:
+      summary: Display available endpoints
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Array of links
+
+
+  /coverages:
+
+    get:
+      summary: Display available coverages
+      tags:
+        - coverages
+      responses:
+        200:
+          description: Array of coverages
+          schema:
+            title: coverages
+            type: array
+            items:
+              $ref: '#/definitions/coverage'
+
+    post:
+      summary: Create a new coverage
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Coverage object that needs to be added to Tartare
+          required: true
+          schema:
+            $ref: "#/definitions/coverage"
+      responses:
+        200:
+          description: Created coverage
+          schema:
+            $ref: "#/definitions/coverage"
+
+  /coverages/<coverage_id>:
+    patch:
+      summary: Modify a coverage configuration
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Attributes of the coverage <coverage_id> that needs to be modified
+          required: true
+          schema:
+            $ref: "#/definitions/coverage"
+      responses:
+        200:
+          description: Modified coverage
+          schema:
+            $ref: "#/definitions/coverage"
+
+    delete:
+      summary: Delete a coverage
+      tags:
+        - coverages
+      produces:
+        - application/json
+      responses:
+        204:
+          description: Coverage <coverage_id> correctly deleted
+
+  /coverages/<coverage_id>/grid_calendar:
+    post:
+      summary: Handle a grid_calendar file to coverage <coverage_id> for processing
+      tags:
+        - coverages
+      consumes:
+        - application/binary
+      produces:
+        - application/json
+      responses:
+        200:
+          description: OK
+
+  /coverages/<coverage_id>/environments/<environment_type>/data_update:
+    post:
+      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym)
+      tags:
+        - coverages
+      consumes:
+        - application/binary
+      produces:
+        - application/json
+      responses:
+        200:
+          description: OK
+
+
+  /contributors:
+    get:
+      summary: Display available contributors
+      tags:
+        - contributors
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Array of contributors
+          schema:
+            title: contributors
+            type: array
+            items:
+              $ref: '#/definitions/contributor'
+
+
+
+
+
+definitions:
+
+  coverage:
+    type: object
+    properties:
+      id:
+        type: string
+        example: fr-auv
+      name:
+        type: string
+        example: auv
+      grid_calendar_id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
+      environments:
+        $ref: "#/definitions/environments"
+
+  environments:
+    type: object
+    properties:
+      production:
+        $ref: "#/definitions/environment_type"
+      preproduction:
+        $ref: "#/definitions/environment_type"
+      integration:
+        $ref: "#/definitions/environment_type"
+
+  environment_type:
+    type: object
+    properties:
+      name:
+        type: string
+        example: dev
+      tyr_url:
+        type: string
+        example: http://tyr.dev.canaltp.fr/v0/jobs/fr-auv
+      current_ntfs_id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
+
+  contributor:
+    type: object
+    properties:
+      id:
+        type: string
+        example: contrib-tan
+      name:
+        type: string
+        example: TAN

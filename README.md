@@ -67,61 +67,8 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 ### Use the Rest Api
 
-#### Configuration of coverages
-
-##### List the available coverages
-
-``` bash
-curl -X GET http://127.0.0.1:5000/coverages/
-```
-
-##### Create a new coverage
-
-``` bash
-# using curl
-curl -X POST http://127.0.0.1:5000/coverages/ -H "Content-Type: application/json" -d '{"name":"coverage_name", "id":"coverage_id" }'
-# using HTTPie python package
-http POST http://localhost:5000/coverages name=coverage_name id=coverage_id
-```
-
-There is an optionnal environments section where you can parameter multiple output environments.
-They can can be either:
-* integration
-* preproduction
-* production
-For each you can parameter:
-* name, typically the platforms name
-* tyr_url, the url used to post data output of tartare
-
-##### Modify a coverage configuration
-
-``` bash
-curl -X PATCH http://127.0.0.1:5000/coverages/coverage_id/ -H "Content-Type: application/json" -d '{"name":"coverage_new_name"}'
-```
-
-##### Delete a coverage
-
-``` bash
-curl -X DELETE http://127.0.0.1:5000/coverages/coverage_id
-```
-
-
-#### Sending Data to a specific coverage
-POST grid calendars to a specific coverage :
-``` bash
-# using curl
-curl -X POST -F file=@path/to/your-file.zip http://127.0.0.1:5000/coverages/coverage_id/grid_calendar
-# using HTTPie python package
-http POST 'http://127.0.0.1:5000/coverages/coverage_id/grid_calendar' file@/path/to/your-file.zip --form
-```
-
-POST geographic Data (currently OSM PBF files only) :
-``` bash
-# using curl
-curl -X POST -F file=@/path/to/your-file.osm.pbf http://127.0.0.1:5000/coverages/coverage_id/geo_data
-# using HTTPie python package
-http POST 'http://127.0.0.1:5000/coverages/coverage_id/geo_data' file@/path/to/your-file.osm.pbf --form
-```
+See [OpenAPI file](https://raw.githubusercontent.com/CanalTP/tartare/master/documentation/openAPI.yaml).
+You may use [swagger editor](http://editor.swagger.io/#/) or [swagger live explorer](http://petstore.swagger.io/) to explore it.
 
 
 ## Tests
