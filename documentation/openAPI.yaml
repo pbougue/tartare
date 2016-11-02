@@ -27,6 +27,13 @@ consumes:
 produces:
   - application/json
 
+tags:
+  -
+    name: "coverages"
+    description: "Manage coverages"
+  -
+    name: "contributors"
+    description: "Manage contributors"
 
 paths:
   /:
@@ -43,6 +50,8 @@ paths:
 
     get:
       summary: Display available coverages
+      tags:
+        - coverages
       responses:
         200:
           description: Array of coverages
@@ -54,6 +63,8 @@ paths:
 
     post:
       summary: Create a new coverage
+      tags:
+        - coverages
       consumes:
         - application/json
       produces:
@@ -74,6 +85,8 @@ paths:
   /coverages/<coverage_id>:
     patch:
       summary: Modify a coverage configuration
+      tags:
+        - coverages
       consumes:
         - application/json
       produces:
@@ -93,6 +106,8 @@ paths:
 
     delete:
       summary: Delete a coverage
+      tags:
+        - coverages
       produces:
         - application/json
       responses:
@@ -102,6 +117,8 @@ paths:
   /coverages/<coverage_id>/grid_calendar:
     post:
       summary: Handle a grid_calendar file to coverage <coverage_id> for processing
+      tags:
+        - coverages
       consumes:
         - application/binary
       produces:
@@ -113,6 +130,8 @@ paths:
   /coverages/<coverage_id>/environments/<environment_type>/data_update:
     post:
       summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym)
+      tags:
+        - coverages
       consumes:
         - application/binary
       produces:
@@ -125,6 +144,8 @@ paths:
   /contributors:
     get:
       summary: Display available contributors
+      tags:
+        - contributors
       produces:
         - application/json
       responses:
