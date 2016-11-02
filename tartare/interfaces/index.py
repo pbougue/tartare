@@ -37,6 +37,7 @@ from flask import url_for
 class Index(flask_restful.Resource):
     def get(self):
         return ({'_links':
-                    {'coverages': {'href': url_for('coverages', _external=True)},
-                     'status': {'href': url_for('status', _external=True)}}},
+                    {'status': {'href': url_for('status', _external=True)},
+                     'coverages': {'href': url_for('coverages', _external=True)},
+                     'contributors': {'href': url_for('contributors', _external=True)}}},
                 200)
