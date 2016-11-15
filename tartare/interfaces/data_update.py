@@ -32,6 +32,7 @@
 
 import logging
 import os
+import flask
 from flask.globals import request
 from flask_restful import Resource
 from tartare.core import models, data_handler
@@ -75,3 +76,13 @@ class DataUpdate(Resource):
                     tasks.send_file_to_tyr_and_discard.delay(coverage_id, environment_type, file_id)
 
         return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
+
+    def get(self, coverage_id, environment_type):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+        if environment_type not in coverage.environments:
+            return {'message': 'bad environment {}'.format(environment_type)}, 404
+        ntfs_file_id = coverage.environments[environment_type].current_ntfs_id
+        ntfs_file = models.get_file_from_gridfs(ntfs_file_id)
+        return flask.send_file(ntfs_file, mimetype='application/zip')
