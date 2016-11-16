@@ -41,43 +41,51 @@ import shutil
 from tartare import tasks
 
 
+def add_coverage_data(coverage_id, coverage, environment_type):
+    if coverage is None:
+        return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+
+    if environment_type not in coverage.environments:
+        return {'message': 'bad environment {}'.format(environment_type)}, 404
+
+    if not request.files :
+        return {'message': 'no file provided'}, 400
+    if request.files and 'file' not in request.files:
+        return {'message': 'file provided with bad param ("file" param expected)'}, 400
+    content = request.files['file']
+    logger = logging.getLogger(__name__)
+    logger.info('content received: %s', content)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_file = os.path.join(tmpdirname, content.filename)
+        content.save(tmp_file)
+        #TODO: improve this function so we don't have to write the file localy first
+        file_type, file_name = data_handler.type_of_data(tmp_file)
+        if file_type in [None, "tmp"] :
+            logger.warning('invalid file provided: %s', content.filename)
+            return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
+        with open(tmp_file, 'rb') as file:
+            if file_type == 'fusio': #ntfs is called fusio in type_of_data
+                coverage.save_ntfs(environment_type, file)
+                tasks.send_ntfs_to_tyr.delay(coverage_id, environment_type)
+            else:
+                #we need to temporary save the file before sending it
+                file_id = models.save_file_in_gridfs(file, filename=content.filename)
+                tasks.send_file_to_tyr_and_discard.delay(coverage_id, environment_type, file_id)
+    return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
+
 class DataUpdate(Resource):
     def post(self, coverage_id, environment_type):
         coverage = models.Coverage.get(coverage_id)
-        if coverage is None:
-            return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+        return add_coverage_data(coverage_id, coverage, environment_type)
 
-        if environment_type not in coverage.environments:
-            return {'message': 'bad environment {}'.format(environment_type)}, 404
+class CoverageData(Resource):
+    def post(self, coverage_id, environment_type, data_type=None):
+        coverage = models.Coverage.get(coverage_id)
+        return add_coverage_data(coverage, environment_type)
 
-        if not request.files :
-            return {'message': 'no file provided'}, 400
-        if request.files and 'file' not in request.files:
-            return {'message': 'file provided with bad param ("file" param expected)'}, 400
-        content = request.files['file']
-        logger = logging.getLogger(__name__)
-        logger.info('content received: %s', content)
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            tmp_file = os.path.join(tmpdirname, content.filename)
-            content.save(tmp_file)
-
-            #TODO: improve this function so we don't have to write the file localy first
-            file_type, file_name = data_handler.type_of_data(tmp_file)
-            if file_type in [None, "tmp"] :
-                logger.warning('invalid file provided: %s', content.filename)
-                return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
-            with open(tmp_file, 'rb') as file:
-                if file_type == 'fusio': #ntfs is called fusio in type_of_data
-                    coverage.save_ntfs(environment_type, file)
-                    tasks.send_ntfs_to_tyr.delay(coverage_id, environment_type)
-                else:
-                    #we need to temporary save the file before sending it
-                    file_id = models.save_file_in_gridfs(file, filename=content.filename)
-                    tasks.send_file_to_tyr_and_discard.delay(coverage_id, environment_type, file_id)
-
-        return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
-
-    def get(self, coverage_id, environment_type):
+    def get(self, coverage_id, environment_type, data_type):
+        if data_type != 'ntfs':
+            return {'message': 'bad data type {}'.format(data_type)}, 404
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404

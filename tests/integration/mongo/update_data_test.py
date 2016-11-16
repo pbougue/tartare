@@ -18,6 +18,7 @@ def test_upload_file_ok(coverage_obj, fixture_dir):
         send_file_to_tyr_and_discard(coverage_obj.id, 'production', file_id)
         assert m.called
 
+
 def test_get_ntfs_file_ok(app, coverage_obj, fixture_dir):
     with get_valid_ntfs_memory_archive() as (ntfs_file_name, ntfs_zip_memory):
         files = {'file': (ntfs_zip_memory, ntfs_file_name)}
@@ -26,7 +27,7 @@ def test_get_ntfs_file_ok(app, coverage_obj, fixture_dir):
             raw = app.post('/coverages/test/environments/production/data_update', data=files)
         r = to_json(raw)
         assert r['message'].startswith('Valid fusio file provided')
-        raw = app.get('/coverages/test/environments/production/data_update')
+        raw = app.get('/coverages/test/environments/production/data/ntfs')
         assert raw.status_code == 200
         assert raw.mimetype == 'application/zip'
         data = raw.get_data()
