@@ -62,7 +62,7 @@ def test_post_contrib_one_data_source_with_id(app):
     print(to_json(raw))
     assert raw.status_code == 400
 
-def test_post_contrib_one_data_source_with_datasource(app):
+def test_post_contrib_one_data_source_with_data_format(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune"})
