@@ -85,7 +85,7 @@ class CoverageData(Resource):
 
     def get(self, coverage_id, environment_type, data_type):
         if data_type != 'ntfs':
-            return {'message': 'bad data type {}'.format(data_type)}, 404
+            return {'message': 'bad data type {} ("ntfs" expected)'.format(data_type)}, 404
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             return {'message': 'bad coverage {}'.format(coverage_id)}, 404
