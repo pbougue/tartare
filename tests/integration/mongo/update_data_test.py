@@ -48,4 +48,5 @@ def test_get_ntfs_bad_requedted_type(app, coverage_obj, fixture_dir):
         raw = app.get('/coverages/test/environments/production/data/ntfs_error')
         r = to_json(raw)
         assert raw.status_code == 404
+        print(r["message"])
         assert r["message"].startswith('bad data type')
