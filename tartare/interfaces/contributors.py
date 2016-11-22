@@ -49,10 +49,13 @@ class Contributor(flask_restful.Resource):
         try:
             contributor.save()
         except DuplicateKeyError as e:
-            logging.getLogger(__name__).exception('impossible to add contributor {}, data_prefix already used ({})'.format(contributor, request.json['data_prefix']))
+            logging.getLogger(__name__).exception(
+                'impossible to add contributor {}, data_prefix already used ({})'.format(
+                    contributor, request.json['data_prefix']))
             return {'error': str(e)}, 400
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to add contributor {}'.format(contributor))
+            logging.getLogger(__name__).exception(
+                'impossible to add contributor {}'.format(contributor))
             return {'error': str(e)}, 500
 
         return {'contributor': contributor_schema.dump(contributor).data}, 201
@@ -74,7 +77,8 @@ class Contributor(flask_restful.Resource):
         return {'contributor': None}, 204
 
     def patch(self, contributor_id):
-        # "data_prefix" field is not modifiable, impacts of the modification need to be checked. The previous value needs to be checked for an error
+        # "data_prefix" field is not modifiable, impacts of the modification
+        # need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
         if contributor is None:
             abort(404)
@@ -85,14 +89,16 @@ class Contributor(flask_restful.Resource):
             return {'error': errors}, 400
 
         if 'data_prefix' in request.json and contributor.data_prefix != request.json['data_prefix']:
-            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(contributor.data_prefix, request.json['data_prefix'])}, 400
+            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(
+                contributor.data_prefix, request.json['data_prefix'])}, 400
         if 'id' in request.json and contributor.id != request.json['id']:
             return {'error': 'The modification of the id is not possible'}, 400
 
         try:
             contributor = models.Contributor.update(contributor_id, request.json)
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update contributor with dataset {}'.format(args))
+            logging.getLogger(__name__).exception(
+                'impossible to update contributor with dataset {}'.format(args))
             return {'error': str(e)}, 500
 
         return {'contributor': schema.ContributorSchema().dump(contributor).data}, 200
