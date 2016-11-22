@@ -35,6 +35,7 @@ from collections.abc import Mapping
 import requests
 from requests_toolbelt.multipart import encoder
 from gridfs.grid_file import GridOut
+from bson.objectid import ObjectId
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self):
@@ -49,7 +50,6 @@ def upload_file(url, filename, file):
     #})
     #headers =  {'Content-Type': form.content_type}
     #return requests.post(url, headers=headers, data=form, timeout=10)
-
 
 def configure_logger(app_config):
     """
@@ -90,6 +90,10 @@ def to_doted_notation(data, prefix=None):
         key = _make_doted_key(prefix, k)
         if isinstance(v, Mapping):
             result.update(to_doted_notation(v, key))
+        elif isinstance(v, list):
+            for lk, lv in enumerate(v):
+                list_key = _make_doted_key(key, str(lk))
+                result.update(to_doted_notation(lv, list_key))
         else:
             result[key] = v
     return result

@@ -33,7 +33,7 @@ from flask_restful import unpack
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
-from tartare.core.models import MongoContributorSchema, Environment
+from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema
 import os
 from tartare import app
 
@@ -99,3 +99,5 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
 class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
     id = fields.String()
 
+class DataSourceSchema(MongoDataSourceSchema, NoUnknownFieldMixin):
+    id = fields.String()

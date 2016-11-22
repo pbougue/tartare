@@ -40,12 +40,19 @@ from marshmallow import ValidationError
 
 class Contributor(flask_restful.Resource):
     def post(self):
+        post_data = request.json
+        #first a check on the data_sources id
+        #if "data_sources" in post_data and 'id' in [ds for ds in post_data["data_sources"]]:
+        if any('id' in ds for ds in post_data.get('data_sources', [])):
+            return {'error': 'new data_source id should not be provided.'}, 400
+
         contributor_schema = schema.ContributorSchema(strict=True)
         try:
-            contributor = contributor_schema.load(request.json).data
+            contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
             return {'error': err.messages}, 400
 
+        contributor_id = post_data["id"]
         try:
             contributor.save()
         except DuplicateKeyError as e:
@@ -58,7 +65,7 @@ class Contributor(flask_restful.Resource):
                 'impossible to add contributor {}'.format(contributor))
             return {'error': str(e)}, 500
 
-        return {'contributor': contributor_schema.dump(contributor).data}, 201
+        return {'contributor': contributor_schema.dump(models.Contributor.get(contributor_id)).data}, 201
 
     def get(self, contributor_id=None):
         if contributor_id:
@@ -94,8 +101,30 @@ class Contributor(flask_restful.Resource):
         if 'id' in request.json and contributor.id != request.json['id']:
             return {'error': 'The modification of the id is not possible'}, 400
 
+        existing_ds_id = [d.id for d in contributor.data_sources]
+        logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
+
+        request_data = request.json
+        #checking errors before updating PATCH data
+        if any(('id' in ds and ds["id"] not in existing_ds_id) for ds in request_data.get('data_sources', [])):
+                    return {'error': 'new data_source id should not be provided.'}, 400
+        #constructing PATCH data
+        patched_data_sources = None
+        if "data_sources" in request_data:
+            patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
+
+            for ds in request_data["data_sources"]:
+                if 'id' in ds:
+                    pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
+                    if pds:
+                        pds.update(ds)
+                else:
+                    #adding a new data_source
+                    patched_data_sources.append(ds)
+        if patched_data_sources:
+            request_data['data_sources'] = patched_data_sources
         try:
-            contributor = models.Contributor.update(contributor_id, request.json)
+            contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError as e:
             logging.getLogger(__name__).exception(
                 'impossible to update contributor with dataset {}'.format(args))

@@ -47,6 +47,10 @@ def test_to_doted_notation_two():
     data = {'a': 1, 'b': {'a': 3, 'b': {'c': 9, 'd': 10}}}
     assert to_doted_notation(data) == {'a': 1, 'b.a': 3, 'b.b.c': 9, 'b.b.d': 10}
 
+def test_to_doted_notation_array():
+    data = {'a': [{'b':1}, {'c':2}]}
+    assert to_doted_notation(data) == {'a.0.b': 1, 'a.1.c':2}
+
 def test_make_doted_key():
     assert _make_doted_key('a') == 'a'
     assert _make_doted_key('a', 'b') == 'a.b'
@@ -64,6 +68,3 @@ def test_upload_file():
         assert request.method == 'POST'
         assert request.url == 'http://test.com/'
         #we can't really check the upload: we can only check how it's implemented in requests
-
-
-

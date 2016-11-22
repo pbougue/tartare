@@ -39,5 +39,7 @@ class Index(flask_restful.Resource):
         return ({'_links':
                     {'status': {'href': url_for('status', _external=True)},
                      'coverages': {'href': url_for('coverages', _external=True)},
-                     'contributors': {'href': url_for('contributors', _external=True)}}},
+                     'contributors': {'href': url_for('contributors', _external=True)}
+                    }
+                },
                 200)
