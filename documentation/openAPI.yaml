@@ -220,7 +220,7 @@ paths:
         - in: formData
           name: file
           type: file
-          description: File to be sended to the coverage. Data type is automaticaly detected
+          description: File to be sent to the coverage. Data type is automatically detected
           required: true
       responses:
         200:
