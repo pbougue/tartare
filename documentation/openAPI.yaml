@@ -289,10 +289,89 @@ paths:
             title: contributors
             type: array
             items:
-              $ref: '#/definitions/contributor'
+              $ref: '#/definitions/contributor_type'
+    post:
+      summary: Create a new contributor
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      responses:
+        201:
+          description: Contributor created
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: error
+          schema :
+            $ref: '#/definitions/error'
 
-
-
+  /contributors/{contributor_id}:
+    get:
+      summary: Display contributor info
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+    delete:
+      summary: delete contributor
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        204:
+          description: Delete OK
+          schema:
+            $ref: '#/definitions/contributor_obj'
+    patch:
+      summary: Modify contributor info
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the contributor <contributor_id> that needs to be modified.
+          required: true
+          schema:
+            $ref: "#/definitions/contributor_type"
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: error
+          schema :
+            $ref: '#/definitions/error'
 
 
 definitions:
@@ -335,7 +414,13 @@ definitions:
         type: string
         example: 5810cb2d3c96b7000108d074
 
-  contributor:
+  contributor_obj:
+    type: object
+    properties:
+      contributor:
+        $ref: "#/definitions/contributor_type"
+
+  contributor_type:
     type: object
     properties:
       id:
