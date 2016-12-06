@@ -154,7 +154,7 @@ paths:
         - in: formData
           name: file
           type: file
-          description: File to be sended to the coverage. Data type is automaticaly detected
+          description: File to be sent to the coverage. Data type is automatically detected
           required: true
       responses:
         200:
@@ -200,6 +200,7 @@ paths:
       summary: Send a new data file to coverage <coverage_id> for processing
       tags:
         - coverages
+        - data
       consumes:
         - multipart/form-data
       produces:
@@ -235,7 +236,7 @@ paths:
 
   /coverages/{coverage_id}/environments/{environment_type}/data_update:
     post:
-      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym)
+      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
       tags:
         - coverages
         - data
@@ -253,12 +254,12 @@ paths:
           name: environment_type
           type: string
           enum: ["integration", "preproduction", "production"]
-          description: Environnement of the coverage <coverage_id> the DATA will be sent to
+          description: Environment of the coverage <coverage_id> the DATA will be sent to
           required: true
         - in: formData
           name: file
           type: file
-          description: File to be sended to the coverage. Data type is automaticaly detected
+          description: File to be sent to the coverage. Data type is automatically detected
           required: true
       responses:
         200:
@@ -444,4 +445,3 @@ definitions:
     properties:
       message:
         type: string
-      
