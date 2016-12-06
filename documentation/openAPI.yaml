@@ -1,5 +1,6 @@
 ---
 swagger: '2.0'
+host: "127.0.0.1:5000"
 info:
   description: |
     API managing data integration.
@@ -111,6 +112,10 @@ paths:
           description: Modified coverage
           schema:
             $ref: "#/definitions/coverage"
+        400:
+          description: Error in provided data
+          schema:
+            $ref: "#/definitions/error"
     delete:
       summary: Delete a coverage
       tags:
@@ -126,6 +131,10 @@ paths:
       responses:
         204:
           description: Coverage <coverage_id> correctly deleted
+        404:
+          description: coverage_id not found
+          schema:
+            $ref: "#/definitions/message"
 
   /coverages/{coverage_id}/grid_calendar:
     post:
@@ -150,12 +159,17 @@ paths:
       responses:
         200:
           description: OK
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
 
   /coverages/{coverage_id}/data/{data_type}:
     get:
       summary: Retrieve the latest data file of the specified coverage
       tags:
         - coverages
+        - data
       produces:
         - application/json
         - application/zip
@@ -174,6 +188,14 @@ paths:
       responses:
         200:
           description: Return the data file requested
+        400:
+          description: OK
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
     post:
       summary: Send a new data file to coverage <coverage_id> for processing
       tags:
@@ -202,6 +224,14 @@ paths:
       responses:
         200:
           description: Return the data file requested
+        400:
+          description: OK
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
 
   /coverages/{coverage_id}/environments/{environment_type}/data_update:
     post:
@@ -233,6 +263,16 @@ paths:
       responses:
         200:
           description: OK
+          schema:
+            $ref: '#/definitions/message'
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
 
 
   /contributors:
@@ -309,6 +349,12 @@ definitions:
         example: AAA
 
   message:
+    type: object
+    properties:
+      message:
+        type: string
+
+  error:
     type: object
     properties:
       message:
