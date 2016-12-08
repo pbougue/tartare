@@ -1,5 +1,6 @@
 ---
 swagger: '2.0'
+host: "127.0.0.1:5000"
 info:
   description: |
     API managing data integration.
@@ -22,7 +23,7 @@ schemes:
 # format of bodies a client can send (Content-Type)
 consumes:
   - application/json
-  - application/binary
+  - multipart/form-data
 # format of the responses to the client (Accepts)
 produces:
   - application/json
@@ -34,6 +35,9 @@ tags:
   -
     name: "contributors"
     description: "Manage contributors"
+  -
+    name: "data"
+    description: "Manage data api"
 
 paths:
   /:
@@ -82,7 +86,7 @@ paths:
           schema:
             $ref: "#/definitions/coverage"
 
-  /coverages/<coverage_id>:
+  /coverages/{coverage_id}:
     patch:
       summary: Modify a coverage configuration
       tags:
@@ -92,6 +96,11 @@ paths:
       produces:
         - application/json
       parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
         - in: body
           name: body
           description: Attributes of the coverage <coverage_id> that needs to be modified
@@ -103,42 +112,168 @@ paths:
           description: Modified coverage
           schema:
             $ref: "#/definitions/coverage"
-
+        400:
+          description: Error in provided data
+          schema:
+            $ref: "#/definitions/error"
     delete:
       summary: Delete a coverage
       tags:
         - coverages
       produces:
         - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
       responses:
         204:
           description: Coverage <coverage_id> correctly deleted
+        404:
+          description: coverage_id not found
+          schema:
+            $ref: "#/definitions/message"
 
-  /coverages/<coverage_id>/grid_calendar:
+  /coverages/{coverage_id}/grid_calendar:
     post:
       summary: Handle a grid_calendar file to coverage <coverage_id> for processing
       tags:
         - coverages
       consumes:
-        - application/binary
+        - multipart/form-data
       produces:
         - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: formData
+          name: file
+          type: file
+          description: File to be sent to the coverage. Data type is automatically detected
+          required: true
       responses:
         200:
           description: OK
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
 
-  /coverages/<coverage_id>/environments/<environment_type>/data_update:
-    post:
-      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym)
+  /coverages/{coverage_id}/data/{data_type}:
+    get:
+      summary: Retrieve the latest data file of the specified coverage
       tags:
         - coverages
-      consumes:
-        - application/binary
+        - data
       produces:
         - application/json
+        - application/zip
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the manipulated coverage
+          required: true
+        - in: path
+          name: data_type
+          type: string
+          enum: ["ntfs"]
+          description: Type of data beeing manipulated
+          required: true
+      responses:
+        200:
+          description: Return the data file requested
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+    post:
+      summary: Send a new data file to coverage <coverage_id> for processing
+      tags:
+        - coverages
+        - data
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the manipulated coverage
+          required: true
+        - in: path
+          name: data_type
+          type: string
+          enum: ["ntfs"]
+          description: Type of data beeing manipulated
+          required: true
+        - in: formData
+          name: file
+          type: file
+          description: File to be sent to the coverage. Data type is automatically detected
+          required: true
+      responses:
+        200:
+          description: Return the data file requested
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+
+  /coverages/{coverage_id}/environments/{environment_type}/data_update:
+    post:
+      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
+      tags:
+        - coverages
+        - data
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: path
+          name: environment_type
+          type: string
+          enum: ["integration", "preproduction", "production"]
+          description: Environment of the coverage <coverage_id> the DATA will be sent to
+          required: true
+        - in: formData
+          name: file
+          type: file
+          description: File to be sent to the coverage. Data type is automatically detected
+          required: true
       responses:
         200:
           description: OK
+          schema:
+            $ref: '#/definitions/message'
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+        404:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
 
 
   /contributors:
@@ -155,10 +290,89 @@ paths:
             title: contributors
             type: array
             items:
-              $ref: '#/definitions/contributor'
+              $ref: '#/definitions/contributor_type'
+    post:
+      summary: Create a new contributor
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      responses:
+        201:
+          description: Contributor created
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: Error
+          schema :
+            $ref: '#/definitions/error'
 
-
-
+  /contributors/{contributor_id}:
+    get:
+      summary: Display contributor info
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+    delete:
+      summary: delete contributor
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        204:
+          description: Delete OK
+          schema:
+            $ref: '#/definitions/contributor_obj'
+    patch:
+      summary: Modify contributor info
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the contributor <contributor_id> that needs to be modified.
+          required: true
+          schema:
+            $ref: "#/definitions/contributor_type"
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: Error
+          schema :
+            $ref: '#/definitions/error'
 
 
 definitions:
@@ -193,7 +407,7 @@ definitions:
     properties:
       name:
         type: string
-        example: dev
+        example: integration
       tyr_url:
         type: string
         example: http://tyr.dev.canaltp.fr/v0/jobs/fr-auv
@@ -201,7 +415,13 @@ definitions:
         type: string
         example: 5810cb2d3c96b7000108d074
 
-  contributor:
+  contributor_obj:
+    type: object
+    properties:
+      contributor:
+        $ref: "#/definitions/contributor_type"
+
+  contributor_type:
     type: object
     properties:
       id:
@@ -210,3 +430,20 @@ definitions:
       name:
         type: string
         example: TAN
+      data_prefix:
+        type: string
+        example: AAA
+
+  message:
+    type: object
+    properties:
+      message:
+        type: string
+        example: impossible to add coverage <coverage_id>
+
+  error:
+    type: object
+    properties:
+      error:
+        type: string
+        example: The modification of the id is not possible
