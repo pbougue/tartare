@@ -189,7 +189,7 @@ paths:
         200:
           description: Return the data file requested
         400:
-          description: OK
+          description: Error
           schema:
             $ref: '#/definitions/message'
         404:
@@ -226,7 +226,7 @@ paths:
         200:
           description: Return the data file requested
         400:
-          description: OK
+          description: Error
           schema:
             $ref: '#/definitions/message'
         404:
@@ -305,7 +305,7 @@ paths:
           schema:
             $ref: '#/definitions/contributor_obj'
         400:
-          description: error
+          description: Error
           schema :
             $ref: '#/definitions/error'
 
@@ -370,7 +370,7 @@ paths:
           schema:
             $ref: '#/definitions/contributor_obj'
         400:
-          description: error
+          description: Error
           schema :
             $ref: '#/definitions/error'
 
@@ -439,9 +439,11 @@ definitions:
     properties:
       message:
         type: string
+        example: impossible to add coverage <coverage_id>
 
   error:
     type: object
     properties:
-      message:
+      error:
         type: string
+        example: The modification of the id is not possible
