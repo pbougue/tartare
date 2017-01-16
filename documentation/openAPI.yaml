@@ -164,7 +164,7 @@ paths:
           schema:
             $ref: '#/definitions/message'
 
-  /coverages/{coverage_id}/data/{data_type}:
+  /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:
       summary: Retrieve the latest data file of the specified coverage
       tags:
@@ -178,6 +178,12 @@ paths:
           name: coverage_id
           type: string
           description: Identifier of the manipulated coverage
+          required: true
+        - in: path
+          name: environment_type
+          type: string
+          enum: ["integration", "preproduction", "production"]
+          description: Environment of the coverage <coverage_id> to be requested
           required: true
         - in: path
           name: data_type
@@ -210,6 +216,12 @@ paths:
           name: coverage_id
           type: string
           description: Identifier of the manipulated coverage
+          required: true
+        - in: path
+          name: environment_type
+          type: string
+          enum: ["integration", "preproduction", "production"]
+          description: Environment of the coverage <coverage_id> the data will be sent to
           required: true
         - in: path
           name: data_type
