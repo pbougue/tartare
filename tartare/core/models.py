@@ -39,8 +39,8 @@ import uuid
 
 @app.before_first_request
 def init_mongo():
-    mongo.db['contributors'].ensure_index("data_prefix", unique=True)
-    mongo.db['contributors'].ensure_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
+    mongo.db['contributors'].create_index("data_prefix", unique=True)
+    mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
@@ -180,9 +180,43 @@ class DataSource(object):
         self.name = name
         self.data_format = data_format
 
+    def save(self, contributor):
+        if self.id in [ds.id for ds in contributor.data_sources]:
+            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+        contributor.data_sources.append(self)
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+
+    @classmethod
+    def get(cls, contributor, data_source_id=None):
+        data_sources = contributor.data_sources
+        if data_source_id is not None:
+            data_sources = [ds for ds in data_sources if ds.id == data_source_id]
+            if not data_sources:
+                return None
+        return data_sources
+
+    @classmethod
+    def delete(cls, contributor, data_source_id):
+        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
+        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+        return nb_delete
+
+    @classmethod
+    def update(cls, contributor, data_source_id=None, dataset={}):
+        contrib_dataset = {'data_sources': [dataset]}
+        raw = mongo.db[Contributor.mongo_collection].update_one({'_id': contributor.id}, {'$set': to_doted_notation(contrib_dataset)})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor, data_source_id)
+
+
 
 class MongoDataSourceSchema(Schema):
-    id = fields.String(required=False)
+    id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
 
