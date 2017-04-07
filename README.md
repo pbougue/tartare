@@ -44,7 +44,7 @@ To watch logs output:
  docker-compose logs -f
  ```
 
-## Rest Api
+## "Rest" Api
 
 Tartare provides an API to enable coverage declaration and configuration, and to POST data to update.
 
@@ -68,7 +68,10 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ### Use the Rest Api
 
 See [OpenAPI file](https://raw.githubusercontent.com/CanalTP/tartare/master/documentation/openAPI.yaml).
-You may use [swagger editor](http://editor.swagger.io/#/) or [swagger live explorer](http://petstore.swagger.io/) to explore it.
+You may use
+[swagger editor](http://editor.swagger.io/#/) or
+[swagger live explorer](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/CanalTP/tartare/master/documentation/openAPI.yaml)
+to explore it.
 
 
 ## Tests
