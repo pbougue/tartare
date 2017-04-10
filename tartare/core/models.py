@@ -180,7 +180,8 @@ class DataSource(object):
         self.name = name
         self.data_format = data_format
 
-    def save(self, contributor):
+    def save(self, contributor_id):
+        contributor = self.get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
             raise ValueError("Duplicate data_source id '{}'".format(self.id))
         contributor.data_sources.append(self)
@@ -188,7 +189,8 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor, data_source_id=None):
+    def get(cls, contributor_id, data_source_id=None):
+        contributor = cls.get_contributor(contributor_id)
         data_sources = contributor.data_sources
         if data_source_id is not None:
             data_sources = [ds for ds in data_sources if ds.id == data_source_id]
@@ -197,7 +199,10 @@ class DataSource(object):
         return data_sources
 
     @classmethod
-    def delete(cls, contributor, data_source_id):
+    def delete(cls, contributor_id, data_source_id=None):
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        contributor = cls.get_contributor(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
         raw_contrib = MongoContributorSchema().dump(contributor).data
@@ -205,13 +210,24 @@ class DataSource(object):
         return nb_delete
 
     @classmethod
-    def update(cls, contributor, data_source_id=None, dataset={}):
+    def update(cls, contributor_id, data_source_id=None, dataset={}):
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        contributor = cls.get_contributor(contributor_id)
         contrib_dataset = {'data_sources': [dataset]}
-        raw = mongo.db[Contributor.mongo_collection].update_one({'_id': contributor.id}, {'$set': to_doted_notation(contrib_dataset)})
+        raw = mongo.db[Contributor.mongo_collection].update_one({'_id': contributor.id},
+                                                                {'$set': to_doted_notation(contrib_dataset)})
         if raw.matched_count == 0:
             return None
 
         return cls.get(contributor, data_source_id)
+
+    @classmethod
+    def get_contributor(cls, contributor_id):
+        contributor = Contributor.get(contributor_id)
+        if contributor is None:
+            raise ValueError('Bad contributor {}'.format(contributor_id))
+        return contributor
 
 
 
