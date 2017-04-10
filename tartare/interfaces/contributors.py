@@ -36,15 +36,16 @@ import logging
 from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
+import uuid
 
 
 class Contributor(flask_restful.Resource):
     def post(self):
         post_data = request.json
-        #first a check on the data_sources id
-        #if "data_sources" in post_data and 'id' in [ds for ds in post_data["data_sources"]]:
-        if any('id' in ds for ds in post_data.get('data_sources', [])):
-            return {'error': 'new data_source id should not be provided.'}, 400
+        #first a check on the data_sources id and providing a uuid if not provided
+        for ds in post_data.get('data_sources', []):
+            if not ds.get('id', None):
+                ds['id'] = str(uuid.uuid4())
 
         contributor_schema = schema.ContributorSchema(strict=True)
         try:
@@ -90,31 +91,33 @@ class Contributor(flask_restful.Resource):
         if contributor is None:
             abort(404)
 
+        request_data = request.json
+        #checking errors before updating PATCH data
+        for ds in request_data.get('data_sources', []):
+            if not ds.get('id', None):
+                ds['id'] = str(uuid.uuid4())
+
         schema_contributor = schema.ContributorSchema(partial=True)
-        errors = schema_contributor.validate(request.json, partial=True)
+        errors = schema_contributor.validate(request_data, partial=True)
         if errors:
             return {'error': errors}, 400
 
-        if 'data_prefix' in request.json and contributor.data_prefix != request.json['data_prefix']:
+        if 'data_prefix' in request_data and contributor.data_prefix != request_data['data_prefix']:
             return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(
-                contributor.data_prefix, request.json['data_prefix'])}, 400
-        if 'id' in request.json and contributor.id != request.json['id']:
+                contributor.data_prefix, request_data['data_prefix'])}, 400
+        if 'id' in request_data and contributor.id != request_data['id']:
             return {'error': 'The modification of the id is not possible'}, 400
 
         existing_ds_id = [d.id for d in contributor.data_sources]
         logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
 
-        request_data = request.json
-        #checking errors before updating PATCH data
-        if any(('id' in ds and ds["id"] not in existing_ds_id) for ds in request_data.get('data_sources', [])):
-                    return {'error': 'new data_source id should not be provided.'}, 400
         #constructing PATCH data
         patched_data_sources = None
         if "data_sources" in request_data:
             patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
 
             for ds in request_data["data_sources"]:
-                if 'id' in ds:
+                if ds['id'] in existing_ds_id:
                     pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
                     if pds:
                         pds.update(ds)
@@ -127,7 +130,7 @@ class Contributor(flask_restful.Resource):
             contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError as e:
             logging.getLogger(__name__).exception(
-                'impossible to update contributor with dataset {}'.format(args))
+                'impossible to update contributor with dataset {}'.format(request_data))
             return {'error': str(e)}, 500
 
         return {'contributor': schema.ContributorSchema().dump(contributor).data}, 200

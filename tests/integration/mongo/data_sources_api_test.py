@@ -60,7 +60,12 @@ def test_post_contrib_one_data_source_with_id(app):
     post_data["data_sources"].append({"id": "data_source_id", "name":"data_source_name"})
     raw = post(app, '/contributors', json.dumps(post_data))
     print(to_json(raw))
-    assert raw.status_code == 400
+    assert raw.status_code == 201
+    raw = app.get('/contributors/id_test/')
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200
+    assert len(r["contributor"]["data_sources"]) == 1
 
 def test_post_contrib_one_data_source_with_data_format(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
