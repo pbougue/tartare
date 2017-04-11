@@ -53,7 +53,7 @@ class DataSource(flask_restful.Resource):
             logging.getLogger(__name__).exception('impossible to add data_source {}'.format(data_source))
             return {'error': str(e)}, 400
 
-        return {'data_sources': data_source_schema.dump(data_source).data}, 201
+        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
 
 
     def get(self, contributor_id, data_source_id=None):
@@ -96,7 +96,7 @@ class DataSource(flask_restful.Resource):
             return {'error': 'The modification of the id is not possible'}, 400
 
         try:
-            data_source = models.DataSource.update(contributor_id, data_source_id, request.json)
+            data_sources = models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
             logging.getLogger(__name__).exception('impossible to update data_source {} on contributor {}'
                                                   .format(data_source_id, contributor_id))
@@ -105,4 +105,4 @@ class DataSource(flask_restful.Resource):
             logging.getLogger(__name__).exception('impossible to update data_source with dataset {}'.format(request.json))
             return {'error': str(e)}, 500
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_source).data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200

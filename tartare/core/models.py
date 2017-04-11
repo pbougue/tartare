@@ -204,7 +204,7 @@ class DataSource(object):
         if data_source_id is not None:
             data_sources = [ds for ds in data_sources if ds.id == data_source_id]
             if not data_sources:
-                return None
+                raise ValueError('Bad data_source {}'.format(data_source_id))
         return data_sources
 
     @classmethod
@@ -222,9 +222,16 @@ class DataSource(object):
     def update(cls, contributor_id, data_source_id=None, dataset={}):
         if data_source_id is None:
             raise ValueError('A data_source id is required')
-        contributor = cls.get_contributor(contributor_id)
-        contrib_dataset = {'data_sources': [dataset]}
-        raw = mongo.db[Contributor.mongo_collection].update_one({'_id': contributor.id},
+        if not [ds for ds in cls.get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+            raise ValueError("No data_source id {} exists in contributor with id {}"
+                             .format(contributor_id, data_source_id))
+        if 'id' in dataset and dataset['id'] != data_source_id:
+            raise ValueError("Id from request {} doesn't match id from url {}"
+                             .format(dataset['id'], data_source_id))
+
+        # `$` acts as a placeholder of the first match in the list
+        contrib_dataset = {'data_sources': {'$': dataset}}
+        raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
                                                                 {'$set': to_doted_notation(contrib_dataset)})
         if raw.matched_count == 0:
             return None
