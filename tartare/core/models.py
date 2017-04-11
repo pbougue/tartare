@@ -172,14 +172,13 @@ class MongoCoverageSchema(Schema):
         return Coverage(**data)
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", url=None):
+    def __init__(self, id=None, name=None, data_format="gtfs"):
         if not id:
             self.id = str(uuid.uuid4())
         else:
             self.id = id
         self.name = name
         self.data_format = data_format
-        self.url = url
 
     def save(self, contributor_id):
         contributor = self.get_contributor(contributor_id)
@@ -245,7 +244,6 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    url = fields.String(required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data):
