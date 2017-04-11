@@ -48,6 +48,13 @@ def post(app, url, params):
                     data=params)
 
 
+def get(app, url):
+    """
+    get on API with params as json
+    """
+    return app.get(url)
+
+
 def patch(app, url, params):
     """
     patch on API with params as json

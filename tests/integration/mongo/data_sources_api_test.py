@@ -28,20 +28,32 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post, patch
+from tests.utils import to_json, post, patch, get
 import json
 
-
-def test_post_contrib_no_data_source(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+def test_post_ds_one_data_source_without_id(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    print(to_json(raw))
     assert raw.status_code == 201
-    raw = app.get('/contributors/id_test/')
+    post_ds = {"name":"data_source_name"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    print(to_json(raw))
+    assert raw.status_code == 201
+
+    raw = app.get('/contributors/id_test/data_sources')
     r = to_json(raw)
     print(r)
     assert raw.status_code == 200
-    assert len(r["contributor"]["data_sources"]) == 0
+    assert len(r["data_sources"]) == 1
 
 def test_post_contrib_one_data_source_without_id(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name"})
@@ -54,7 +66,30 @@ def test_post_contrib_one_data_source_without_id(app):
     assert raw.status_code == 200
     assert len(r["contributor"]["data_sources"]) == 1
 
+
+def test_post_ds_one_data_source_with_id(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    print(to_json(raw))
+    assert raw.status_code == 201
+    post_ds = {"id": "data_source_id", "name":"data_source_name"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    print(to_json(raw))
+    assert raw.status_code == 201
+
+    raw = app.get('/contributors/id_test/data_sources')
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200
+    assert len(r["data_sources"]) == 1
+
 def test_post_contrib_one_data_source_with_id(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"id": "data_source_id", "name":"data_source_name"})
@@ -67,7 +102,31 @@ def test_post_contrib_one_data_source_with_id(app):
     assert raw.status_code == 200
     assert len(r["contributor"]["data_sources"]) == 1
 
+
+def test_post_ds_one_data_source_with_data_format(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    print(to_json(raw))
+    assert raw.status_code == 201
+    post_ds = {"name":"data_source_name", "data_format":"Neptune"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    print(to_json(raw))
+    assert raw.status_code == 201
+
+    raw = app.get('/contributors/id_test/data_sources')
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200
+    assert len(r["data_sources"]) == 1
+    assert r["data_sources"][0]["data_format"] == "Neptune"
+
 def test_post_contrib_one_data_source_with_data_format(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune"})
@@ -81,7 +140,33 @@ def test_post_contrib_one_data_source_with_data_format(app):
     assert len(r["contributor"]["data_sources"]) == 1
     assert r["contributor"]["data_sources"][0]["data_format"] == "Neptune"
 
+
+def test_post_ds_two_data_source(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    print(to_json(raw))
+    assert raw.status_code == 201
+    post_ds = {"name":"data_source_name1"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    post_ds = {"name":"data_source_name2"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    print(to_json(raw))
+    assert raw.status_code == 201
+
+    raw = app.get('/contributors/id_test/data_sources')
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200
+    assert len(r["data_sources"]) == 2
+    assert r["data_sources"][0]["id"] != r["data_sources"][1]["id"]
+
 def test_post_contrib_two_data_source(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name"})
@@ -95,7 +180,32 @@ def test_post_contrib_two_data_source(app):
     assert len(r["contributor"]["data_sources"]) == 2
     assert r["contributor"]["data_sources"][0]["id"] != r["contributor"]["data_sources"][1]["id"]
 
-def test_patch_data_source_with_full_contributor(app):
+
+def test_patch_ds_data_source_with_full_contributor(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    assert raw.status_code == 201
+    post_ds = {"id": "ds_id", "name":"data_source_name"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+    r["data_sources"][0]["name"] = "name_modified"
+    print("patching data with ", json.dumps(r["data_sources"][0]))
+    raw = patch(app, '/contributors/id_test/data_sources/ds_id', json.dumps(r["data_sources"][0]))
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200, print(r)
+    assert len(r["data_sources"]) == 1
+    patched_data_source = r["data_sources"][0]
+    assert patched_data_source["name"] == "name_modified"
+
+def test_patch_contrib_data_source_with_full_contributor(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name"})
@@ -112,7 +222,32 @@ def test_patch_data_source_with_full_contributor(app):
     patched_data_source = r["contributor"]["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
 
-def test_patch_data_source_name_only(app):
+
+def test_patch_ds_data_source_name_only(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    assert raw.status_code == 201
+    post_ds = {"id": "ds_id", "name":"data_source_name", "data_format":"Neptune"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+    modif_ds = {"id": "ds_id", "name":"name_modified"}
+    raw = patch(app, '/contributors/id_test/data_sources/ds_id', json.dumps(modif_ds))
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200, print(r)
+    assert len(r["data_sources"]) == 1
+    patched_data_source = r["data_sources"][0]
+    assert patched_data_source["name"] == "name_modified"
+    assert patched_data_source["data_format"] == "Neptune"
+
+def test_patch_contrib_data_source_name_only(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune"})
@@ -136,7 +271,48 @@ def test_patch_data_source_name_only(app):
     assert patched_data_source["name"] == "name_modified"
     assert patched_data_source["data_format"] == "Neptune"
 
-def test_patch_one_data_source_name_of_two_and_add_one(app):
+
+def test_patch_ds_one_data_source_name_of_two_and_add_one(app):
+    '''
+    using /data_sources endpoint
+    '''
+    post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    raw = post(app, '/contributors', json.dumps(post_contrib))
+    assert raw.status_code == 201
+    post_ds = {"id": "ds1_id", "name":"data_source_name1", "data_format":"Neptune"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+    post_ds = {"id": "ds2_id", "name":"data_source_name2", "data_format":"Neptune"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+    modif_ds = {"name":"name_modified"}
+    raw = patch(app, '/contributors/id_test/data_sources/ds2_id', json.dumps(modif_ds))
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200, print(r)
+    post_ds = {"id": "ds3_id", "name":"data_source_name3"}
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+
+    raw = get(app, '/contributors/id_test/data_sources')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r["data_sources"]) == 3
+    patched_data_sources = r["data_sources"]
+    assert patched_data_sources[0]["data_format"] == "Neptune"
+    assert patched_data_sources[1]["data_format"] == "Neptune"
+    assert patched_data_sources[2]["data_format"] == "gtfs"
+    assert patched_data_sources[0]["name"] == "data_source_name1"
+    assert patched_data_sources[1]["name"] == "name_modified"
+    assert patched_data_sources[2]["name"] == "data_source_name3"
+
+def test_patch_contrib_one_data_source_name_of_two_and_add_one(app):
+    '''
+    using /contributors endpoint
+    '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune"})
