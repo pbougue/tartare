@@ -71,7 +71,22 @@ def coverage(app):
     coverage = app.post('/coverages',
                 headers={'Content-Type': 'application/json'},
                data='{"id": "jdr", "name": "name of the coverage jdr"}')
-    return to_json(coverage)['coverage']
+    return to_json(coverage)['coverages'][0]
+
+
+@pytest.fixture(scope="function")
+def contributor(app):
+    contributor = app.post('/contributors',
+                           headers={'Content-Type': 'application/json'},
+                           data='{"id": "bob", "name": "bob", "data_prefix": "bob"}')
+    return to_json(contributor)['contributor']
+
+@pytest.fixture(scope="function")
+def data_source(app, contributor):
+    data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
+                           headers={'Content-Type': 'application/json'},
+                           data='{"name": "bobette", "data_format": "gtfs"}')
+    return to_json(data_source)['data_sources'][0]
 
 @pytest.fixture(scope="function")
 def coverage_obj(tmpdir, get_app_context):

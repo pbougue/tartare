@@ -193,7 +193,7 @@ paths:
         400:
           description: Error
           schema:
-            $ref: '#/definitions/error'
+            $ref: '#/definitions/message'
 
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:

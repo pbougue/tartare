@@ -39,20 +39,20 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            return {'message': 'bad coverage {}'.format(coverage_id)}, 400
+            return {'message': 'Bad coverage {}.'.format(coverage_id)}, 400
 
         if 'id' not in request.json:
-            return {'error': 'Missing data_source_id attribute in request body.'}, 400
+            return {'message': 'Missing data_source_id attribute in request body.'}, 400
 
         data_source_id = request.json['id']
 
         try:
             data_sources = models.DataSource.get(data_source_id=data_source_id)
         except ValueError:
-            return {'error': 'unknown data_source_id {}.'.format(data_source_id, coverage_id)}, 400
+            return {'message': 'Unknown data_source_id {}.'.format(data_source_id, coverage_id)}, 400
 
         if coverage.has_data_source(data_sources[0]):
-            return {'error': 'data_source_id {} already exists in coverage {}.'.format(data_source_id, coverage_id)}, 400
+            return {'message': 'Data source id {} already exists in coverage {}.'.format(data_source_id, coverage_id)}, 400
 
         coverage.add_data_source(data_sources[0])
 
@@ -62,6 +62,6 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
             logging.getLogger(__name__).exception(
                 'impossible to update coverage {} with data_source {}'.format(coverage_id, data_source_id)
             )
-            return {'error': str(e)}, 400
+            return {'message': str(e)}, 400
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200

@@ -119,7 +119,7 @@ def test_add_coverage_with_no_env(app):
     raw = post(app, '/coverages',
             '''{"id": "id_test", "name": "name of the coverage",
                 "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
-    print(raw.data)
+
     assert raw.status_code == 400
     r = to_json(raw)
     assert 'error' in r
@@ -129,7 +129,7 @@ def test_add_coverage_with_env_invalid_url(app):
     raw = post(app, '/coverages',
             '''{"id": "id_test", "name": "name of the coverage",
                 "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "foo"}}}''')
-    print(raw.data)
+
     assert raw.status_code == 400
     r = to_json(raw)
     assert 'error' in r
@@ -258,7 +258,7 @@ def test_update_coverage__env(app):
                     "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
                     "production": null
                 }}''')
-    print(raw.data)
+
     assert raw.status_code == 200
     raw = app.get('/coverages')
     r = to_json(raw)
