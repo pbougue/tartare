@@ -164,6 +164,37 @@ paths:
           schema:
             $ref: '#/definitions/message'
 
+  /coverages/{coverage_id}/data_sources:
+    post:
+      summary: Add a data_source to coverage <coverage_id>
+      tags:
+        - coverages
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: body
+          name: body
+          description: data_source id that you want to add to the coverage
+          required: true
+          schema:
+            $ref: "#/definitions/data_source_id"
+      responses:
+        200:
+          description: Data source added
+          schema:
+            $ref: "#/definitions/coverage"
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/error'
+
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:
       summary: Retrieve the latest data file of the specified coverage
@@ -410,6 +441,13 @@ definitions:
         example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
+
+  data_source_id:
+    type: object
+    properties:
+      data_source_id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
 
   environments:
     type: object
