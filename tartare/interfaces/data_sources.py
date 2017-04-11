@@ -31,7 +31,6 @@ import os
 from flask_restful import reqparse, abort, request
 import flask_restful
 from pymongo.errors import PyMongoError
-from tartare import app
 from tartare.core import models
 import logging
 from tartare.interfaces import schema

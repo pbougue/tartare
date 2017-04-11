@@ -177,8 +177,8 @@ def test_patch_simple_coverage(app):
     raw = patch(app, '/coverages/id_test', '{"name": "new name"}')
     assert raw.status_code == 200
     r = to_json(raw)
-    assert r["coverage"]["id"] == "id_test"
-    assert r["coverage"]["name"] == "new name"
+    assert r["coverages"][0]["id"] == "id_test"
+    assert r["coverages"][0]["name"] == "new name"
 
 
 def test_delete_coverage_returns_success(app):
@@ -207,8 +207,8 @@ def test_update_coverage_returns_success_status(app):
     r = to_json(raw)
 
     assert raw.status_code == 200
-    assert r["coverage"]['id'] == "id_test"
-    assert r["coverage"]['name'] == "new_name_test"
+    assert r["coverages"][0]['id'] == "id_test"
+    assert r["coverages"][0]['name'] == "new_name_test"
 
 
 def test_update_unknown_coverage(app):
