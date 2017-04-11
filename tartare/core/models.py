@@ -190,8 +190,17 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id, data_source_id=None):
-        contributor = cls.get_contributor(contributor_id)
+    def get(cls, contributor_id=None, data_source_id=None):
+        if not contributor_id is None:
+            contributor = cls.get_contributor(contributor_id)
+        elif not data_source_id is None:
+            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
+            if raw is None:
+                raise ValueError('Bad data_source {}'.format(data_source_id))
+            contributor =  MongoContributorSchema(strict=True).load(raw).data
+        else:
+            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
+
         data_sources = contributor.data_sources
         if data_source_id is not None:
             data_sources = [ds for ds in data_sources if ds.id == data_source_id]
@@ -221,7 +230,7 @@ class DataSource(object):
         if raw.matched_count == 0:
             return None
 
-        return cls.get(contributor, data_source_id)
+        return cls.get(contributor_id, data_source_id)
 
     @classmethod
     def get_contributor(cls, contributor_id):

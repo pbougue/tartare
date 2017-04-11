@@ -41,7 +41,7 @@ import shutil
 
 class DataSet(Resource):
     def post(self, data_source_id):
-        datasource = models.DataSource.get(data_source_id)
+        datasource = models.DataSource.get(data_source_id=data_source_id)
         if datasource is None:
             return {'message': 'bad data_source {}'.format(data_source_id)}, 404
 
