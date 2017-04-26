@@ -59,8 +59,6 @@ class DataSource(flask_restful.Resource):
     def get(self, contributor_id, data_source_id=None):
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
-            if ds is None:
-                abort(404)
         except ValueError as e:
             logging.getLogger(__name__).exception('impossible to get data_source {} on contributor {}'
                                                   .format(data_source_id, contributor_id))
@@ -84,7 +82,7 @@ class DataSource(flask_restful.Resource):
 
     def patch(self, contributor_id, data_source_id=None):
         ds = models.DataSource.get(contributor_id, data_source_id)
-        if ds is None or len(ds) != 1:
+        if len(ds) != 1:
             abort(404)
 
         schema_data_source = schema.DataSourceSchema(partial=True)

@@ -190,9 +190,9 @@ class DataSource(object):
 
     @classmethod
     def get(cls, contributor_id=None, data_source_id=None):
-        if not contributor_id is None:
+        if contributor_id is not None:
             contributor = cls.get_contributor(contributor_id)
-        elif not data_source_id is None:
+        elif data_source_id is not None:
             raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
             if raw is None:
                 raise ValueError('Bad data_source {}'.format(data_source_id))
