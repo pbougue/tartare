@@ -39,8 +39,8 @@ import uuid
 
 @app.before_first_request
 def init_mongo():
-    mongo.db['contributors'].ensure_index("data_prefix", unique=True)
-    mongo.db['contributors'].ensure_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
+    mongo.db['contributors'].create_index("data_prefix", unique=True)
+    mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
@@ -180,9 +180,75 @@ class DataSource(object):
         self.name = name
         self.data_format = data_format
 
+    def save(self, contributor_id):
+        contributor = self.get_contributor(contributor_id)
+        if self.id in [ds.id for ds in contributor.data_sources]:
+            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+        contributor.data_sources.append(self)
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+
+    @classmethod
+    def get(cls, contributor_id=None, data_source_id=None):
+        if contributor_id is not None:
+            contributor = cls.get_contributor(contributor_id)
+        elif data_source_id is not None:
+            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
+            if raw is None:
+                raise ValueError('Bad data_source {}'.format(data_source_id))
+            contributor =  MongoContributorSchema(strict=True).load(raw).data
+        else:
+            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
+
+        data_sources = contributor.data_sources
+        if data_source_id is not None:
+            data_sources = [ds for ds in data_sources if ds.id == data_source_id]
+            if not data_sources:
+                raise ValueError('Bad data_source {}'.format(data_source_id))
+        return data_sources
+
+    @classmethod
+    def delete(cls, contributor_id, data_source_id=None):
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        contributor = cls.get_contributor(contributor_id)
+        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
+        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+        return nb_delete
+
+    @classmethod
+    def update(cls, contributor_id, data_source_id=None, dataset={}):
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        if not [ds for ds in cls.get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+            raise ValueError("No data_source id {} exists in contributor with id {}"
+                             .format(contributor_id, data_source_id))
+        if 'id' in dataset and dataset['id'] != data_source_id:
+            raise ValueError("Id from request {} doesn't match id from url {}"
+                             .format(dataset['id'], data_source_id))
+
+        # `$` acts as a placeholder of the first match in the list
+        contrib_dataset = {'data_sources': {'$': dataset}}
+        raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
+                                                                {'$set': to_doted_notation(contrib_dataset)})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor_id, data_source_id)
+
+    @classmethod
+    def get_contributor(cls, contributor_id):
+        contributor = Contributor.get(contributor_id)
+        if contributor is None:
+            raise ValueError('Bad contributor {}'.format(contributor_id))
+        return contributor
+
+
 
 class MongoDataSourceSchema(Schema):
-    id = fields.String(required=False)
+    id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
 

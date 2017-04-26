@@ -110,6 +110,16 @@ def test_add_contributors_unique_data_suffix_error(app):
     assert len(r["contributors"]) == 1
 
 
+def test_post_contrib_no_data_source(app):
+    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+    assert raw.status_code == 201
+    raw = app.get('/contributors/id_test/')
+    r = to_json(raw)
+    print(r)
+    assert raw.status_code == 200
+    assert len(r["contributor"]["data_sources"]) == 0
+
+
 def test_delete_contributors_returns_success(app):
     raw = app.get('/contributors/id_test')
     assert raw.status_code == 404

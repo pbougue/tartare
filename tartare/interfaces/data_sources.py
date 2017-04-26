@@ -40,52 +40,49 @@ from marshmallow import ValidationError
 
 class DataSource(flask_restful.Resource):
     def post(self, contributor_id):
-        contributor = models.Contributor.get(contributor_id)
-        if contributor is None:
-            return {'message': 'bad contributor {}'.format(contributor_id)}, 400
-
         data_source_schema = schema.DataSourceSchema(strict=True)
         try:
             d = request.json
-            d['contributor_id'] = contributor_id
             data_source = data_source_schema.load(d).data
         except ValidationError as err:
             return {'error': err.messages}, 400
 
         try:
-            data_source.save()
-        except PyMongoError as e:
+            data_source.save(contributor_id)
+        except (PyMongoError, ValueError) as e:
             logging.getLogger(__name__).exception('impossible to add data_source {}'.format(data_source))
             return {'error': str(e)}, 400
 
-        return {'data_source': data_source_schema.dump(data_source).data}, 201
+        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
+
 
     def get(self, contributor_id, data_source_id=None):
-        contributor = models.Contributor.get(contributor_id)
-        if contributor is None:
-            return {'message': 'bad contributor {}'.format(contributor_id)}, 400
+        try:
+            ds = models.DataSource.get(contributor_id, data_source_id)
+        except ValueError as e:
+            logging.getLogger(__name__).exception('impossible to get data_source {} on contributor {}'
+                                                  .format(data_source_id, contributor_id))
+            return {'error': str(e)}, 400
 
-        if data_source_id:
-            ds = models.DataSoure.get(data_source_id)
-            if ds is None:
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
+
+
+    def delete(self, contributor_id, data_source_id=None):
+        try:
+            nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
+            if nb_deleted == 0:
                 abort(404)
+        except ValueError as e:
+            logging.getLogger(__name__).exception('impossible to delete data_source {} on contributor {}'
+                                                  .format(data_source_id, contributor_id))
+            return {'error': str(e)}, 400
 
-            result = schema.DataSoureSchema().dump(ds)
-            return {'data_source': result.data}, 200
+        return {'data_sources': []}, 204
 
-        data_sources = models.DataSource.all()
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200
-
-    def delete(self, data_source_id):
-        ds = models.DataSoure.delete(data_source_id)
-        if ds == 0:
-            abort(404)
-        return {'data_source': None}, 204
-
-    def patch(self, data_source_id):
-        data_source = models.DataSource.get(data_source_id)
-        if data_source is None:
+    def patch(self, contributor_id, data_source_id=None):
+        ds = models.DataSource.get(contributor_id, data_source_id)
+        if len(ds) != 1:
             abort(404)
 
         schema_data_source = schema.DataSourceSchema(partial=True)
@@ -93,13 +90,17 @@ class DataSource(flask_restful.Resource):
         if errors:
             return {'error': errors}, 400
 
-        if 'id' in request.json and contributor.id != request.json['id']:
+        if 'id' in request.json and ds[0].id != request.json['id']:
             return {'error': 'The modification of the id is not possible'}, 400
 
         try:
-            data_source = models.DataSource.update(data_source_id, request.json)
+            data_sources = models.DataSource.update(contributor_id, data_source_id, request.json)
+        except ValueError as e:
+            logging.getLogger(__name__).exception('impossible to update data_source {} on contributor {}'
+                                                  .format(data_source_id, contributor_id))
+            return {'error': str(e)}, 400
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update data_source with dataset {}'.format(args))
+            logging.getLogger(__name__).exception('impossible to update data_source with dataset {}'.format(request.json))
             return {'error': str(e)}, 500
 
-        return {'data_source': schema.DataSourceSchema().dump(data_source).data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200
