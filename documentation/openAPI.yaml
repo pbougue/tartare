@@ -307,6 +307,13 @@ paths:
       summary: Create a new contributor
       tags:
         - contributors
+      parameters:
+        - in: body
+          name: body
+          description: Contributor object that needs to be added to Tartare
+          required: true
+          schema:
+            $ref: "#/definitions/contributor_type"
       produces:
         - application/json
       consumes:
@@ -398,7 +405,7 @@ definitions:
       name:
         type: string
         example: auv
-      grid_calendar_id:
+      grid_calendars_id:
         type: string
         example: 5810cb2d3c96b7000108d074
       environments:
