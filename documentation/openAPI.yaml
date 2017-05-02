@@ -332,10 +332,7 @@ paths:
         200:
           description: Array of contributors
           schema:
-            title: contributors
-            type: array
-            items:
-              $ref: '#/definitions/contributor_type'
+            $ref: '#/definitions/contributor_obj'
     post:
       summary: Create a new contributor
       tags:
@@ -394,8 +391,6 @@ paths:
       responses:
         204:
           description: Delete OK
-          schema:
-            $ref: '#/definitions/contributor_obj'
     patch:
       summary: Modify contributor info
       tags:
@@ -435,7 +430,6 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/coverage"
-
   coverage:
     type: object
     properties:
@@ -484,8 +478,10 @@ definitions:
   contributor_obj:
     type: object
     properties:
-      contributor:
-        $ref: "#/definitions/contributor_type"
+      contributors:
+        type: array
+        items:
+          $ref: "#/definitions/contributor_type"
 
   contributor_type:
     type: object

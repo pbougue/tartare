@@ -30,7 +30,6 @@
 from flask_restful import abort
 import flask_restful
 from pymongo.errors import PyMongoError, DuplicateKeyError
-from tartare import app
 from tartare.core import models
 import logging
 from flask import request
@@ -66,7 +65,7 @@ class Contributor(flask_restful.Resource):
                 'impossible to add contributor {}'.format(contributor))
             return {'error': str(e)}, 500
 
-        return {'contributor': contributor_schema.dump(models.Contributor.get(contributor_id)).data}, 201
+        return {'contributors': [contributor_schema.dump(models.Contributor.get(contributor_id)).data]}, 201
 
     def get(self, contributor_id=None):
         if contributor_id:
@@ -74,7 +73,7 @@ class Contributor(flask_restful.Resource):
             if c is None:
                 abort(404)
             result = schema.ContributorSchema().dump(c)
-            return {'contributor': result.data}, 200
+            return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
         return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
 
@@ -82,7 +81,7 @@ class Contributor(flask_restful.Resource):
         c = models.Contributor.delete(contributor_id)
         if c == 0:
             abort(404)
-        return {'contributor': None}, 204
+        return "", 204
 
     def patch(self, contributor_id):
         # "data_prefix" field is not modifiable, impacts of the modification
@@ -133,4 +132,4 @@ class Contributor(flask_restful.Resource):
                 'impossible to update contributor with dataset {}'.format(request_data))
             return {'error': str(e)}, 500
 
-        return {'contributor': schema.ContributorSchema().dump(contributor).data}, 200
+        return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200

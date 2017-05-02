@@ -60,7 +60,7 @@ def test_post_contrib_one_data_source_without_id(app):
     r = to_json(raw)
     print(r)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 1
+    assert len(r["contributors"][0]["data_sources"]) == 1
 
 
 def test_post_ds_one_data_source_with_id(app):
@@ -91,7 +91,7 @@ def test_post_contrib_one_data_source_with_id(app):
     raw = app.get('/contributors/id_test/')
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 1
+    assert len(r["contributors"][0]["data_sources"]) == 1
 
 
 def test_post_ds_one_data_source_with_data_format(app):
@@ -123,8 +123,8 @@ def test_post_contrib_one_data_source_with_data_format(app):
     raw = app.get('/contributors/id_test/')
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 1
-    assert r["contributor"]["data_sources"][0]["data_format"] == "Neptune"
+    assert len(r["contributors"][0]["data_sources"]) == 1
+    assert r["contributors"][0]["data_sources"][0]["data_format"] == "Neptune"
 
 
 def test_post_ds_two_data_source(app):
@@ -160,8 +160,8 @@ def test_post_contrib_two_data_source(app):
     raw = app.get('/contributors/id_test/')
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 2
-    assert r["contributor"]["data_sources"][0]["id"] != r["contributor"]["data_sources"][1]["id"]
+    assert len(r["contributors"][0]["data_sources"]) == 2
+    assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
 
 
 def test_patch_ds_data_source_with_full_contributor(app):
@@ -194,13 +194,12 @@ def test_patch_contrib_data_source_with_full_contributor(app):
     raw = post(app, '/contributors', json.dumps(post_data))
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
-    r["contributor"]["data_sources"][0]["name"] = "name_modified"
-    print("patching data with ", json.dumps(r["contributor"]))
-    raw = patch(app, '/contributors/id_test', json.dumps(r["contributor"]))
+    r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
+    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 1
-    patched_data_source = r["contributor"]["data_sources"][0]
+    assert len(r["contributors"][0]["data_sources"]) == 1
+    patched_data_source = r["contributors"][0]["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
 
 
@@ -235,17 +234,17 @@ def test_patch_contrib_data_source_name_only(app):
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
     new_data_source = {}
-    new_data_source["id"] = r["contributor"]["data_sources"][0]["id"]
+    new_data_source["id"] = r["contributors"][0]["data_sources"][0]["id"]
     new_data_source["name"] = "name_modified"
-    r["contributor"]["data_sources"][0] = new_data_source
+    r["contributors"][0]["data_sources"][0] = new_data_source
     data_source_list = {}
     data_source_list["data_sources"] = [new_data_source]
     print("patching data with ", json.dumps(data_source_list))
     raw = patch(app, '/contributors/id_test', json.dumps(data_source_list))
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 1
-    patched_data_source = r["contributor"]["data_sources"][0]
+    assert len(r["contributors"][0]["data_sources"]) == 1
+    patched_data_source = r["contributors"][0]["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
     assert patched_data_source["data_format"] == "Neptune"
 
@@ -299,17 +298,17 @@ def test_patch_contrib_one_data_source_name_of_two_and_add_one(app):
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
     new_data_source = {}
-    new_data_source["id"] = r["contributor"]["data_sources"][1]["id"]
+    new_data_source["id"] = r["contributors"][0]["data_sources"][1]["id"]
     new_data_source["name"] = "name_modified"
-    r["contributor"]["data_sources"][0] = new_data_source
+    r["contributors"][0]["data_sources"][0] = new_data_source
     data_source_list = {}
     data_source_list["data_sources"] = [new_data_source, {"name":"data_source_3"}]
     print("patching data with ", json.dumps(data_source_list))
     raw = patch(app, '/contributors/id_test', json.dumps(data_source_list))
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
-    assert len(r["contributor"]["data_sources"]) == 3
-    patched_data_sources = r["contributor"]["data_sources"]
+    assert len(r["contributors"][0]["data_sources"]) == 3
+    patched_data_sources = r["contributors"][0]["data_sources"]
     assert patched_data_sources[0]["data_format"] == "Neptune"
     assert patched_data_sources[1]["data_format"] == "Neptune"
     assert patched_data_sources[2]["data_format"] == "gtfs"

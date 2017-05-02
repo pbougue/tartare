@@ -117,7 +117,7 @@ def test_post_contrib_no_data_source(app):
     r = to_json(raw)
     print(r)
     assert raw.status_code == 200
-    assert len(r["contributor"]["data_sources"]) == 0
+    assert len(r["contributors"][0]["data_sources"]) == 0
 
 
 def test_delete_contributors_returns_success(app):
@@ -146,8 +146,8 @@ def test_update_contributor_name(app):
     r = to_json(raw)
 
     assert raw.status_code == 200
-    assert r["contributor"]['id'] == "id_test"
-    assert r["contributor"]['name'] == "new_name_test"
+    assert r["contributors"][0]['id'] == "id_test"
+    assert r["contributors"][0]['name'] == "new_name_test"
 
 
 def test_update_contributor_data_prefix_error(app):

@@ -79,7 +79,7 @@ def contributor(app):
     contributor = app.post('/contributors',
                            headers={'Content-Type': 'application/json'},
                            data='{"id": "bob", "name": "bob", "data_prefix": "bob"}')
-    return to_json(contributor)['contributor']
+    return to_json(contributor)['contributors'][0]
 
 @pytest.fixture(scope="function")
 def data_source(app, contributor):
