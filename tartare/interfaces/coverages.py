@@ -51,7 +51,7 @@ class Coverage(flask_restful.Resource):
             logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
             return {'error': str(e)}, 500
 
-        return {'coverage': coverage_schema.dump(coverage).data}, 201
+        return {'coverages': coverage_schema.dump([coverage], many=True).data}, 201
 
     def get(self, coverage_id=None):
         if coverage_id:
@@ -60,7 +60,7 @@ class Coverage(flask_restful.Resource):
                 abort(404)
 
             result = schema.CoverageSchema().dump(c)
-            return {'coverage': result.data}, 200
+            return {'coverages': [result.data]}, 200
 
         coverages = models.Coverage.all()
 
@@ -70,7 +70,7 @@ class Coverage(flask_restful.Resource):
         c = models.Coverage.delete(coverage_id)
         if c == 0:
             abort(404)
-        return {'coverage': None}, 204
+        return "", 204
 
     def patch(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
@@ -90,4 +90,4 @@ class Coverage(flask_restful.Resource):
             logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(request.json))
             return {'error': str(e)}, 500
 
-        return {'coverage': schema.CoverageSchema().dump(coverage).data}, 200
+        return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200

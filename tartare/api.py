@@ -38,6 +38,7 @@ from tartare.interfaces.contributors import Contributor
 from tartare.interfaces.grid_calendar import GridCalendar
 from tartare.interfaces.data_update import DataUpdate, CoverageData
 from tartare.interfaces.data_sources import DataSource
+from tartare.interfaces.coverage_data_source_subscription import CoverageDataSourceSubscription
 
 
 api = Api(app)
@@ -53,3 +54,4 @@ api.add_resource(CoverageData, '/coverages/<string:coverage_id>/environments/<st
                              endpoint='data')
 api.add_resource(Contributor, '/contributors', '/contributors/', '/contributors/<string:contributor_id>', endpoint='contributors')
 api.add_resource(DataSource, '/contributors/<string:contributor_id>/data_sources', '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>')
+api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id>/data_sources', '/coverages/<string:coverage_id>/data_sources/<string:data_source_id>', endpoint='coverages_data_sources')

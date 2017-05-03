@@ -84,16 +84,21 @@ def make_celery(app):
 def _make_doted_key(*args):
     return '.'.join([e for e in args if e])
 
+
 def to_doted_notation(data, prefix=None):
     result = {}
-    for k,v in data.items():
+    for k, v in data.items():
         key = _make_doted_key(prefix, k)
         if isinstance(v, Mapping):
             result.update(to_doted_notation(v, key))
         elif isinstance(v, list):
-            for lk, lv in enumerate(v):
-                list_key = _make_doted_key(key, str(lk))
-                result.update(to_doted_notation(lv, list_key))
+            # if data is a list of scalars
+            if all(isinstance(item, (int, float, str, bool)) for item in v):
+                result[key] = v
+            else:
+                for lk, lv in enumerate(v):
+                    list_key = _make_doted_key(key, str(lk))
+                    result.update(to_doted_notation(lv, list_key))
         else:
             result[key] = v
     return result

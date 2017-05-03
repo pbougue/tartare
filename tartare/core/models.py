@@ -67,7 +67,7 @@ class Environment(object):
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None, data_sources=[]):
         self.id = id
         self.name = name
         if environments:
@@ -75,6 +75,7 @@ class Coverage(object):
         else:
             self.environments = {}
         self.grid_calendars_id = grid_calendars_id
+        self.data_sources = data_sources
 
     def save_grid_calendars(self, file):
         gridfs = GridFS(mongo.db)
@@ -140,6 +141,12 @@ class Coverage(object):
         delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
         self.environments[environment_type].current_ntfs_id = id
 
+    def has_data_source(self, data_source):
+        return data_source.id in self.data_sources
+
+    def add_data_source(self, data_source):
+        self.data_sources.append(data_source.id)
+
 
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
@@ -160,16 +167,6 @@ class MongoEnvironmentListSchema(Schema):
         #We don't want to keep removed environments
         return {key: value for key, value in data.items() if value is not None}
 
-
-class MongoCoverageSchema(Schema):
-    id = fields.String(required=True, load_from='_id', dump_to='_id')
-    name = fields.String(required=True)
-    environments = fields.Nested(MongoEnvironmentListSchema)
-    grid_calendars_id = fields.String(allow_none=True)
-
-    @post_load
-    def make_coverage(self, data):
-        return Coverage(**data)
 
 class DataSource(object):
     def __init__(self, id=None, name=None, data_format="gtfs"):
@@ -196,7 +193,7 @@ class DataSource(object):
             raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
             if raw is None:
                 raise ValueError('Bad data_source {}'.format(data_source_id))
-            contributor =  MongoContributorSchema(strict=True).load(raw).data
+            contributor = MongoContributorSchema(strict=True).load(raw).data
         else:
             raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
 
@@ -255,6 +252,18 @@ class MongoDataSourceSchema(Schema):
     @post_load
     def build_data_source(self, data):
         return DataSource(**data)
+
+
+class MongoCoverageSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    name = fields.String(required=True)
+    environments = fields.Nested(MongoEnvironmentListSchema)
+    grid_calendars_id = fields.String(allow_none=True)
+    data_sources = fields.List(fields.String())
+
+    @post_load
+    def make_coverage(self, data):
+        return Coverage(**data)
 
 
 class Contributor(object):

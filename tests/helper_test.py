@@ -51,6 +51,10 @@ def test_to_doted_notation_array():
     data = {'a': [{'b':1}, {'c':2}]}
     assert to_doted_notation(data) == {'a.0.b': 1, 'a.1.c':2}
 
+def test_to_doted_notation_with_list_of_scalars():
+    data = {'a': 1, 'b': {'a': 3, 'b': {'c': 9, 'd': 10}}, 'e': [1, 2.6, "bar", True]}
+    assert to_doted_notation(data) == {'a': 1, 'b.a': 3, 'b.b.c': 9, 'b.b.d': 10, 'e': [1, 2.6, "bar", True]}
+
 def test_make_doted_key():
     assert _make_doted_key('a') == 'a'
     assert _make_doted_key('a', 'b') == 'a.b'

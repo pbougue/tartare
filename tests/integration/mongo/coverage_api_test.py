@@ -119,7 +119,7 @@ def test_add_coverage_with_no_env(app):
     raw = post(app, '/coverages',
             '''{"id": "id_test", "name": "name of the coverage",
                 "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
-    print(raw.data)
+
     assert raw.status_code == 400
     r = to_json(raw)
     assert 'error' in r
@@ -129,7 +129,7 @@ def test_add_coverage_with_env_invalid_url(app):
     raw = post(app, '/coverages',
             '''{"id": "id_test", "name": "name of the coverage",
                 "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "foo"}}}''')
-    print(raw.data)
+
     assert raw.status_code == 400
     r = to_json(raw)
     assert 'error' in r
@@ -177,8 +177,8 @@ def test_patch_simple_coverage(app):
     raw = patch(app, '/coverages/id_test', '{"name": "new name"}')
     assert raw.status_code == 200
     r = to_json(raw)
-    assert r["coverage"]["id"] == "id_test"
-    assert r["coverage"]["name"] == "new name"
+    assert r["coverages"][0]["id"] == "id_test"
+    assert r["coverages"][0]["name"] == "new name"
 
 
 def test_delete_coverage_returns_success(app):
@@ -207,8 +207,8 @@ def test_update_coverage_returns_success_status(app):
     r = to_json(raw)
 
     assert raw.status_code == 200
-    assert r["coverage"]['id'] == "id_test"
-    assert r["coverage"]['name'] == "new_name_test"
+    assert r["coverages"][0]['id'] == "id_test"
+    assert r["coverages"][0]['name'] == "new_name_test"
 
 
 def test_update_unknown_coverage(app):
@@ -258,7 +258,7 @@ def test_update_coverage__env(app):
                     "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
                     "production": null
                 }}''')
-    print(raw.data)
+
     assert raw.status_code == 200
     raw = app.get('/coverages')
     r = to_json(raw)

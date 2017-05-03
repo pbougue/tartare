@@ -60,10 +60,7 @@ paths:
         200:
           description: Array of coverages
           schema:
-            title: coverages
-            type: array
-            items:
-              $ref: '#/definitions/coverage'
+            $ref: '#/definitions/coverages'
 
     post:
       summary: Create a new coverage
@@ -84,7 +81,7 @@ paths:
         200:
           description: Created coverage
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverages"
 
   /coverages/{coverage_id}:
     patch:
@@ -111,7 +108,7 @@ paths:
         200:
           description: Modified coverage
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverages"
         400:
           description: Error in provided data
           schema:
@@ -159,6 +156,37 @@ paths:
       responses:
         200:
           description: OK
+        400:
+          description: Error
+          schema:
+            $ref: '#/definitions/message'
+
+  /coverages/{coverage_id}/data_sources:
+    post:
+      summary: Add a data_source to coverage <coverage_id>
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: body
+          name: body
+          description: data_source id that you want to add to the coverage
+          required: true
+          schema:
+            $ref: "#/definitions/data_source_id"
+      responses:
+        200:
+          description: Data source added
+          schema:
+            $ref: "#/definitions/coverages"
         400:
           description: Error
           schema:
@@ -395,6 +423,13 @@ paths:
 
 
 definitions:
+  coverages:
+    type: object
+    properties:
+      coverages:
+        type: array
+        items:
+          $ref: "#/definitions/coverage"
 
   coverage:
     type: object
@@ -410,6 +445,13 @@ definitions:
         example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
+
+  data_source_id:
+    type: object
+    properties:
+      id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
 
   environments:
     type: object
