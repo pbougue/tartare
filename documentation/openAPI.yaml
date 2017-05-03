@@ -420,6 +420,46 @@ paths:
           description: Error
           schema :
             $ref: '#/definitions/error'
+  /contributors/{contributor_id}/data_sources:
+    get:
+      summary: Display contributor data sources
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor data source
+    post:
+      summary: Create a new data source for a contributor
+      tags:
+        - contributors
+      parameters:
+        - in: body
+          name: body
+          description: Data source object that needs to be added to Tartare
+          required: true
+          schema:
+            $ref: "#/definitions/data_source_type"
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      responses:
+        201:
+          description: Data source created
+          schema:
+            $ref: '#/definitions/data_source_obj'
+        400:
+          description: Error
+          schema :
+            $ref: '#/definitions/error'
 
 
 definitions:
@@ -494,6 +534,27 @@ definitions:
       data_prefix:
         type: string
         example: AAA
+
+  data_source_obj:
+    type: object
+    properties:
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/data_source_type"
+
+  data_source_type:
+    type: object
+    properties:
+      id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
+      name:
+        type: string
+        example: my data source
+      data_format:
+        type: string
+        example: "gtfs"
 
   message:
     type: object
