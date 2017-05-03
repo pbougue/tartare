@@ -70,5 +70,5 @@ def test_add_data_source(app, coverage, data_source):
     raw = post(app, '/coverages/jdr/data_sources',
                json.dumps({"id": data_source.get('id')}))
     r = to_json(raw)
-    assert raw.status_code == 400
+    assert raw.status_code == 409
     assert r.get('message') == 'Data source id {} already exists in coverage jdr.'.format(data_source.get('id'))

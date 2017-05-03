@@ -52,7 +52,7 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
             return {'message': 'Unknown data_source_id {}.'.format(data_source_id, coverage_id)}, 400
 
         if coverage.has_data_source(data_sources[0]):
-            return {'message': 'Data source id {} already exists in coverage {}.'.format(data_source_id, coverage_id)}, 400
+            return {'message': 'Data source id {} already exists in coverage {}.'.format(data_source_id, coverage_id)}, 409
 
         coverage.add_data_source(data_sources[0])
 

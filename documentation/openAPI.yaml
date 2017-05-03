@@ -191,6 +191,11 @@ paths:
           description: Error
           schema:
             $ref: '#/definitions/message'
+        409:
+          description: Duplicated data source in the coverage
+          schema:
+            $ref: '#/definitions/error_duplicated_data_source_in_coverage'
+
 
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:
@@ -451,7 +456,7 @@ definitions:
     properties:
       id:
         type: string
-        example: 5810cb2d3c96b7000108d074
+        example: lyon_tram
 
   environments:
     type: object
@@ -508,3 +513,10 @@ definitions:
       error:
         type: string
         example: The modification of the id is not possible
+
+  error_duplicated_data_source_in_coverage:
+    type: object
+    properties:
+      message:
+        type: string
+        example: Data source id lyon_tram already exists in coverage fr-se.
