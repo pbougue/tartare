@@ -60,10 +60,7 @@ paths:
         200:
           description: Array of coverages
           schema:
-            title: coverages
-            type: array
-            items:
-              $ref: '#/definitions/coverage'
+            $ref: '#/definitions/coverages'
 
     post:
       summary: Create a new coverage
@@ -84,7 +81,7 @@ paths:
         200:
           description: Created coverage
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverages"
 
   /coverages/{coverage_id}:
     patch:
@@ -111,7 +108,7 @@ paths:
         200:
           description: Modified coverage
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverages"
         400:
           description: Error in provided data
           schema:
@@ -170,7 +167,7 @@ paths:
       tags:
         - coverages
       consumes:
-        - multipart/form-data
+        - application/json
       produces:
         - application/json
       parameters:
@@ -189,7 +186,7 @@ paths:
         200:
           description: Data source added
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverages"
         400:
           description: Error
           schema:
@@ -426,6 +423,13 @@ paths:
 
 
 definitions:
+  coverages:
+    type: object
+    properties:
+      coverages:
+        type: array
+        items:
+          $ref: "#/definitions/coverage"
 
   coverage:
     type: object
@@ -445,7 +449,7 @@ definitions:
   data_source_id:
     type: object
     properties:
-      data_source_id:
+      id:
         type: string
         example: 5810cb2d3c96b7000108d074
 

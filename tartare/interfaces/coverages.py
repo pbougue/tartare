@@ -70,7 +70,7 @@ class Coverage(flask_restful.Resource):
         c = models.Coverage.delete(coverage_id)
         if c == 0:
             abort(404)
-        return {'coverage': None}, 204
+        return "", 204
 
     def patch(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
