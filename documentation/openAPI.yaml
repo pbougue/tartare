@@ -420,6 +420,7 @@ paths:
           description: Error
           schema :
             $ref: '#/definitions/error'
+
   /contributors/{contributor_id}/data_sources:
     get:
       summary: Display contributor data sources
@@ -443,7 +444,7 @@ paths:
       parameters:
         - in: body
           name: body
-          description: Data source object that needs to be added to Tartare
+          description: Data source object that needs to be added to given contributor
           required: true
           schema:
             $ref: "#/definitions/data_source_type"
@@ -548,10 +549,10 @@ definitions:
     properties:
       id:
         type: string
-        example: 5810cb2d3c96b7000108d074
+        example: tram_lyon
       name:
         type: string
-        example: my data source
+        example: Tram feed for Lyon
       data_format:
         type: string
         example: "gtfs"
