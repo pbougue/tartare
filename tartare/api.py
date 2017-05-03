@@ -54,4 +54,4 @@ api.add_resource(CoverageData, '/coverages/<string:coverage_id>/environments/<st
                              endpoint='data')
 api.add_resource(Contributor, '/contributors', '/contributors/', '/contributors/<string:contributor_id>', endpoint='contributors')
 api.add_resource(DataSource, '/contributors/<string:contributor_id>/data_sources', '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>')
-api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id>/data_sources', '/coverages/<string:coverage_id>/data_sources/<string:data_source_id>', endpoint='coverages_data_sources')
+api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id>/data_sources', '/coverages/<string:coverage_id>/data_sources/<string:data_source_id>')
