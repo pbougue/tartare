@@ -33,24 +33,27 @@ from tartare.helper import to_doted_notation
 from gridfs import GridFS
 from bson.objectid import ObjectId
 import logging
-import datetime
 import pymongo
 import uuid
+
 
 @app.before_first_request
 def init_mongo():
     mongo.db['contributors'].create_index("data_prefix", unique=True)
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
+
 def save_file_in_gridfs(file, gridfs=None, **kwargs):
     if not gridfs:
         gridfs = GridFS(mongo.db)
     return str(gridfs.put(file, **kwargs))
 
+
 def get_file_from_gridfs(id, gridfs=None):
     if not gridfs:
         gridfs = GridFS(mongo.db)
     return gridfs.get(ObjectId(id))
+
 
 def delete_file_from_gridfs(id, gridfs=None):
     if not gridfs:
@@ -63,6 +66,7 @@ class Environment(object):
         self.name = name
         self.tyr_url = tyr_url
         self.current_ntfs_id = current_ntfs_id
+
 
 class Coverage(object):
     mongo_collection = 'coverages'
@@ -82,17 +86,15 @@ class Coverage(object):
         filename = '{coverage}_calendars.zip'.format(coverage=self.id)
         id = save_file_in_gridfs(file, gridfs=gridfs, filename=filename, coverage=self.id)
         Coverage.update(self.id, {'grid_calendars_id': id})
-        #when we delete the file all process reading it will get invalid data
-        #TODO: We will need to implement a better solution
+        # when we delete the file all process reading it will get invalid data
+        # TODO: We will need to implement a better solution
         delete_file_from_gridfs(self.grid_calendars_id, gridfs=gridfs)
         self.grid_calendars_id = id
 
     def get_grid_calendars(self):
         if not self.grid_calendars_id:
             return None
-        gridfs = GridFS(mongo.db)
         return get_file_from_gridfs(self.grid_calendars_id)
-
 
     def save(self):
         raw = MongoCoverageSchema().dump(self).data
@@ -122,7 +124,7 @@ class Coverage(object):
 
     @classmethod
     def update(cls, coverage_id=None, dataset={}):
-        #we have to use "doted notation' to only update some fields of a nested object
+        # we have to use "doted notation' to only update some fields of a nested object
         raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(dataset)})
         if raw.matched_count == 0:
             return None
@@ -136,8 +138,8 @@ class Coverage(object):
         gridfs = GridFS(mongo.db)
         id = save_file_in_gridfs(file, gridfs=gridfs, filename=filename, coverage=self.id)
         Coverage.update(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
-        #when we delete the file all process reading it will get invalid data
-        #TODO: We will need to implements a better solution
+        # when we delete the file all process reading it will get invalid data
+        # TODO: We will need to implements a better solution
         delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
         self.environments[environment_type].current_ntfs_id = id
 
@@ -146,6 +148,11 @@ class Coverage(object):
 
     def add_data_source(self, data_source):
         self.data_sources.append(data_source.id)
+
+    def remove_data_source(self, coverage_id, data_source_id):
+        if data_source_id in self.data_sources:
+            self.data_sources.remove(data_source_id)
+            self.update(coverage_id, {"data_sources": self.data_sources})
 
 
 class MongoEnvironmentSchema(Schema):
@@ -157,6 +164,7 @@ class MongoEnvironmentSchema(Schema):
     def make_environment(self, data):
         return Environment(**data)
 
+
 class MongoEnvironmentListSchema(Schema):
     production = fields.Nested(MongoEnvironmentSchema, allow_none=True)
     preproduction = fields.Nested(MongoEnvironmentSchema, allow_none=True)
@@ -164,7 +172,7 @@ class MongoEnvironmentListSchema(Schema):
 
     @post_load
     def remove_none(self, data):
-        #We don't want to keep removed environments
+        # We don't want to keep removed environments
         return {key: value for key, value in data.items() if value is not None}
 
 
@@ -241,7 +249,6 @@ class DataSource(object):
         if contributor is None:
             raise ValueError('Bad contributor {}'.format(contributor_id))
         return contributor
-
 
 
 class MongoDataSourceSchema(Schema):

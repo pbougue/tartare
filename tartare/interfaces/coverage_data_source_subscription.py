@@ -63,3 +63,14 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
                                       .format(coverage_id, data_source_id))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200
+
+    def delete(self, coverage_id, data_source_id):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            return {'message': 'Bad coverage {}.'.format(coverage_id)}, 404
+
+        if data_source_id not in coverage.data_sources:
+            return {'message': 'Unknown data_source_id attribute in uri.'}, 404
+
+        coverage.remove_data_source(coverage_id, data_source_id)
+        return {'data_sources': None}, 204
