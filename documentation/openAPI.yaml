@@ -133,7 +133,7 @@ paths:
           required: true
         - in: body
           name: body
-          description: Attributes of the coverage <coverage_id> that needs to be modified
+          description: Attributes of the coverage {coverage_id} that needs to be modified
           required: true
           schema:
             $ref: "#/definitions/coverage"
@@ -168,7 +168,7 @@ paths:
           required: true
       responses:
         204:
-          description: Coverage <coverage_id> correctly deleted
+          description: Coverage {coverage_id} correctly deleted
         404:
           description: Resource not found
           schema :
@@ -176,7 +176,7 @@ paths:
 
   /coverages/{coverage_id}/grid_calendar:
     post:
-      summary: Handle a grid_calendar file to coverage <coverage_id> for processing
+      summary: Handle a grid_calendar file to coverage {coverage_id} for processing
       tags:
         - coverages
       consumes:
@@ -208,7 +208,7 @@ paths:
 
   /coverages/{coverage_id}/data_sources:
     post:
-      summary: Add a data_source to coverage <coverage_id>
+      summary: Add a data_source to coverage {coverage_id}
       tags:
         - coverages
       consumes:
@@ -249,12 +249,32 @@ paths:
           schema :
             $ref: '#/definitions/error_500'
 
+  /coverages/{coverage_id}/data_sources/{data_source_id}:
+    delete:
+      summary: Delete a data_source from a coverage {coverage_id}
+      tags:
+        - coverages
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: path
+          name: data_source_id
+          type: string
+          description: Identifier of the data_source that needs to be removed from the coverage
+          required: true
+      responses:
+        204:
+          description: When data source {data_source_id} is correctly deleted from coverage
+        404:
+          description: provided coverage or data source id was not found in database
 
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:
       summary: Retrieve the latest data file of the specified coverage
       tags:
-        - coverages
         - data
       produces:
         - application/json
@@ -269,7 +289,7 @@ paths:
           name: environment_type
           type: string
           enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage <coverage_id> to be requested
+          description: Environment of the coverage {coverage_id} to be requested
           required: true
         - in: path
           name: data_type
@@ -289,9 +309,8 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     post:
-      summary: Send a new data file to coverage <coverage_id> for processing
+      summary: Send a new data file to coverage {coverage_id} for processing
       tags:
-        - coverages
         - data
       consumes:
         - multipart/form-data
@@ -307,7 +326,7 @@ paths:
           name: environment_type
           type: string
           enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage <coverage_id> the data will be sent to
+          description: Environment of the coverage {coverage_id} the data will be sent to
           required: true
         - in: path
           name: data_type
@@ -326,9 +345,8 @@ paths:
 
   /coverages/{coverage_id}/environments/{environment_type}/data_update:
     post:
-      summary: Handle a file to coverage <coverage_id> for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
+      summary: Handle a file to coverage {coverage_id} for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
       tags:
-        - coverages
         - data
       consumes:
         - multipart/form-data
@@ -344,7 +362,7 @@ paths:
           name: environment_type
           type: string
           enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage <coverage_id> the DATA will be sent to
+          description: Environment of the coverage {coverage_id} the DATA will be sent to
           required: true
         - in: formData
           name: file
@@ -473,7 +491,7 @@ paths:
           required: true
         - in: body
           name: body
-          description: Attributes of the contributor <contributor_id> that needs to be modified.
+          description: Attributes of the contributor {contributor_id} that needs to be modified.
           required: true
           schema:
             $ref: "#/definitions/contributor_type"
