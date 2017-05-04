@@ -32,12 +32,11 @@
 
 import logging
 import zipfile
-import os
 from flask.globals import request
 from flask_restful import Resource
 from tartare import app, tasks
 from tartare.core import models
-import shutil
+from tartare.exceptions import InvalidArguments, ResourceNotFound
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_CALENDARS_HEADER = {'id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
@@ -84,23 +83,23 @@ class GridCalendar(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            return {'message': 'bad coverage {}'.format(coverage_id)}, 400
+            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
 
         if not request.files:
-            return {'message': 'the archive is missing'}, 400
+            raise InvalidArguments('The archive is missing.')
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
         if not zipfile.is_zipfile(content):
-            return {'message': ' invalid ZIP'}, 400
+            raise InvalidArguments('Invalid ZIP.')
         zip_file = zipfile.ZipFile(content)
         valid_file, missing_files = is_valid_file(zip_file)
         if not valid_file:
-            return {'message': 'file(s) missing : {}'.format(''.join(missing_files))}, 400
+            raise InvalidArguments('File(s) missing : {}.'.format(''.join(missing_files)))
         # check files header
         valid_header, invalid_files = check_files_header(zip_file)
         if not valid_header:
-            return {'message': 'non-compliant file(s) : {}'.format(''.join(invalid_files))}, 400
+            raise InvalidArguments('Non-compliant file(s) : {}.'.format(''.join(invalid_files)))
 
         content.stream.seek(0)
         coverage.save_grid_calendars(content)

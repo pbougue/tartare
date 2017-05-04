@@ -28,13 +28,13 @@
 # www.navitia.io
 from flask_restful import abort
 import flask_restful
-from pymongo.errors import PyMongoError
-from tartare import app
+from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from flask import request
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
 
 
 class Coverage(flask_restful.Resource):
@@ -43,13 +43,14 @@ class Coverage(flask_restful.Resource):
         try:
             coverage = coverage_schema.load(request.json).data
         except ValidationError as err:
-            return {'error': err.messages}, 400
+            raise InvalidArguments(err.messages)
 
         try:
             coverage.save()
+        except DuplicateKeyError:
+            raise DuplicateEntry("Coverage {} already exists.".format(request.json['id']))
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to add coverage {}'.format(coverage))
-            return {'error': str(e)}, 500
+            raise InternalServerError('Impossible to add coverage.')
 
         return {'coverages': coverage_schema.dump([coverage], many=True).data}, 201
 
@@ -57,7 +58,7 @@ class Coverage(flask_restful.Resource):
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
-                abort(404)
+                raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
             return {'coverages': [result.data]}, 200
@@ -69,25 +70,24 @@ class Coverage(flask_restful.Resource):
     def delete(self, coverage_id):
         c = models.Coverage.delete(coverage_id)
         if c == 0:
-            abort(404)
+            raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
         return "", 204
 
     def patch(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            abort(404)
+            raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
         if 'id' in request.json and coverage.id != request.json['id']:
-            return {'error': 'The modification of the id is not possible'}, 400
+            raise InvalidArguments('The modification of the id is not possible')
         coverage_schema = schema.CoverageSchema(partial=True)
         errors = coverage_schema.validate(request.json, partial=True)
         if errors:
-            return {'error': errors}, 400
+            raise InvalidArguments(errors)
 
         logging.debug(request.json)
         try:
             coverage = models.Coverage.update(coverage_id, request.json)
-        except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update coverage with dataset {}'.format(request.json))
-            return {'error': str(e)}, 500
+        except PyMongoError:
+            raise InternalServerError('Impossible to update coverage with dataset {}'.format(request.json))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200

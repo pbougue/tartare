@@ -36,8 +36,8 @@ def test_bad_coverage(app):
     raw = post(app, '/coverages/unknown/data_sources',
                '''{"id": "bob"}''')
     r = to_json(raw)
-    assert raw.status_code == 400
-    assert r.get('message') == 'Bad coverage unknown.'
+    assert raw.status_code == 404
+    assert r.get('error') == 'Coverage unknown not found.'
 
 
 def test_missing_data_source_id(app, coverage):
@@ -45,15 +45,15 @@ def test_missing_data_source_id(app, coverage):
                '''{}''')
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message') == 'Missing data_source_id attribute in request body.'
+    assert r.get('error') == 'Missing data_source_id attribute in request body.'
 
 
 def test_unknown_data_source(app, coverage):
     raw = post(app, '/coverages/jdr/data_sources',
                '''{"id": "bob"}''')
     r = to_json(raw)
-    assert raw.status_code == 400
-    assert r.get('message') == 'Unknown data_source_id bob.'
+    assert raw.status_code == 404
+    assert r.get('error') == 'Data source bob not found.'
 
 
 def test_add_data_source(app, coverage, data_source):
@@ -71,4 +71,4 @@ def test_add_data_source(app, coverage, data_source):
                json.dumps({"id": data_source.get('id')}))
     r = to_json(raw)
     assert raw.status_code == 409
-    assert r.get('message') == 'Data source id {} already exists in coverage jdr.'.format(data_source.get('id'))
+    assert r.get('error') == 'Data source id {} already exists in coverage jdr.'.format(data_source.get('id'))

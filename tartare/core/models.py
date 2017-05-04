@@ -192,7 +192,7 @@ class DataSource(object):
         elif data_source_id is not None:
             raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
             if raw is None:
-                raise ValueError('Bad data_source {}'.format(data_source_id))
+                return None
             contributor = MongoContributorSchema(strict=True).load(raw).data
         else:
             raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
@@ -201,7 +201,7 @@ class DataSource(object):
         if data_source_id is not None:
             data_sources = [ds for ds in data_sources if ds.id == data_source_id]
             if not data_sources:
-                raise ValueError('Bad data_source {}'.format(data_source_id))
+                return None
         return data_sources
 
     @classmethod

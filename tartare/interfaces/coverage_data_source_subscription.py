@@ -31,37 +31,35 @@ from flask_restful import request
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare.core import models
-import logging
 from tartare.interfaces import schema
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
 
 
 class CoverageDataSourceSubscription(flask_restful.Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            return {'message': 'Bad coverage {}.'.format(coverage_id)}, 400
+            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
 
         if 'id' not in request.json:
-            return {'message': 'Missing data_source_id attribute in request body.'}, 400
+            raise InvalidArguments('Missing data_source_id attribute in request body.')
 
         data_source_id = request.json['id']
 
-        try:
-            data_sources = models.DataSource.get(data_source_id=data_source_id)
-        except ValueError:
-            return {'message': 'Unknown data_source_id {}.'.format(data_source_id, coverage_id)}, 400
+        data_sources = models.DataSource.get(data_source_id=data_source_id)
+        if data_sources is None:
+            raise ResourceNotFound("Data source {} not found.".format(data_source_id))
 
         if coverage.has_data_source(data_sources[0]):
-            return {'message': 'Data source id {} already exists in coverage {}.'.format(data_source_id, coverage_id)}, 409
+            raise DuplicateEntry('Data source id {} already exists in coverage {}.'
+                                 .format(data_source_id, coverage_id))
 
         coverage.add_data_source(data_sources[0])
 
         try:
             coverage = models.Coverage.update(coverage_id, {"data_sources": coverage.data_sources})
         except (PyMongoError, ValueError) as e:
-            logging.getLogger(__name__).exception(
-                'impossible to update coverage {} with data_source {}'.format(coverage_id, data_source_id)
-            )
-            return {'message': str(e)}, 400
+            raise InternalServerError('Impossible to update coverage {} with data_source {}.'
+                                      .format(coverage_id, data_source_id))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200

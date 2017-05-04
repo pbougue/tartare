@@ -82,8 +82,41 @@ paths:
           description: Created coverage
           schema:
             $ref: "#/definitions/coverages"
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        409:
+          description: Duplicate entry
+          schema :
+            $ref: '#/definitions/error_409'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
 
   /coverages/{coverage_id}:
+    get:
+      summary: Display coverage info
+      tags:
+        - coverages
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/coverages'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
     patch:
       summary: Modify a coverage configuration
       tags:
@@ -110,9 +143,17 @@ paths:
           schema:
             $ref: "#/definitions/coverages"
         400:
-          description: Error in provided data
-          schema:
-            $ref: "#/definitions/error"
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
     delete:
       summary: Delete a coverage
       tags:
@@ -129,9 +170,9 @@ paths:
         204:
           description: Coverage <coverage_id> correctly deleted
         404:
-          description: coverage_id not found
-          schema:
-            $ref: "#/definitions/message"
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
 
   /coverages/{coverage_id}/grid_calendar:
     post:
@@ -157,9 +198,13 @@ paths:
         200:
           description: OK
         400:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
 
   /coverages/{coverage_id}/data_sources:
     post:
@@ -188,13 +233,21 @@ paths:
           schema:
             $ref: "#/definitions/coverages"
         400:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
         409:
-          description: Duplicated data source in the coverage
-          schema:
-            $ref: '#/definitions/error_duplicated_data_source_in_coverage'
+          description: Duplicate entry
+          schema :
+            $ref: '#/definitions/error_409'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
 
 
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
@@ -228,13 +281,13 @@ paths:
         200:
           description: Return the data file requested
         400:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
         404:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
     post:
       summary: Send a new data file to coverage <coverage_id> for processing
       tags:
@@ -270,14 +323,6 @@ paths:
       responses:
         200:
           description: Return the data file requested
-        400:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
-        404:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
 
   /coverages/{coverage_id}/environments/{environment_type}/data_update:
     post:
@@ -310,15 +355,19 @@ paths:
         200:
           description: OK
           schema:
-            $ref: '#/definitions/message'
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Valid fusio file provided : file.zip"
         400:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
         404:
-          description: Error
-          schema:
-            $ref: '#/definitions/message'
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
 
 
   /contributors:
@@ -354,9 +403,17 @@ paths:
           schema:
             $ref: '#/definitions/contributor_obj'
         400:
-          description: Error
+          description: Invalid arguments
           schema :
-            $ref: '#/definitions/error'
+            $ref: '#/definitions/error_400'
+        409:
+          description: Duplicate entry
+          schema :
+            $ref: '#/definitions/error_409'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
 
   /contributors/{contributor_id}:
     get:
@@ -376,6 +433,11 @@ paths:
           description: Requested contributor
           schema:
             $ref: '#/definitions/contributor_obj'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
     delete:
       summary: delete contributor
       tags:
@@ -391,6 +453,10 @@ paths:
       responses:
         204:
           description: Delete OK
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
     patch:
       summary: Modify contributor info
       tags:
@@ -417,9 +483,17 @@ paths:
           schema:
             $ref: '#/definitions/contributor_obj'
         400:
-          description: Error
+          description: Invalid arguments
           schema :
-            $ref: '#/definitions/error'
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
 
   /contributors/{contributor_id}/data_sources:
     get:
@@ -437,6 +511,14 @@ paths:
       responses:
         200:
           description: Requested contributor data source
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
     post:
       summary: Create a new data source for a contributor
       tags:
@@ -458,9 +540,13 @@ paths:
           schema:
             $ref: '#/definitions/data_source_obj'
         400:
-          description: Error
+          description: Invalid arguments
           schema :
-            $ref: '#/definitions/error'
+            $ref: '#/definitions/error_400'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
 
 
 definitions:
@@ -558,23 +644,42 @@ definitions:
         type: string
         example: "gtfs"
 
-  message:
+  error_400:
     type: object
     properties:
       message:
         type: string
-        example: impossible to add coverage <coverage_id>
-
-  error:
-    type: object
-    properties:
+        example: Invalid arguments
       error:
         type: string
-        example: The modification of the id is not possible
+        example: Detailed message
 
-  error_duplicated_data_source_in_coverage:
+  error_409:
     type: object
     properties:
       message:
         type: string
-        example: Data source id lyon_tram already exists in coverage fr-se.
+        example: Duplicate entry
+      error:
+        type: string
+        example: Detailed message
+
+  error_404:
+    type: object
+    properties:
+      message:
+        type: string
+        example: Resource not found
+      error:
+        type: string
+        example: Detailed message
+
+  error_500:
+    type: object
+    properties:
+      message:
+        type: string
+        example: Internal Server Error
+      error:
+        type: string
+        example: Detailed message

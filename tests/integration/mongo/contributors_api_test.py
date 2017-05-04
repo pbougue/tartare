@@ -104,7 +104,7 @@ def test_add_contributors_unique_data_suffix_error(app):
     raw = post(app, '/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
     assert raw.status_code == 201
     raw = post(app, '/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAA"}')
-    assert raw.status_code == 400
+    assert raw.status_code == 409
     raw = app.get('/contributors')
     r = to_json(raw)
     assert len(r["contributors"]) == 1
