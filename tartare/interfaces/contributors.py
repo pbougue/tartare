@@ -36,6 +36,7 @@ from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 import uuid
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
 
 
 class Contributor(flask_restful.Resource):
@@ -50,20 +51,16 @@ class Contributor(flask_restful.Resource):
         try:
             contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
-            return {'error': err.messages}, 400
+            raise InvalidArguments(err.messages)
 
         contributor_id = post_data["id"]
         try:
             contributor.save()
-        except DuplicateKeyError as e:
-            logging.getLogger(__name__).exception(
-                'impossible to add contributor {}, data_prefix already used ({})'.format(
-                    contributor, request.json['data_prefix']))
-            return {'error': str(e)}, 400
-        except PyMongoError as e:
-            logging.getLogger(__name__).exception(
-                'impossible to add contributor {}'.format(contributor))
-            return {'error': str(e)}, 500
+        except DuplicateKeyError:
+            raise DuplicateEntry("Impossible to add contributor, data_prefix '{}' already used."
+                                 .format(request.json['data_prefix']))
+        except PyMongoError:
+            raise InternalServerError('Impossible to add contributor {}'.format(contributor))
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(contributor_id)).data]}, 201
 
@@ -71,7 +68,7 @@ class Contributor(flask_restful.Resource):
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
-                abort(404)
+                raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
             result = schema.ContributorSchema().dump(c)
             return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
@@ -80,7 +77,7 @@ class Contributor(flask_restful.Resource):
     def delete(self, contributor_id):
         c = models.Contributor.delete(contributor_id)
         if c == 0:
-            abort(404)
+            raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
     def patch(self, contributor_id):
@@ -88,7 +85,7 @@ class Contributor(flask_restful.Resource):
         # need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
         if contributor is None:
-            abort(404)
+            raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
 
         request_data = request.json
         #checking errors before updating PATCH data
@@ -99,13 +96,13 @@ class Contributor(flask_restful.Resource):
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)
         if errors:
-            return {'error': errors}, 400
+            raise InvalidArguments(errors)
 
         if 'data_prefix' in request_data and contributor.data_prefix != request_data['data_prefix']:
-            return {'error': 'The modification of the data_prefix is not possible ({} => {})'.format(
-                contributor.data_prefix, request_data['data_prefix'])}, 400
+            raise InvalidArguments('The modification of the data_prefix is not possible ({} => {})'.format(
+                contributor.data_prefix, request_data['data_prefix']))
         if 'id' in request_data and contributor.id != request_data['id']:
-            return {'error': 'The modification of the id is not possible'}, 400
+            raise InvalidArguments('The modification of the id is not possible')
 
         existing_ds_id = [d.id for d in contributor.data_sources]
         logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
@@ -127,9 +124,7 @@ class Contributor(flask_restful.Resource):
             request_data['data_sources'] = patched_data_sources
         try:
             contributor = models.Contributor.update(contributor_id, request_data)
-        except PyMongoError as e:
-            logging.getLogger(__name__).exception(
-                'impossible to update contributor with dataset {}'.format(request_data))
-            return {'error': str(e)}, 500
+        except PyMongoError:
+            raise InternalServerError('impossible to update contributor with dataset {}'.format(request_data))
 
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200

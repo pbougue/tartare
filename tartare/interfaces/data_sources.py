@@ -35,6 +35,7 @@ from tartare.core import models
 import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
 
 
 class DataSource(flask_restful.Resource):
@@ -44,13 +45,12 @@ class DataSource(flask_restful.Resource):
             d = request.json
             data_source = data_source_schema.load(d).data
         except ValidationError as err:
-            return {'error': err.messages}, 400
+            raise InvalidArguments(err.messages)
 
         try:
             data_source.save(contributor_id)
         except (PyMongoError, ValueError) as e:
-            logging.getLogger(__name__).exception('impossible to add data_source {}'.format(data_source))
-            return {'error': str(e)}, 400
+            raise InternalServerError('Impossible to add data source.')
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
 
@@ -58,10 +58,10 @@ class DataSource(flask_restful.Resource):
     def get(self, contributor_id, data_source_id=None):
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
+            if ds is None:
+                raise ResourceNotFound("Data source '{}' not found.".format(data_source_id))
         except ValueError as e:
-            logging.getLogger(__name__).exception('impossible to get data_source {} on contributor {}'
-                                                  .format(data_source_id, contributor_id))
-            return {'error': str(e)}, 400
+            raise InvalidArguments(str(e))
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
@@ -70,11 +70,9 @@ class DataSource(flask_restful.Resource):
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
-                abort(404)
+                raise ResourceNotFound("Data source '{}' not found.".format(contributor_id))
         except ValueError as e:
-            logging.getLogger(__name__).exception('impossible to delete data_source {} on contributor {}'
-                                                  .format(data_source_id, contributor_id))
-            return {'error': str(e)}, 400
+            raise InvalidArguments(str(e))
 
         return {'data_sources': []}, 204
 
@@ -87,19 +85,16 @@ class DataSource(flask_restful.Resource):
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)
         if errors:
-            return {'error': errors}, 400
+            raise ResourceNotFound("Data source '{}' not found.".format(contributor_id))
 
         if 'id' in request.json and ds[0].id != request.json['id']:
-            return {'error': 'The modification of the id is not possible'}, 400
+            raise InvalidArguments('The modification of the id is not possible')
 
         try:
             data_sources = models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
-            logging.getLogger(__name__).exception('impossible to update data_source {} on contributor {}'
-                                                  .format(data_source_id, contributor_id))
-            return {'error': str(e)}, 400
+            raise InvalidArguments(str(e))
         except PyMongoError as e:
-            logging.getLogger(__name__).exception('impossible to update data_source with dataset {}'.format(request.json))
-            return {'error': str(e)}, 500
+            raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200

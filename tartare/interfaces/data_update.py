@@ -37,21 +37,21 @@ from flask.globals import request
 from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
-import shutil
 from tartare import tasks
+from tartare.exceptions import InvalidArguments, ResourceNotFound
 
 
 def add_coverage_data(coverage_id, coverage, environment_type):
     if coverage is None:
-        return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+        raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
 
     if environment_type not in coverage.environments:
-        return {'message': 'bad environment {}'.format(environment_type)}, 404
+        raise ResourceNotFound("Environment{}' not found.".format(environment_type))
 
-    if not request.files :
-        return {'message': 'no file provided'}, 400
+    if not request.files:
+        raise InvalidArguments('No file provided.')
     if request.files and 'file' not in request.files:
-        return {'message': 'file provided with bad param ("file" param expected)'}, 400
+        raise InvalidArguments('File provided with bad param ("file" param expected).')
     content = request.files['file']
     logger = logging.getLogger(__name__)
     logger.info('content received: %s', content)
@@ -60,9 +60,9 @@ def add_coverage_data(coverage_id, coverage, environment_type):
         content.save(tmp_file)
         #TODO: improve this function so we don't have to write the file localy first
         file_type, file_name = data_handler.type_of_data(tmp_file)
-        if file_type in [None, "tmp"] :
+        if file_type in [None, "tmp"]:
             logger.warning('invalid file provided: %s', content.filename)
-            return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
+            raise InvalidArguments('Invalid file provided: {}.'.format(content.filename))
         with open(tmp_file, 'rb') as file:
             if file_type == 'fusio': #ntfs is called fusio in type_of_data
                 coverage.save_ntfs(environment_type, file)
@@ -86,13 +86,13 @@ class CoverageData(Resource):
     def get(self, coverage_id, environment_type, data_type):
         available_data_types = ['ntfs']
         if data_type.lower() not in available_data_types:
-            return {'message': 'bad data type {} (expected formats: {})'.format(
-                data_type, ','.join(available_data_types))}, 404
+            raise InvalidArguments('Bad data type {} (expected formats: {}).'
+                                   .format(data_type, ','.join(available_data_types)))
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            return {'message': 'bad coverage {}'.format(coverage_id)}, 404
+            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
         if environment_type not in coverage.environments:
-            return {'message': 'bad environment {}'.format(environment_type)}, 404
+            raise ResourceNotFound("Environment{}' not found.".format(environment_type))
         ntfs_file_id = coverage.environments[environment_type].current_ntfs_id
         ntfs_file = models.get_file_from_gridfs(ntfs_file_id)
         return flask.send_file(ntfs_file, mimetype='application/zip')

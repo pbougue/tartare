@@ -37,18 +37,19 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 import shutil
+from tartare.exceptions import InvalidArguments, ResourceNotFound
 
 
 class DataSet(Resource):
     def post(self, data_source_id):
         datasource = models.DataSource.get(data_source_id=data_source_id)
         if datasource is None:
-            return {'message': 'bad data_source {}'.format(data_source_id)}, 404
+            raise ResourceNotFound("Data source '{}' not found.".format(data_source_id))
 
         if not request.files :
-            return {'message': 'no file provided'}, 400
+            raise InvalidArguments('No file provided.')
         if request.files and 'file' not in request.files:
-            return {'message': 'file provided with bad param ("file" param expected)'}, 400
+            raise InvalidArguments('File provided with bad param ("file" param expected).')
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: %s', content)
@@ -59,7 +60,8 @@ class DataSet(Resource):
             file_type, file_name = data_handler.type_of_data(tmp_file)
             if file_type in [None, "tmp"] :
                 logger.warning('invalid file provided: %s', content.filename)
-                return {'message': 'invalid file provided: {}'.format(content.filename)}, 400
+                raise InvalidArguments('Invalid file provided: {}.'.format(content.filename))
+
 
             # backup content
             input_dir = coverage.technical_conf.input_dir

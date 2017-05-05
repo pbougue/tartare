@@ -1,6 +1,4 @@
-# coding: utf-8
-
-# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -28,29 +26,37 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from flask import Flask
-
-from tartare.helper import configure_logger, make_celery
-from celery.signals import setup_logging
-from flask_pymongo import PyMongo
-
-app = Flask(__name__)
-app.config.from_object('tartare.default_settings')
-app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
-app.config["ERROR_404_HELP"] = False  # Disable help message in 404 response
-
-configure_logger(app.config)
-
-mongo = PyMongo(app)
+from werkzeug.exceptions import HTTPException
 
 
-@setup_logging.connect
-def celery_setup_logging(*args, **kwargs):
-    # we don't want celery to mess with our logging configuration
-    pass
+class TartareException(HTTPException):
+    """
+    All tartare exceptions must inherit from this one and define a code and a short message
+    """
+    def __init__(self, detailed_message=None):
+        super(TartareException, self).__init__()
+        self.data = {
+            'message': self.message,
+        }
+        if detailed_message:
+            self.data['error'] = detailed_message
 
-celery = make_celery(app)
+
+class InvalidArguments(TartareException):
+    code = 400
+    message = 'Invalid arguments'
 
 
-from tartare import api
+class DuplicateEntry(TartareException):
+    code = 409
+    message = 'Duplicate entry'
+
+
+class ResourceNotFound(TartareException):
+    code = 404
+    message = 'Resource not found'
+
+
+class InternalServerError(TartareException):
+    code = 500
+    message = 'Internal Server Error'

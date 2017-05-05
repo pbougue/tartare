@@ -65,7 +65,7 @@ def test_post_pbf_with_bad_param(app, coverage_obj, fixture_dir):
     raw = app.post('/coverages/test/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message') == 'file provided with bad param ("file" param expected)'
+    assert r.get('error') == 'File provided with bad param ("file" param expected).'
 
 def test_post_osm_returns_invalid_file_extension_message(app, coverage_obj, fixture_dir):
     filename = 'empty_pbf.funky_extension'
@@ -74,7 +74,7 @@ def test_post_osm_returns_invalid_file_extension_message(app, coverage_obj, fixt
     raw = app.post('/coverages/test/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message').startswith('invalid file provided')
+    assert r.get('error').startswith('Invalid file provided')
 
 def test_post_osm_returns_invalid_coverage(app, fixture_dir):
     path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
@@ -82,13 +82,13 @@ def test_post_osm_returns_invalid_coverage(app, fixture_dir):
     raw = app.post('/coverages/jdr_bug/environments/production/data_update', data=files)
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('message') == 'bad coverage jdr_bug'
+    assert r.get('error') == 'Coverage jdr_bug not found.'
 
 def test_post_pbf_returns_file_missing_message(app, coverage_obj):
     raw = app.post('/coverages/test/environments/production/data_update')
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('message') == 'no file provided'
+    assert r.get('error') == 'No file provided.'
 
 def test_post_ntfs_success(app, coverage_obj):
     #create ZIP file with fixture before sending it
