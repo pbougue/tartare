@@ -28,7 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post
+from tests.utils import to_json, post, delete
 import json
 
 
@@ -72,3 +72,24 @@ def test_add_data_source(app, coverage, data_source):
     r = to_json(raw)
     assert raw.status_code == 409
     assert r.get('error') == 'Data source id {} already exists in coverage jdr.'.format(data_source.get('id'))
+
+
+def test_delete_unknown_coverage(app):
+    raw = delete(app, '/coverages/jdr/data_sources/toto')
+    r = to_json(raw)
+    assert raw.status_code == 404
+    assert r.get('error') == 'Unknown coverage id "jdr".'
+
+def test_delete_unknown_data_source(app, coverage_with_data_source_tram_lyon):
+    raw = delete(app, '/coverages/jdr/data_sources/toto')
+    r = to_json(raw)
+    assert raw.status_code == 404
+    assert r.get('error') == 'Unknown data source id "toto" attribute in uri.'
+
+
+def test_delete_valid_data_source(app, coverage_with_data_source_tram_lyon):
+    assert 'tram_lyon' in coverage_with_data_source_tram_lyon['data_sources']
+    raw = delete(app, '/coverages/jdr/data_sources/tram_lyon')
+    assert raw.status_code == 204
+    jdr_cov = to_json(app.get('/coverages/jdr'))
+    assert 'data_sources' not in jdr_cov

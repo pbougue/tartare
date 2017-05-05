@@ -39,6 +39,12 @@ def to_json(response):
     return json.loads(response.data.decode('utf-8'))
 
 
+def delete(app, url):
+    """
+        post on API with params as json
+        """
+    return app.delete(url)
+
 def post(app, url, params):
     """
     post on API with params as json
@@ -46,14 +52,6 @@ def post(app, url, params):
     return app.post(url,
                     headers={'Content-Type': 'application/json'},
                     data=params)
-
-
-def get(app, url):
-    """
-    get on API with params as json
-    """
-    return app.get(url)
-
 
 def patch(app, url, params):
     """

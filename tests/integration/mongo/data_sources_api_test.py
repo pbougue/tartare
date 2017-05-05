@@ -28,7 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post, patch, get
+from tests.utils import to_json, post, patch
 import json
 
 def test_post_ds_one_data_source_without_id(app):
@@ -274,7 +274,7 @@ def test_patch_ds_one_data_source_name_of_two_and_add_one(app):
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
 
-    raw = get(app, '/contributors/id_test/data_sources')
+    raw = app.get('/contributors/id_test/data_sources')
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
     assert len(r["data_sources"]) == 3

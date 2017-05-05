@@ -67,6 +67,13 @@ def get_app_context():
 
 
 @pytest.fixture(scope="function")
+def coverage_with_data_source_tram_lyon(app):
+    coverage = app.post('/coverages',
+                headers={'Content-Type': 'application/json'},
+               data='{"id": "jdr", "name": "name of the coverage jdr", "data_sources": ["tram_lyon"]}')
+    return to_json(coverage)['coverages'][0]
+
+@pytest.fixture(scope="function")
 def coverage(app):
     coverage = app.post('/coverages',
                 headers={'Content-Type': 'application/json'},

@@ -63,3 +63,17 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
                                       .format(coverage_id, data_source_id))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200
+
+    def delete(self, coverage_id, data_source_id):
+        coverage = models.Coverage.get(coverage_id)
+        if coverage is None:
+            raise ResourceNotFound('Unknown coverage id "{}".'.format(coverage_id))
+
+        if data_source_id not in coverage.data_sources:
+            raise ResourceNotFound('Unknown data source id "{}" attribute in uri.'.format(data_source_id))
+
+        try:
+            coverage.remove_data_source(data_source_id)
+        except (PyMongoError, ValueError):
+            raise InternalServerError
+        return {'data_sources': None}, 204
