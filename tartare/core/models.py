@@ -32,7 +32,6 @@ from tartare import app
 from tartare.helper import to_doted_notation
 from gridfs import GridFS
 from bson.objectid import ObjectId
-import logging
 import pymongo
 import uuid
 
