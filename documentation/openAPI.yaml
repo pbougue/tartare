@@ -269,7 +269,9 @@ paths:
         204:
           description: When data source {data_source_id} is correctly deleted from coverage
         404:
-          description: provided coverage or data source id was not found in database
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
 
   /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
     get:

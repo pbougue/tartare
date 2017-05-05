@@ -149,10 +149,10 @@ class Coverage(object):
     def add_data_source(self, data_source):
         self.data_sources.append(data_source.id)
 
-    def remove_data_source(self, coverage_id, data_source_id):
+    def remove_data_source(self, data_source_id):
         if data_source_id in self.data_sources:
             self.data_sources.remove(data_source_id)
-            self.update(coverage_id, {"data_sources": self.data_sources})
+            self.update(self.id, {"data_sources": self.data_sources})
 
 
 class MongoEnvironmentSchema(Schema):

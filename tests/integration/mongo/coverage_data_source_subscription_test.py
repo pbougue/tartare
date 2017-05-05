@@ -78,13 +78,13 @@ def test_delete_unknown_coverage(app):
     raw = delete(app, '/coverages/jdr/data_sources/toto')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('message') == 'Bad coverage jdr.'
+    assert r.get('error') == 'Unknown coverage id "jdr".'
 
 def test_delete_unknown_data_source(app, coverage_with_data_source_tram_lyon):
     raw = delete(app, '/coverages/jdr/data_sources/toto')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('message') == 'Unknown data_source_id attribute in uri.'
+    assert r.get('error') == 'Unknown data source id "toto" attribute in uri.'
 
 
 def test_delete_valid_data_source(app, coverage_with_data_source_tram_lyon):
