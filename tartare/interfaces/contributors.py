@@ -27,7 +27,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask_restful import abort
 import flask_restful
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
@@ -37,6 +36,7 @@ from tartare.interfaces import schema
 from marshmallow import ValidationError
 import uuid
 from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
+
 
 
 class Contributor(flask_restful.Resource):
@@ -56,9 +56,9 @@ class Contributor(flask_restful.Resource):
         contributor_id = post_data["id"]
         try:
             contributor.save()
-        except DuplicateKeyError:
-            raise DuplicateEntry("Impossible to add contributor, data_prefix '{}' already used."
-                                 .format(request.json['data_prefix']))
+        except DuplicateKeyError as e:
+            raise DuplicateEntry("Impossible to add contributor, id {} or data_prefix {} already used."
+                                 .format(request.json['id'], request.json['data_prefix']))
         except PyMongoError:
             raise InternalServerError('Impossible to add contributor {}'.format(contributor))
 
