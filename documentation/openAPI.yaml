@@ -568,6 +568,72 @@ paths:
           schema :
             $ref: '#/definitions/error_500'
 
+  /contributors/{contributor_id}/data_sources/{data_source_id}:
+    patch:
+      summary: Modify a data source for a contributor
+      tags:
+        - contributors
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: data_source_id
+          type: string
+          description: Identifier of the data source that needs to be modified
+          required: true
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor of the data source
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the contributor {contributor_id} that needs to be modified
+          required: true
+          schema:
+            $ref: "#/definitions/data_source_type"
+      responses:
+        201:
+          description: Data source modified
+          schema:
+            $ref: '#/definitions/data_source_obj'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Contributor not found
+          schema :
+            $ref: '#/definitions/error_404'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
+    delete:
+      summary: Delete a data_source from a contributor {contributor_id}
+      tags:
+        - contributors
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor that needs to be modified
+          required: true
+        - in: path
+          name: data_source_id
+          type: string
+          description: Identifier of the data_source that needs to be removed from the contributor
+          required: true
+      responses:
+        204:
+          description: When data source {data_source_id} is correctly deleted from contributor
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
 
 definitions:
   coverages:
