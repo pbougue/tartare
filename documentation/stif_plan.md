@@ -8,44 +8,37 @@ Current STIF process:
 
 ### API endpoints
 
-#### /data_sources
+#### /contributors/contributor_stif/data_sources
 
 ```json
 {
-  "contributors": [
+  "data_sources": [
     {
-      "name": "STIF",
-      "id": "contributor_stif",
+      "name": "STIF feed",
+      "id": "datasource_stif",
       "data_prefix": "STF",
-      "data_sources": [
-        {
-          "name": "STIF feed",
-          "id": "datasource_stif",
-          "data_format": "gtfs",
-          "input":{
-              "type":"url",
-              "url":"stif.com/od.zip"
-          }
-        },
-        {
-          "name": "BANO IdF",
-          "id": "bano_idf",
-          "data_format": "bano",
-          "input":{
-              "type":"existing_version",
-              "v":"-2"
-          }
-        },
-        {
-          "name": "STIF RealTime codes",
-          "id": "datasource_rt_code_stif",
-          "data_format": "custom",
-          "input":{
-              "type":"custom_file"
-          }
-        }
-      ]
-      ...
+      "data_format": "gtfs",
+      "input": {
+        "type": "url",
+        "url": "stif.com/od.zip"
+      }
+    },
+    {
+      "name": "BANO IdF",
+      "id": "bano_idf",
+      "data_format": "bano",
+      "input": {
+        "type": "existing_version",
+        "v": "-2"
+      }
+    },
+    {
+      "name": "STIF RealTime codes",
+      "id": "datasource_rt_code_stif",
+      "data_format": "custom",
+      "input": {
+        "type": "custom_file"
+      }
     }
   ]
 }
@@ -67,37 +60,35 @@ POSSIBLE EVOS:
   "contributors": [
     {
       "id": "contributor_stif",
-      "preprocess": {
-        "serial": [
-          {
-            "type": "ruspell",
-            "source_params": {
-              "tc_data": "data_source:datasource_stif",
-              "bano_data": "data_source:bano_75"
-            }
-          },
-          {
-            "type": "compute_directions",
-            "source_params": {
-              "tc_data": "data_format:gtfs"
-            }
-          },
-          {
-            "type": "headsign_short_name",
-            "source_params": {
-              "tc_data": "data_format:gtfs"
-            }
-          },
-          {
-            "type": "compute_external_code_rules",
-            "source_params": {
-              "tc_data": "data_source:datasource_stif",
-              "rt_code_json": "data_source:datasource_rt_code_stif"
-            }
+      "data_sources": [...],
+      "preprocess": [
+        {
+          "type": "ruspell",
+          "source_params": {
+            "tc_data": "data_source:datasource_stif",
+            "bano_data": "data_source:bano_75"
           }
-        ]
-      }
-      ...
+        },
+        {
+          "type": "compute_directions",
+          "source_params": {
+            "tc_data": "data_format:gtfs"
+          }
+        },
+        {
+          "type": "headsign_short_name",
+          "source_params": {
+            "tc_data": "data_format:gtfs"
+          }
+        },
+        {
+          "type": "compute_external_code_rules",
+          "source_params": {
+            "tc_data": "data_source:datasource_stif",
+            "rt_code_json": "data_source:datasource_rt_code_stif"
+          }
+        }
+      ]
     }
   ]
 }
