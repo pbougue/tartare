@@ -65,27 +65,27 @@ POSSIBLE EVOS:
         {
           "type": "ruspell",
           "source_params": {
-            "tc_data": "data_source:datasource_stif",
-            "bano_data": "data_source:bano_75"
+            "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+            "bano_data": {"key": "data_sources.id", "value": "bano_75"}
           }
         },
         {
           "type": "compute_directions",
           "source_params": {
-            "tc_data": "data_format:gtfs"
+            "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
           }
         },
         {
           "type": "headsign_short_name",
           "source_params": {
-            "tc_data": "data_format:gtfs"
+            "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
           }
         },
         {
           "type": "compute_external_code_rules",
           "source_params": {
-            "tc_data": "data_source:datasource_stif",
-            "rt_code_json": "data_source:datasource_rt_code_stif"
+            "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+            "rt_code_json": {"key": "data_sources.id", "value": "datasource_rt_code_stif"}
           }
         }
       ]
@@ -94,15 +94,14 @@ POSSIBLE EVOS:
 }
 ```
 
-TODO:
-* Maybe change to `"tc_data": {"key": "data_sources.id", "value": "datasource_stif"}`
+Provide some kind of OPTIONS verb on processes endpoints to offer self-documentation is a must ("ruspell", what params/types, what is done).
 
 IMPLICIT:
 * No output name provided: same than input (default process modifies data)
 * When using tag or format, parallel execution possible
 
 POSSIBLE EVOS:
-* Add `parallel` meta-group
+* Add `parallel` and `serial` (which is the one used on root) meta-processes
 * Add `params` to be provided to executing class
 * Add possibility to "register/use" a new name for output
 
@@ -113,7 +112,7 @@ POSSIBLE EVOS:
 * Contributor `postprocess` (nothing to do)
 * Coverage `merge` (will wrap Fusio for now)
 
-We will provide endpoints to retrieve info/data_exports and launch policies for:
+We will provide endpoints to retrieve info/data_exports and launch policies (`.../action/export`) for:
 * data_sources
 * contributor preprocess
 * contributor merge
@@ -133,10 +132,23 @@ ability to register names, and request files/logs/metadata stored in that regist
 
 Wrap celery in tartare tasks to handle mongo as celery driver for mongo is not stable (probably needing to share only context's id between celery workers)
 
+Python sub-scripts are meant to be included into tartare (at least on deploy) maybe just by dynamically loading the module (to isolate licences).
+Other sub-scripts (rust and all) on same machines and binded in python.
+
 
 ### Questions dangling
 
-* What aboput the beat to sync and manage all that?
+* What about the beat to sync and manage all that?
 * Mongo + Celery OK?
-* Where do we launch sub-scripts and sub-exe?
-* How to manage params for sub-exe (ex: ruspell)? data_sources? github?
+* How to manage params for sub-exe (ex: ruspell)? data_sources (Hmm, ya?), github (Na!)
+
+
+### TODO
+
+* retrieve and cleanup python sub-scripts
+* have all working around a central format (able to model all, whether NTFS or chouette or ...). This would require some converters and to migrate the maximum of scripts to using that format.
+
+
+### To be done later
+
+* Necessity to add special "contributors" to manage BANO/OSM to provide central point for "real" contributors
