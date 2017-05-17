@@ -34,7 +34,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema, MongoJobSchema, \
-    MongoPreProcessSchema, MongoContributorExportSchema, MongoCoverageExportSchema
+    MongoPreProcessSchema, MongoContributorExportSchema, Platform, MongoCoverageExportSchema
 import os
 from tartare import app
 
@@ -91,8 +91,10 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
 
         envs = data.get('environments', {})
         if not envs.get('production') and not envs.get('preproduction') and not envs.get('integration'):
-            env = Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'),
-                        tyr_url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
+            platform = Platform(name='navitia',
+                                _type='http',
+                                url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
+            env = Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'), publication_platforms=[platform])
             data['environments'] = {}
             data['environments']['production'] = env
         return Coverage(**data)
