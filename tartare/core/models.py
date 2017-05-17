@@ -327,3 +327,48 @@ class MongoContributorSchema(Schema):
     @post_load
     def make_contributor(self, data):
         return Contributor(**data)
+
+
+class Job(object):
+    mongo_collection = 'jobs'
+
+    def __init__(self, id, action_type, state='pending', step=None):
+        self.id = id
+        self.action_type = action_type
+        self.step = step
+        # 'pending', 'running', 'done', 'failed'
+        self.state = state
+        self.error_message = ""
+
+    def save(self):
+        raw = MongoJobSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get(cls, job_id=None):
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
+        if raw is None:
+            return None
+        return MongoJobSchema(strict=True).load(raw).data
+
+    @classmethod
+    def update(cls, job_id, state, step=None, error_message=None):
+        params = {
+            "state": state
+        }
+        if step is not None:
+            params["step"] = step
+        if error_message is not None:
+            params["error_message"] = error_message
+
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': to_doted_notation(params)})
+        if raw.matched_count == 0:
+            return None
+        return cls.get(job_id)
+
+
+class MongoJobSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    action_type = fields.String(required=True)
+    state = fields.String(required=True)
+    step = fields.String(required=False)

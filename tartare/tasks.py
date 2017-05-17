@@ -1,19 +1,17 @@
 import glob
 import logging
-import shutil
 import os
 import datetime
-import zipfile
-from zipfile import ZipFile
-from shutil import copyfile
 
-from tartare import app
+from zipfile import ZipFile
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
-from tartare.core.data_handler import type_of_data, is_ntfs_data, is_calendar_data
+from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
+from tartare.core.contributor_export_functions import *
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -78,3 +76,22 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
     if response.status_code != 200:
         raise self.retry()
 
+@celery.task(default_retry_delay=300, max_retries=5)
+def _contributor_export(contributor_id, job):
+    try:
+        models.Job.update(job_id=job.id, state="running", step="preprocess")
+        preprocess(contributor_id)
+        models.Job.update(job_id=job.id, state="running", step="merge")
+        merge(contributor_id)
+        models.Job.update(job_id=job.id, state="running", step="postprocess")
+        postprocess(contributor_id)
+        models.Job.update(job_id=job.id, state="done")
+    except Exception as e:
+        models.Job.update(job_id=job.id, state="failed", error_message=str(e))
+
+@celery.task(default_retry_delay=300, max_retries=5)
+def contributor_export(contributor_id):
+    job = models.Job(id=str(uuid.uuid4()), action_type="contributor_export")
+    _contributor_export.delay(contributor_id, job)
+    job.save()
+    return job
