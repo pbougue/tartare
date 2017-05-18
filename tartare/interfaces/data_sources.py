@@ -49,10 +49,11 @@ class DataSource(flask_restful.Resource):
 
         try:
             data_source.save(contributor_id)
-        except (PyMongoError, ValueError) as e:
+            return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
+        except PyMongoError:
             raise InternalServerError('Impossible to add data source.')
-
-        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
+        except ValueError as e:
+            raise InternalServerError(str(e))
 
 
     def get(self, contributor_id, data_source_id=None):
