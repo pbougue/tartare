@@ -340,7 +340,7 @@ class Job(object):
         # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = ""
-        self.start_at = datetime.now()
+        self.start_at = datetime.utcnow()
         self.finish_at = None
 
     def save(self):
@@ -348,11 +348,19 @@ class Job(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
+    def find(cls, filter):
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        return MongoJobSchema(many=True).load(raw).data
+
+    @classmethod
     def get(cls, job_id=None):
-        raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
-        if raw is None:
-            return None
-        return MongoJobSchema(strict=False).load(raw).data
+        if job_id:
+            raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
+            if raw is None:
+                return None
+            return MongoJobSchema(strict=False).load(raw).data
+        else:
+            return cls.find(filter={})
 
     @classmethod
     def update(cls, job_id, state=None, step=None, error_message=None):
@@ -363,11 +371,10 @@ class Job(object):
             params["step"] = step
         if error_message is not None:
             params["error_message"] = error_message
-        params["finish_at"] = datetime.now()
+        params["finish_at"] = datetime.utcnow()
         if not params:
             return None
-
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': params})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(params).data})
         if raw.matched_count == 0:
             return None
         return cls.get(job_id)
