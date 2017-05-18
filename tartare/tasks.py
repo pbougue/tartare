@@ -42,7 +42,7 @@ def _get_current_nfts_file(current_data_dir):
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].tyr_url
+	url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
     file = grifs_handler.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
@@ -60,7 +60,7 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self, coverage_id, environment_type):
     coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].tyr_url
+    url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
     ntfs_file = grifs_handler.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
     grid_calendars_file = coverage.get_grid_calendars()

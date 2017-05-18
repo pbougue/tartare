@@ -51,8 +51,9 @@ def get_contributor(contributor_id):
 
 
 class Environment(object):
-    def __init__(self, name=None, publication_platforms=[]):
+    def __init__(self, name=None, current_ntfs_id=None, publication_platforms=[]):
         self.name = name
+        self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms
 
 
@@ -162,6 +163,7 @@ class MongoPlatformSchema(Schema):
 
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
+    current_ntfs_id = fields.String(allow_none=True)
     publication_platforms = fields.Nested(MongoPlatformSchema, many=True)
 
     @post_load
@@ -178,7 +180,6 @@ class MongoEnvironmentListSchema(Schema):
     def remove_none(self, data):
         # We don't want to keep removed environments
         return {key: value for key, value in data.items() if value is not None}
-
 
 
 class DataSource(object):
