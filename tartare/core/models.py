@@ -57,9 +57,9 @@ class Environment(object):
 
 
 class Platform(object):
-    def __init__(self, name=None, _type=None, url=None):
+    def __init__(self, name=None, platform_type=None, url=None):
         self.name = name
-        self.type = _type
+        self.platform_type = platform_type
         self.url = url
 
 
@@ -152,7 +152,7 @@ class Coverage(object):
 
 class MongoPlatformSchema(Schema):
     name = fields.String(required=True)
-    type = fields.String(required=True)
+    platform_type = fields.String(required=True)
     url = fields.String(required=True)
 
     @post_load

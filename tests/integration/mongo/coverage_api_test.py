@@ -62,8 +62,10 @@ def test_add_coverage_returns_success(app):
     assert 'environments' in coverage
     assert 'production' in coverage['environments']
     assert coverage['environments']['production']['name'] == 'production'
-    assert coverage['environments']['production']['tyr_url'] == 'http://tyr.prod/v0/coverage/id_test/'
-
+    publication_platform = coverage['environments']['production']['publication_platforms'][0]
+    assert publication_platform['name'] == 'navitia'
+    assert publication_platform['platform_type'] == 'http'
+    assert publication_platform['url'] == 'http://tyr.prod/v0/coverage/id_test/'
 
 
 def test_add_coverage_no_id(app):
@@ -88,7 +90,7 @@ def test_add_coverage_no_name(app):
 
 def test_add_coverage_with_name(app):
     raw = post(app, '/coverages',
-            '{"id": "id_test", "name": "name of the coverage"}')
+               '{"id": "id_test", "name": "name of the coverage"}')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -97,10 +99,11 @@ def test_add_coverage_with_name(app):
     assert r["coverages"][0]["id"] == "id_test"
     assert r["coverages"][0]["name"] == "name of the coverage"
 
+
 def test_add_coverage_with_pre_env(app):
     raw = post(app, '/coverages',
-            '''{"id": "id_test", "name": "name of the coverage",
-                "environments" : {"preproduction": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
+               '''{"id": "id_test", "name": "name of the coverage",
+               "environments" : {"preproduction": {"name": "pre"}}}''')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -113,7 +116,7 @@ def test_add_coverage_with_pre_env(app):
     assert 'production' not in coverage['environments']
     assert 'preproduction' in coverage['environments']
     assert coverage['environments']['preproduction']['name'] == 'pre'
-    assert coverage['environments']['preproduction']['tyr_url'] == 'http://foo.bar/'
+
 
 def test_add_coverage_with_no_env(app):
     raw = post(app, '/coverages',
@@ -135,14 +138,15 @@ def test_add_coverage_with_env_invalid_url(app):
     assert 'error' in r
     assert 'environments' in r['error']
 
+
 def test_add_coverage_with_all_env(app):
     raw = post(app, '/coverages',
-            '''{"id": "id_test", "name": "name of the coverage",
-                "environments" : {
-                    "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
-                    "production": {"name": "prod", "tyr_url": "http://prod.bar/"},
-                    "integration": {"name": "sim", "tyr_url": "http://int.bar/"}
-                }}''')
+               '''{"id": "id_test", "name": "name of the coverage",
+                    "environments" : {
+                        "preproduction": {"name": "pre"},
+                        "production": {"name": "prod"},
+                        "integration": {"name": "sim"}
+                    }}''')
     assert raw.status_code == 201
     raw = app.get('/coverages')
     r = to_json(raw)
@@ -156,11 +160,8 @@ def test_add_coverage_with_all_env(app):
     assert 'preproduction' in coverage['environments']
     assert 'integration'  in coverage['environments']
     assert coverage['environments']['preproduction']['name'] == 'pre'
-    assert coverage['environments']['preproduction']['tyr_url'] == 'http://pre.bar/'
     assert coverage['environments']['production']['name'] == 'prod'
-    assert coverage['environments']['production']['tyr_url'] == 'http://prod.bar/'
     assert coverage['environments']['integration']['name'] == 'sim'
-    assert coverage['environments']['integration']['tyr_url'] == 'http://int.bar/'
 
 
 def test_patch_simple_coverage(app):
@@ -249,15 +250,16 @@ def test_update_coverage_forbid_unkown_environments_type(app):
     r = to_json(raw)
     assert 'error' in r
 
+
 def test_update_coverage__env(app):
     raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
     assert raw.status_code == 201
 
     raw = patch(app, '/coverages/id_test',
-            '''{"environments" : {
-                    "preproduction": {"name": "pre", "tyr_url": "http://pre.bar/"},
-                    "production": null
-                }}''')
+                '''{"environments" : {
+                        "preproduction": {"name": "pre"},
+                        "production": null
+                    }}''')
 
     assert raw.status_code == 200
     raw = app.get('/coverages')
@@ -271,4 +273,3 @@ def test_update_coverage__env(app):
     assert 'production' not in coverage['environments']
     assert 'preproduction' in coverage['environments']
     assert coverage['environments']['preproduction']['name'] == 'pre'
-    assert coverage['environments']['preproduction']['tyr_url'] == 'http://pre.bar/'
