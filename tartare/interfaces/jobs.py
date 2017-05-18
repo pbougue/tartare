@@ -34,8 +34,10 @@ from tartare.interfaces.schema import JobSchema
 
 class Job(flask_restful.Resource):
     def get(self, job_id=None):
-
         jobs = models.Job.get(job_id)
         if job_id:
-            return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
+            if jobs:
+                return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
+            else:
+                return {'jobs': [], 'error': 'job not found'}, 404
         return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200

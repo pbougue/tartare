@@ -97,17 +97,13 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
         return Coverage(**data)
 
 
-class GenericSchema(NoUnknownFieldMixin):
+class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
     id = fields.String()
 
 
-class ContributorSchema(MongoContributorSchema, GenericSchema):
-    pass
+class DataSourceSchema(MongoDataSourceSchema, NoUnknownFieldMixin):
+    id = fields.String()
 
 
-class DataSourceSchema(MongoDataSourceSchema, GenericSchema):
-    pass
-
-
-class JobSchema(MongoJobSchema, GenericSchema):
-    pass
+class JobSchema(MongoJobSchema, NoUnknownFieldMixin):
+    id = fields.String()

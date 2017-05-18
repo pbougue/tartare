@@ -35,7 +35,7 @@ from bson.objectid import ObjectId
 import pymongo
 import uuid
 from datetime import datetime
-
+import logging
 
 @app.before_first_request
 def init_mongo():
@@ -340,8 +340,8 @@ class Job(object):
         # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = ""
-        self.start_at = datetime.utcnow()
-        self.finish_at = None
+        self.started_at = datetime.utcnow()
+        self.updated_at = None
 
     def save(self):
         raw = MongoJobSchema().dump(self).data
@@ -364,20 +364,27 @@ class Job(object):
 
     @classmethod
     def update(cls, job_id, state=None, step=None, error_message=None):
-        params = {}
-        if state is not None:
-            params["state"] = state
-        if step is not None:
-            params["step"] = step
-        if error_message is not None:
-            params["error_message"] = error_message
-        params["finish_at"] = datetime.utcnow()
-        if not params:
+        logger = logging.getLogger(__name__)
+        if not job_id:
+            logger.error('job_id cannot be empty')
             return None
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(params).data})
+        job = cls.get(job_id)
+        if not job:
+            logger.error("Cannot find job to update")
+            return None
+        if state is not None:
+            job["state"] = state
+        if step is not None:
+            job["step"] = step
+        if error_message is not None:
+            job["error_message"] = error_message
+
+        job['updated_at'] = datetime.utcnow()
+
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(job).data})
         if raw.matched_count == 0:
             return None
-        return cls.get(job_id)
+        return job
 
 
 class MongoJobSchema(Schema):
@@ -385,5 +392,5 @@ class MongoJobSchema(Schema):
     action_type = fields.String(required=True)
     state = fields.String(required=True)
     step = fields.String(required=False)
-    start_at = fields.DateTime(required=False)
-    finish_at = fields.DateTime(required=False)
+    started_at = fields.DateTime(required=False)
+    updated_at = fields.DateTime(required=False)
