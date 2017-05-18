@@ -34,6 +34,7 @@ from gridfs import GridFS
 from bson.objectid import ObjectId
 import pymongo
 import uuid
+from datetime import datetime
 
 
 @app.before_first_request
@@ -339,6 +340,8 @@ class Job(object):
         # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = ""
+        self.start_at = datetime.now()
+        self.finish_at = None
 
     def save(self):
         raw = MongoJobSchema().dump(self).data
@@ -349,19 +352,22 @@ class Job(object):
         raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
         if raw is None:
             return None
-        return MongoJobSchema(strict=True).load(raw).data
+        return MongoJobSchema(strict=False).load(raw).data
 
     @classmethod
-    def update(cls, job_id, state, step=None, error_message=None):
-        params = {
-            "state": state
-        }
+    def update(cls, job_id, state=None, step=None, error_message=None):
+        params = {}
+        if state is not None:
+            params["state"] = state
         if step is not None:
             params["step"] = step
         if error_message is not None:
             params["error_message"] = error_message
+        params["finish_at"] = datetime.now()
+        if not params:
+            return None
 
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': to_doted_notation(params)})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': params})
         if raw.matched_count == 0:
             return None
         return cls.get(job_id)
@@ -372,3 +378,5 @@ class MongoJobSchema(Schema):
     action_type = fields.String(required=True)
     state = fields.String(required=True)
     step = fields.String(required=False)
+    start_at = fields.DateTime(required=False)
+    finish_at = fields.DateTime(required=False)

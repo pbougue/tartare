@@ -10,7 +10,7 @@ from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
-from tartare.core.contributor_export_functions import *
+from tartare.core.contributor_export_functions import preprocess, merge, postprocess
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,8 @@ def _contributor_export(contributor_id, job):
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
+        logger.error('Contributor export failed, error {}'.format(str(e)))
+
 
 @celery.task(default_retry_delay=300, max_retries=5)
 def contributor_export(contributor_id):

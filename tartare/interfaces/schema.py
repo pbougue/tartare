@@ -33,7 +33,7 @@ from flask_restful import unpack
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
-from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema
+from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema, MongoJobSchema
 import os
 from tartare import app
 
@@ -96,8 +96,18 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
             data['environments']['production'] = env
         return Coverage(**data)
 
-class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
+
+class GenericSchema(NoUnknownFieldMixin):
     id = fields.String()
 
-class DataSourceSchema(MongoDataSourceSchema, NoUnknownFieldMixin):
-    id = fields.String()
+
+class ContributorSchema(MongoContributorSchema, GenericSchema):
+    pass
+
+
+class DataSourceSchema(MongoDataSourceSchema, GenericSchema):
+    pass
+
+
+class JobSchema(MongoJobSchema, GenericSchema):
+    pass

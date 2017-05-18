@@ -29,9 +29,11 @@
 
 import flask_restful
 from tartare.tasks import contributor_export
+from tartare.interfaces.schema import JobSchema
 
 
 class ContributorExport(flask_restful.Resource):
     def post(self, contributor_id):
         job = contributor_export(contributor_id)
-        return {'id': job.id, 'state': job.state}, 200
+        job_schema = JobSchema(strict=True)
+        return {'job': job_schema.dump(job).data}, 201
