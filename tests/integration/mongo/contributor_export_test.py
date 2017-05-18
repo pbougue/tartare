@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -26,18 +28,38 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tests.utils import to_json, post
 
-import flask_restful
-from tartare.core import models
-from tartare.interfaces.schema import JobSchema
+def test_contributor_export_contributor_not_found(app):
+    raw = post(app, '/contributors/toto/actions/export', {})
+    assert raw.status_code == 404
+    r = to_json(raw)
+    assert 'error' in r
+    assert r.get('error') == 'Contributor not found'
 
 
-class Job(flask_restful.Resource):
-    def get(self, job_id=None):
-        jobs = models.Job.get(job_id)
-        if job_id:
-            if jobs:
-                return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
-            else:
-                return {'error': 'job not found'}, 404
-        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200
+def test_contributor_exportd(app):
+    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+    assert raw.status_code == 201
+
+    raw = post(app, '/contributors/id_test/actions/export', {})
+    assert raw.status_code == 201
+    r = to_json(raw)
+    assert 'job' in r
+    job = r.get('job')
+    assert job.get('action_type') == 'contributor_export'
+
+    raw_job = app.get('/jobs')
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']
+
+    raw_job = app.get('/jobs/{}'.format(job['id']))
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']
+
+    raw_job = app.get('/jobs/toto')
+    assert raw_job.status_code == 404

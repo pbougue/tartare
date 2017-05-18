@@ -77,14 +77,14 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
         raise self.retry()
 
 @celery.task(default_retry_delay=300, max_retries=5)
-def _contributor_export(contributor_id, job):
+def _contributor_export(contributor, job):
     try:
         models.Job.update(job_id=job.id, state="running", step="preprocess")
-        preprocess(contributor_id)
+        preprocess(contributor)
         models.Job.update(job_id=job.id, state="running", step="merge")
-        merge(contributor_id)
+        merge(contributor)
         models.Job.update(job_id=job.id, state="running", step="postprocess")
-        postprocess(contributor_id)
+        postprocess(contributor)
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
@@ -92,8 +92,8 @@ def _contributor_export(contributor_id, job):
 
 
 @celery.task(default_retry_delay=300, max_retries=5)
-def contributor_export(contributor_id):
+def contributor_export(contributor):
     job = models.Job(id=str(uuid.uuid4()), action_type="contributor_export")
-    _contributor_export.delay(contributor_id, job)
+    _contributor_export.delay(contributor, job)
     job.save()
     return job
