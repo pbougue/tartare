@@ -531,6 +531,8 @@ paths:
       responses:
         200:
           description: Requested contributor data source
+          schema:
+            $ref: '#/definitions/data_source_obj'
         400:
           description: Invalid arguments
           schema :
@@ -733,6 +735,18 @@ definitions:
       data_format:
         type: string
         example: "gtfs"
+      input:
+        type: array
+        items:
+          type: object
+          properties:
+            key:
+              type: string
+              example: type
+            value:
+              type: string
+              example: url
+
 
   error_400:
     type: object

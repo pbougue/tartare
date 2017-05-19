@@ -92,7 +92,6 @@ def test_post_contrib_one_data_source_with_id(app):
     post_data = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"id": "data_source_id", "name":"data_source_name",
-
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -133,7 +132,6 @@ def test_post_contrib_one_data_source_with_data_format(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format": "Neptune",
-
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -180,14 +178,20 @@ def test_post_ds_duplicate_two_data_source(app):
     post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201, print(to_json(raw))
-    post_ds = {"id": "dupplicate_id", "name":"data_source_name1"}
+    post_ds = {"id": "duplicate_id", "name":"data_source_name1",
+               "input": [{"key": "type", "value": "url"},
+                         {"key": "url", "value": "http://stif.com/od.zip"}]
+               }
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     assert raw.status_code == 201, print(to_json(raw))
-    post_ds = {"id": "dupplicate_id", "name": "data_source_name2"}
+    post_ds = {"id": "duplicate_id", "name": "data_source_name2",
+               "input": [{"key": "type", "value": "url"},
+                         {"key": "url", "value": "http://stif.com/od.zip"}]
+               }
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     payload = to_json(raw)
     assert raw.status_code == 409, print(payload)
-    assert payload['error'] == "Duplicate data_source id 'dupplicate_id'"
+    assert payload['error'] == "Duplicate data_source id 'duplicate_id'"
 
 def test_post_contrib_two_data_source(app):
     '''
@@ -196,7 +200,6 @@ def test_post_contrib_two_data_source(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name",
-
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     post_data["data_sources"].append({"name": "data_source_name2",
