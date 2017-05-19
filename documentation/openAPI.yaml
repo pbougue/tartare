@@ -567,6 +567,10 @@ paths:
           description: Internal Server Error
           schema :
             $ref: '#/definitions/error_500'
+        409:
+          description: Duplicate data_source id
+          schema :
+            $ref: '#/definitions/error_409'
 
   /contributors/{contributor_id}/data_sources/{data_source_id}:
     patch:
