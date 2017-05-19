@@ -92,10 +92,9 @@ def contributor(app):
 def data_source(app, contributor):
     data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
                            headers={'Content-Type': 'application/json'},
-                           data='{"name": "bobette", "data_format": "gtfs", "data_prefix": "BOB",'
+                           data='{"name": "bobette", "data_format": "gtfs",'
                                 '"input": [{"key": "type", "value": "url"}, '
                                 '{"key": "url", "value": "http://stif.com/od.zip"}]}')
-    print(data_source)
     return to_json(data_source)['data_sources'][0]
 
 @pytest.fixture(scope="function")

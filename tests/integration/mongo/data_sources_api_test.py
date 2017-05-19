@@ -38,7 +38,7 @@ def test_post_ds_one_data_source_without_id(app):
     post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201, print(to_json(raw))
-    post_ds = {"name":"data_source_name", "data_prefix": "STF",
+    post_ds = {"name":"data_source_name",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
@@ -55,7 +55,7 @@ def test_post_contrib_one_data_source_without_id(app):
     '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
-    post_data["data_sources"].append({"name": "data_source_name", "data_prefix": "STF",
+    post_data["data_sources"].append({"name": "data_source_name",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -75,7 +75,7 @@ def test_post_ds_one_data_source_with_id(app):
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201, print(to_json(raw))
     post_ds = {"id": "data_source_id", "name": "data_source_name",
-               "data_prefix": "STF", "input": [{"key": "type", "value": "url"},
+               "input": [{"key": "type", "value": "url"},
                                                {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     assert raw.status_code == 201, print(to_json(raw))
@@ -92,7 +92,7 @@ def test_post_contrib_one_data_source_with_id(app):
     post_data = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"id": "data_source_id", "name":"data_source_name",
-                                      "data_prefix": "STF",
+
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -121,7 +121,6 @@ def test_post_ds_one_data_source_with_data_format(app):
     assert raw.status_code == 200, print(r)
     assert len(r["data_sources"]) == 1
     assert r["data_sources"][0]["data_format"] == "Neptune"
-    assert r["data_sources"][0]["data_prefix"] is None
     assert r["data_sources"][0]["input"][0]["key"] == "type"
     assert r["data_sources"][0]["input"][0]["value"] == "url"
     assert r["data_sources"][0]["input"][1]["key"] == "url"
@@ -134,7 +133,7 @@ def test_post_contrib_one_data_source_with_data_format(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name", "data_format": "Neptune",
-                                      "data_prefix": "STF",
+
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -144,7 +143,6 @@ def test_post_contrib_one_data_source_with_data_format(app):
     assert raw.status_code == 200, print(r)
     assert len(r["contributors"][0]["data_sources"]) == 1
     assert r["contributors"][0]["data_sources"][0]["data_format"] == "Neptune"
-    assert r["contributors"][0]["data_sources"][0]["data_prefix"] == "STF"
     assert r["contributors"][0]["data_sources"][0]["input"][0]["key"] == "type"
     assert r["contributors"][0]["data_sources"][0]["input"][0]["value"] == "url"
     assert r["contributors"][0]["data_sources"][0]["input"][1]["key"] == "url"
@@ -158,12 +156,12 @@ def test_post_ds_two_data_source(app):
     post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201, print(to_json(raw))
-    post_ds = {"name":"data_source_name1", "data_prefix": "STF",
+    post_ds = {"name":"data_source_name1",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     assert raw.status_code == 201, print(to_json(raw))
-    post_ds = {"name": "data_source_name2", "data_prefix": "STF",
+    post_ds = {"name": "data_source_name2",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stof.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
@@ -198,10 +196,10 @@ def test_post_contrib_two_data_source(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
     post_data["data_sources"].append({"name":"data_source_name",
-                                      "data_prefix": "STF",
+
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
-    post_data["data_sources"].append({"name": "data_source_name2", "data_prefix": "STG",
+    post_data["data_sources"].append({"name": "data_source_name2",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stof.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -221,7 +219,7 @@ def test_patch_ds_data_source_with_full_contributor(app):
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201
     post_ds = {"id": "ds_id", "name":"data_source_name",
-               "data_prefix": "STF",
+
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
@@ -242,7 +240,7 @@ def test_patch_contrib_data_source_with_full_contributor(app):
     '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
-    post_data["data_sources"].append({"name":"data_source_name", "data_prefix": "STF",
+    post_data["data_sources"].append({"name":"data_source_name",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -264,7 +262,7 @@ def test_patch_ds_data_source_name_only(app):
     post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201
-    post_ds = {"id": "ds_id", "name":"data_source_name", "data_format":"Neptune", "data_prefix": "STF",
+    post_ds = {"id": "ds_id", "name":"data_source_name", "data_format":"Neptune",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
@@ -285,7 +283,7 @@ def test_patch_contrib_data_source_only(app):
     '''
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["data_sources"] = []
-    post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune", "data_prefix": "STF",
+    post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
@@ -310,7 +308,6 @@ def test_patch_contrib_data_source_only(app):
     patched_data_source = r["contributors"][0]["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
     assert patched_data_source["data_format"] == "Neptune"
-    assert patched_data_source["data_prefix"] == "LOL"
     assert patched_data_source["input"][0]["key"] == "type"
     assert patched_data_source["input"][0]["value"] == "existing_version"
     assert patched_data_source["input"][1]["key"] == "v"
@@ -324,19 +321,19 @@ def test_patch_ds_one_data_source_name_of_two_and_add_one(app):
     post_contrib = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     raw = post(app, '/contributors', json.dumps(post_contrib))
     assert raw.status_code == 201
-    post_ds = {"id": "ds1_id", "name":"data_source_name1", "data_format":"Neptune", "data_prefix": "STF",
+    post_ds = {"id": "ds1_id", "name":"data_source_name1", "data_format":"Neptune",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
-    post_ds = {"id": "ds2_id", "name":"data_source_name2", "data_format":"Neptune", "data_prefix": "STF",
+    post_ds = {"id": "ds2_id", "name":"data_source_name2", "data_format":"Neptune",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     r = to_json(raw)
     assert raw.status_code == 201, print(r)
-    modif_ds = {"name": "name_modified", "data_prefix": "STF",
+    modif_ds = {"name": "name_modified",
                 "input": [{"key": "type", "value": "url"},
                           {"key": "url", "value": "http://stif.com/od.zip"}]
                 }
@@ -344,7 +341,7 @@ def test_patch_ds_one_data_source_name_of_two_and_add_one(app):
     r = to_json(raw)
     print(r)
     assert raw.status_code == 200, print(r)
-    post_ds = {"id": "ds3_id", "name":"data_source_name3", "data_prefix": "STF",
+    post_ds = {"id": "ds3_id", "name":"data_source_name3",
                "input": [{"key": "type", "value": "url"},
                          {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
@@ -367,12 +364,12 @@ def test_patch_contrib_one_data_source_name_of_two_and_add_one(app):
     '''
     using /contributors endpoint
     '''
-    post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    post_data = {"id": "id_test", "name":"name_test", "data_prefix": "AAA"}
     post_data["data_sources"] = []
-    post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune", "data_prefix": "STF",
+    post_data["data_sources"].append({"name":"data_source_name", "data_format":"Neptune",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
-    post_data["data_sources"].append({"name":"data_source_2", "data_format":"Neptune", "data_prefix": "LOL",
+    post_data["data_sources"].append({"name":"data_source_2", "data_format":"Neptune",
                                       "input": [{"key": "type", "value": "url"},
                                                 {"key": "url", "value": "http://stif.com/od.zip"}]})
     raw = post(app, '/contributors', json.dumps(post_data))
