@@ -31,11 +31,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def preprocess(contributor):
+def merge(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
 
-def merge(contributor):
-    logger.info("contributor_id : %s", contributor.id)
-
-def postprocess(contributor):
+def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
