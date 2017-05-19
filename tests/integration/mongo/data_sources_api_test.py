@@ -147,7 +147,7 @@ def test_post_ds_two_data_source(app):
     assert len(r["data_sources"]) == 2
     assert r["data_sources"][0]["id"] != r["data_sources"][1]["id"]
 
-def test_post_ds_dupplicate_two_data_source(app):
+def test_post_ds_duplicate_two_data_source(app):
     '''
     using /data_sources endpoint
     '''
@@ -160,7 +160,7 @@ def test_post_ds_dupplicate_two_data_source(app):
     post_ds = {"id": "dupplicate_id", "name": "data_source_name2"}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     payload = to_json(raw)
-    assert raw.status_code == 500, print(payload)
+    assert raw.status_code == 409, print(payload)
     assert payload['error'] == "Duplicate data_source id 'dupplicate_id'"
 
 def test_post_contrib_two_data_source(app):

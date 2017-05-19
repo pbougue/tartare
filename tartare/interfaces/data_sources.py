@@ -53,7 +53,7 @@ class DataSource(flask_restful.Resource):
         except PyMongoError:
             raise InternalServerError('Impossible to add data source.')
         except ValueError as e:
-            raise InternalServerError(str(e))
+            raise DuplicateEntry(str(e))
 
 
     def get(self, contributor_id, data_source_id=None):
