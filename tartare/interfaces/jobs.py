@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -26,37 +26,19 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from werkzeug.exceptions import HTTPException
+
+import flask_restful
+from tartare.core import models
+from tartare.interfaces.schema import JobSchema
+from tartare.exceptions import ObjectNotFound
 
 
-class TartareException(HTTPException):
-    """
-    All tartare exceptions must inherit from this one and define a code and a short message
-    """
-    def __init__(self, detailed_message=None):
-        super(TartareException, self).__init__()
-        self.data = {
-            'message': self.message,
-        }
-        if detailed_message:
-            self.data['error'] = detailed_message
-
-
-class InvalidArguments(TartareException):
-    code = 400
-    message = 'Invalid arguments'
-
-
-class DuplicateEntry(TartareException):
-    code = 409
-    message = 'Duplicate entry'
-
-
-class InternalServerError(TartareException):
-    code = 500
-    message = 'Internal Server Error'
-
-
-class ObjectNotFound(TartareException):
-    code = 404
-    message = 'Object Not Found'
+class Job(flask_restful.Resource):
+    def get(self, job_id=None):
+        jobs = models.Job.get(job_id)
+        if job_id:
+            if jobs:
+                return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
+            else:
+                raise ObjectNotFound('Job not found: {}'.format(job_id))
+        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200

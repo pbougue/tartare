@@ -37,14 +37,14 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 import shutil
-from tartare.exceptions import InvalidArguments, ResourceNotFound
+from tartare.exceptions import InvalidArguments, ObjectNotFound
 
 
 class DataSet(Resource):
     def post(self, data_source_id):
         datasource = models.DataSource.get(data_source_id=data_source_id)
         if datasource is None:
-            raise ResourceNotFound("Data source '{}' not found.".format(data_source_id))
+            raise ObjectNotFound("Data source '{}' not found.".format(data_source_id))
 
         if not request.files :
             raise InvalidArguments('No file provided.')

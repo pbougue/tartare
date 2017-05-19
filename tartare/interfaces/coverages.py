@@ -34,7 +34,7 @@ import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from flask import request
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 class Coverage(flask_restful.Resource):
@@ -58,7 +58,7 @@ class Coverage(flask_restful.Resource):
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
-                raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
+                raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
             return {'coverages': [result.data]}, 200
@@ -70,13 +70,13 @@ class Coverage(flask_restful.Resource):
     def delete(self, coverage_id):
         c = models.Coverage.delete(coverage_id)
         if c == 0:
-            raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
         return "", 204
 
     def patch(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ResourceNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
         if 'id' in request.json and coverage.id != request.json['id']:
             raise InvalidArguments('The modification of the id is not possible')
         coverage_schema = schema.CoverageSchema(partial=True)

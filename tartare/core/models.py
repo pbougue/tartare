@@ -34,7 +34,8 @@ from gridfs import GridFS
 from bson.objectid import ObjectId
 import pymongo
 import uuid
-
+from datetime import datetime
+import logging
 
 @app.before_first_request
 def init_mongo():
@@ -327,3 +328,69 @@ class MongoContributorSchema(Schema):
     @post_load
     def make_contributor(self, data):
         return Contributor(**data)
+
+
+class Job(object):
+    mongo_collection = 'jobs'
+
+    def __init__(self, id, action_type, state='pending', step=None):
+        self.id = id
+        self.action_type = action_type
+        self.step = step
+        # 'pending', 'running', 'done', 'failed'
+        self.state = state
+        self.error_message = ""
+        self.started_at = datetime.utcnow()
+        self.updated_at = None
+
+    def save(self):
+        raw = MongoJobSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def find(cls, filter):
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        return MongoJobSchema(many=True).load(raw).data
+
+    @classmethod
+    def get(cls, job_id=None):
+        if job_id:
+            raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
+            if raw is None:
+                return None
+            return MongoJobSchema(strict=False).load(raw).data
+        else:
+            return cls.find(filter={})
+
+    @classmethod
+    def update(cls, job_id, state=None, step=None, error_message=None):
+        logger = logging.getLogger(__name__)
+        if not job_id:
+            logger.error('job_id cannot be empty')
+            return None
+        job = cls.get(job_id)
+        if not job:
+            logger.error("Cannot find job to update %s", job_id)
+            return None
+        if state is not None:
+            job["state"] = state
+        if step is not None:
+            job["step"] = step
+        if error_message is not None:
+            job["error_message"] = error_message
+
+        job['updated_at'] = datetime.utcnow()
+
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(job).data})
+        if raw.matched_count == 0:
+            return None
+        return job
+
+
+class MongoJobSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    action_type = fields.String(required=True)
+    state = fields.String(required=True)
+    step = fields.String(required=False)
+    started_at = fields.DateTime(required=False)
+    updated_at = fields.DateTime(required=False)

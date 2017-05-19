@@ -35,7 +35,7 @@ from tartare.core import models
 import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 class DataSource(flask_restful.Resource):
@@ -59,7 +59,7 @@ class DataSource(flask_restful.Resource):
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
             if ds is None:
-                raise ResourceNotFound("Data source '{}' not found.".format(data_source_id))
+                raise ObjectNotFound("Data source '{}' not found.".format(data_source_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -70,7 +70,7 @@ class DataSource(flask_restful.Resource):
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
-                raise ResourceNotFound("Data source '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("Data source '{}' not found.".format(contributor_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -85,7 +85,7 @@ class DataSource(flask_restful.Resource):
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)
         if errors:
-            raise ResourceNotFound("Data source '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("Data source '{}' not found.".format(contributor_id))
 
         if 'id' in request.json and ds[0].id != request.json['id']:
             raise InvalidArguments('The modification of the id is not possible')

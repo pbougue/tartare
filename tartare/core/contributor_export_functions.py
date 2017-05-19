@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -26,37 +26,16 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from werkzeug.exceptions import HTTPException
 
+import logging
 
-class TartareException(HTTPException):
-    """
-    All tartare exceptions must inherit from this one and define a code and a short message
-    """
-    def __init__(self, detailed_message=None):
-        super(TartareException, self).__init__()
-        self.data = {
-            'message': self.message,
-        }
-        if detailed_message:
-            self.data['error'] = detailed_message
+logger = logging.getLogger(__name__)
 
+def preprocess(contributor):
+    logger.info("contributor_id : %s", contributor.id)
 
-class InvalidArguments(TartareException):
-    code = 400
-    message = 'Invalid arguments'
+def merge(contributor):
+    logger.info("contributor_id : %s", contributor.id)
 
-
-class DuplicateEntry(TartareException):
-    code = 409
-    message = 'Duplicate entry'
-
-
-class InternalServerError(TartareException):
-    code = 500
-    message = 'Internal Server Error'
-
-
-class ObjectNotFound(TartareException):
-    code = 404
-    message = 'Object Not Found'
+def postprocess(contributor):
+    logger.info("contributor_id : %s", contributor.id)

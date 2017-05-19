@@ -32,14 +32,14 @@ import flask_restful
 from pymongo.errors import PyMongoError
 from tartare.core import models
 from tartare.interfaces import schema
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 class CoverageDataSourceSubscription(flask_restful.Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
+            raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
 
         if 'id' not in request.json:
             raise InvalidArguments('Missing data_source_id attribute in request body.')
@@ -48,7 +48,7 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
 
         data_sources = models.DataSource.get(data_source_id=data_source_id)
         if data_sources is None:
-            raise ResourceNotFound("Data source {} not found.".format(data_source_id))
+            raise ObjectNotFound("Data source {} not found.".format(data_source_id))
 
         if coverage.has_data_source(data_sources[0]):
             raise DuplicateEntry('Data source id {} already exists in coverage {}.'
@@ -67,10 +67,10 @@ class CoverageDataSourceSubscription(flask_restful.Resource):
     def delete(self, coverage_id, data_source_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ResourceNotFound('Unknown coverage id "{}".'.format(coverage_id))
+            raise ObjectNotFound('Unknown coverage id "{}".'.format(coverage_id))
 
         if data_source_id not in coverage.data_sources:
-            raise ResourceNotFound('Unknown data source id "{}" attribute in uri.'.format(data_source_id))
+            raise ObjectNotFound('Unknown data source id "{}" attribute in uri.'.format(data_source_id))
 
         try:
             coverage.remove_data_source(data_source_id)

@@ -36,7 +36,7 @@ from flask.globals import request
 from flask_restful import Resource
 from tartare import app, tasks
 from tartare.core import models
-from tartare.exceptions import InvalidArguments, ResourceNotFound
+from tartare.exceptions import InvalidArguments, ObjectNotFound
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_CALENDARS_HEADER = {'id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
@@ -83,7 +83,7 @@ class GridCalendar(Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
+            raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
 
         if not request.files:
             raise InvalidArguments('The archive is missing.')

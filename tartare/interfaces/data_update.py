@@ -38,15 +38,15 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 from tartare import tasks
-from tartare.exceptions import InvalidArguments, ResourceNotFound
+from tartare.exceptions import InvalidArguments, ObjectNotFound
 
 
 def add_coverage_data(coverage_id, coverage, environment_type):
     if coverage is None:
-        raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
+        raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
 
     if environment_type not in coverage.environments:
-        raise ResourceNotFound("Environment{}' not found.".format(environment_type))
+        raise ObjectNotFound("Environment{}' not found.".format(environment_type))
 
     if not request.files:
         raise InvalidArguments('No file provided.')
@@ -90,9 +90,9 @@ class CoverageData(Resource):
                                    .format(data_type, ','.join(available_data_types)))
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ResourceNotFound("Coverage {} not found.".format(coverage_id))
+            raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
         if environment_type not in coverage.environments:
-            raise ResourceNotFound("Environment{}' not found.".format(environment_type))
+            raise ObjectNotFound("Environment{}' not found.".format(environment_type))
         ntfs_file_id = coverage.environments[environment_type].current_ntfs_id
         ntfs_file = models.get_file_from_gridfs(ntfs_file_id)
         return flask.send_file(ntfs_file, mimetype='application/zip')
