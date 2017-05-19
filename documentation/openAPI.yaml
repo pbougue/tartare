@@ -755,7 +755,7 @@ definitions:
     properties:
       message:
         type: string
-        example: Resource not found
+        example: Object not found
       error:
         type: string
         example: Detailed message

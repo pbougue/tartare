@@ -35,7 +35,7 @@ from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 import uuid
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ResourceNotFound
+from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 
@@ -68,7 +68,7 @@ class Contributor(flask_restful.Resource):
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
-                raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
             result = schema.ContributorSchema().dump(c)
             return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
@@ -77,7 +77,7 @@ class Contributor(flask_restful.Resource):
     def delete(self, contributor_id):
         c = models.Contributor.delete(contributor_id)
         if c == 0:
-            raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
     def patch(self, contributor_id):
@@ -85,7 +85,7 @@ class Contributor(flask_restful.Resource):
         # need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
         if contributor is None:
-            raise ResourceNotFound("Contributor '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
 
         request_data = request.json
         #checking errors before updating PATCH data

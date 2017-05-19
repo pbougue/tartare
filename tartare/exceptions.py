@@ -52,11 +52,6 @@ class DuplicateEntry(TartareException):
     message = 'Duplicate entry'
 
 
-class ResourceNotFound(TartareException):
-    code = 404
-    message = 'Resource not found'
-
-
 class InternalServerError(TartareException):
     code = 500
     message = 'Internal Server Error'
