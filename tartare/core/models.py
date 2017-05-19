@@ -254,20 +254,14 @@ class DataSource(object):
 
 
 class Input(object):
-    def __init__(self, _type=None, url=None, v=None):
-        self._type = _type
-
-        if url:
-            self.url = url
-
-        if v:
-            self.v = v
+    def __init__(self, key=None, value=None):
+        self.key = key
+        self.value = value
 
 
 class MongoInputSchema(Schema):
-    _type = fields.String(required=True, dump_to="type", load_from="type")
-    url = fields.String(required=False)
-    v = fields.String(required=False)
+    key = fields.String(required=True)
+    value = fields.String(required=True)
 
     @post_load
     def build_input(self, data):
@@ -278,8 +272,7 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    data_prefix = fields.String(required=False, allow_none=True)
-    input = fields.Nested(MongoInputSchema, required=True)
+    input = fields.Nested(MongoInputSchema, required=True, many=True)
 
     @post_load
     def build_data_source(self, data):
