@@ -30,6 +30,7 @@
 import flask_restful
 from tartare.core import models
 from tartare.interfaces.schema import JobSchema
+from tartare.exceptions import ObjectNotFound
 
 
 class Job(flask_restful.Resource):
@@ -39,5 +40,5 @@ class Job(flask_restful.Resource):
             if jobs:
                 return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
             else:
-                return {'error': 'job not found'}, 404
+                raise ObjectNotFound('Job not found: {}'.format(job_id))
         return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200

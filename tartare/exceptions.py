@@ -60,3 +60,8 @@ class ResourceNotFound(TartareException):
 class InternalServerError(TartareException):
     code = 500
     message = 'Internal Server Error'
+
+
+class ObjectNotFound(TartareException):
+    code = 404
+    message = 'Object Not Found'

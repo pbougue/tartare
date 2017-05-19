@@ -32,6 +32,7 @@ from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Contributor, Job
 import uuid
+from tartare.exceptions import ObjectNotFound
 
 
 class ContributorExport(flask_restful.Resource):
@@ -46,7 +47,7 @@ class ContributorExport(flask_restful.Resource):
     def post(self, contributor_id):
         contributor = Contributor.get(contributor_id)
         if not contributor:
-            return {'error': 'Contributor not found'}, 404
+            raise ObjectNotFound('Contributor not found: {}'.format(contributor_id))
         job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201

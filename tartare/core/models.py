@@ -370,7 +370,7 @@ class Job(object):
             return None
         job = cls.get(job_id)
         if not job:
-            logger.error("Cannot find job to update")
+            logger.error("Cannot find job to update %s", job_id)
             return None
         if state is not None:
             job["state"] = state

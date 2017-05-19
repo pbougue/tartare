@@ -35,10 +35,10 @@ def test_contributor_export_contributor_not_found(app):
     assert raw.status_code == 404
     r = to_json(raw)
     assert 'error' in r
-    assert r.get('error') == 'Contributor not found'
+    assert r.get('error') == 'Contributor not found: toto'
 
 
-def test_contributor_exportd(app):
+def test_contributor_export(app):
     raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
     assert raw.status_code == 201
 
