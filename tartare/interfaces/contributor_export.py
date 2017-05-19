@@ -30,14 +30,23 @@
 import flask_restful
 from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema
-from tartare.core.models import Contributor
+from tartare.core.models import Contributor, Job
+import uuid
 
 
 class ContributorExport(flask_restful.Resource):
+
+    @staticmethod
+    def _export(contributor):
+        job = Job(id=str(uuid.uuid4()), action_type="contributor_export")
+        contributor_export.delay(contributor, job)
+        job.save()
+        return job
+
     def post(self, contributor_id):
         contributor = Contributor.get(contributor_id)
         if not contributor:
             return {'error': 'Contributor not found'}, 404
-        job = contributor_export(contributor)
+        job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
