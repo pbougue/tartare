@@ -27,12 +27,10 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
 from flask_restful import reqparse, abort, request
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare.core import models
-import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound

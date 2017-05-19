@@ -177,7 +177,7 @@ class MongoEnvironmentListSchema(Schema):
 
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", data_prefix=None, input={}):
+    def __init__(self, id=None, name=None, data_format="gtfs", data_prefix=None, input=[]):
         if not id:
             self.id = str(uuid.uuid4())
         else:
@@ -330,7 +330,7 @@ class Contributor(object):
 
     @classmethod
     def update(cls, contributor_id=None, dataset={}):
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': to_doted_notation(dataset)})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': dataset})
         if raw.matched_count == 0:
             return None
 
