@@ -64,7 +64,7 @@ def test_add_coverage_returns_success(app):
     assert coverage['environments']['production']['name'] == 'production'
     publication_platform = coverage['environments']['production']['publication_platforms'][0]
     assert publication_platform['name'] == 'navitia'
-    assert publication_platform['platform_type'] == 'http'
+    assert publication_platform['type'] == 'http'
     assert publication_platform['url'] == 'http://tyr.prod/v0/coverage/id_test/'
 
 

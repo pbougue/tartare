@@ -92,7 +92,7 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
         envs = data.get('environments', {})
         if not envs.get('production') and not envs.get('preproduction') and not envs.get('integration'):
             platform = Platform(name='navitia',
-                                platform_type='http',
+                                type='http',
                                 url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
             env = Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'), publication_platforms=[platform])
             data['environments'] = {}
