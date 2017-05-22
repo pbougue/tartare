@@ -29,5 +29,5 @@
 
 
 class Context():
-    def __init__(self, data_source_id=None, file_path=None, **kwargs):
+    def __init__(self, data_source_id=None, file_path=None):
         self.data_sources = {data_source_id: file_path}
