@@ -58,7 +58,7 @@ class Environment(object):
 
 
 class Platform(object):
-    def __init__(self, name=None, type=None, url=None):
+    def __init__(self, name, type, url):
         self.name = name
         self.type = type
         self.url = url
