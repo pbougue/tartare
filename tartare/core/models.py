@@ -184,7 +184,6 @@ class DataSource(object):
             self.id = id
         self.name = name
         self.data_format = data_format
-        self.data_prefix = data_prefix
         self.input = input
 
     def save(self, contributor_id):

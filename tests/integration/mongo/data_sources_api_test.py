@@ -76,7 +76,7 @@ def test_post_ds_one_data_source_with_id(app):
     assert raw.status_code == 201, print(to_json(raw))
     post_ds = {"id": "data_source_id", "name": "data_source_name",
                "input": [{"key": "type", "value": "url"},
-                                               {"key": "url", "value": "http://stif.com/od.zip"}]}
+                         {"key": "url", "value": "http://stif.com/od.zip"}]}
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds))
     assert raw.status_code == 201, print(to_json(raw))
 
