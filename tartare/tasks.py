@@ -11,7 +11,8 @@ from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
 from tartare.core.contributor_export_functions import merge, postprocess
-from tartare.dataset_fetcher import DataSetFetcher
+from tartare.core.contributor_export_functions import dataset_fetcher
+from tartare.core.context import Context
 import tartare.processes
 
 logger = logging.getLogger(__name__)
@@ -80,10 +81,10 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
 
 @celery.task(default_retry_delay=300, max_retries=5)
 def contributor_export(contributor, job):
-    context = {}
+    context = Context()
     try:
 
-        context = DataSetFetcher(contributor.data_sources, context).fetch()
+        context = dataset_fetcher(contributor.data_sources, context)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch([], context)

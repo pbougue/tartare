@@ -27,23 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
-from tartare.dataset_fetcher import HttpDataSetFetcher
 
-logger = logging.getLogger(__name__)
-
-def merge(contributor, context):
-    logger.info("contributor_id : %s", contributor.id)
-
-def postprocess(contributor, context):
-    logger.info("contributor_id : %s", contributor.id)
-
-
-def dataset_fetcher(data_sources, context):
-    map_fetcher = {
-        "url": HttpDataSetFetcher
-    }
-    for d in data_sources:
-        cls_fetcher = map_fetcher.get(d.get('url'))(d, context)
-        context = cls_fetcher.fetch()
-    return context
+class Context():
+    def __init__(self, data_source_id=None, file_path=None, **kwargs):
+        self.data_sources = {data_source_id: file_path}
