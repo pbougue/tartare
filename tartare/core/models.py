@@ -177,7 +177,7 @@ class MongoEnvironmentListSchema(Schema):
 
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", data_prefix=None, input=[]):
+    def __init__(self, id=None, name=None, data_format="gtfs", input={}):
         if not id:
             self.id = str(uuid.uuid4())
         else:
@@ -252,26 +252,11 @@ class DataSource(object):
         return contributor
 
 
-class Input(object):
-    def __init__(self, key=None, value=None):
-        self.key = key
-        self.value = value
-
-
-class MongoInputSchema(Schema):
-    key = fields.String(required=True)
-    value = fields.String(required=True)
-
-    @post_load
-    def build_input(self, data):
-        return Input(**data)
-
-
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    input = fields.Nested(MongoInputSchema, required=True, many=True)
+    input = fields.Raw(required=True)
 
     @post_load
     def build_data_source(self, data):
