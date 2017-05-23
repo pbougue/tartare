@@ -57,7 +57,7 @@ class PreProcess(flask_restful.Resource):
     def get(self, contributor_id, preprocess_id=None):
         try:
             ps = models.PreProcess.get(contributor_id, preprocess_id)
-            if not ps:
+            if not ps and preprocess_id:
                 raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
         except ValueError as e:
             raise InvalidArguments(str(e))

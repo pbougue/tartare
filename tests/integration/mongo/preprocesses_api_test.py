@@ -143,6 +143,9 @@ def test_delete_preprocess(app):
     preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
     raw = delete(app, '/contributors/id_test/preprocesses/{}'.format(preprocess_id))
     assert raw.status_code == 204, print(to_json(raw))
+    raw = app.get('/contributors/id_test/preprocesses')
+    r = to_json(raw)
+    assert len(r['preprocesses']) == 0
 
 def test_post_preprocess_with_unknown_type(app, contributor):
     '''
