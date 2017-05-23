@@ -147,6 +147,7 @@ def test_delete_preprocess(app):
     r = to_json(raw)
     assert len(r['preprocesses']) == 0
 
+
 def test_post_preprocess_with_unknown_type(app, contributor):
     '''
     using /preprocesses endpoint
@@ -195,3 +196,57 @@ def test_update_preprocess_with_unknown_type(app):
     assert raw.status_code == 400, print(r)
     assert 'error' in r
     assert r['error'] == 'Invalid process type bob'
+
+
+def test_update_preprocesses_with_id(app):
+    '''
+    using /contributors endpoint
+    '''
+    post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    post_data["preprocesses"] = [
+        {
+            "id": "toto",
+            "type": "Ruspell",
+            "source_params": {
+                "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
+                "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+            }
+        },
+        {
+            "id": "titi",
+            "type": "ComputeDirections",
+            "source_params": {
+                "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+            }
+        }
+    ]
+
+    raw = post(app, '/contributors', json.dumps(post_data))
+    assert raw.status_code == 201, print(to_json(raw))
+    raw = app.get('/contributors/id_test/')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r["contributors"][0]["preprocesses"]) == 2
+    new_preprocess = {
+        "type": "HeadsignShortName",
+        "source_params": {
+            "tc_data": {"key": "data_sources.data_format", "value": "ffff"}
+        }
+    }
+
+    raw = patch(app, '/contributors/id_test/preprocesses/titi', json.dumps(new_preprocess))
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    # Update only one preprocess
+    assert len(r["preprocesses"]) == 1
+
+    raw = app.get('/contributors/id_test')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r["contributors"][0]["preprocesses"]) == 2
+    p_titi = None
+    for p in r["contributors"][0]["preprocesses"]:
+        if p['id'] == 'titi':
+            p_titi = p
+    assert p_titi
+    assert p_titi['type'] == 'HeadsignShortName'
