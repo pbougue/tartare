@@ -49,7 +49,7 @@ def fetch_dataset(data_sources):
     for d in data_sources:
         kls = map_fetcher.get(d.get('type'))
         if kls is None:
-            logger.info("Unknown URL: %s", d.get('type'))
+            logger.info("Unknown type: %s", d.get('type'))
             continue
         fetcher = kls(d, context)
         context = fetcher.fetch()

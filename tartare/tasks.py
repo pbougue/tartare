@@ -81,6 +81,8 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
 @celery.task(default_retry_delay=300, max_retries=5)
 def contributor_export(contributor, job):
     try:
+
+        models.Job.update(job_id=job.id, state="running", step="fetching data")
         context = fetch_dataset(contributor.data_sources)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
