@@ -27,14 +27,13 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask_restful import reqparse, abort, request
+from flask_restful import abort, request
 import flask_restful
 from pymongo.errors import PyMongoError
 from tartare.core import models
-import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.exceptions import InvalidArguments, InternalServerError, ObjectNotFound
 
 
 class PreProcess(flask_restful.Resource):
