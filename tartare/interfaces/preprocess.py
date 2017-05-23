@@ -34,6 +34,7 @@ from tartare.core import models
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.exceptions import InvalidArguments, InternalServerError, ObjectNotFound
+from tartare.helper import validate_preprocesses_or_raise
 
 
 class PreProcess(flask_restful.Resource):
@@ -41,6 +42,7 @@ class PreProcess(flask_restful.Resource):
         preprocess_schema = schema.PreProcessSchema(strict=True)
         try:
             d = request.json
+            validate_preprocesses_or_raise([d])
             preprocess = preprocess_schema.load(d).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
@@ -73,11 +75,13 @@ class PreProcess(flask_restful.Resource):
             raise ObjectNotFound("Preprocess '{}' not found.".format(contributor_id))
 
         try:
-            preprocesses = models.PreProcess.update(contributor_id, preprocess_id, request.json)
+            p = request.json
+            validate_preprocesses_or_raise([p])
+            preprocesses = models.PreProcess.update(contributor_id, preprocess_id, p)
         except ValueError as e:
             raise InvalidArguments(str(e))
         except PyMongoError as e:
-            raise InternalServerError('impossible to update contributor with preprocess {}'.format(request.json))
+            raise InternalServerError('impossible to update contributor with preprocess {}'.format(p))
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(preprocesses).data}, 200
 

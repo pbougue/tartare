@@ -38,7 +38,7 @@ def test_post_ds_one_data_source_without_id(app, contributor):
     using /preprocesses endpoint
     '''
     post_ps = {
-        "type": "ruspell",
+        "type": "Ruspell",
         "source_params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
@@ -75,7 +75,7 @@ def test_post_contrib_one_data_source_with_id(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["preprocesses"] = [{
         "id": "toto",
-        "type": "ruspell",
+        "type": "Ruspell",
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -95,7 +95,7 @@ def test_update_preprocess_with_id(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["preprocesses"] = [{
         "id": "toto",
-        "type": "ruspell",
+        "type": "Ruspell",
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -109,7 +109,7 @@ def test_update_preprocess_with_id(app):
     assert len(r["contributors"][0]["preprocesses"]) == 1
     preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
     new_preprocess = {
-        "type": "compute_directions",
+        "type": "ComputeDirections",
         "source_params": {
             "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
         }
@@ -130,7 +130,7 @@ def test_delete_preprocess(app):
     post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
     post_data["preprocesses"] = [{
         "id": "toto",
-        "type": "ruspell",
+        "type": "Ruspell",
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -143,3 +143,52 @@ def test_delete_preprocess(app):
     preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
     raw = delete(app, '/contributors/id_test/preprocesses/{}'.format(preprocess_id))
     assert raw.status_code == 204, print(to_json(raw))
+
+def test_post_preprocess_with_unknown_type(app, contributor):
+    '''
+    using /preprocesses endpoint
+    '''
+    post_ps = {
+        "type": "bob",
+        "source_params": {
+            "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+            "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+        }
+    }
+    raw = post(app, '/contributors/id_test/preprocesses', json.dumps(post_ps))
+    r = to_json(raw)
+    assert raw.status_code == 400, print(r)
+    assert 'error' in r
+    assert r['error'] == 'Invalid process type bob'
+
+
+def test_update_preprocess_with_unknown_type(app):
+    '''
+    using /contributors endpoint
+    '''
+    post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
+    post_data["preprocesses"] = [{
+        "id": "toto",
+        "type": "Ruspell",
+        "source_params": {
+            "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
+            "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+        }
+    }]
+    raw = post(app, '/contributors', json.dumps(post_data))
+    r = to_json(raw)
+    assert raw.status_code == 201, print(r)
+
+    preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
+    new_preprocess = {
+        "type": "bob",
+        "source_params": {
+            "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+        }
+    }
+
+    raw = patch(app, '/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
+    r = to_json(raw)
+    assert raw.status_code == 400, print(r)
+    assert 'error' in r
+    assert r['error'] == 'Invalid process type bob'

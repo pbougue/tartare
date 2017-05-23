@@ -30,12 +30,12 @@
 import logging
 import logging.config
 import celery
-import sys
 from collections.abc import Mapping
 import requests
-from requests_toolbelt.multipart import encoder
 from gridfs.grid_file import GridOut
-from bson.objectid import ObjectId
+import tartare.processes
+import logging
+from tartare.exceptions import InvalidArguments
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self):
@@ -102,3 +102,13 @@ def to_doted_notation(data, prefix=None):
         else:
             result[key] = v
     return result
+
+
+def validate_preprocesses_or_raise(preprocesses):
+    for p in preprocesses:
+        p_type = p.get('type')
+        kls = getattr(tartare.processes, p_type, None)
+        if kls is None:
+            msg = 'Invalid process type {}'.format(p_type)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
