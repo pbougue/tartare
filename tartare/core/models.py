@@ -177,13 +177,14 @@ class MongoEnvironmentListSchema(Schema):
 
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs"):
+    def __init__(self, id=None, name=None, data_format="gtfs", input={}):
         if not id:
             self.id = str(uuid.uuid4())
         else:
             self.id = id
         self.name = name
         self.data_format = data_format
+        self.input = input
 
     def save(self, contributor_id):
         contributor = self.get_contributor(contributor_id)
@@ -255,6 +256,7 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
+    input = fields.Raw(required=True)
 
     @post_load
     def build_data_source(self, data):
@@ -312,7 +314,7 @@ class Contributor(object):
 
     @classmethod
     def update(cls, contributor_id=None, dataset={}):
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': to_doted_notation(dataset)})
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': dataset})
         if raw.matched_count == 0:
             return None
 

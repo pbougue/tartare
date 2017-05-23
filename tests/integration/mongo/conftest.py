@@ -85,14 +85,15 @@ def coverage(app):
 def contributor(app):
     contributor = app.post('/contributors',
                            headers={'Content-Type': 'application/json'},
-                           data='{"id": "bob", "name": "bob", "data_prefix": "bob"}')
+                           data='{"id": "id_test", "name": "name_test", "data_prefix": "AAA"}')
     return to_json(contributor)['contributors'][0]
 
 @pytest.fixture(scope="function")
 def data_source(app, contributor):
     data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
                            headers={'Content-Type': 'application/json'},
-                           data='{"name": "bobette", "data_format": "gtfs"}')
+                           data='{"name": "bobette", "data_format": "gtfs", "data_format": "Neptune",'
+                                '"input": {"type": "url", "url": "http://stif.com/od.zip"}}')
     return to_json(data_source)['data_sources'][0]
 
 @pytest.fixture(scope="function")
