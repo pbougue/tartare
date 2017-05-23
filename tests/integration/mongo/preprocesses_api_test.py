@@ -44,10 +44,10 @@ def test_post_ds_one_data_source_without_id(app, contributor):
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
         }
     }
-    raw = post(app, '/contributors/bob/preprocesses', json.dumps(post_ps))
+    raw = post(app, '/contributors/id_test/preprocesses', json.dumps(post_ps))
     assert raw.status_code == 201, print(to_json(raw))
 
-    raw = app.get('/contributors/bob/preprocesses')
+    raw = app.get('/contributors/id_test/preprocesses')
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
     assert len(r["preprocesses"]) == 1
@@ -56,14 +56,14 @@ def test_post_ds_one_data_source_without_id(app, contributor):
 
     preprocess_id = r["preprocesses"][0]["id"]
 
-    raw = app.get('/contributors/bob/preprocesses/{}'.format(preprocess_id))
+    raw = app.get('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
     assert len(r["preprocesses"]) == 1
     assert r["preprocesses"][0]["type"] == post_ps["type"]
     assert r["preprocesses"][0]["source_params"] == post_ps["source_params"]
 
-    raw = app.get('/contributors/bob/preprocesses/toto')
+    raw = app.get('/contributors/id_test/preprocesses/toto')
     r = to_json(raw)
     assert raw.status_code == 404, print(r)
 
