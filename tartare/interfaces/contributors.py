@@ -44,8 +44,12 @@ class Contributor(flask_restful.Resource):
         post_data = request.json
         #first a check on the data_sources id and providing a uuid if not provided
         for ds in post_data.get('data_sources', []):
-            if not ds.get('id', None):
-                ds['id'] = str(uuid.uuid4())
+            # set id if not existent
+            ds.setdefault('id', str(uuid.uuid4()))
+
+        for ps in post_data.get('preprocesses', []):
+            # set id if not existent
+            ps.setdefault('id', str(uuid.uuid4()))
 
         contributor_schema = schema.ContributorSchema(strict=True)
         try:
