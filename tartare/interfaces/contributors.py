@@ -36,7 +36,7 @@ from tartare.interfaces import schema
 from marshmallow import ValidationError
 import uuid
 from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-
+from tartare.helper import validate_preprocesses_or_raise
 
 
 class Contributor(flask_restful.Resource):
@@ -44,8 +44,16 @@ class Contributor(flask_restful.Resource):
         post_data = request.json
         #first a check on the data_sources id and providing a uuid if not provided
         for ds in post_data.get('data_sources', []):
-            if not ds.get('id', None):
-                ds['id'] = str(uuid.uuid4())
+            # set id if not existent
+            ds.setdefault('id', str(uuid.uuid4()))
+
+        preprocesses = post_data.get('preprocesses', [])
+
+        validate_preprocesses_or_raise(preprocesses)
+
+        for ps in preprocesses:
+            # set id if not existent
+            ps.setdefault('id', str(uuid.uuid4()))
 
         contributor_schema = schema.ContributorSchema(strict=True)
         try:

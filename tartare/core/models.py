@@ -61,6 +61,13 @@ def delete_file_from_gridfs(id, gridfs=None):
     return gridfs.delete(ObjectId(id))
 
 
+def get_contributor(contributor_id):
+    contributor = Contributor.get(contributor_id)
+    if contributor is None:
+        raise ValueError('Bad contributor {}'.format(contributor_id))
+    return contributor
+
+
 class Environment(object):
     def __init__(self, tyr_url=None, name=None, current_ntfs_id=None):
         self.name = name
@@ -187,7 +194,7 @@ class DataSource(object):
         self.input = input
 
     def save(self, contributor_id):
-        contributor = self.get_contributor(contributor_id)
+        contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
             raise ValueError("Duplicate data_source id '{}'".format(self.id))
         contributor.data_sources.append(self)
@@ -197,7 +204,7 @@ class DataSource(object):
     @classmethod
     def get(cls, contributor_id=None, data_source_id=None):
         if contributor_id is not None:
-            contributor = cls.get_contributor(contributor_id)
+            contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
             raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
             if raw is None:
@@ -217,7 +224,7 @@ class DataSource(object):
     def delete(cls, contributor_id, data_source_id=None):
         if data_source_id is None:
             raise ValueError('A data_source id is required')
-        contributor = cls.get_contributor(contributor_id)
+        contributor = get_contributor(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
         raw_contrib = MongoContributorSchema().dump(contributor).data
@@ -228,7 +235,7 @@ class DataSource(object):
     def update(cls, contributor_id, data_source_id=None, dataset={}):
         if data_source_id is None:
             raise ValueError('A data_source id is required')
-        if not [ds for ds in cls.get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+        if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
             raise ValueError("No data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
         if 'id' in dataset and dataset['id'] != data_source_id:
@@ -244,12 +251,72 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)
 
+
+class PreProcess(object):
+    def __init__(self, id=None, type=None, source_params=None):
+        self.id = str(uuid.uuid4()) if id is None else id
+        self.type = type
+        self.source_params = {} if source_params is None else source_params
+
+    def save(self, contributor_id):
+        contributor = get_contributor(contributor_id)
+
+        if self.id in [p.id for p in contributor.preprocesses]:
+            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+
+        contributor.preprocesses.append(self)
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+
     @classmethod
-    def get_contributor(cls, contributor_id):
-        contributor = Contributor.get(contributor_id)
-        if contributor is None:
-            raise ValueError('Bad contributor {}'.format(contributor_id))
-        return contributor
+    def get(cls, contributor_id=None, preprocess_id=None):
+        if contributor_id is not None:
+            contributor = get_contributor(contributor_id)
+        elif preprocess_id is not None:
+            raw = mongo.db[Contributor.mongo_collection].find_one({'preprocesses.id': preprocess_id})
+            if raw is None:
+                return None
+            contributor = MongoContributorSchema(strict=True).load(raw).data
+        else:
+            raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
+
+        preprocesses = contributor.preprocesses
+
+        if preprocess_id is None:
+            return preprocesses
+        p = next((p for p in preprocesses if p.id == preprocess_id), None)
+        return [p] if p else []
+
+
+    @classmethod
+    def delete(cls, contributor_id, preprocess_id):
+        if preprocess_id is None:
+            raise ValueError('A preprocess id is required')
+        contributor = get_contributor(contributor_id)
+        nb_delete = len([p for p in contributor.preprocesses if p.id == preprocess_id])
+        contributor.preprocesses = [p for p in contributor.preprocesses if p.id != preprocess_id]
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+        return nb_delete
+
+    @classmethod
+    def update(cls, contributor_id, preprocess_id, preprocess=None):
+        if preprocess_id is None:
+            raise ValueError('A data_source id is required')
+        if not [ps for ps in get_contributor(contributor_id).preprocesses if ps.id == preprocess_id]:
+            raise ValueError("No preprocesses id {} exists in contributor with id {}"
+                             .format(contributor_id, preprocess_id))
+        if 'id' in preprocess and preprocess['id'] != preprocess_id:
+            raise ValueError("Id from request {} doesn't match id from url {}"
+                             .format(preprocess['id'], preprocess_id))
+
+        preprocess['id'] = preprocess_id
+        raw = mongo.db[Contributor.mongo_collection].update_one({'preprocesses.id': preprocess_id},
+                                                                {'$set': {'preprocesses.$': preprocess}})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor_id, preprocess_id)
 
 
 class MongoDataSourceSchema(Schema):
@@ -261,6 +328,16 @@ class MongoDataSourceSchema(Schema):
     @post_load
     def build_data_source(self, data):
         return DataSource(**data)
+
+
+class MongoPreProcessSchema(Schema):
+    id = fields.String(required=True)
+    type = fields.String(required=True)
+    source_params = fields.Dict(required=True)
+
+    @post_load
+    def build_data_source(self, data):
+        return PreProcess(**data)
 
 
 class MongoCoverageSchema(Schema):
@@ -278,18 +355,17 @@ class MongoCoverageSchema(Schema):
 class Contributor(object):
     mongo_collection = 'contributors'
 
-    def __init__(self, id, name, data_prefix, data_sources=[]):
+    def __init__(self, id, name, data_prefix, data_sources=None, preprocesses=None):
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
-        self.data_sources = data_sources
+        self.data_sources = [] if data_sources is None else data_sources
+        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save(self):
         raw = MongoContributorSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-    def data_source_ids(self):
-        return [d.id for d in self.data_sources]
 
     @classmethod
     def get(cls, contributor_id=None):
@@ -326,6 +402,7 @@ class MongoContributorSchema(Schema):
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
+    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
 
     @post_load
     def make_contributor(self, data):
