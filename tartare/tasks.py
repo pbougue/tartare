@@ -10,8 +10,9 @@ from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
-from tartare.core.contributor_export_functions import preprocess, merge, postprocess
-
+from tartare.core.contributor_export_functions import merge, postprocess
+from tartare.core.contributor_export_functions import fetch_dataset
+import tartare.processes
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +81,34 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
 @celery.task(default_retry_delay=300, max_retries=5)
 def contributor_export(contributor, job):
     try:
+
+        models.Job.update(job_id=job.id, state="running", step="fetching data")
+        context = fetch_dataset(contributor.data_sources)
+
         models.Job.update(job_id=job.id, state="running", step="preprocess")
-        preprocess(contributor)
+        context = launch([], context)
+
         models.Job.update(job_id=job.id, state="running", step="merge")
-        merge(contributor)
+        context = merge(contributor, context)
+
         models.Job.update(job_id=job.id, state="running", step="postprocess")
-        postprocess(contributor)
+        postprocess(contributor, context)
+
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
         logger.error('Contributor export failed, error {}'.format(str(e)))
+
+
+def launch(processes, context):
+    for p in processes:
+        p_type = p.get('type')
+        # Call p_type class
+
+        kls = getattr(tartare.processes, p_type, None)
+        if kls is None:
+            logger.error('Unknown type %s', p_type)
+            continue
+        context = kls(context, p.get("source_params")).do()
+
+    return context

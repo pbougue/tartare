@@ -27,31 +27,36 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
-from tartare.dataset_fetcher import HttpDataSetFetcher
-from tartare.core.context import Context
-
-logger = logging.getLogger(__name__)
-
-def merge(contributor, context):
-    logger.info("contributor_id : %s", contributor.id)
-
-def postprocess(contributor, context):
-    logger.info("contributor_id : %s", contributor.id)
+from abc import ABCMeta, abstractmethod
 
 
-def fetch_dataset(data_sources):
-    map_fetcher = {
-        "url": HttpDataSetFetcher
-    }
-    context = Context()
+class AbstractDataSetFetcher(metaclass=ABCMeta):
+    @abstractmethod
+    def fetch(self):
+        pass
 
-    for d in data_sources:
-        kls = map_fetcher.get(d.get('type'))
-        if kls is None:
-            logger.info("Unknown type: %s", d.get('type'))
-            continue
-        fetcher = kls(d, context)
-        context = fetcher.fetch()
 
-    return context
+class HttpDataSetFetcher(AbstractDataSetFetcher):
+    def __init__(self, data_source, context):
+        self.data_source = data_source
+        self.context = context
+
+    def fetch(self):
+        data_input = self.data_source.get('input')
+        if data_input:
+                # HTTP GET input.get('url')
+                self.context.update({self.data_source.id: "file path"})
+        return self.context
+
+
+class FtpDataSetFetcher(AbstractDataSetFetcher):
+    def __init__(self, data_source, context):
+        self.data_source = data_source
+        self.context = context
+
+    def fetch(self):
+        data_input = self.data_source.get('input')
+        if data_input:
+                # FTP GET input.get('url')
+                self.context.update({self.data_source.id: "file path"})
+        return self.context
