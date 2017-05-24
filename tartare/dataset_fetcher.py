@@ -26,7 +26,12 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 
+logger = logging.getLogger(__name__)
+
+import urllib.request
+from tartare.core.gridfs_handler import GridFsHandler
 from abc import ABCMeta, abstractmethod
 
 
@@ -36,27 +41,20 @@ class AbstractDataSetFetcher(metaclass=ABCMeta):
         pass
 
 
-class HttpDataSetFetcher(AbstractDataSetFetcher):
+class HttpOrFTPDataSetFetcher(AbstractDataSetFetcher):
     def __init__(self, data_source, context):
         self.data_source = data_source
         self.context = context
 
     def fetch(self):
-        data_input = self.data_source.get('input')
+        logger.info("fetching")
+        data_input = self.data_source.input
         if data_input:
-                # HTTP GET input.get('url')
-                self.context.update({self.data_source.id: "file path"})
-        return self.context
-
-
-class FtpDataSetFetcher(AbstractDataSetFetcher):
-    def __init__(self, data_source, context):
-        self.data_source = data_source
-        self.context = context
-
-    def fetch(self):
-        data_input = self.data_source.get('input')
-        if data_input:
-                # FTP GET input.get('url')
-                self.context.update({self.data_source.id: "file path"})
+            logger.info(data_input.get('url'))
+            tmp_file_name = "gtfs-{data_source_id}.zip".format(data_source_id=self.data_source.id)
+            urllib.request.urlretrieve(data_input.get('url'), tmp_file_name)
+            with open(tmp_file_name, 'rb') as file:
+                grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
+                logger.info(grid_fs_id)
+                # self.context.update({'contrib.id': {self.data_source.id: "id gridfs"}})
         return self.context

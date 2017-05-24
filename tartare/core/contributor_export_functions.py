@@ -28,7 +28,7 @@
 # www.navitia.io
 
 import logging
-from tartare.dataset_fetcher import HttpDataSetFetcher
+from tartare.dataset_fetcher import HttpOrFTPDataSetFetcher
 from tartare.core.context import Context
 
 logger = logging.getLogger(__name__)
@@ -42,14 +42,16 @@ def postprocess(contributor, context):
 
 def fetch_dataset(data_sources):
     map_fetcher = {
-        "url": HttpDataSetFetcher
+        "url": HttpOrFTPDataSetFetcher,
+        "ftp": HttpOrFTPDataSetFetcher
     }
     context = Context()
 
     for d in data_sources:
-        kls = map_fetcher.get(d.get('type'))
+        type = d.input.get('type')
+        kls = map_fetcher.get(type)
         if kls is None:
-            logger.info("Unknown type: %s", d.get('type'))
+            logger.info("Unknown type: %s", type)
             continue
         fetcher = kls(d, context)
         context = fetcher.fetch()

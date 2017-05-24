@@ -40,8 +40,8 @@ class ContributorExport(flask_restful.Resource):
     @staticmethod
     def _export(contributor):
         job = Job(id=str(uuid.uuid4()), action_type="contributor_export")
-        contributor_export.delay(contributor, job)
         job.save()
+        contributor_export.delay(contributor, job)
         return job
 
     def post(self, contributor_id):
