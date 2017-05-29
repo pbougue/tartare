@@ -26,7 +26,16 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
+from urllib.error import ContentTooShortError
 
+logger = logging.getLogger(__name__)
+
+import urllib.request
+from tartare.core.gridfs_handler import GridFsHandler
+import zipfile
+import tempfile
+import os
 from abc import ABCMeta, abstractmethod
 
 
@@ -36,27 +45,27 @@ class AbstractDataSetFetcher(metaclass=ABCMeta):
         pass
 
 
-class HttpDataSetFetcher(AbstractDataSetFetcher):
+class UrlDataSetFetcher(AbstractDataSetFetcher):
     def __init__(self, data_source, context):
         self.data_source = data_source
         self.context = context
 
     def fetch(self):
-        data_input = self.data_source.get('input')
+        data_input = self.data_source.input
         if data_input:
-                # HTTP GET input.get('url')
-                self.context.update({self.data_source.id: "file path"})
-        return self.context
-
-
-class FtpDataSetFetcher(AbstractDataSetFetcher):
-    def __init__(self, data_source, context):
-        self.data_source = data_source
-        self.context = context
-
-    def fetch(self):
-        data_input = self.data_source.get('input')
-        if data_input:
-                # FTP GET input.get('url')
-                self.context.update({self.data_source.id: "file path"})
-        return self.context
+            url = data_input.get('url')
+            logger.info("fetching data from url {}".format(url))
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_file_name = os.path.join(tmp_dir_name,
+                                             "gtfs-{data_source_id}.zip".format(data_source_id=self.data_source.id))
+                try:
+                    urllib.request.urlretrieve(url, tmp_file_name)
+                    if not zipfile.is_zipfile(tmp_file_name):
+                        raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                    with open(tmp_file_name, 'rb') as file:
+                        grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
+                        self.context.add_data_source_grid(data_source_id=self.data_source.id, grid_fs_id=grid_fs_id)
+                        return self.context
+                except ContentTooShortError as e:
+                    logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
+                    raise e

@@ -29,5 +29,8 @@
 
 
 class Context():
-    def __init__(self, data_source_id=None, file_path=None):
-        self.data_sources = {data_source_id: file_path}
+    def __init__(self):
+        self.data_sources_grid = []
+
+    def add_data_source_grid(self, data_source_id, grid_fs_id):
+        self.data_sources_grid.append({"data_source_id": data_source_id, "grid_fs_id": grid_fs_id})

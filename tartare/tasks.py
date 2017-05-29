@@ -86,7 +86,8 @@ def contributor_export(contributor, job):
     try:
 
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context = fetch_dataset(contributor.data_sources)
+        context = fetch_dataset(data_sources=contributor.data_sources)
+        logger.info(vars(context))
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch([], context)
