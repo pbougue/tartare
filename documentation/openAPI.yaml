@@ -206,6 +206,63 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /coverages/{coverage_id}/contributors:
+    post:
+      summary: Subscribe a coverage to a contributor
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: body
+          name: body
+          description: contributor_id to which you want the coverage to subscribe
+          schema:
+            $ref: "#/definitions/contributor_id"
+          required: true
+      responses:
+        200:
+          description: OK
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+  /coverages/{coverage_id}/contributors/{contributor_id}:
+    delete:
+      summary: Delete a contributor from a coverage {coverage_id}
+      tags:
+        - coverages
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor that needs to be removed from the coverage
+          required: true
+      responses:
+        204:
+          description: When data source {contributor_id} is correctly deleted from coverage
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+            
   /coverages/{coverage_id}/data_sources:
     post:
       summary: Add a data_source to coverage {coverage_id}
@@ -664,6 +721,13 @@ definitions:
       environments:
         $ref: "#/definitions/environments"
 
+  contributor_id:
+    type: object
+    properties:
+      id:
+        type: string
+        example: C53
+        
   data_source_id:
     type: object
     properties:
