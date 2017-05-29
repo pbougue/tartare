@@ -31,6 +31,7 @@
 class Context():
     def __init__(self):
         self.data_sources_grid = []
+		self.export_gridfs_id = None
 
     def add_data_source_grid(self, data_source_id, grid_fs_id):
         self.data_sources_grid.append({"data_source_id": data_source_id, "grid_fs_id": grid_fs_id})

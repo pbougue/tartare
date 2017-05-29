@@ -29,8 +29,8 @@
 
 import flask_restful
 from tartare.tasks import contributor_export
-from tartare.interfaces.schema import JobSchema
-from tartare.core.models import Contributor, Job
+from tartare.interfaces.schema import JobSchema, ContributorExportsSchema
+from tartare.core.models import Contributor, Job, ContributorExports
 import uuid
 from tartare.exceptions import ObjectNotFound
 
@@ -51,3 +51,10 @@ class ContributorExport(flask_restful.Resource):
         job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
+
+    def get(self, contributor_id):
+        contributor = Contributor.get(contributor_id)
+        if not contributor:
+            raise ObjectNotFound('Contributor not found: {}'.format(contributor_id))
+        exports = ContributorExports.get(contributor_id)
+        return {'exports': ContributorExportsSchema(many=True, strict=True).dump(exports).data}, 200

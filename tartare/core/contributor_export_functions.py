@@ -34,16 +34,21 @@ import urllib.request
 import zipfile
 from urllib.error import ContentTooShortError
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import save_file_in_gridfs
+from tartare.core.models import ContributorExports
+
 
 logger = logging.getLogger(__name__)
 
 
 def merge(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
+    return context
 
 
 def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
+    return context
 
 
 def fetch_datasets(contributor, context):
@@ -66,5 +71,22 @@ def fetch_datasets(contributor, context):
                     logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
                     raise e
 
+    for d in data_sources:
+        type = d.input.get('type')
+        kls = map_fetcher.get(type)
+        if kls is None:
+            logger.info("Unknown type: %s", type)
+            continue
+        fetcher = kls(d, context)
+        context = fetcher.fetch()
+
     return context
 
+def save_export(contributor, context):
+    export_file = '/home/azime/Navitia/tartare/tests/fixtures/ntfs/ntfs.zip'
+    with open(export_file, 'rb') as file:
+        context.export_gridfs_id = save_file_in_gridfs(file=file, filename='ntfs.zip')
+        logger.info('Export generate : {}'.format(context.export_gridfs_id))
+        export = ContributorExports(contributor_id=contributor.id, gridfs_id=context.export_gridfs_id)
+        export.save()
+    return context

@@ -472,3 +472,31 @@ class MongoJobSchema(Schema):
     step = fields.String(required=False)
     started_at = fields.DateTime(required=False)
     updated_at = fields.DateTime(required=False)
+
+
+class ContributorExports(object):
+    mongo_collection = 'contributor_exports'
+
+    def __init__(self, contributor_id, gridfs_id):
+        self.id = str(uuid.uuid4())
+        self.contributor_id = contributor_id
+        self.gridfs_id = gridfs_id
+        self.created_at = datetime.utcnow()
+
+    def save(self):
+        raw = MongoContributorExportsSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get(cls, contributor_id):
+        if not contributor_id:
+            return None
+        raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
+        return MongoContributorExportsSchema(many=True).load(raw).data
+
+
+class MongoContributorExportsSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    contributor_id = fields.String(required=True)
+    gridfs_id = fields.String(required=True)
+    created_at = fields.DateTime(required=True)
