@@ -35,7 +35,7 @@ from tartare.interfaces import schema
 from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
-class CoverageContibutorSubscription(flask_restful.Resource):
+class CoverageContributorSubscription(flask_restful.Resource):
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
