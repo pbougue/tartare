@@ -2,8 +2,8 @@ import os
 from tartare.tasks import send_file_to_tyr_and_discard
 from tartare.core import models
 import requests_mock
-import logging
 from tests.utils import to_json, get_valid_ntfs_memory_archive
+from tartare.core.gridfs_handler import GridFsHandler
 
 from io import BytesIO
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -12,7 +12,8 @@ from zipfile import ZipFile, ZIP_DEFLATED
 def test_upload_file_ok(coverage_obj, fixture_dir):
     path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
     with open(path, 'rb') as f:
-        file_id = models.save_file_in_gridfs(f, filename='test.osm.pbf')
+        grifs_handler = GridFsHandler()
+        file_id = grifs_handler.save_file_in_gridfs(f, filename='test.osm.pbf')
     with requests_mock.Mocker() as m:
         m.post('http://tyr.prod/v0/instances/test', text='ok')
         send_file_to_tyr_and_discard(coverage_obj.id, 'production', file_id)

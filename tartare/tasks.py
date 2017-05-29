@@ -13,6 +13,7 @@ import tempfile
 from tartare.core.contributor_export_functions import merge, postprocess
 from tartare.core.contributor_export_functions import fetch_dataset
 import tartare.processes
+from tartare.core.gridfs_handler import GridFsHandler
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ def _get_current_nfts_file(current_data_dir):
 def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].tyr_url
-    file = models.get_file_from_gridfs(file_id)
+    grifs_handler = GridFsHandler()
+    file = grifs_handler.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
     #TODO: how to handle timeout?
@@ -50,7 +52,7 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
         if response.status_code != 200:
             raise self.retry()
         else:
-            models.delete_file_from_gridfs(file_id)
+            grifs_handler.delete_file_from_gridfs(file_id)
     except:
         logging.exception('error')
 
@@ -58,7 +60,8 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
 def send_ntfs_to_tyr(self, coverage_id, environment_type):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].tyr_url
-    ntfs_file = models.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
+    grifs_handler = GridFsHandler()
+    ntfs_file = grifs_handler.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
     grid_calendars_file = coverage.get_grid_calendars()
     response = None
     if grid_calendars_file:

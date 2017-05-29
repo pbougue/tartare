@@ -39,6 +39,7 @@ from tartare.core import models, data_handler
 import tempfile
 from tartare import tasks
 from tartare.exceptions import InvalidArguments, ObjectNotFound
+from tartare.core.gridfs_handler import GridFsHandler
 
 
 def add_coverage_data(coverage_id, coverage, environment_type):
@@ -69,7 +70,8 @@ def add_coverage_data(coverage_id, coverage, environment_type):
                 tasks.send_ntfs_to_tyr.delay(coverage_id, environment_type)
             else:
                 #we need to temporary save the file before sending it
-                file_id = models.save_file_in_gridfs(file, filename=content.filename)
+                gridfs_handler = GridFsHandler()
+                file_id = gridfs_handler.save_file_in_gridfs(file, filename=content.filename)
                 tasks.send_file_to_tyr_and_discard.delay(coverage_id, environment_type, file_id)
     return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
 
@@ -94,5 +96,6 @@ class CoverageData(Resource):
         if environment_type not in coverage.environments:
             raise ObjectNotFound("Environment{}' not found.".format(environment_type))
         ntfs_file_id = coverage.environments[environment_type].current_ntfs_id
-        ntfs_file = models.get_file_from_gridfs(ntfs_file_id)
+        grifs_handler = GridFsHandler()
+        ntfs_file = grifs_handler.get_file_from_gridfs(ntfs_file_id)
         return flask.send_file(ntfs_file, mimetype='application/zip')
