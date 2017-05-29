@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 import urllib.request
 from tartare.core.gridfs_handler import GridFsHandler
+from zipfile import is_zipfile
 from abc import ABCMeta, abstractmethod
 
 
@@ -50,11 +51,14 @@ class HttpOrFTPDataSetFetcher(AbstractDataSetFetcher):
         logger.info("fetching")
         data_input = self.data_source.input
         if data_input:
-            logger.info(data_input.get('url'))
+            url = data_input.get('url')
+            logger.info(url)
             tmp_file_name = "gtfs-{data_source_id}.zip".format(data_source_id=self.data_source.id)
-            urllib.request.urlretrieve(data_input.get('url'), tmp_file_name)
-            with open(tmp_file_name, 'rb') as file:
-                grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
-                logger.info(grid_fs_id)
-                # self.context.update({'contrib.id': {self.data_source.id: "id gridfs"}})
-        return self.context
+            urllib.request.urlretrieve(url, tmp_file_name)
+            if not is_zipfile(tmp_file_name):
+                raise Exception('downloaded file from url {} was not a zip file'.format(url))
+            else:
+                with open(tmp_file_name, 'rb') as file:
+                    grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
+                    self.context.add_data_source_grid(data_source_id=self.data_source.id, grid_fs_id=grid_fs_id)
+                    return self.context

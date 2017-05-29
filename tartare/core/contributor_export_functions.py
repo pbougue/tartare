@@ -40,12 +40,12 @@ def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
 
 
-def fetch_dataset(data_sources):
+def fetch_dataset(contributor_id, data_sources):
     map_fetcher = {
         "url": HttpOrFTPDataSetFetcher,
         "ftp": HttpOrFTPDataSetFetcher
     }
-    context = Context()
+    context = Context(contributor_id)
 
     for d in data_sources:
         type = d.input.get('type')
