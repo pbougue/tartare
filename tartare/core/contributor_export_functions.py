@@ -28,7 +28,7 @@
 # www.navitia.io
 
 import logging
-from tartare.dataset_fetcher import HttpOrFTPDataSetFetcher
+from tartare.url_dataset_fetcher import UrlDataSetFetcher
 from tartare.core.context import Context
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,12 @@ def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
 
 
-def fetch_dataset(contributor_id, data_sources):
+def fetch_dataset(data_sources):
     map_fetcher = {
-        "url": HttpOrFTPDataSetFetcher,
-        "ftp": HttpOrFTPDataSetFetcher
+        "url": UrlDataSetFetcher,
+        "ftp": UrlDataSetFetcher
     }
-    context = Context(contributor_id)
+    context = Context()
 
     for d in data_sources:
         type = d.input.get('type')

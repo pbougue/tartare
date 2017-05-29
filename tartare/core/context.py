@@ -29,9 +29,8 @@
 
 
 class Context():
-    def __init__(self, contributor_id):
+    def __init__(self):
         self.data_sources_grid = []
-        self.contributor_id = contributor_id
 
     def add_data_source_grid(self, data_source_id, grid_fs_id):
         self.data_sources_grid.append({"data_source_id": data_source_id, "grid_fs_id": grid_fs_id})
