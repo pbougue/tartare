@@ -39,6 +39,7 @@ from tartare.interfaces.grid_calendar import GridCalendar
 from tartare.interfaces.data_update import DataUpdate, CoverageData
 from tartare.interfaces.data_sources import DataSource
 from tartare.interfaces.coverage_data_source_subscription import CoverageDataSourceSubscription
+from tartare.interfaces.coverage_contributor_subscription import CoverageContributorSubscription
 from tartare.interfaces.contributor_export import ContributorExport
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
@@ -62,5 +63,7 @@ api.add_resource(PreProcess, '/contributors/<string:contributor_id>/preprocesses
                  '/contributors/<string:contributor_id>/preprocesses/<string:preprocess_id>')
 api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id>/data_sources',
                  '/coverages/<string:coverage_id>/data_sources/<string:data_source_id>')
+api.add_resource(CoverageContributorSubscription, '/coverages/<string:coverage_id>/contributors',
+                 '/coverages/<string:coverage_id>/contributors/<string:contributor_id>')
 api.add_resource(ContributorExport, '/contributors/<string:contributor_id>/actions/export')
 api.add_resource(Job, '/jobs', '/jobs/<string:job_id>', endpoint='jobs')

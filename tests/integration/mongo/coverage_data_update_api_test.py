@@ -29,10 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
-from glob import glob
 from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
-from zipfile import ZipFile, ZIP_DEFLATED
-from io import BytesIO
 import requests_mock
 from tartare.tasks import send_file_to_tyr_and_discard, send_ntfs_to_tyr
 
