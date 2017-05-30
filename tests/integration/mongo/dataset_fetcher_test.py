@@ -1,6 +1,7 @@
 from tartare.core.context import Context
 from tartare.core.models import DataSource
 from tartare.url_dataset_fetcher import UrlDataSetFetcher
+import mock
 from tests.utils import mock_urlretrieve
 from tartare import app
 
