@@ -49,12 +49,10 @@ def test_get_contributors_non_exist(app):
 
 def test_add_contributor_without_id(app):
     raw = post(app, '/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
-    assert raw.status_code == 201
-    raw = app.get('/contributors')
+    assert raw.status_code == 400
     r = to_json(raw)
-
-    assert len(r["contributors"]) == 1
-    assert len(r["contributors"][0]["id"]) != 0
+    assert 'error' in r
+    assert r['error'] == "contributor id has to be specified"
 
 
 def test_add_contributor_returns_success(app):
