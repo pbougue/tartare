@@ -37,7 +37,6 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import save_file_in_gridfs
 from tartare.core.models import ContributorExports
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -82,11 +81,14 @@ def fetch_datasets(contributor, context):
 
     return context
 
+
 def save_export(contributor, context):
-    export_file = '/home/azime/Navitia/tartare/tests/fixtures/ntfs/ntfs.zip'
-    with open(export_file, 'rb') as file:
-        context.export_gridfs_id = save_file_in_gridfs(file=file, filename='ntfs.zip')
-        logger.info('Export generate : {}'.format(context.export_gridfs_id))
-        export = ContributorExports(contributor_id=contributor.id, gridfs_id=context.export_gridfs_id)
+    for dict_gridfs_id in context.data_sources_grid:
+        grid_fs_id = dict_gridfs_id.get("grid_fs_id")
+        data_source_id = dict_gridfs_id.get("data_source_id")
+        if not grid_fs_id:
+            logger.info("data source {} without gridfs id.".format(data_source_id))
+            continue
+        export = ContributorExports(contributor_id=contributor.id, gridfs_id=grid_fs_id, data_sources=[data_source_id])
         export.save()
     return context

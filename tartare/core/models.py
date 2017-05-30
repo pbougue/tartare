@@ -477,11 +477,12 @@ class MongoJobSchema(Schema):
 class ContributorExports(object):
     mongo_collection = 'contributor_exports'
 
-    def __init__(self, contributor_id, gridfs_id):
+    def __init__(self, contributor_id, gridfs_id, data_sources=None):
         self.id = str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = datetime.utcnow()
+        self.data_sources = [] if data_sources is None else data_sources
 
     def save(self):
         raw = MongoContributorExportsSchema().dump(self).data
@@ -500,3 +501,4 @@ class MongoContributorExportsSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
+    data_sources = fields.List(fields.String())
