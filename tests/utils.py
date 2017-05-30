@@ -72,3 +72,9 @@ def get_valid_ntfs_memory_archive():
         ntfs_zip.close()
         ntfs_zip_memory.seek(0)
         yield (ntfs_file_name, ntfs_zip_memory)
+
+
+def mock_urlretrieve(url, target):
+    with get_valid_ntfs_memory_archive() as (filename, ntfs_file):
+        with open(target, 'wb') as out:
+            out.write(ntfs_file.read())
