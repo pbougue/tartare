@@ -28,32 +28,43 @@
 # www.navitia.io
 
 import logging
-from tartare.url_dataset_fetcher import UrlDataSetFetcher
-from tartare.core.context import Context
+import os
+import tempfile
+import urllib.request
+import zipfile
+from urllib.error import ContentTooShortError
+from tartare.core.gridfs_handler import GridFsHandler
 
 logger = logging.getLogger(__name__)
 
+
 def merge(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
+
 
 def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
 
 
-def fetch_dataset(data_sources):
-    map_fetcher = {
-        "url": UrlDataSetFetcher,
-        "ftp": UrlDataSetFetcher
-    }
-    context = Context()
-
-    for d in data_sources:
-        type = d.input.get('type')
-        kls = map_fetcher.get(type)
-        if kls is None:
-            logger.info("Unknown type: %s", type)
-            continue
-        fetcher = kls(d, context)
-        context = fetcher.fetch()
+def fetch_datasets(contributor, context):
+    for data_source in contributor.data_sources:
+        data_input = data_source.input
+        if data_input:
+            url = data_input.get('url')
+            logger.info("fetching data from url {}".format(url))
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_file_name = os.path.join(tmp_dir_name,
+                                             "gtfs-{data_source_id}.zip".format(data_source_id=data_source.id))
+                try:
+                    urllib.request.urlretrieve(url, tmp_file_name)
+                    if not zipfile.is_zipfile(tmp_file_name):
+                        raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                    with open(tmp_file_name, 'rb') as file:
+                        grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
+                        context.add_data_source_grid(data_source_id=data_source.id, grid_fs_id=grid_fs_id)
+                except ContentTooShortError as e:
+                    logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
+                    raise e
 
     return context
+

@@ -7,11 +7,12 @@ from zipfile import ZipFile
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
+from tartare.core.context import Context
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
 from tartare.core.contributor_export_functions import merge, postprocess
-from tartare.core.contributor_export_functions import fetch_dataset
+from tartare.core.contributor_export_functions import fetch_datasets
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
 
@@ -84,10 +85,9 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
 @celery.task(default_retry_delay=300, max_retries=5)
 def contributor_export(contributor, job):
     try:
-
+        context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context = fetch_dataset(data_sources=contributor.data_sources)
-        logger.info(vars(context))
+        context = fetch_datasets(contributor, context)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch([], context)
