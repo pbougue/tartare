@@ -42,7 +42,7 @@ from tartare.helper import validate_preprocesses_or_raise
 class Contributor(flask_restful.Resource):
     def post(self):
         post_data = request.json
-        #first a check on the data_sources id and providing a uuid if not provided
+        # first a check on the data_sources id and providing a uuid if not provided
         for ds in post_data.get('data_sources', []):
             # set id if not existent
             ds.setdefault('id', str(uuid.uuid4()))
@@ -56,21 +56,21 @@ class Contributor(flask_restful.Resource):
             ps.setdefault('id', str(uuid.uuid4()))
 
         contributor_schema = schema.ContributorSchema(strict=True)
+        post_data['id'] = post_data.get('id', str(uuid.uuid4()))
         try:
             contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
-        contributor_id = post_data["id"]
         try:
             contributor.save()
-        except DuplicateKeyError as e:
+        except DuplicateKeyError:
             raise DuplicateEntry("Impossible to add contributor, id {} or data_prefix {} already used."
                                  .format(request.json['id'], request.json['data_prefix']))
         except PyMongoError:
             raise InternalServerError('Impossible to add contributor {}'.format(contributor))
 
-        return {'contributors': [contributor_schema.dump(models.Contributor.get(contributor_id)).data]}, 201
+        return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
 
     def get(self, contributor_id=None):
         if contributor_id:
@@ -96,7 +96,7 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
 
         request_data = request.json
-        #checking errors before updating PATCH data
+        # checking errors before updating PATCH data
         for ds in request_data.get('data_sources', []):
             if not ds.get('id', None):
                 ds['id'] = str(uuid.uuid4())
@@ -115,7 +115,7 @@ class Contributor(flask_restful.Resource):
         existing_ds_id = [d.id for d in contributor.data_sources]
         logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
 
-        #constructing PATCH data
+        # constructing PATCH data
         patched_data_sources = None
         if "data_sources" in request_data:
             patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
@@ -126,7 +126,7 @@ class Contributor(flask_restful.Resource):
                     if pds:
                         pds.update(ds)
                 else:
-                    #adding a new data_source
+                    # adding a new data_source
                     patched_data_sources.append(ds)
         if patched_data_sources:
             request_data['data_sources'] = patched_data_sources
