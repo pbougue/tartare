@@ -42,6 +42,8 @@ from tartare.helper import validate_preprocesses_or_raise
 class Contributor(flask_restful.Resource):
     def post(self):
         post_data = request.json
+        if 'id' not in post_data:
+            raise InvalidArguments('contributor id has to be specified')
         # first a check on the data_sources id and providing a uuid if not provided
         for ds in post_data.get('data_sources', []):
             # set id if not existent
@@ -56,7 +58,7 @@ class Contributor(flask_restful.Resource):
             ps.setdefault('id', str(uuid.uuid4()))
 
         contributor_schema = schema.ContributorSchema(strict=True)
-        post_data['id'] = post_data.get('id', str(uuid.uuid4()))
+
         try:
             contributor = contributor_schema.load(post_data).data
         except ValidationError as err:
