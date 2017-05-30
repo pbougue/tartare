@@ -47,6 +47,15 @@ def test_get_contributors_non_exist(app):
     r = to_json(raw)
     assert 'message' in r
 
+def test_add_contributor_without_id(app):
+    raw = post(app, '/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
+    assert raw.status_code == 201
+    raw = app.get('/contributors')
+    r = to_json(raw)
+
+    assert len(r["contributors"]) == 1
+    assert len(r["contributors"][0]["id"]) != 0
+
 
 def test_add_contributor_returns_success(app):
     raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
