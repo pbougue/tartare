@@ -60,12 +60,11 @@ class Environment(object):
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None, data_sources=None, contributors=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
-        self.data_sources = [] if data_sources is None else data_sources
         self.contributors = [] if contributors is None else contributors
 
     def save_grid_calendars(self, file):
@@ -131,17 +130,6 @@ class Coverage(object):
         # TODO: We will need to implements a better solution
         gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
         self.environments[environment_type].current_ntfs_id = id
-
-    def has_data_source(self, data_source):
-        return data_source.id in self.data_sources
-
-    def add_data_source(self, data_source):
-        self.data_sources.append(data_source.id)
-
-    def remove_data_source(self, data_source_id):
-        if data_source_id in self.data_sources:
-            self.data_sources.remove(data_source_id)
-            self.update(self.id, {"data_sources": self.data_sources})
 
     def has_contributor(self, contributor):
         return contributor.id in self.contributors
@@ -339,7 +327,6 @@ class MongoCoverageSchema(Schema):
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
-    data_sources = fields.List(fields.String())
     contributors = fields.List(fields.String())
 
     @post_load
