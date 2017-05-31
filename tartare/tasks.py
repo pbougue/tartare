@@ -99,7 +99,7 @@ def contributor_export(contributor, job):
         context = postprocess(contributor, context)
 
         models.Job.update(job_id=job.id, state="done")
-        # insert export in mango db
+        # insert export in mongo db
         save_export(contributor, context)
     except Exception as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))

@@ -34,7 +34,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema, MongoJobSchema, \
-    MongoPreProcessSchema, MongoContributorExportsSchema
+    MongoPreProcessSchema, MongoContributorExportSchema
 import os
 from tartare import app
 
@@ -114,5 +114,5 @@ class PreProcessSchema(MongoPreProcessSchema, NoUnknownFieldMixin):
     id = fields.String()
 
 
-class ContributorExportsSchema(MongoContributorExportsSchema, NoUnknownFieldMixin):
+class ContributorExportSchema(MongoContributorExportSchema, NoUnknownFieldMixin):
     id = fields.String()

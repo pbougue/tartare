@@ -474,7 +474,7 @@ class MongoJobSchema(Schema):
     updated_at = fields.DateTime(required=False)
 
 
-class ContributorExports(object):
+class ContributorExport(object):
     mongo_collection = 'contributor_exports'
 
     def __init__(self, contributor_id, gridfs_id, data_sources=None):
@@ -485,7 +485,7 @@ class ContributorExports(object):
         self.data_sources = [] if data_sources is None else data_sources
 
     def save(self):
-        raw = MongoContributorExportsSchema().dump(self).data
+        raw = MongoContributorExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
@@ -493,10 +493,10 @@ class ContributorExports(object):
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
-        return MongoContributorExportsSchema(many=True).load(raw).data
+        return MongoContributorExportSchema(many=True).load(raw).data
 
 
-class MongoContributorExportsSchema(Schema):
+class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)

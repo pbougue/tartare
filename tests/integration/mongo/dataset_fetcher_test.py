@@ -8,7 +8,7 @@ from tartare import app
 
 def test_fetch_data_from_input_failed(mocker):
     url = "http://whatever.com/gtfs.zip"
-    data_source = DataSource(666, 'myDS', 'gtfs', {"type": "ftp", "url": url})
+    data_source = DataSource(666, 'Bob', 'gtfs', {"type": "ftp", "url": url})
 
     mock_dl = mocker.patch('urllib.request.urlretrieve', autospec=True)
     mock_check = mocker.patch('zipfile.is_zipfile', autospec=True)
@@ -23,10 +23,10 @@ def test_fetch_data_from_input_failed(mocker):
         pass
 
 
-class TestFtecher():
+class TestFetcher():
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_fetcher(self, urlretrieve_func):
-        data_source = DataSource(666, 'myDS', 'gtfs', {"type": "ftp", "url": "bob"})
+        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
         data_fetcher = UrlDataSetFetcher(data_source, Context())
         with app.app_context():
             context = data_fetcher.fetch()
