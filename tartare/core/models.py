@@ -445,7 +445,7 @@ class Job(object):
         if not job_id:
             logger.error('job_id cannot be empty')
             return None
-        job = cls.get(job_id)
+        job = cls.get(job_id=job_id)
         if not job:
             logger.error("Cannot find job to update %s", job_id)
             return None
