@@ -78,3 +78,7 @@ def mock_urlretrieve(url, target):
     with get_valid_ntfs_memory_archive() as (filename, ntfs_file):
         with open(target, 'wb') as out:
             out.write(ntfs_file.read())
+
+
+def mock_zip_file(url, target):
+    pass
