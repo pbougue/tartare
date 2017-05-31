@@ -317,7 +317,7 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    input = fields.Raw(required=True)
+    input = fields.Dict(required=True)
 
     @post_load
     def build_data_source(self, data):

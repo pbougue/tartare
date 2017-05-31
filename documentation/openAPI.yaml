@@ -225,11 +225,13 @@ paths:
           name: body
           description: contributor_id to which you want the coverage to subscribe
           schema:
-            $ref: "#/definitions/contributor_id"
+            $ref: "#/definitions/id_object"
           required: true
       responses:
         200:
           description: OK
+          schema :
+            $ref: '#/definitions/coverages'
         400:
           description: Invalid arguments
           schema :
@@ -262,7 +264,7 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-            
+
   /coverages/{coverage_id}/data_sources:
     post:
       summary: Add a data_source to coverage {coverage_id}
@@ -283,7 +285,7 @@ paths:
           description: data_source id that you want to add to the coverage
           required: true
           schema:
-            $ref: "#/definitions/data_source_id"
+            $ref: "#/definitions/id_object"
       responses:
         200:
           description: Data source added
@@ -658,7 +660,7 @@ paths:
           schema:
             $ref: "#/definitions/data_source_type"
       responses:
-        201:
+        200:
           description: Data source modified
           schema:
             $ref: '#/definitions/data_source_obj'
@@ -698,6 +700,128 @@ paths:
             $ref: '#/definitions/error_404'
 
 
+  /contributors/{contributor_id}/preprocesses:
+    get:
+      summary: Display contributor preprocesses
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor preprocesses
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+    post:
+      summary: Create preprocess for a contributor
+      tags:
+        - contributors
+      parameters:
+        - in: body
+          name: body
+          description: Preprocess object that needs to be added to given contributor
+          required: true
+          schema:
+            $ref: "#/definitions/preprocess"
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      responses:
+        201:
+          description: Preprocess created
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
+
+  /contributors/{contributor_id}/preprocesses/{preprocess_id}:
+    patch:
+      summary: Modify a preprocess for a contributor
+      tags:
+        - contributors
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: preprocess_id
+          type: string
+          description: Identifier of the preprocess that needs to be modified
+          required: true
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor of the data source
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the contributor {contributor_id} that needs to be modified
+          required: true
+          schema:
+            $ref: "#/definitions/preprocess"
+      responses:
+        200:
+          description: Preprocess modified
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Object not found
+          schema :
+            $ref: '#/definitions/error_404'
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
+    delete:
+      summary: Delete a preprocess from a contributor {contributor_id}
+      tags:
+        - contributors
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor that needs to be modified
+          required: true
+        - in: path
+          name: preprocess_id
+          type: string
+          description: Identifier of the preprocess that needs to be removed from the contributor
+          required: true
+      responses:
+        204:
+          description: When preprocess {preprocess_id} is correctly deleted from contributor
+        404:
+          description: Object not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+
 definitions:
   coverages:
     type: object
@@ -720,20 +844,21 @@ definitions:
         example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
+      contributors:
+        $ref: "#/definitions/array_of_int"
 
-  contributor_id:
+  array_of_int:
+    type: array
+    items:
+      type: integer
+    example: [123, 456]
+
+  id_object:
     type: object
     properties:
       id:
         type: string
-        example: C53
-        
-  data_source_id:
-    type: object
-    properties:
-      id:
-        type: string
-        example: lyon_tram
+        example: ABCD
 
   environments:
     type: object
@@ -778,6 +903,32 @@ definitions:
       data_prefix:
         type: string
         example: AAA
+      preprocesses:
+        type: array
+        items:
+          $ref: "#/definitions/preprocess"
+
+  preprocess_list:
+    type: object
+    properties:
+      preprocesses:
+        type: array
+        items:
+          $ref: "#/definitions/preprocess"
+
+  preprocess:
+    type: object
+    properties:
+      id:
+        type: string
+        example: preprocess_id
+      type:
+        type: string
+        example: Ruspell
+      source_params:
+        type: object
+        example: {bano_data: {key: data_sources_id, value: bano_75}}
+
 
   data_source_obj:
     type: object
