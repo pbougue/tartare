@@ -34,16 +34,19 @@ import urllib.request
 import zipfile
 from urllib.error import ContentTooShortError
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import ContributorExport
 
 logger = logging.getLogger(__name__)
 
 
 def merge(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
+    return context
 
 
 def postprocess(contributor, context):
     logger.info("contributor_id : %s", contributor.id)
+    return context
 
 
 def fetch_datasets(contributor, context):
@@ -65,6 +68,16 @@ def fetch_datasets(contributor, context):
                 except ContentTooShortError as e:
                     logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
                     raise e
-
     return context
 
+
+def save_export(contributor, context):
+    for dict_gridfs_id in context.data_sources_grid:
+        grid_fs_id = dict_gridfs_id.get("grid_fs_id")
+        data_source_id = dict_gridfs_id.get("data_source_id")
+        if not grid_fs_id:
+            logger.info("data source {} without gridfs id.".format(data_source_id))
+            continue
+        export = ContributorExport(contributor_id=contributor.id, gridfs_id=grid_fs_id, data_sources=[data_source_id])
+        export.save()
+    return context

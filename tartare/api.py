@@ -40,7 +40,7 @@ from tartare.interfaces.data_update import DataUpdate, CoverageData
 from tartare.interfaces.data_sources import DataSource
 from tartare.interfaces.coverage_data_source_subscription import CoverageDataSourceSubscription
 from tartare.interfaces.coverage_contributor_subscription import CoverageContributorSubscription
-from tartare.interfaces.contributor_export import ContributorExport
+from tartare.interfaces.contributor_export import ContributorExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
 
@@ -65,8 +65,11 @@ api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id
                  '/coverages/<string:coverage_id>/data_sources/<string:data_source_id>')
 api.add_resource(CoverageContributorSubscription, '/coverages/<string:coverage_id>/contributors',
                  '/coverages/<string:coverage_id>/contributors/<string:contributor_id>')
-api.add_resource(ContributorExport, '/contributors/<string:contributor_id>/actions/export')
+api.add_resource(ContributorExportResource,
+                 '/contributors/<string:contributor_id>/exports',
+                 '/contributors/<string:contributor_id>/actions/export')
 api.add_resource(Job, '/jobs',
                  '/contributors/<string:contributor_id>/jobs',
                  '/contributors/<string:contributor_id>/jobs/<string:job_id>',
                  '/jobs/<string:job_id>', endpoint='jobs')
+

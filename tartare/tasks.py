@@ -11,7 +11,7 @@ from tartare.core.context import Context
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
-from tartare.core.contributor_export_functions import merge, postprocess
+from tartare.core.contributor_export_functions import merge, postprocess, save_export
 from tartare.core.contributor_export_functions import fetch_datasets
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
@@ -96,7 +96,10 @@ def contributor_export(contributor, job):
         context = merge(contributor, context)
 
         models.Job.update(job_id=job.id, state="running", step="postprocess")
-        postprocess(contributor, context)
+        context = postprocess(contributor, context)
+
+        # insert export in mongo db
+        save_export(contributor, context)
 
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
