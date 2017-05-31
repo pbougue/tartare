@@ -804,9 +804,6 @@ definitions:
         items:
           type: object
           properties:
-            type:
-              type: string
-              example: url
             value:
               url: string
               example: "http://stif.com/od.zip"
