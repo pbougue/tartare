@@ -425,7 +425,7 @@ class Job(object):
     @classmethod
     def find(cls, filter):
         raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoJobSchema(many=(not filter.get("_id"))).load(raw).data
+        return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
     def get(cls, contributor_id=None, job_id=None):
@@ -434,6 +434,9 @@ class Job(object):
             find_filter.update({'contributor_id': contributor_id})
         if job_id:
             find_filter.update({'_id': job_id})
+            raw = mongo.db[cls.mongo_collection].find_one(find_filter)
+            return MongoJobSchema(strict=False).load(raw).data
+
         return cls.find(filter=find_filter)
 
     @classmethod
