@@ -407,9 +407,10 @@ class MongoContributorSchema(Schema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, id, action_type, state='pending', step=None):
+    def __init__(self, id, action_type, contributor_id, state='pending', step=None):
         self.id = id
         self.action_type = action_type
+        self.contributor_id = contributor_id
         self.step = step
         # 'pending', 'running', 'done', 'failed'
         self.state = state
@@ -427,14 +428,16 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get(cls, job_id=None):
+    def get(cls, contributor_id=None, job_id=None):
+        find_filter = {}
+        if contributor_id:
+            find_filter.update({'contributor_id': contributor_id})
         if job_id:
-            raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
-            if raw is None:
-                return None
+            find_filter.update({'_id': job_id})
+            raw = mongo.db[cls.mongo_collection].find_one(find_filter)
             return MongoJobSchema(strict=False).load(raw).data
-        else:
-            return cls.find(filter={})
+
+        return cls.find(filter=find_filter)
 
     @classmethod
     def update(cls, job_id, state=None, step=None, error_message=None):
@@ -464,6 +467,7 @@ class Job(object):
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     action_type = fields.String(required=True)
+    contributor_id = fields.String(required=True)
     state = fields.String(required=True)
     step = fields.String(required=False)
     started_at = fields.DateTime(required=False)

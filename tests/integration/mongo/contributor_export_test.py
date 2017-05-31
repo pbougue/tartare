@@ -63,3 +63,26 @@ def test_contributor_export(app):
 
     raw_job = app.get('/jobs/toto')
     assert raw_job.status_code == 404
+
+def test_contributor_export_find_job_by_contributor(app):
+    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+    assert raw.status_code == 201
+
+    raw = post(app, '/contributors/id_test/actions/export', {})
+    assert raw.status_code == 201
+    r = to_json(raw)
+    assert 'job' in r
+    job = r.get('job')
+    assert job.get('action_type') == 'contributor_export'
+
+    raw_job = app.get('/jobs')
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']
+
+    raw_job = app.get('contributors/id_test/jobs/{}'.format(job['id']))
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']

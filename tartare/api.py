@@ -66,4 +66,7 @@ api.add_resource(CoverageDataSourceSubscription, '/coverages/<string:coverage_id
 api.add_resource(CoverageContributorSubscription, '/coverages/<string:coverage_id>/contributors',
                  '/coverages/<string:coverage_id>/contributors/<string:contributor_id>')
 api.add_resource(ContributorExport, '/contributors/<string:contributor_id>/actions/export')
-api.add_resource(Job, '/jobs', '/jobs/<string:job_id>', endpoint='jobs')
+api.add_resource(Job, '/jobs',
+                 '/contributors/<string:contributor_id>/jobs',
+                 '/contributors/<string:contributor_id>/jobs/<string:job_id>',
+                 '/jobs/<string:job_id>', endpoint='jobs')

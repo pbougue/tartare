@@ -34,8 +34,8 @@ from tartare.exceptions import ObjectNotFound
 
 
 class Job(flask_restful.Resource):
-    def get(self, job_id=None):
-        jobs = models.Job.get(job_id)
+    def get(self, contributor_id=None, job_id=None):
+        jobs = models.Job.get(contributor_id, job_id)
         if job_id:
             if jobs:
                 return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
