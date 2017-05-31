@@ -35,7 +35,7 @@ import uuid
 from tartare.exceptions import ObjectNotFound
 
 
-class ContributorExport(flask_restful.Resource):
+class ContributorExportResource(flask_restful.Resource):
 
     @staticmethod
     def _export(contributor):
@@ -56,5 +56,5 @@ class ContributorExport(flask_restful.Resource):
         contributor = Contributor.get(contributor_id)
         if not contributor:
             raise ObjectNotFound('Contributor not found: {}'.format(contributor_id))
-        exports = ContributorExport.get(contributor.id)
+        exports = ContributorExport.get(contributor_id=contributor.id)
         return {'exports': ContributorExportSchema(many=True, strict=True).dump(exports).data}, 200
