@@ -38,6 +38,9 @@ tags:
   -
     name: "data"
     description: "Manage data api"
+  -
+    name: "jobs"
+    description: "Display job informations"
 
 paths:
   /:
@@ -821,8 +824,70 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /jobs:
+    get:
+      summary: Display list of jobs
+      tags:
+        - jobs
+      produces:
+        - application/json
+      responses:
+        200:
+          description: List of jobs
+          schema:
+            $ref: '#/definitions/job_list'
+
+  /jobs/{job_id}:
+    get:
+      summary: Display information about a job
+      tags:
+        - jobs
+      parameters:
+        - in: path
+          name: job_id
+          type: string
+          description: Identifier of a job
+          required: true
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Information about the job
+          schema:
+            $ref: '#/definitions/job_list'
 
 definitions:
+  job_list:
+    type: object
+    properties:
+      jobs:
+        type: array
+        items:
+          $ref: "#/definitions/job"
+
+  job:
+    type: object
+    properties:
+      id:
+        type: string
+        example: jobx
+
+      action_type:
+        type: string
+        example: contributor_export
+      state:
+        type: string
+        example: pending
+      step:
+        type: string
+        example: fetching data
+      started_at:
+        type: string
+        example: "2017-05-29T13:37:55.967795+00:00"
+      updated_at:
+        type: string
+        example: "2017-05-29T13:37:55.967795+00:00"
+
   coverages:
     type: object
     properties:
@@ -830,6 +895,7 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/coverage"
+
   coverage:
     type: object
     properties:
