@@ -780,7 +780,7 @@ paths:
           required: true
         - in: body
           name: body
-          description: Attributes of the contributor {contributor_id} that needs to be modified
+          description: Attributes of the contributor's preprocess that needs to be modified
           required: true
           schema:
             $ref: "#/definitions/preprocess"
@@ -911,13 +911,13 @@ definitions:
       environments:
         $ref: "#/definitions/environments"
       contributors:
-        $ref: "#/definitions/array_of_int"
+        $ref: "#/definitions/array_of_strings"
 
-  array_of_int:
+  array_of_strings:
     type: array
     items:
-      type: integer
-    example: [123, 456]
+      type: string
+    example: [ABC, DEF]
 
   id_object:
     type: object
