@@ -46,22 +46,22 @@ class Contributor(flask_restful.Resource):
             "data_sources": schema.DataSourceSchema,
             "preprocesses": schema.PreProcessSchema
         }
-        existing_ds_id = [d.id for d in source]
-        logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
+        existing_id = [d.id for d in source]
+        logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
         # constructing PATCH data
-        patched_data_sources = None
+        patched_data = None
         if key in request_data:
-            patched_data_sources = map_model.get(key)(many=True).dump(source).data
+            patched_data = map_model.get(key)(many=True).dump(source).data
             for ds in request_data[key]:
-                if ds['id'] in existing_ds_id:
-                    pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
+                if ds['id'] in existing_id:
+                    pds = next((p for p in patched_data if p['id'] == ds['id']), None)
                     if pds:
                         pds.update(ds)
                 else:
                     # adding a new data_source
-                    patched_data_sources.append(ds)
-        if patched_data_sources:
-            request_data[key] = patched_data_sources
+                    patched_data.append(ds)
+        if patched_data:
+            request_data[key] = patched_data
 
     @staticmethod
     def set_ids(collections):
