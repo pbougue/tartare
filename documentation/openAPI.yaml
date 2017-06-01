@@ -401,7 +401,7 @@ paths:
         200:
           description: Requested coverage exports
           schema:
-            $ref: '#/definitions/export_list'
+            $ref: '#/definitions/coverage_export_list'
         400:
           description: Invalid arguments
           schema :
@@ -807,6 +807,34 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
             
+  /contributors/{coverage_id}/exports:
+    get:
+      summary: Display contributor exports
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor exports
+          schema:
+            $ref: '#/definitions/contributor_export_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+
   /jobs:
     get:
       summary: Display list of jobs
@@ -981,15 +1009,15 @@ definitions:
         type: object
         example: {bano_data: {key: data_sources_id, value: bano_75}}
 
-  export_list:
+  coverage_export_list:
     type: object
     properties:
       exports:
         type: array
         items:
-          $ref: "#/definitions/export"
+          $ref: "#/definitions/coverage_export"
 
-  export:
+  coverage_export:
     type: object
     properties:
       id:
@@ -1001,6 +1029,30 @@ definitions:
       contributors:
         type: object
         example: [contributor_stif, contributor_pdl]
+      gridfs_id:
+        type: string
+        example: 12345
+
+  contributor_export_list:
+    type: object
+    properties:
+      exports:
+        type: array
+        items:
+          $ref: "#/definitions/ccontributor_export"
+
+  ccontributor_export:
+    type: object
+    properties:
+      id:
+        type: string
+        example: 1234
+      contributor_id:
+        type: string
+        example: contributor_stif
+      contributors:
+        type: object
+        example: [datasource_stif]
       gridfs_id:
         type: string
         example: 12345
