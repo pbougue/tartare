@@ -489,3 +489,33 @@ class MongoContributorExportSchema(Schema):
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     data_sources = fields.List(fields.String())
+
+
+class CoverageExport(object):
+    mongo_collection = 'coverage_exports'
+
+    def __init__(self, coverage_id, gridfs_id, contributors=None):
+        self.id = str(uuid.uuid4())
+        self.coverage_id = coverage_id
+        self.gridfs_id = gridfs_id
+        self.created_at = datetime.utcnow()
+        self.contributors = [] if contributors is None else contributors
+
+    def save(self):
+        raw = MongoCoverageExportSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get(cls, coverage_id):
+        if not coverage_id:
+            return None
+        raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)
+        return MongoCoverageExportSchema(many=True).load(raw).data
+
+
+class MongoCoverageExportSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    coverage_id = fields.String(required=True)
+    gridfs_id = fields.String(required=True)
+    created_at = fields.DateTime(required=True)
+    contributors = fields.List(fields.String())

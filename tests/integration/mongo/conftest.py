@@ -103,3 +103,10 @@ def coverage_obj(tmpdir, get_app_context):
                                                              tyr_url='http://tyr.prod/v0/instances/test')
     coverage.save()
     return coverage
+
+
+@pytest.fixture(scope="function")
+def coverage_export_obj(tmpdir, get_app_context):
+    coverage_export = models.CoverageExport("coverage1", "1234", ["contributor1", "contributor2"])
+    coverage_export.save()
+    return coverage_export
