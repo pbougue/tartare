@@ -27,7 +27,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
 import logging.config
 import celery
 from collections.abc import Mapping

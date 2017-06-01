@@ -30,32 +30,56 @@
 import flask_restful
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
-import logging
 from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
-import uuid
 from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.helper import validate_preprocesses_or_raise
+import uuid
+import logging
 
 
 class Contributor(flask_restful.Resource):
+    @staticmethod
+    def upgrade_dict(source, request_data, key):
+        map_model = {
+            "data_sources": schema.DataSourceSchema,
+            "preprocesses": schema.PreProcessSchema
+        }
+        existing_ds_id = [d.id for d in source]
+        logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
+        # constructing PATCH data
+        patched_data_sources = None
+        if key in request_data:
+            patched_data_sources = map_model.get(key)(many=True).dump(source).data
+            for ds in request_data[key]:
+                if ds['id'] in existing_ds_id:
+                    pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
+                    if pds:
+                        pds.update(ds)
+                else:
+                    # adding a new data_source
+                    patched_data_sources.append(ds)
+        if patched_data_sources:
+            request_data[key] = patched_data_sources
+
+    @staticmethod
+    def set_ids(collections):
+        for c in collections:
+            c.setdefault('id', str(uuid.uuid4()))
+
     def post(self):
         post_data = request.json
         if 'id' not in post_data:
             raise InvalidArguments('contributor id has to be specified')
         # first a check on the data_sources id and providing a uuid if not provided
-        for ds in post_data.get('data_sources', []):
-            # set id if not existent
-            ds.setdefault('id', str(uuid.uuid4()))
+        self.set_ids(post_data.get('data_sources', []))
 
         preprocesses = post_data.get('preprocesses', [])
 
         validate_preprocesses_or_raise(preprocesses)
 
-        for ps in preprocesses:
-            # set id if not existent
-            ps.setdefault('id', str(uuid.uuid4()))
+        self.set_ids(preprocesses)
 
         contributor_schema = schema.ContributorSchema(strict=True)
 
@@ -99,9 +123,9 @@ class Contributor(flask_restful.Resource):
 
         request_data = request.json
         # checking errors before updating PATCH data
-        for ds in request_data.get('data_sources', []):
-            if not ds.get('id', None):
-                ds['id'] = str(uuid.uuid4())
+        self.set_ids(request_data.get('data_sources', []))
+        self.set_ids(request_data.get('preprocesses', []))
+        validate_preprocesses_or_raise(request_data.get('preprocesses', []))
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)
@@ -114,24 +138,9 @@ class Contributor(flask_restful.Resource):
         if 'id' in request_data and contributor.id != request_data['id']:
             raise InvalidArguments('The modification of the id is not possible')
 
-        existing_ds_id = [d.id for d in contributor.data_sources]
-        logging.getLogger(__name__).debug("PATCH : list of existing data_sources ids %s", str(existing_ds_id))
+        self.upgrade_dict(contributor.data_sources, request_data, "data_sources")
+        self.upgrade_dict(contributor.preprocesses, request_data, "preprocesses")
 
-        # constructing PATCH data
-        patched_data_sources = None
-        if "data_sources" in request_data:
-            patched_data_sources = schema.DataSourceSchema(many=True).dump(contributor.data_sources).data
-
-            for ds in request_data["data_sources"]:
-                if ds['id'] in existing_ds_id:
-                    pds = next((p for p in patched_data_sources if p['id'] == ds['id']), None)
-                    if pds:
-                        pds.update(ds)
-                else:
-                    # adding a new data_source
-                    patched_data_sources.append(ds)
-        if patched_data_sources:
-            request_data['data_sources'] = patched_data_sources
         try:
             contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError:
