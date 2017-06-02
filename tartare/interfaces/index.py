@@ -33,13 +33,9 @@
 import flask_restful
 from flask import url_for
 
+collection = ["status", "coverages", "contributors", "jobs"]
+
 
 class Index(flask_restful.Resource):
     def get(self):
-        return ({'_links':
-                    {'status': {'href': url_for('status', _external=True)},
-                     'coverages': {'href': url_for('coverages', _external=True)},
-                     'contributors': {'href': url_for('contributors', _external=True)}
-                    }
-                },
-                200)
+        return ({'_links': {ap: {'href': url_for(ap, _external=True)} for ap in collection}}, 200)
