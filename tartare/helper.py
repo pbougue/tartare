@@ -36,10 +36,12 @@ import tartare.processes
 import logging
 from tartare.exceptions import InvalidArguments
 
+
 #monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self):
     return self.length
 GridOut.__len__ = grid_out_len
+
 
 def upload_file(url, filename, file):
     return requests.post(url, files={'file': file}, timeout=120)
@@ -49,6 +51,7 @@ def upload_file(url, filename, file):
     #})
     #headers =  {'Content-Type': form.content_type}
     #return requests.post(url, headers=headers, data=form, timeout=10)
+
 
 def configure_logger(app_config):
     """

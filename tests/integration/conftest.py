@@ -42,6 +42,7 @@ def fixture_dir():
     pwd = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(pwd, 'fixtures/')
 
+
 @pytest.fixture(scope="session", autouse=True)
 def local_celery():
     """

@@ -30,7 +30,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
 import flask_restful
 import os
 

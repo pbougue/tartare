@@ -128,6 +128,7 @@ def test_add_coverage_with_no_env(app):
     assert 'error' in r
     assert 'environments' in r['error']
 
+
 def test_add_coverage_with_env_invalid_url(app):
     raw = post(app, '/coverages',
             '''{"id": "id_test", "name": "name of the coverage",
@@ -228,6 +229,7 @@ def test_update_id_impossible(app):
     assert 'error' in r
     assert raw.status_code == 400
 
+
 def test_update_coverage_forbid_unkown_field(app):
     raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')
     assert raw.status_code == 201
@@ -237,6 +239,7 @@ def test_update_coverage_forbid_unkown_field(app):
 
     assert raw.status_code == 400
     assert 'error' in r
+
 
 def test_update_coverage_forbid_unkown_environments_type(app):
     raw = post(app, '/coverages', '{"id": "id_test", "name": "name_test"}')

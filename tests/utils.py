@@ -35,6 +35,7 @@ from glob import glob
 from contextlib import contextmanager
 import os
 
+
 def to_json(response):
     return json.loads(response.data.decode('utf-8'))
 
@@ -45,6 +46,7 @@ def delete(app, url):
         """
     return app.delete(url)
 
+
 def post(app, url, params):
     """
     post on API with params as json
@@ -53,6 +55,7 @@ def post(app, url, params):
                     headers={'Content-Type': 'application/json'},
                     data=params)
 
+
 def patch(app, url, params):
     """
     patch on API with params as json
@@ -60,6 +63,7 @@ def patch(app, url, params):
     return app.patch(url,
                      headers={'Content-Type': 'application/json'},
                      data=params)
+
 
 @contextmanager
 def get_valid_ntfs_memory_archive():

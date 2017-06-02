@@ -31,29 +31,36 @@ from tartare.helper import to_doted_notation, _make_doted_key, upload_file
 import requests_mock
 from io import StringIO
 
+
 def test_to_doted_notation_flat():
     data = {'a': 1, 'b': 2}
     assert data == to_doted_notation(data)
+
 
 def test_to_doted_notation_one():
     data = {'a': 1, 'b': {'a': 3}}
     assert to_doted_notation(data) == {'a': 1, 'b.a': 3}
 
+
 def test_to_doted_notation_one_multiple():
     data = {'a': 1, 'b': {'a': 3, 'b': 5}}
     assert to_doted_notation(data) == {'a': 1, 'b.a': 3, 'b.b': 5}
+
 
 def test_to_doted_notation_two():
     data = {'a': 1, 'b': {'a': 3, 'b': {'c': 9, 'd': 10}}}
     assert to_doted_notation(data) == {'a': 1, 'b.a': 3, 'b.b.c': 9, 'b.b.d': 10}
 
+
 def test_to_doted_notation_array():
     data = {'a': [{'b':1}, {'c':2}]}
     assert to_doted_notation(data) == {'a.0.b': 1, 'a.1.c':2}
 
+
 def test_to_doted_notation_with_list_of_scalars():
     data = {'a': 1, 'b': {'a': 3, 'b': {'c': 9, 'd': 10}}, 'e': [1, 2.6, "bar", True]}
     assert to_doted_notation(data) == {'a': 1, 'b.a': 3, 'b.b.c': 9, 'b.b.d': 10, 'e': [1, 2.6, "bar", True]}
+
 
 def test_make_doted_key():
     assert _make_doted_key('a') == 'a'
@@ -61,6 +68,7 @@ def test_make_doted_key():
     assert _make_doted_key(None, 'a', 'b') == 'a.b'
     assert _make_doted_key('a', None, 'b') == 'a.b'
     assert _make_doted_key(None, 'a', None, 'b', None) == 'a.b'
+
 
 def test_upload_file():
     with requests_mock.Mocker() as m, StringIO('myfile') as stream:

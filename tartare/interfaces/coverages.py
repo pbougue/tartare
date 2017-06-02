@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from flask_restful import abort
+
 import flask_restful
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
