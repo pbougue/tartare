@@ -32,17 +32,8 @@ from tests.utils import to_json, post
 
 
 def test_get_coverage_export(app, coverage_export_obj):
-    raw = post(app, '/coverages', '{"id": "coverage1", "name":"name_test"}')
-    assert raw.status_code == 201
-    raw = app.get('/coverages/coverage1')
-    r = to_json(raw)
-    assert len(r["coverages"]) == 1
-
-    raw = post(app, '/coverages', '{"id": "coverage2", "name":"name_test"}')
-    assert raw.status_code == 201
-    raw = app.get('/coverages/coverage2')
-    r = to_json(raw)
-    assert len(r["coverages"]) == 1
+    post(app, '/coverages', '{"id": "coverage1", "name":"name_test"}')
+    post(app, '/coverages', '{"id": "coverage2", "name":"name_test"}')
 
     # Exports for coverage1, one export
     exports = app.get('/coverages/coverage1/exports')
