@@ -27,11 +27,24 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import logging
+from tartare.core.models import ContributorExport
 
-class Context():
-    def __init__(self):
-        self.data_sources_grid = []
-        self.contributor_exports = []
+logger = logging.getLogger(__name__)
 
-    def add_data_source_grid(self, data_source_id, grid_fs_id):
-        self.data_sources_grid.append({"data_source_id": data_source_id, "grid_fs_id": grid_fs_id})
+
+def merge(coverage, context):
+    logger.info("coverage_id : %s", coverage.id)
+
+
+def postprocess(coverage, context):
+    logger.info("coverage_id : %s", coverage.id)
+
+
+def fetch_datasets(coverage, context):
+    logger.info('fetch_datasets')
+    for contributor_id in coverage.contributors:
+        export = ContributorExport.get(contributor_id)
+        context.contributor_exports.append(export)
+    return context
+

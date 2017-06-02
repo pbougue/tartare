@@ -394,10 +394,11 @@ class MongoContributorSchema(Schema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, id, action_type, contributor_id, state='pending', step=None):
+    def __init__(self, id, action_type, contributor_id=None, coverage_id=None, state='pending', step=None):
         self.id = id
         self.action_type = action_type
         self.contributor_id = contributor_id
+        self.coverage_id = coverage_id
         self.step = step
         # 'pending', 'running', 'done', 'failed'
         self.state = state
@@ -454,7 +455,7 @@ class Job(object):
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     action_type = fields.String(required=True)
-    contributor_id = fields.String(required=True)
+    contributor_id = fields.String(required=False)
     state = fields.String(required=True)
     step = fields.String(required=False)
     started_at = fields.DateTime(required=False)

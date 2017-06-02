@@ -11,8 +11,8 @@ from tartare.core.context import Context
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
-from tartare.core.contributor_export_functions import merge, postprocess, save_export
-from tartare.core.contributor_export_functions import fetch_datasets
+from tartare.core import contributor_export_functions
+from tartare.core import coverage_export_functions
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
 
@@ -87,24 +87,47 @@ def contributor_export(contributor, job):
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context = fetch_datasets(contributor, context)
+        context = contributor_export_functions.fetch_datasets(contributor, context)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch([], context)
 
         models.Job.update(job_id=job.id, state="running", step="merge")
-        context = merge(contributor, context)
+        context = contributor_export_functions.merge(contributor, context)
 
         models.Job.update(job_id=job.id, state="running", step="postprocess")
-        context = postprocess(contributor, context)
+        context = contributor_export_functions.postprocess(contributor, context)
 
         # insert export in mongo db
-        save_export(contributor, context)
+        contributor_export_functions.save_export(contributor, context)
 
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
         logger.error('Contributor export failed, error {}'.format(str(e)))
+
+
+@celery.task(default_retry_delay=300, max_retries=5)
+def coverage_export(coverage, job):
+    logger.info('coverage_export')
+    try:
+        context = Context()
+        models.Job.update(job_id=job.id, state="running", step="fetching data")
+        context = coverage_export_functions.fetch_datasets(coverage, context)
+
+        models.Job.update(job_id=job.id, state="running", step="preprocess")
+        context = launch([], context)
+
+        models.Job.update(job_id=job.id, state="running", step="merge")
+        context = coverage_export_functions.merge(coverage, context)
+
+        models.Job.update(job_id=job.id, state="running", step="postprocess")
+        coverage_export_functions.postprocess(coverage, context)
+
+        models.Job.update(job_id=job.id, state="done")
+    except Exception as e:
+        models.Job.update(job_id=job.id, state="failed", error_message=str(e))
+        logger.error('coverage export failed, error {}'.format(str(e)))
 
 
 def launch(processes, context):

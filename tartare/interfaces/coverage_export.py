@@ -28,12 +28,31 @@
 # www.navitia.io
 
 import flask_restful
-from tartare.interfaces.schema import CoverageExportSchema
-from tartare.core.models import Coverage, CoverageExport
+from tartare.tasks import coverage_export
+from tartare.interfaces.schema import JobSchema
+from tartare.core.models import Job, Coverage
+import uuid
 from tartare.exceptions import ObjectNotFound
+from tartare.interfaces.schema import CoverageExportSchema
 
 
-class CoverageExportResource(flask_restful.Resource):
+class CoverageExport(flask_restful.Resource):
+
+    @staticmethod
+    def _export(coverage):
+        job = Job(id=str(uuid.uuid4()), coverage_id=coverage.id, action_type="coverage_export")
+        job.save()
+        coverage_export.delay(coverage, job)
+        return job
+
+    def post(self, coverage_id):
+        coverage = Coverage.get(coverage_id)
+        if not coverage:
+            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
+        job = self._export(coverage)
+        job_schema = JobSchema(strict=True)
+        return {'job': job_schema.dump(job).data}, 201
+
     def get(self, coverage_id):
         coverage = Coverage.get(coverage_id)
         if not coverage:
