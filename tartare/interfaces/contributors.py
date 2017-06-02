@@ -52,14 +52,13 @@ class Contributor(flask_restful.Resource):
         patched_data = None
         if key in request_data:
             patched_data = map_model.get(key)(many=True).dump(source).data
-            for ds in request_data[key]:
-                if ds['id'] in existing_id:
-                    pds = next((p for p in patched_data if p['id'] == ds['id']), None)
-                    if pds:
-                        pds.update(ds)
+            for item in request_data[key]:
+                if item['id'] in existing_id:
+                    item2update = next((p for p in patched_data if p['id'] == item['id']), None)
+                    if item2update:
+                        item2update.update(item)
                 else:
-                    # adding a new data_source
-                    patched_data.append(ds)
+                    patched_data.append(item)
         if patched_data:
             request_data[key] = patched_data
 

@@ -773,13 +773,9 @@ paths:
           required: true
       responses:
         200:
-          description: Requested contributor data source
+          description: Requested contributor jobs
           schema:
             $ref: '#/definitions/job_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
         404:
           description: Resource not found
           schema :
