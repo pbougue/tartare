@@ -456,6 +456,7 @@ class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     action_type = fields.String(required=True)
     contributor_id = fields.String(required=False)
+    coverage_id = fields.String(required=False)
     state = fields.String(required=True)
     step = fields.String(required=False)
     started_at = fields.DateTime(required=False)

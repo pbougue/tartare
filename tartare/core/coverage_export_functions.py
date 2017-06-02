@@ -35,10 +35,12 @@ logger = logging.getLogger(__name__)
 
 def merge(coverage, context):
     logger.info("coverage_id : %s", coverage.id)
+    return context
 
 
 def postprocess(coverage, context):
     logger.info("coverage_id : %s", coverage.id)
+    return context
 
 
 def fetch_datasets(coverage, context):

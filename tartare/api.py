@@ -108,5 +108,6 @@ api.add_resource(Job,
                  endpoint='jobs')
 
 api.add_resource(CoverageExportResource,
-                 coverage_and_id + '/exports')
+                 coverage_and_id + '/exports',
+                 coverage_and_id + '/actions/export')
 

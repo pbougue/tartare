@@ -30,14 +30,13 @@
 import flask_restful
 from tartare.tasks import coverage_export
 from tartare.interfaces.schema import JobSchema
-from tartare.core.models import Job, Coverage
+from tartare.core.models import Job, Coverage, CoverageExport
 import uuid
 from tartare.exceptions import ObjectNotFound
 from tartare.interfaces.schema import CoverageExportSchema
 
 
-class CoverageExport(flask_restful.Resource):
-
+class CoverageExportResource(flask_restful.Resource):
     @staticmethod
     def _export(coverage):
         job = Job(id=str(uuid.uuid4()), coverage_id=coverage.id, action_type="coverage_export")
