@@ -402,10 +402,6 @@ paths:
           description: Requested coverage exports
           schema:
             $ref: '#/definitions/coverage_export_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
         404:
           description: Resource not found
           schema :
@@ -825,10 +821,6 @@ paths:
           description: Requested contributor exports
           schema:
             $ref: '#/definitions/contributor_export_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
         404:
           description: Resource not found
           schema :
@@ -1022,7 +1014,7 @@ definitions:
     properties:
       id:
         type: string
-        example: 1234
+        example: 443e81b8-9e45-489c-9bd8-c24c2c398995
       coverage_id:
         type: string
         example: fr-idf
@@ -1031,7 +1023,7 @@ definitions:
         example: [contributor_stif, contributor_pdl]
       gridfs_id:
         type: string
-        example: 12345
+        example: 592d4b327053ad21a7626578
 
   contributor_export_list:
     type: object
@@ -1046,7 +1038,7 @@ definitions:
     properties:
       id:
         type: string
-        example: 1234
+        example: 5b95dc75-bf5d-4563-b227-8374196deeb4
       contributor_id:
         type: string
         example: contributor_stif
@@ -1055,7 +1047,7 @@ definitions:
         example: [datasource_stif]
       gridfs_id:
         type: string
-        example: 12345
+        example: 592d4b327053ad21a7626578
 
   data_source_obj:
     type: object
