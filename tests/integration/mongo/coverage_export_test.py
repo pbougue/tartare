@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
+# coding=utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -29,13 +28,31 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-import flask_restful
-from flask import url_for
-
-collection = ["status", "coverages", "contributors", "jobs"]
+from tests.utils import to_json, post
 
 
-class Index(flask_restful.Resource):
-    def get(self):
-        return ({'_links': {ap: {'href': url_for(ap, _external=True)} for ap in collection}}, 200)
+def test_get_coverage_export(app, coverage_export_obj):
+    post(app, '/coverages', '{"id": "coverage1", "name":"name_test"}')
+    post(app, '/coverages', '{"id": "coverage2", "name":"name_test"}')
+
+    # Exports for coverage1, one export
+    exports = app.get('/coverages/coverage1/exports')
+    assert exports.status_code == 200
+    r = to_json(exports)
+    assert len(r["exports"]) == 1
+    assert r["exports"][0]["gridfs_id"] == "1234"
+    assert r["exports"][0]["coverage_id"] == "coverage1"
+    assert r["exports"][0]["contributors"] == ["contributor1", "contributor2"]
+
+    # Exports for coverage2, 0 export
+    exports = app.get('/coverages/coverage2/exports')
+    assert exports.status_code == 200
+    r = to_json(exports)
+    assert len(r["exports"]) == 0
+
+    # Exports for unknown coverage, 0 export
+    exports = app.get('/coverages/bob/exports')
+    assert exports.status_code == 404
+    r = to_json(exports)
+    assert r['message'] == 'Object Not Found'
+    assert r['error'] == 'Coverage not found: bob'

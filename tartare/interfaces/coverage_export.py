@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -31,11 +28,15 @@
 # www.navitia.io
 
 import flask_restful
-from flask import url_for
+from tartare.interfaces.schema import CoverageExportSchema
+from tartare.core.models import Coverage, CoverageExport
+from tartare.exceptions import ObjectNotFound
 
-collection = ["status", "coverages", "contributors", "jobs"]
 
-
-class Index(flask_restful.Resource):
-    def get(self):
-        return ({'_links': {ap: {'href': url_for(ap, _external=True)} for ap in collection}}, 200)
+class CoverageExportResource(flask_restful.Resource):
+    def get(self, coverage_id):
+        coverage = Coverage.get(coverage_id)
+        if not coverage:
+            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
+        exports = CoverageExport.get(coverage_id=coverage.id)
+        return {'exports': CoverageExportSchema(many=True, strict=True).dump(exports).data}, 200
