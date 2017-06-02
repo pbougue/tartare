@@ -757,6 +757,30 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+
+  /contributors/{contributor_id}/jobs:
+    get:
+      summary: Display contributor jobs
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+      responses:
+        200:
+          description: Requested contributor jobs
+          schema:
+            $ref: '#/definitions/job_list'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+            
   /jobs:
     get:
       summary: Display list of jobs
@@ -820,6 +844,9 @@ definitions:
       updated_at:
         type: string
         example: "2017-05-29T13:37:55.967795+00:00"
+      contributor_id:
+        type: string
+        example: "contributor_stif"
 
   coverages:
     type: object

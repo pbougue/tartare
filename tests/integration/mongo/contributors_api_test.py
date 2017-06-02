@@ -420,3 +420,89 @@ def test_patch_contrib_one_data_source_name_of_two_and_add_one(app):
     assert patched_data_sources[0]["name"] == "data_source_name"
     assert patched_data_sources[1]["name"] == "name_modified"
     assert patched_data_sources[2]["name"] == "data_source_3"
+
+def test_patch_contrib_preprocesses_without_id(app, contributor):
+    """
+    using /contributors endpoint
+    """
+    preprocesses = [
+        {
+            "type": "Ruspell",
+            "source_params": {
+                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+            }
+        },
+        {
+            "type": "ComputeDirections",
+            "source_params": {
+                "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+            }
+        }
+    ]
+    raw = app.get('/contributors')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r['contributors']) == 1
+    r["contributors"][0]["preprocesses"] = preprocesses
+    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r["contributors"][0]["preprocesses"]) == 2
+    types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
+    exceptd = [p.get("type") for p in preprocesses]
+    assert types.sort() == exceptd.sort()
+
+def test_patch_contrib_preprocesses_with_id(app, contributor):
+    """
+    using /contributors endpoint
+    """
+    preprocesses = [
+        {
+            "id": "ruspell",
+            "type": "Ruspell",
+            "source_params": {
+                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+            }
+        }
+    ]
+    raw = app.get('/contributors')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r['contributors']) == 1
+    r["contributors"][0]["preprocesses"] = preprocesses
+    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r["contributors"][0]["preprocesses"]) == 1
+    assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
+    assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
+
+def test_patch_contrib_preprocesses_type_unknown(app, contributor):
+    """
+    using /contributors endpoint
+    """
+    preprocesses = [
+        {
+            "id": "ruspell",
+            "type": "BOB",
+            "source_params": {
+                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+            }
+        }
+    ]
+    raw = app.get('/contributors')
+    r = to_json(raw)
+    assert raw.status_code == 200, print(r)
+    assert len(r['contributors']) == 1
+    r["contributors"][0]["preprocesses"] = preprocesses
+    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
+    r = to_json(raw)
+    assert raw.status_code == 400, print(r)
+    assert "contributors" not in r
+    assert "message" in r
+    assert "error" in r
+    assert r["message"] == "Invalid arguments"
+    assert r["error"] == "Invalid process type BOB"
