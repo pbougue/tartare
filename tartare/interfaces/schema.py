@@ -100,7 +100,7 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
         environments = ['preproduction', 'production', 'integration']
         if not any([envs.get(e, False) for e in environments]):
             data['environments'] = {}
-            data['environments']['production'] = env
+            data['environments']['production'] = self._default_env(data)
         return Coverage(**data)
 
 
