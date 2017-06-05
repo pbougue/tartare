@@ -541,14 +541,6 @@ class CoverageExport(object):
         return MongoCoverageExportSchema(many=True).load(raw).data
 
 
-    @classmethod
-    def delete(cls, coverage_id, gridfs_id):
-        # TODO: Delete gridfs file
-        raw = mongo.db[cls.mongo_collection].delete_one({'coverage_id': coverage_id,
-                                                         'gridfs_id': gridfs_id})
-        return raw.deleted_count
-
-
 class MongoCoverageExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     coverage_id = fields.String(required=True)
