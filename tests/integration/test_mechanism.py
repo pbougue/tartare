@@ -31,7 +31,6 @@
 
 from tartare import app
 import json
-from tartare.core import models
 
 
 class TartareFixture(object):
@@ -47,10 +46,3 @@ class TartareFixture(object):
 
     def to_json(self, response):
         return json.loads(response.data.decode('utf-8'))
-
-    def get_mongo_coverage_export(self, coverage="coverage1", gridfs_id="1234",
-                                  contributors=["contributor1", "contributor2"]):
-        coverage_export = models.CoverageExport(coverage, gridfs_id, contributors)
-        coverage_export.save()
-        yield coverage_export
-        coverage_export.delete(coverage_export.coverage_id, coverage_export.gridfs_id)
