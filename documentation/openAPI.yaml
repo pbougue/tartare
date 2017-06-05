@@ -177,6 +177,23 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /coverages/{coverage_id}/actions/export:
+    post:
+      summary: Export a coverage
+      tags:
+        - coverages
+      produces:
+        - application/json
+      responses:
+        201:
+          description: Job created
+          schema:
+            $ref: "#/definitions/job"
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
+
   /coverages/{coverage_id}/grid_calendar:
     post:
       summary: Handle a grid_calendar file to coverage {coverage_id} for processing
@@ -532,6 +549,23 @@ paths:
           schema :
             $ref: '#/definitions/error_500'
 
+  /contributors/{contributor_id}/actions/export:
+    post:
+      summary: Export a contributor
+      tags:
+        - contributors
+      produces:
+        - application/json
+      responses:
+        201:
+          description: Job created
+          schema:
+            $ref: "#/definitions/job"
+        500:
+          description: Internal Server Error
+          schema :
+            $ref: '#/definitions/error_500'
+
   /contributors/{contributor_id}/data_sources:
     get:
       summary: Display contributor data sources
@@ -878,6 +912,12 @@ definitions:
       action_type:
         type: string
         example: contributor_export
+      contributor_id:
+        type: string
+        example: c264e0d0-6079-416c-b24c-33ba737dc12c
+      coverage_id:
+        type: string
+        example: fr-idf
       state:
         type: string
         example: pending

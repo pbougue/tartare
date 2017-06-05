@@ -31,6 +31,41 @@
 from tests.utils import to_json, post
 
 
+def test_coverage_export_coverage_not_found(app):
+    raw = post(app, '/coverages/toto/actions/export', {})
+    assert raw.status_code == 404
+    r = to_json(raw)
+    assert 'error' in r
+    assert r.get('error') == 'Coverage not found: toto'
+
+
+def test_coverage_export(app):
+    raw = post(app, '/coverages', '{"id": "id_test", "name":"name_test"}')
+    assert raw.status_code == 201
+
+    raw = post(app, '/coverages/id_test/actions/export', {})
+    assert raw.status_code == 201
+    r = to_json(raw)
+    assert 'job' in r
+    job = r.get('job')
+    assert job.get('action_type') == 'coverage_export'
+
+    raw_job = app.get('/jobs')
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']
+
+    raw_job = app.get('/jobs/{}'.format(job['id']))
+    assert raw_job.status_code == 200
+    r_jobs = to_json(raw_job)
+    assert len(r_jobs['jobs']) == 1
+    assert r_jobs.get('jobs')[0]['id'] == job['id']
+
+    raw_job = app.get('/jobs/toto')
+    assert raw_job.status_code == 404
+
+
 def test_get_coverage_export(app, coverage_export_obj):
     post(app, '/coverages', '{"id": "coverage1", "name":"name_test"}')
     post(app, '/coverages', '{"id": "coverage2", "name":"name_test"}')
