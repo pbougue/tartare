@@ -28,7 +28,7 @@
 # www.navitia.io
 
 import logging
-from tartare.core.models import ContributorExport
+from tartare.core.models import ContributorExport, CoverageExport
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,23 @@ def postprocess(coverage, context):
 
 
 def fetch_datasets(coverage, context):
-    logger.info('fetch_datasets')
+    logger.info('fetch contributors')
     for contributor_id in coverage.contributors:
-        export = ContributorExport.get(contributor_id)
-        context.contributor_exports.append(export)
+        export = ContributorExport.get_last(contributor_id)
+        if not export:
+            logger.info("Contributor {} without export.".format(contributor_id), coverage.id)
+            continue
+        context.contributor_exports.append(export[0])
+
     return context
 
+
+def save_export(coverage, context):
+    for ce in context.contributor_exports:
+        if not ce.get("gridfs_id"):
+            logger.info("contributor export {} without gridfs id.".format(ce.get("contributor_id")))
+            continue
+        export = CoverageExport(coverage_id=coverage.id, gridfs_id=ce.get("gridfs_id"),
+                                contributors=[ce.get("contributor_id")])
+        export.save()
+    return context

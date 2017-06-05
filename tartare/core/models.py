@@ -433,10 +433,12 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get(cls, contributor_id=None, job_id=None):
+    def get(cls, contributor_id=None, coverage_id=None, job_id=None):
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
+        if coverage_id:
+            find_filter.update({'coverage_id': coverage_id})
         if job_id:
             find_filter.update({'_id': job_id})
             raw = mongo.db[cls.mongo_collection].find_one(find_filter)
@@ -501,6 +503,13 @@ class ContributorExport(object):
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
         return MongoContributorExportSchema(many=True).load(raw).data
 
+    @classmethod
+    def get_last(cls, contributor_id):
+        if not contributor_id:
+            return None
+        raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
+        return MongoContributorExportSchema(many=True).load(raw).data
+
 
 class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
@@ -530,6 +539,14 @@ class CoverageExport(object):
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)
         return MongoCoverageExportSchema(many=True).load(raw).data
+
+
+    @classmethod
+    def delete(cls, coverage_id, gridfs_id):
+        # TODO: Delete gridfs file
+        raw = mongo.db[cls.mongo_collection].delete_one({'coverage_id': coverage_id,
+                                                         'gridfs_id': gridfs_id})
+        return raw.deleted_count
 
 
 class MongoCoverageExportSchema(Schema):

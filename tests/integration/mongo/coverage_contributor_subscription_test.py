@@ -100,5 +100,4 @@ def test_delete_valid_contributor(app, coverage, contributor):
     r = to_json(raw)
     assert len(r['coverages'][0]['contributors']) == 0
 
-    assert 1
 

@@ -28,66 +28,109 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post
+
+from tests.integration.test_mechanism import TartareFixture
+import mock
+from tests.utils import mock_urlretrieve
 
 
-def test_coverage_export_coverage_not_found(app):
-    raw = post(app, '/coverages/toto/actions/export', {})
-    assert raw.status_code == 404
-    r = to_json(raw)
-    assert 'error' in r
-    assert r.get('error') == 'Coverage not found: toto'
+class TestCoverageExport(TartareFixture):
+    def test_coverage_export_coverage_not_found(self):
+        raw = self.post('/coverages/toto/actions/export', {})
+        assert raw.status_code == 404
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r.get('error') == 'Coverage not found: toto'
 
+    def test_coverage_export(self):
+        raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
+        assert raw.status_code == 201
 
-def test_coverage_export(app):
-    raw = post(app, '/coverages', '{"id": "id_test", "name":"name_test"}')
-    assert raw.status_code == 201
+        raw = self.post('/coverages/id_test/actions/export', {})
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert 'job' in r
+        job = r.get('job')
+        assert job.get('action_type') == 'coverage_export'
 
-    raw = post(app, '/coverages/id_test/actions/export', {})
-    assert raw.status_code == 201
-    r = to_json(raw)
-    assert 'job' in r
-    job = r.get('job')
-    assert job.get('action_type') == 'coverage_export'
+        raw_job = self.get('/jobs')
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    raw_job = app.get('/jobs')
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
+        raw_job = self.get('/jobs/{}'.format(job['id']))
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    raw_job = app.get('/jobs/{}'.format(job['id']))
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
+        raw_job = self.get('/jobs/toto')
+        assert raw_job.status_code == 404
 
-    raw_job = app.get('/jobs/toto')
-    assert raw_job.status_code == 404
+    def test_get_coverage_export(self, coverage_export_obj):
+        self.post('/coverages', '{"id": "coverage1", "name":"name_test"}')
+        self.post('/coverages', '{"id": "coverage2", "name":"name_test"}')
 
+        # Exports for coverage1, one export
+        exports = self.get('/coverages/coverage1/exports')
+        assert exports.status_code == 200
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 1
+        assert r["exports"][0]["gridfs_id"] == "1234"
+        assert r["exports"][0]["coverage_id"] == "coverage1"
+        assert r["exports"][0]["contributors"] == ["contributor1", "contributor2"]
 
-def test_get_coverage_export(app, coverage_export_obj):
-    post(app, '/coverages', '{"id": "coverage1", "name":"name_test"}')
-    post(app, '/coverages', '{"id": "coverage2", "name":"name_test"}')
+        # Exports for coverage2, 0 export
+        exports = self.get('/coverages/coverage2/exports')
+        assert exports.status_code == 200
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 0
 
-    # Exports for coverage1, one export
-    exports = app.get('/coverages/coverage1/exports')
-    assert exports.status_code == 200
-    r = to_json(exports)
-    assert len(r["exports"]) == 1
-    assert r["exports"][0]["gridfs_id"] == "1234"
-    assert r["exports"][0]["coverage_id"] == "coverage1"
-    assert r["exports"][0]["contributors"] == ["contributor1", "contributor2"]
+        # Exports for unknown coverage, 0 export
+        exports = self.get('/coverages/bob/exports')
+        assert exports.status_code == 404
+        r = self.to_json(exports)
+        assert r['message'] == 'Object Not Found'
+        assert r['error'] == 'Coverage not found: bob'
 
-    # Exports for coverage2, 0 export
-    exports = app.get('/coverages/coverage2/exports')
-    assert exports.status_code == 200
-    r = to_json(exports)
-    assert len(r["exports"]) == 0
+    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
+    def test_save_coverage_export(self, mock_urlretrieve):
+        # Add contributor with data_sources
+        contrib_data = '''{
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "bobette",
+                    "data_format": "gtfs",
+                    "data_format": "Neptune",
+                    "input": {"type": "url", "url": "http://stif.com/od.zip"}}
+            ]
+        }'''
+        self.post('/contributors', contrib_data)
+        # Add coverage with coverages
+        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors": ["id_test"]}')
+        # launch contributor export
+        job = self.post('/contributors/{}/actions/export'.format("id_test"), {})
+        assert job.status_code == 201
 
-    # Exports for unknown coverage, 0 export
-    exports = app.get('/coverages/bob/exports')
-    assert exports.status_code == 404
-    r = to_json(exports)
-    assert r['message'] == 'Object Not Found'
-    assert r['error'] == 'Coverage not found: bob'
+        # launch coverage export
+        jobs = self.post('/coverages/coverage1/exports', {})
+        assert job.status_code == 201
+
+        # jobs of coverage
+        jobs = self.get("/coverages/{}/jobs".format("coverage1"))
+        assert jobs.status_code == 200
+        json = self.to_json(jobs)
+        assert "jobs" in json
+        assert len(json.get("jobs")) == 1
+
+        # coverage export
+        ce = self.get("/coverages/{}/exports".format("coverage1"))
+        assert ce.status_code == 200
+        json = self.to_json(ce)
+        assert "exports" in json
+        assert len(json.get("exports")) == 1
+        assert json.get("exports")[0].get("gridfs_id")
