@@ -99,8 +99,9 @@ def data_source(app, contributor):
 @pytest.fixture(scope="function")
 def coverage_obj(tmpdir, get_app_context):
     coverage = models.Coverage(id='test', name='test')
-    coverage.environments['production'] = models.Environment(name='prod',
-                                                             tyr_url='http://tyr.prod/v0/instances/test')
+    coverage.environments['production'] = models.Environment(name='prod')
+    publication_platform = models.Platform(name="navitia", type="http", url="http://tyr.prod/v0/instances/test")
+    coverage.environments['production'].publication_platforms.append(publication_platform)
     coverage.save()
     return coverage
 

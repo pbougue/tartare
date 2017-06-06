@@ -27,14 +27,10 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
-import pytest
 from tartare import mongo
-from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
+from tests.utils import to_json, get_valid_ntfs_memory_archive
 from gridfs import GridFS
 from bson.objectid import ObjectId
-from zipfile import ZipFile, ZIP_DEFLATED
-from glob import glob
-from tartare.core import calendar_handler, models
 import requests_mock
 
 
@@ -68,7 +64,6 @@ def test_post_grid_calendar_returns_success_status(app, coverage, get_app_contex
     assert not gridfs.exists(ObjectId(file_id))
     #and the new one exist
     assert gridfs.exists(ObjectId(r['coverages'][0]['grid_calendars_id']))
-
 
 
 def test_post_grid_calendar_returns_non_compliant_file_status(app, coverage):

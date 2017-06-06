@@ -29,7 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
-from tests.utils import to_json, post, patch
+from tests.utils import to_json
 
 
 def test_unkown_version_status(app):
@@ -47,6 +47,7 @@ def test_kown_version_status(app, monkeypatch):
     r = to_json(raw)
     assert raw.status_code == 200
     assert r.get('version') == version
+
 
 def test_index(app):
     response = app.get('/')

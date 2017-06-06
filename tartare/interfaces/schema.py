@@ -34,7 +34,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema, MongoJobSchema, \
-    MongoPreProcessSchema, MongoContributorExportSchema, MongoCoverageExportSchema
+    MongoPreProcessSchema, MongoContributorExportSchema, Platform, MongoCoverageExportSchema
 import os
 from tartare import app
 
@@ -65,6 +65,7 @@ class NoUnknownFieldMixin(Schema):
 class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
     current_ntfs_id = fields.String(allow_none=True, dump_only=True)
 
+
 class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
     production = fields.Nested(EnvironmentSchema, allow_none=True)
     preproduction = fields.Nested(EnvironmentSchema, allow_none=True)
@@ -79,6 +80,12 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     #read only
     grid_calendars_id = fields.String(dump_only=True)
 
+    @staticmethod
+    def _default_env(data):
+        platform = Platform(name='navitia',
+                            type='http',
+                            url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
+        return Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'), publication_platforms=[platform])
 
     @post_load
     def make_coverage(self, data):
@@ -90,11 +97,10 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
             return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
 
         envs = data.get('environments', {})
-        if not envs.get('production') and not envs.get('preproduction') and not envs.get('integration'):
-            env = Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'),
-                        tyr_url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
+        environments = ['preproduction', 'production', 'integration']
+        if not any([envs.get(e, False) for e in environments]):
             data['environments'] = {}
-            data['environments']['production'] = env
+            data['environments']['production'] = self._default_env(data)
         return Coverage(**data)
 
 

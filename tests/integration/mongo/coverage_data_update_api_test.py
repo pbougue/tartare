@@ -29,7 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
-from tests.utils import to_json, post, patch, get_valid_ntfs_memory_archive
+from tests.utils import to_json, get_valid_ntfs_memory_archive
 import requests_mock
 from tartare.tasks import send_file_to_tyr_and_discard, send_ntfs_to_tyr
 
@@ -45,6 +45,7 @@ def test_post_pbf_returns_success_status(app, coverage_obj, fixture_dir):
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')
 
+
 def test_post_pbf_mocked(app, coverage_obj, fixture_dir, mocker):
     m = mocker.patch.object(send_file_to_tyr_and_discard, 'delay')
     path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
@@ -55,6 +56,7 @@ def test_post_pbf_mocked(app, coverage_obj, fixture_dir, mocker):
     assert raw.status_code == 200
     assert r.get('message').startswith('Valid osm file provided')
 
+
 def test_post_pbf_with_bad_param(app, coverage_obj, fixture_dir):
     filename = 'empty_pbf.osm.pbf'
     path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
@@ -63,6 +65,7 @@ def test_post_pbf_with_bad_param(app, coverage_obj, fixture_dir):
     r = to_json(raw)
     assert raw.status_code == 400
     assert r.get('error') == 'File provided with bad param ("file" param expected).'
+
 
 def test_post_osm_returns_invalid_file_extension_message(app, coverage_obj, fixture_dir):
     filename = 'empty_pbf.funky_extension'
@@ -73,6 +76,7 @@ def test_post_osm_returns_invalid_file_extension_message(app, coverage_obj, fixt
     assert raw.status_code == 400
     assert r.get('error').startswith('Invalid file provided')
 
+
 def test_post_osm_returns_invalid_coverage(app, fixture_dir):
     path = os.path.join(fixture_dir, 'geo_data/empty_pbf.osm.pbf')
     files = {'file': (open(path, 'rb'), 'empty_pbf.funky_extension')}
@@ -81,11 +85,13 @@ def test_post_osm_returns_invalid_coverage(app, fixture_dir):
     assert raw.status_code == 404
     assert r.get('error') == 'Coverage jdr_bug not found.'
 
+
 def test_post_pbf_returns_file_missing_message(app, coverage_obj):
     raw = app.post('/coverages/test/environments/production/data_update')
     r = to_json(raw)
     assert raw.status_code == 400
     assert r.get('error') == 'No file provided.'
+
 
 def test_post_ntfs_success(app, coverage_obj):
     #create ZIP file with fixture before sending it
@@ -98,6 +104,7 @@ def test_post_ntfs_success(app, coverage_obj):
         r = to_json(raw)
         assert raw.status_code == 200
         assert r.get('message').startswith('Valid fusio file provided')
+
 
 def test_post_ntfs_mocked(app, coverage_obj, mocker):
     #create ZIP file with fixture before sending it

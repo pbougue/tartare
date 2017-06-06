@@ -1,3 +1,32 @@
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+#
+# This file is part of Navitia,
+#     the software to build cool stuff with public transport.
+#
+# Hope you'll enjoy and contribute to this project,
+#     powered by Canal TP (www.canaltp.fr).
+# Help us simplify mobility and open public transport:
+#     a non ending quest to the responsive locomotion way of traveling!
+#
+# LICENCE: This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# Stay tuned using
+# twitter @navitia
+# IRC #navitia on freenode
+# https://groups.google.com/d/forum/navitia
+# www.navitia.io
+
 import glob
 import logging
 import os
@@ -42,7 +71,7 @@ def _get_current_nfts_file(current_data_dir):
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
     coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].tyr_url
+    url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
     file = grifs_handler.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
@@ -60,7 +89,7 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self, coverage_id, environment_type):
     coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].tyr_url
+    url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
     ntfs_file = grifs_handler.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
     grid_calendars_file = coverage.get_grid_calendars()

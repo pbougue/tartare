@@ -34,7 +34,7 @@ import logging
 import zipfile
 from flask.globals import request
 from flask_restful import Resource
-from tartare import app, tasks
+from tartare import tasks
 from tartare.core import models
 from tartare.exceptions import InvalidArguments, ObjectNotFound
 

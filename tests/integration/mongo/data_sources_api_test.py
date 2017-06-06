@@ -183,8 +183,6 @@ def test_patch_ds_data_source_name_only(app, data_source):
     assert patched_data_source["data_format"] == "Neptune"
 
 
-
-
 def test_patch_ds_one_data_source_name_of_two_and_add_one(app, contributor):
     """
     using /data_sources endpoint

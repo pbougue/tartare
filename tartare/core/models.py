@@ -51,10 +51,17 @@ def get_contributor(contributor_id):
 
 
 class Environment(object):
-    def __init__(self, tyr_url=None, name=None, current_ntfs_id=None):
+    def __init__(self, name=None, current_ntfs_id=None, publication_platforms=[]):
         self.name = name
-        self.tyr_url = tyr_url
         self.current_ntfs_id = current_ntfs_id
+        self.publication_platforms = publication_platforms
+
+
+class Platform(object):
+    def __init__(self, name, type, url):
+        self.name = name
+        self.type = type
+        self.url = url
 
 
 class Coverage(object):
@@ -144,10 +151,20 @@ class Coverage(object):
             self.update(self.id, {"contributors": self.contributors})
 
 
+class MongoPlatformSchema(Schema):
+    name = fields.String(required=True)
+    type = fields.String(required=True)
+    url = fields.String(required=True)
+
+    @post_load
+    def make_platform(self, data):
+        return Platform(**data)
+
+
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
-    tyr_url = fields.Url()
     current_ntfs_id = fields.String(allow_none=True)
+    publication_platforms = fields.Nested(MongoPlatformSchema, many=True)
 
     @post_load
     def make_environment(self, data):

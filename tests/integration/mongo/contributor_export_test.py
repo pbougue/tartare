@@ -30,6 +30,7 @@
 # www.navitia.io
 from tests.utils import to_json, post
 
+
 def test_contributor_export_contributor_not_found(app):
     raw = post(app, '/contributors/toto/actions/export', {})
     assert raw.status_code == 404
