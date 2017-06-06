@@ -44,7 +44,7 @@ def postprocess(coverage, context):
 
 
 def initialize_context(coverage, context):
-    logger.info('fetch contributors')
+    logger.info('initialize context')
     for contributor_id in coverage.contributors:
         export = ContributorExport.get_last(contributor_id)
         if not export:
