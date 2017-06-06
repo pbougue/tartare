@@ -29,7 +29,7 @@
 from tartare import app, mongo
 import pytest
 from tartare.core import models
-from tests.docker_wrapper import MongoDocker
+from tests.docker_wrapper import MongoDocker, DownloadServerDocker
 from tests.utils import to_json
 
 
@@ -58,6 +58,12 @@ def empty_mongo(docker):
     with app.app_context():
         mongo.db.client.drop_database(docker.DBNAME)
         models.init_mongo()
+
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def init_download_server():
+    with DownloadServerDocker() as download_server:
+        yield download_server
 
 
 @pytest.yield_fixture(scope="function")

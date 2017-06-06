@@ -25,6 +25,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import os
 
 import docker
 import logging
@@ -32,6 +33,8 @@ import logging
 # python image
 MONGO_IMAGE = 'mongo'
 MONGO_CONTAINER_NAME = 'tartare_test_mongo'
+
+HTTP_SERVER_IMAGE = 'visity/webdav'
 
 
 def _get_docker_file():
@@ -44,6 +47,43 @@ def _get_docker_file():
     """
     from io import BytesIO
     return BytesIO("FROM {}".format(MONGO_IMAGE).encode())
+
+
+class DownloadServerDocker(object):
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.logger.info('DownloadServerDocker')
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        gtfs_http_fixtures_dir = os.path.join(current_dir, 'fixtures', 'gtfs', 'http', '')
+        self.logger.info(gtfs_http_fixtures_dir)
+        self.docker = docker.Client(base_url='unix://var/run/docker.sock')
+        volumes = ['/var/www']
+        volume_bindings = {
+            gtfs_http_fixtures_dir: {
+                'bind': '/var/www',
+                'mode': 'ro',
+            },
+        }
+        host_config = self.docker.create_host_config(
+            binds=volume_bindings
+        )
+        self.docker.pull(HTTP_SERVER_IMAGE)
+        self.container_id = self.docker.create_container(HTTP_SERVER_IMAGE, name='http_download_server', volumes=volumes, host_config=host_config).get('Id')
+        self.logger.info("docker id is {}".format(self.container_id))
+        self.logger.info("starting the temporary docker")
+        self.docker.start(self.container_id)
+        self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
+        self.logger.info("IP addr is {}".format(self.ip_addr))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.logger.info("stoping the temporary docker")
+        self.docker.stop(container=self.container_id)
+
+        self.logger.info("removing the temporary docker")
+        self.docker.remove_container(container=self.container_id, v=True)
 
 
 class MongoDocker(object):
