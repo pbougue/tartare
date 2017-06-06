@@ -188,7 +188,7 @@ paths:
         - in: path
           name: coverage_id
           type: string
-          description: Identifier of the coverage that needs to be modified
+          description: which we want an export from
           required: true
       responses:
         201:
@@ -566,7 +566,7 @@ paths:
         - in: path
           name: contributor_id
           type: string
-          description: Identifier of the contributor
+          description: which we want an export from
           required: true
       responses:
         201:
