@@ -28,15 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post
 
-
-def test_contributor_export_contributor_not_found(app):
-    raw = post(app, '/contributors/toto/actions/export', {})
-    assert raw.status_code == 404
-    r = to_json(raw)
-    assert 'error' in r
-    assert r.get('error') == 'Contributor not found: toto'
+from tests.integration.test_mechanism import TartareFixture
 
 
 def test_contributor_export(app):
