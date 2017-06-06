@@ -143,7 +143,7 @@ def coverage_export(coverage, job):
 
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context = coverage_export_functions.fetch_datasets(coverage, context)
+        context = coverage_export_functions.initialize_context(coverage, context)
         models.Job.update(job_id=job.id, state="running", step="merge")
         context = coverage_export_functions.merge(coverage, context)
 
