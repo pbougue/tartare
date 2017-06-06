@@ -180,7 +180,7 @@ def test_patch_ds_data_source_name_only(app, data_source):
     assert len(r["data_sources"]) == 1
     patched_data_source = r["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
-    assert patched_data_source["data_format"] == "Neptune"
+    assert patched_data_source["data_format"] == "gtfs"
 
 
 def test_patch_ds_one_data_source_name_of_two_and_add_one(app, contributor):

@@ -105,7 +105,6 @@ class TestCoverageExport(TartareFixture):
                 {
                     "name": "bobette",
                     "data_format": "gtfs",
-                    "data_format": "Neptune",
                     "input": {"type": "url", "url": "http://stif.com/od.zip"}}
             ]
         }'''

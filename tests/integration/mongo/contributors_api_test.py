@@ -163,7 +163,6 @@ def test_update_contributor_data_prefix_error(app):
     assert raw.status_code == 201
 
     raw = patch(app, '/contributors/id_test', '{"data_prefix": "AAB"}')
-    r = to_json(raw)
 
     assert raw.status_code == 400
 
@@ -353,7 +352,7 @@ def test_patch_contrib_data_source_only(app, data_source):
     assert len(r["contributors"][0]["data_sources"]) == 1
     patched_data_source = r["contributors"][0]["data_sources"][0]
     assert patched_data_source["name"] == "name_modified"
-    assert patched_data_source["data_format"] == "Neptune"
+    assert patched_data_source["data_format"] == "gtfs"
     assert patched_data_source["input"]["type"] == "existing_version"
     assert patched_data_source["input"]["v"] == "-2"
 
@@ -450,8 +449,8 @@ def test_patch_contrib_preprocesses_without_id(app, contributor):
     assert raw.status_code == 200, print(r)
     assert len(r["contributors"][0]["preprocesses"]) == 2
     types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
-    exceptd = [p.get("type") for p in preprocesses]
-    assert types.sort() == exceptd.sort()
+    excepted = [p.get("type") for p in preprocesses]
+    assert types.sort() == excepted.sort()
 
 def test_patch_contrib_preprocesses_with_id(app, contributor):
     """
@@ -478,6 +477,7 @@ def test_patch_contrib_preprocesses_with_id(app, contributor):
     assert len(r["contributors"][0]["preprocesses"]) == 1
     assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
     assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
+
 
 def test_patch_contrib_preprocesses_type_unknown(app, contributor):
     """

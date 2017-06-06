@@ -92,7 +92,7 @@ def contributor(app):
 def data_source(app, contributor):
     data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
                            headers={'Content-Type': 'application/json'},
-                           data='{"name": "bobette", "data_format": "gtfs", "data_format": "Neptune",'
+                           data='{"name": "bobette", "data_format": "gtfs",'
                                 '"input": {"type": "url", "url": "http://stif.com/od.zip"}}')
     return to_json(data_source)['data_sources'][0]
 
