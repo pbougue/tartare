@@ -61,7 +61,7 @@ class DownloadServerDocker(object):
         volume_bindings = {
             gtfs_http_fixtures_dir: {
                 'bind': '/var/www',
-                'mode': 'ro',
+                'mode': 'rw',
             },
         }
         host_config = self.docker.create_host_config(

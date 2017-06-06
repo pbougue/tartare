@@ -92,23 +92,27 @@ class TestContributorExport(TartareFixture):
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    @pytest.mark.parametrize("filename,state,step", [
-        ('a_file.txt.zip', 'done', 'postprocess'),
-        ('unexisting_file.zip', 'failed', 'fetching data'),
-        ('not_a_zip_file.zip', 'failed', 'fetching data')
+    @pytest.mark.parametrize("filename,state,step,error_message", [
+        ('a_file.txt.zip', 'done', 'postprocess', None),
+        ('unexisting_file.zip', 'failed', 'fetching data', 'HTTP Error 404: Not Found'),
+        ('not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file')
     ])
-    def test_contributor_export_with_http_download(app, init_download_server, contributor, filename, state, step):
-        raw = app.post('/contributors/id_test/data_sources',
-                       headers={'Content-Type': 'application/json'},
-                       data='{"name": "bobette", "data_format": "gtfs", "input": {"url": "http://' + init_download_server.ip_addr + '/' + filename + '"}}')
+
+    def test_contributor_export_with_http_download(self, init_download_server, contributor, filename, state, step, error_message):
+        url = "http://" + init_download_server.ip_addr + '/' + filename
+        if error_message and '%url%' in error_message:
+            error_message = error_message.replace('%url%', url)
+        raw = self.post('/contributors/id_test/data_sources',
+                       params='{"name": "bobette", "data_format": "gtfs", "input": {"url": "' + url + '"}}')
         assert raw.status_code == 201
-        raw = post(app, '/contributors/{}/actions/export'.format(contributor['id']), {})
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
         assert raw.status_code == 201
         job = to_json(raw).get('job')
-        raw_job = app.get('contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
+
+        raw_job = self.get('contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
         job = to_json(raw_job)['jobs'][0]
-        print(job)
         assert job['state'] == state
         assert job['step'] == step
-        # if error_message:
-        #     assert job['error_message'] == 'tot'
+        if error_message:
+            assert job['error_message'] == error_message
