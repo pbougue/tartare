@@ -112,7 +112,7 @@ class TestCoverageExport(TartareFixture):
         # Add coverage with coverages
         self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors": ["id_test"]}')
         # launch contributor export
-        job = self.post('/contributors/{}/actions/export'.format("id_test"), {})
+        job = self.post('/contributors/id_test/actions/export', {})
         assert job.status_code == 201
 
         # launch coverage export
@@ -120,14 +120,14 @@ class TestCoverageExport(TartareFixture):
         assert job.status_code == 201
 
         # jobs of coverage
-        jobs = self.get("/coverages/{}/jobs".format("coverage1"))
+        jobs = self.get("/coverages/coverage1/jobs")
         assert jobs.status_code == 200
         json = self.to_json(jobs)
         assert "jobs" in json
         assert len(json.get("jobs")) == 1
 
         # coverage export
-        ce = self.get("/coverages/{}/exports".format("coverage1"))
+        ce = self.get("/coverages/coverage1/exports")
         assert ce.status_code == 200
         json = self.to_json(ce)
         assert "exports" in json

@@ -43,7 +43,7 @@ def postprocess(coverage, context):
     return context
 
 
-def fetch_datasets(coverage, context):
+def initialize_context(coverage, context):
     logger.info('fetch contributors')
     for contributor_id in coverage.contributors:
         export = ContributorExport.get_last(contributor_id)
