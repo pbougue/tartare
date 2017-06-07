@@ -540,6 +540,12 @@ class CoverageExport(object):
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)
         return MongoCoverageExportSchema(many=True).load(raw).data
 
+    @classmethod
+    def get_last(cls, coverage_id):
+        if not coverage_id:
+            return None
+        raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
+        return MongoCoverageExportSchema(many=True).load(raw).data
 
 class MongoCoverageExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
