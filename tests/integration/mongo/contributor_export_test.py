@@ -28,62 +28,63 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post
+
+from tests.integration.test_mechanism import TartareFixture
 
 
-def test_contributor_export_contributor_not_found(app):
-    raw = post(app, '/contributors/toto/actions/export', {})
-    assert raw.status_code == 404
-    r = to_json(raw)
-    assert 'error' in r
-    assert r.get('error') == 'Contributor not found: toto'
+class TestContributorExport(TartareFixture):
+    def test_contributor_export_contributor_not_found(self):
+        raw = self.post('/contributors/toto/actions/export', {})
+        assert raw.status_code == 404
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r.get('error') == 'Contributor not found: toto'
 
+    def test_contributor_export(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
 
-def test_contributor_export(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
+        raw = self.post('/contributors/id_test/actions/export', {})
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert 'job' in r
+        job = r.get('job')
+        assert job.get('action_type') == 'contributor_export'
 
-    raw = post(app, '/contributors/id_test/actions/export', {})
-    assert raw.status_code == 201
-    r = to_json(raw)
-    assert 'job' in r
-    job = r.get('job')
-    assert job.get('action_type') == 'contributor_export'
+        raw_job = self.get('/jobs')
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    raw_job = app.get('/jobs')
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
+        raw_job = self.get('/jobs/{}'.format(job['id']))
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    raw_job = app.get('/jobs/{}'.format(job['id']))
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
+        raw_job = self.get('/jobs/toto')
+        assert raw_job.status_code == 404
 
-    raw_job = app.get('/jobs/toto')
-    assert raw_job.status_code == 404
+    def test_contributor_export_find_job_by_contributor(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
 
-def test_contributor_export_find_job_by_contributor(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
+        raw = self.post('/contributors/id_test/actions/export', {})
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert 'job' in r
+        job = r.get('job')
+        assert job.get('action_type') == 'contributor_export'
 
-    raw = post(app, '/contributors/id_test/actions/export', {})
-    assert raw.status_code == 201
-    r = to_json(raw)
-    assert 'job' in r
-    job = r.get('job')
-    assert job.get('action_type') == 'contributor_export'
+        raw_job = self.get('/jobs')
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    raw_job = app.get('/jobs')
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
-
-    raw_job = app.get('contributors/id_test/jobs/{}'.format(job['id']))
-    assert raw_job.status_code == 200
-    r_jobs = to_json(raw_job)
-    assert len(r_jobs['jobs']) == 1
-    assert r_jobs.get('jobs')[0]['id'] == job['id']
+        raw_job = self.get('contributors/id_test/jobs/{}'.format(job['id']))
+        assert raw_job.status_code == 200
+        r_jobs = self.to_json(raw_job)
+        assert len(r_jobs['jobs']) == 1
+        assert r_jobs.get('jobs')[0]['id'] == job['id']

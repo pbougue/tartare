@@ -104,6 +104,8 @@ api.add_resource(Job,
                  '/jobs',
                  contributor_and_id + '/jobs',
                  contributor_and_id + '/jobs/<string:job_id>',
+                 coverage_and_id + '/jobs',
+                 coverage_and_id + '/jobs/<string:job_id>',
                  '/jobs/<string:job_id>',
                  endpoint='jobs')
 

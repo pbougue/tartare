@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -27,18 +29,20 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import flask_restful
-from tartare.core import models
-from tartare.interfaces.schema import JobSchema
-from tartare.exceptions import ObjectNotFound
+from tartare import app
+import json
 
 
-class Job(flask_restful.Resource):
-    def get(self, contributor_id=None, coverage_id=None, job_id=None):
-        jobs = models.Job.get(contributor_id, coverage_id, job_id)
-        if job_id:
-            if jobs:
-                return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
-            else:
-                raise ObjectNotFound('Job not found: {}'.format(job_id))
-        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200
+class TartareFixture(object):
+    tester = app.test_client()
+
+    def post(self, url, params):
+        return self.tester.post(url,
+                                headers={'Content-Type': 'application/json'},
+                                data=params)
+
+    def get(self, url):
+        return self.tester.get(url)
+
+    def to_json(self, response):
+        return json.loads(response.data.decode('utf-8'))

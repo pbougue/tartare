@@ -140,18 +140,18 @@ def contributor_export(contributor, job):
 def coverage_export(coverage, job):
     logger.info('coverage_export')
     try:
+
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context = coverage_export_functions.fetch_datasets(coverage, context)
-
-        models.Job.update(job_id=job.id, state="running", step="preprocess")
-        context = launch([], context)
-
+        context = coverage_export_functions.initialize_context(coverage, context)
         models.Job.update(job_id=job.id, state="running", step="merge")
         context = coverage_export_functions.merge(coverage, context)
 
         models.Job.update(job_id=job.id, state="running", step="postprocess")
         coverage_export_functions.postprocess(coverage, context)
+
+        # insert export in mongo db
+        coverage_export_functions.save_export(coverage, context)
 
         models.Job.update(job_id=job.id, state="done")
     except Exception as e:
