@@ -47,7 +47,7 @@ def init_mongo_db(docker):
     """
     when the docker is started, we init flask once for the new database
     """
-    app.config['MONGO_TEST_DBNAME'] = docker.DBNAME
+    app.config['MONGO_TEST_DBNAME'] = docker.db_name
     app.config['MONGO_TEST_HOST'] = docker.ip_addr
     mongo.init_app(app, 'MONGO_TEST')
 
@@ -56,7 +56,7 @@ def init_mongo_db(docker):
 def empty_mongo(docker):
     """Empty mongo db before each tests"""
     with app.app_context():
-        mongo.db.client.drop_database(docker.DBNAME)
+        mongo.db.client.drop_database(docker.db_name)
         models.init_mongo()
 
 
