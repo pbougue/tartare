@@ -28,17 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import os
-from tartare.tasks import send_file_to_tyr_and_discard
-import requests_mock
-from tests.utils import to_json, get_valid_ntfs_memory_archive
-from tartare.core.gridfs_handler import GridFsHandler
-
-from io import BytesIO
-from zipfile import ZipFile, ZIP_DEFLATED
-
 import mock
-from tests.utils import mock_urlretrieve
+from tests.utils import mock_urlretrieve, mock_requests_post
 from tests.integration.test_mechanism import TartareFixture
 import json
 
@@ -97,5 +88,6 @@ class TestDataUpdate(TartareFixture):
         assert resp.status_code == 201
 
         #Launch data update
-        resp = self.post("/coverages/default/environments/production/actions/export")
-        assert resp.status_code == 200
+        with mock.patch('requests.post', mock_requests_post):
+            resp = self.post("/coverages/default/environments/production/actions/export")
+            assert resp.status_code == 200

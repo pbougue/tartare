@@ -63,3 +63,4 @@ class DataPublisher(flask_restful.Resource):
         coverage = Coverage.get(coverage_id)
         environment = coverage.get_environment(environment_id)
         publish_data.delay(coverage, environment)
+        return {'message': 'OK'}, 200
