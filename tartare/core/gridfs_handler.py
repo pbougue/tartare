@@ -46,3 +46,7 @@ class GridFsHandler(object):
 
     def delete_file_from_gridfs(self, id):
         return self.gridfs.delete(ObjectId(id))
+
+    def copy_file(self, id):
+        file = self.get_file_from_gridfs(id)
+        return self.save_file_in_gridfs(file=file, filename=file.filename)
