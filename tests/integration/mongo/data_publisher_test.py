@@ -34,9 +34,78 @@ from tests.integration.test_mechanism import TartareFixture
 import json
 
 
-class TestDataUpdate(TartareFixture):
+class TestDataPublisher(TartareFixture):
+    def test_publish_unknwon_coverage(self):
+        resp = self.post("/coverages/default/environments/production/actions/export")
+        assert resp.status_code == 404
+        r = self.to_json(resp)
+        assert r['message'] == 'Object Not Found'
+        assert r['error'] == 'Coverage not found: default'
+
+    def test_publish_unknwon_environment(self):
+        coverage = {
+            "contributors": [
+                "fr-idf"
+            ],
+            "environments": {
+                "production": {
+                    "name": "production",
+                    "publication_platforms": [
+                        {
+                            "name": "navitia",
+                            "type": "http",
+                            "url": "http://bob/v0/jobs"
+                        }
+                    ]
+                }
+            },
+            "id": "default",
+            "name": "default"
+        }
+        #Create Coverage
+        resp = self.post("/coverages", json.dumps(coverage))
+        assert resp.status_code == 201
+
+        #Launch data update
+        resp = self.post("/coverages/default/environments/bob/actions/export")
+        assert resp.status_code == 404
+        r = self.to_json(resp)
+        assert r['message'] == 'Object Not Found'
+        assert r['error'] == 'Environment not found: bob'
+
+    def test_publish_coverage_without_export(self):
+        coverage = {
+            "contributors": [
+                "fr-idf"
+            ],
+            "environments": {
+                "production": {
+                    "name": "production",
+                    "publication_platforms": [
+                        {
+                            "name": "navitia",
+                            "type": "http",
+                            "url": "http://bob/v0/jobs"
+                        }
+                    ]
+                }
+            },
+            "id": "default",
+            "name": "default"
+        }
+        #Create Coverage
+        resp = self.post("/coverages", json.dumps(coverage))
+        assert resp.status_code == 201
+
+        #Launch data update
+        resp = self.post("/coverages/default/environments/production/actions/export")
+        assert resp.status_code == 404
+        r = self.to_json(resp)
+        assert r['message'] == 'Object Not Found'
+        assert r['error'] == 'Coverage default without export.'
+
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_data_update_ok(self, urlretrieve_func):
+    def test_publish_ok(self, urlretrieve_func):
         contributor = {
             "id": "fr-idf",
             "name": "fr idf",
