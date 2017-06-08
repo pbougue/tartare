@@ -31,7 +31,6 @@ import flask_restful
 from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
-import uuid
 from tartare.exceptions import ObjectNotFound
 
 

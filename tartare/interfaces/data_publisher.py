@@ -28,42 +28,15 @@
 # www.navitia.io
 
 import flask_restful
-from tartare.core.models import Coverage, CoverageExport
-from tartare.exceptions import ObjectNotFound
 import logging
 from tartare.tasks import publish_data
-from functools import wraps
-
-
-class is_publish(object):
-    def __call__(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Test coverage
-            coverage = Coverage.get(kwargs.get("coverage_id"))
-            if not coverage:
-                msg = 'Coverage not found: {}'.format(kwargs.get("coverage_id"))
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            # Test environment
-            environment = coverage.get_environment(kwargs.get("environment_id"))
-            if not environment:
-                msg = 'Environment not found: {}'.format(kwargs.get("environment_id"))
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            # Test export
-            last_export = CoverageExport.get_last(coverage.id)
-            if not last_export:
-                msg = 'Coverage {} without export.'.format(coverage.id)
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            return func(*args, **kwargs)
-        return wrapper
+from tartare.decorators import publish_params_validate
 
 
 class DataPublisher(flask_restful.Resource):
-    @is_publish()
+    @publish_params_validate()
     def post(self, coverage_id, environment_id):
-        logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment')
+        logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
+                                                                                                       environment_id))
         publish_data.delay(coverage_id, environment_id)
         return {'message': 'OK'}, 200
