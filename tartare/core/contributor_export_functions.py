@@ -56,14 +56,14 @@ def fetch_datasets(contributor, context):
             url = data_input.get('url')
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
-                tmp_file_name = os.path.join(tmp_dir_name,
-                                             "gtfs-{data_source_id}.zip".format(data_source_id=data_source.id))
+                filename = "gtfs-{data_source_id}.zip".format(data_source_id=data_source.id)
+                tmp_file_name = os.path.join(tmp_dir_name, filename)
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
                     if not zipfile.is_zipfile(tmp_file_name):
                         raise Exception('downloaded file from url {} is not a zip file'.format(url))
                     with open(tmp_file_name, 'rb') as file:
-                        grid_fs_id = GridFsHandler().save_file_in_gridfs(file)
+                        grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
                         context.add_data_source_grid(data_source_id=data_source.id, grid_fs_id=grid_fs_id)
                 except ContentTooShortError as e:
                     logger.error('downloaded file size was shorter than exepected for url {}'.format(url))

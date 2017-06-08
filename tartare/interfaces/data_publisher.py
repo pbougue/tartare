@@ -28,33 +28,38 @@
 # www.navitia.io
 
 import flask_restful
-from tartare.tasks import coverage_export
-from tartare.interfaces.schema import JobSchema
-from tartare.core.models import Job, Coverage, CoverageExport
-import uuid
+from tartare.core.models import Coverage, CoverageExport
 from tartare.exceptions import ObjectNotFound
-from tartare.interfaces.schema import CoverageExportSchema
+import logging
+from tartare.tasks import publish_data
+from functools import wraps
 
 
-class CoverageExportResource(flask_restful.Resource):
-    @staticmethod
-    def _export(coverage):
-        job = Job(coverage_id=coverage.id, action_type="coverage_export")
-        job.save()
-        coverage_export.delay(coverage, job)
-        return job
+class is_publish(object):
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Test coverage
+            coverage = Coverage.get(kwargs.get("coverage_id"))
+            if not coverage:
+                raise ObjectNotFound('Coverage not found: {}'.format(kwargs.get("coverage_id")))
+            # Test environment
+            environment = coverage.get_environment(kwargs.get("environment_id"))
+            if not environment:
+                raise ObjectNotFound('Environment not found: {}'.format(kwargs.get("environment_id")))
+            # Test export
+            last_export = CoverageExport.get_last(coverage.id)
+            if not last_export:
+                msg = 'Coverage {} without export.'.format(coverage.id)
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
+            return func(*args, **kwargs)
+        return wrapper
 
-    def post(self, coverage_id):
+
+class DataPublisher(flask_restful.Resource):
+    @is_publish()
+    def post(self, coverage_id, environment_id):
         coverage = Coverage.get(coverage_id)
-        if not coverage:
-            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
-        job = self._export(coverage)
-        job_schema = JobSchema(strict=True)
-        return {'job': job_schema.dump(job).data}, 201
-
-    def get(self, coverage_id):
-        coverage = Coverage.get(coverage_id)
-        if not coverage:
-            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
-        exports = CoverageExport.get(coverage_id=coverage.id)
-        return {'exports': CoverageExportSchema(many=True, strict=True).dump(exports).data}, 200
+        environment = coverage.get_environment(environment_id)
+        publish_data.delay(coverage, environment)
