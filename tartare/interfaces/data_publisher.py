@@ -42,11 +42,15 @@ class is_publish(object):
             # Test coverage
             coverage = Coverage.get(kwargs.get("coverage_id"))
             if not coverage:
-                raise ObjectNotFound('Coverage not found: {}'.format(kwargs.get("coverage_id")))
+                msg = 'Coverage not found: {}'.format(kwargs.get("coverage_id"))
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
             # Test environment
             environment = coverage.get_environment(kwargs.get("environment_id"))
             if not environment:
-                raise ObjectNotFound('Environment not found: {}'.format(kwargs.get("environment_id")))
+                msg = 'Environment not found: {}'.format(kwargs.get("environment_id"))
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
             # Test export
             last_export = CoverageExport.get_last(coverage.id)
             if not last_export:
@@ -60,7 +64,6 @@ class is_publish(object):
 class DataPublisher(flask_restful.Resource):
     @is_publish()
     def post(self, coverage_id, environment_id):
-        coverage = Coverage.get(coverage_id)
-        environment = coverage.get_environment(environment_id)
-        publish_data.delay(coverage, environment)
+        logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment')
+        publish_data.delay(coverage_id, environment_id)
         return {'message': 'OK'}, 200
