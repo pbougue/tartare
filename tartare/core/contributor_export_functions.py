@@ -78,6 +78,10 @@ def save_export(contributor, context):
         if not grid_fs_id:
             logger.info("data source {} without gridfs id.".format(data_source_id))
             continue
-        export = ContributorExport(contributor_id=contributor.id, gridfs_id=grid_fs_id, data_sources=[data_source_id])
+        new_grid_fs_id = GridFsHandler().copy_file(grid_fs_id)
+        export = ContributorExport(contributor_id=contributor.id,
+                                   gridfs_id=new_grid_fs_id,
+                                   data_sources=[data_source_id])
         export.save()
+        dict_gridfs_id.update({'grid_fs_id': new_grid_fs_id})
     return context
