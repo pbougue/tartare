@@ -93,7 +93,6 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert len(r["contributors"]) == 0
 
-
     def test_add_contributors_unique_data_suffix_ok(self):
         raw = self.post('/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
         assert raw.status_code == 201
@@ -102,7 +101,6 @@ class TestContributors(TartareFixture):
         raw = self.get('/contributors')
         r = self.to_json(raw)
         assert len(r["contributors"]) == 2
-
 
     def test_add_contributors_unique_data_suffix_error(self):
         raw = self.post('/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
@@ -113,7 +111,6 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert len(r["contributors"]) == 1
 
-
     def test_post_contrib_no_data_source(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
@@ -122,7 +119,6 @@ class TestContributors(TartareFixture):
         print(r)
         assert raw.status_code == 200
         assert len(r["contributors"][0]["data_sources"]) == 0
-
 
     def test_delete_contributors_returns_success(self):
         raw = self.get('/contributors/id_test')
@@ -141,7 +137,6 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert len(r["contributors"]) == 1
 
-
     def test_update_contributor_name(self):
         raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
@@ -153,7 +148,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]['id'] == "id_test"
         assert r["contributors"][0]['name'] == "new_name_test"
 
-
     def test_update_contributor_data_prefix_error(self):
         raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
@@ -162,13 +156,11 @@ class TestContributors(TartareFixture):
 
         assert raw.status_code == 400
 
-
     def test_update_unknown_coverage(self):
         raw = self.patch('/contributors/unknown', '{"name": "new_name_test"}')
         r = self.to_json(raw)
         assert 'message' in r
         assert raw.status_code == 404
-
 
     def test_update_contributor_id_impossible(self):
         """It should not be possible to update the id of an object"""
@@ -178,7 +170,6 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert 'error' in r
         assert raw.status_code == 400
-
 
     def test_post_contrib_one_data_source_without_id(self):
         '''
@@ -205,7 +196,6 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
-
     def test_post_contrib_one_data_source_with_id(self):
         """
         using /contributors endpoint
@@ -231,7 +221,6 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 200, print(r)
         assert len(r["contributors"][0]["data_sources"]) == 1
-
 
     def test_post_contrib_one_data_source_with_data_format(self):
         """
@@ -261,7 +250,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_sources"][0]["data_format"] == "Neptune"
         assert r["contributors"][0]["data_sources"][0]["input"]["type"] == "url"
         assert r["contributors"][0]["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
-
 
     def test_post_contrib_two_data_source(self):
         """
@@ -296,7 +284,6 @@ class TestContributors(TartareFixture):
         assert len(r["contributors"][0]["data_sources"]) == 2
         assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
 
-
     def test_patch_contrib_data_source_with_full_contributor(self):
         """
         using /contributors endpoint
@@ -326,7 +313,6 @@ class TestContributors(TartareFixture):
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
 
-
     def test_patch_contrib_data_source_only(self, data_source):
         """
         using /contributors endpoint
@@ -351,7 +337,6 @@ class TestContributors(TartareFixture):
         assert patched_data_source["data_format"] == "gtfs"
         assert patched_data_source["input"]["type"] == "existing_version"
         assert patched_data_source["input"]["v"] == "-2"
-
 
     def test_patch_contrib_one_data_source_name_of_two_and_add_one(self):
         """
@@ -474,7 +459,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
         assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
 
-
     def test_patch_contrib_preprocesses_type_unknown(self, contributor):
         """
         using /contributors endpoint
@@ -503,16 +487,18 @@ class TestContributors(TartareFixture):
         assert r["message"] == "Invalid arguments"
         assert r["error"] == "Invalid process type BOB"
 
-    def test_add_contributor_request_without_json(self):
+    def test_post_request_without_headers(self):
         raw = self.post(url='/contributors',
                         params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
                         headers=None)
         assert raw.status_code == 400
-        raw = self.get('/contributors')
         r = self.to_json(raw)
+        assert r['error'] == 'request without data.'
 
-        assert len(r["contributors"]) == 1
-        assert isinstance(r["contributors"], list)
-        assert r["contributors"][0]["id"] == "id_test"
-        assert r["contributors"][0]["name"] == "name_test"
-        assert r["contributors"][0]["data_prefix"] == "AAA"
+    def test_patch_request_without_headers(self):
+        raw = self.post(url='/contributors',
+                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
+                        headers=None)
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r['error'] == 'request without data.'

@@ -80,6 +80,7 @@ def test_delete_unknown_coverage(app):
     assert raw.status_code == 404
     assert r.get('error') == 'Unknown coverage id "jdr".'
 
+
 def test_delete_unknown_contributor(app, coverage, contributor):
     raw = delete(app, '/coverages/jdr/contributors/toto')
     r = to_json(raw)
@@ -101,3 +102,9 @@ def test_delete_valid_contributor(app, coverage, contributor):
     assert len(r['coverages'][0]['contributors']) == 0
 
 
+def test_bad_coverage_without_headers(app):
+    raw = post(app, '/coverages/unknown/contributors',
+               '''{"id": "bob"}''', None)
+    assert raw.status_code == 400
+    r = to_json(raw)
+    assert r['error'] == 'request without data.'

@@ -57,12 +57,12 @@ def post(app, url, params, headers={'Content-Type': 'application/json'}):
                     data=params)
 
 
-def patch(app, url, params):
+def patch(app, url, params, headers={'Content-Type': 'application/json'}):
     """
     patch on API with params as json
     """
     return app.patch(url,
-                     headers={'Content-Type': 'application/json'},
+                     headers=headers,
                      data=params)
 
 
