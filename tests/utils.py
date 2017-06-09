@@ -48,12 +48,12 @@ def delete(app, url):
     return app.delete(url)
 
 
-def post(app, url, params):
+def post(app, url, params, headers={'Content-Type': 'application/json'}):
     """
     post on API with params as json
     """
     return app.post(url,
-                    headers={'Content-Type': 'application/json'},
+                    headers=headers,
                     data=params)
 
 

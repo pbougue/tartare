@@ -28,481 +28,491 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tests.utils import to_json, post, patch
 import json
+from tests.integration.test_mechanism import TartareFixture
 
 
-def test_get_contributors_empty_success(app):
-    raw = app.get('/contributors')
-    assert raw.status_code == 200
-    raw = app.get('/contributors/')
-    assert raw.status_code == 200
-    r = to_json(raw)
-    assert len(r["contributors"]) == 0
+class TestContributors(TartareFixture):
+    def test_get_contributors_empty_success(self):
+        raw = self.get('/contributors')
+        assert raw.status_code == 200
+        raw = self.get('/contributors/')
+        assert raw.status_code == 200
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 0
+
+    def test_get_contributors_non_exist(self):
+        raw = self.get('/contributors/id_test')
+        assert raw.status_code == 404
+        r = self.to_json(raw)
+        assert 'message' in r
+
+    def test_add_contributor_without_id(self):
+        raw = self.post('/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == "contributor id has to be specified"
+
+    def test_add_contributor_returns_success(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+
+        assert len(r["contributors"]) == 1
+        assert isinstance(r["contributors"], list)
+        assert r["contributors"][0]["id"] == "id_test"
+        assert r["contributors"][0]["name"] == "name_test"
+        assert r["contributors"][0]["data_prefix"] == "AAA"
+
+    def test_add_contributors_no_id(self):
+        raw = self.post('/contributors', '{"name": "name_test"}')
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert raw.status_code == 400
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 0
+
+    def test_add_coverage_no_name(self):
+        raw = self.post('/contributors', '{"id": "id_test"}')
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert raw.status_code == 400
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 0
+
+    def test_add_coverage_no_prefix(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test"}')
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert raw.status_code == 400
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 0
 
 
-def test_get_contributors_non_exist(app):
-    raw = app.get('/contributors/id_test')
-    assert raw.status_code == 404
-    r = to_json(raw)
-    assert 'message' in r
-
-def test_add_contributor_without_id(app):
-    raw = post(app, '/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
-    assert raw.status_code == 400
-    r = to_json(raw)
-    assert 'error' in r
-    assert r['error'] == "contributor id has to be specified"
+    def test_add_contributors_unique_data_suffix_ok(self):
+        raw = self.post('/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.post('/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAB"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 2
 
 
-def test_add_contributor_returns_success(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = app.get('/contributors')
-    r = to_json(raw)
-
-    assert len(r["contributors"]) == 1
-    assert isinstance(r["contributors"], list)
-    assert r["contributors"][0]["id"] == "id_test"
-    assert r["contributors"][0]["name"] == "name_test"
-    assert r["contributors"][0]["data_prefix"] == "AAA"
+    def test_add_contributors_unique_data_suffix_error(self):
+        raw = self.post('/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.post('/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAA"}')
+        assert raw.status_code == 409
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
 
 
-def test_add_contributors_no_id(app):
-    raw = post(app, '/contributors', '{"name": "name_test"}')
-    r = to_json(raw)
-    assert 'error' in r
-    assert raw.status_code == 400
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 0
+    def test_post_contrib_no_data_source(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        print(r)
+        assert raw.status_code == 200
+        assert len(r["contributors"][0]["data_sources"]) == 0
 
 
-def test_add_coverage_no_name(app):
-    raw = post(app, '/contributors', '{"id": "id_test"}')
-    r = to_json(raw)
-    assert 'error' in r
-    assert raw.status_code == 400
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 0
+    def test_delete_contributors_returns_success(self):
+        raw = self.get('/contributors/id_test')
+        assert raw.status_code == 404
+
+        raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.delete('/contributors/id_test')
+        assert raw.status_code == 204
+        raw = self.get('/contributors/id_test')
+        assert raw.status_code == 404
+
+        raw = self.post('/contributors', '{"id": "id_test2", "name": "name_test2", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
 
 
-def test_add_coverage_no_prefix(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test"}')
-    r = to_json(raw)
-    assert 'error' in r
-    assert raw.status_code == 400
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 0
+    def test_update_contributor_name(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+
+        raw = self.patch('/contributors/id_test', '{"name": "new_name_test"}')
+        r = self.to_json(raw)
+
+        assert raw.status_code == 200
+        assert r["contributors"][0]['id'] == "id_test"
+        assert r["contributors"][0]['name'] == "new_name_test"
 
 
-def test_add_contributors_unique_data_suffix_ok(app):
-    raw = post(app, '/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = post(app, '/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAB"}')
-    assert raw.status_code == 201
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 2
+    def test_update_contributor_data_prefix_error(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+
+        raw = self.patch('/contributors/id_test', '{"data_prefix": "AAB"}')
+
+        assert raw.status_code == 400
 
 
-def test_add_contributors_unique_data_suffix_error(app):
-    raw = post(app, '/contributors', '{"id": "id_test1", "name":"name_test1", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = post(app, '/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAA"}')
-    assert raw.status_code == 409
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 1
+    def test_update_unknown_coverage(self):
+        raw = self.patch('/contributors/unknown', '{"name": "new_name_test"}')
+        r = self.to_json(raw)
+        assert 'message' in r
+        assert raw.status_code == 404
 
 
-def test_post_contrib_no_data_source(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = app.get('/contributors/id_test/')
-    r = to_json(raw)
-    print(r)
-    assert raw.status_code == 200
-    assert len(r["contributors"][0]["data_sources"]) == 0
+    def test_update_contributor_id_impossible(self):
+        """It should not be possible to update the id of an object"""
+        raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
+        assert raw.status_code == 201
+        raw = self.patch('/contributors/id_test', '{"id": "bob"}')
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert raw.status_code == 400
 
 
-def test_delete_contributors_returns_success(app):
-    raw = app.get('/contributors/id_test')
-    assert raw.status_code == 404
-
-    raw = post(app, '/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = app.delete('/contributors/id_test')
-    assert raw.status_code == 204
-    raw = app.get('/contributors/id_test')
-    assert raw.status_code == 404
-
-    raw = post(app, '/contributors', '{"id": "id_test2", "name": "name_test2", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert len(r["contributors"]) == 1
-
-
-def test_update_contributor_name(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-
-    raw = patch(app, '/contributors/id_test', '{"name": "new_name_test"}')
-    r = to_json(raw)
-
-    assert raw.status_code == 200
-    assert r["contributors"][0]['id'] == "id_test"
-    assert r["contributors"][0]['name'] == "new_name_test"
-
-
-def test_update_contributor_data_prefix_error(app):
-    raw = post(app, '/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-
-    raw = patch(app, '/contributors/id_test', '{"data_prefix": "AAB"}')
-
-    assert raw.status_code == 400
-
-
-def test_update_unknown_coverage(app):
-    raw = patch(app, '/contributors/unknown', '{"name": "new_name_test"}')
-    r = to_json(raw)
-    assert 'message' in r
-    assert raw.status_code == 404
-
-
-def test_update_contributor_id_impossible(app):
-    """It should not be possible to update the id of an object"""
-    raw = post(app, '/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
-    assert raw.status_code == 201
-    raw = patch(app, '/contributors/id_test', '{"id": "bob"}')
-    r = to_json(raw)
-    assert 'error' in r
-    assert raw.status_code == 400
-
-
-def test_post_contrib_one_data_source_without_id(app):
-    '''
-    using /contributors endpoint
-    '''
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "name": "data_source_name",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
+    def test_post_contrib_one_data_source_without_id(self):
+        '''
+        using /contributors endpoint
+        '''
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
                 }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    assert raw.status_code == 201, print(to_json(raw))
-    raw = app.get('/contributors/id_test/')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 1
-
-
-def test_post_contrib_one_data_source_with_id(app):
-    """
-    using /contributors endpoint
-    """
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "id": "data_source_id",
-                "name": "data_source_name",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    assert raw.status_code == 201, print(to_json(raw))
-    raw = app.get('/contributors/id_test/')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 1
-
-
-def test_post_contrib_one_data_source_with_data_format(app):
-    """
-    using /contributors endpoint
-    """
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "name": "data_source_name",
-                "data_format": "Neptune",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    assert raw.status_code == 201, print(to_json(raw))
-    raw = app.get('/contributors/id_test/')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 1
-    assert r["contributors"][0]["data_sources"][0]["data_format"] == "Neptune"
-    assert r["contributors"][0]["data_sources"][0]["input"]["type"] == "url"
-    assert r["contributors"][0]["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
-
-
-def test_post_contrib_two_data_source(app):
-    """
-    using /contributors endpoint
-    """
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "name": "data_source_name",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            },
-            {
-                "name": "data_source_name2",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    assert raw.status_code == 201
-    raw = app.get('/contributors/id_test/')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 2
-    assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
-
-
-def test_patch_contrib_data_source_with_full_contributor(app):
-    """
-    using /contributors endpoint
-    """
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "name": "data_source_name",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    r = to_json(raw)
-    assert raw.status_code == 201, print(r)
-    r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
-    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 1
-    patched_data_source = r["contributors"][0]["data_sources"][0]
-    assert patched_data_source["name"] == "name_modified"
-
-
-def test_patch_contrib_data_source_only(app, data_source):
-    """
-    using /contributors endpoint
-    """
-    new_data_source = {
-        "id": data_source["id"],
-        "name": "name_modified",
-        "input": {
-            "type": "existing_version",
-            "v": "-2"
+            ]
         }
-    }
-    data_source_list = {}
-    data_source_list["data_sources"] = [new_data_source]
-    print("patching data with ", json.dumps(data_source_list))
-    raw = patch(app, '/contributors/id_test', json.dumps(data_source_list))
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 1
-    patched_data_source = r["contributors"][0]["data_sources"][0]
-    assert patched_data_source["name"] == "name_modified"
-    assert patched_data_source["data_format"] == "gtfs"
-    assert patched_data_source["input"]["type"] == "existing_version"
-    assert patched_data_source["input"]["v"] == "-2"
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 201, print(self.to_json(raw))
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 1
 
 
-def test_patch_contrib_one_data_source_name_of_two_and_add_one(app):
-    """
-    using /contributors endpoint
-    """
-    post_data = {
-        "id": "id_test",
-        "name": "name_test",
-        "data_prefix": "AAA",
-        "data_sources": [
-            {
-                "name": "data_source_name",
-                "data_format": "Neptune",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
+    def test_post_contrib_one_data_source_with_id(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "id": "data_source_id",
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
                 }
-            },
-            {
-                "name": "data_source_2",
-                "data_format": "Neptune",
-                "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
-                }
-            }
-        ]
-    }
-    raw = post(app, '/contributors', json.dumps(post_data))
-    r = to_json(raw)
-    assert raw.status_code == 201, print(r)
-    new_data_source = {
-        "id": r["contributors"][0]["data_sources"][1]["id"],
-        "name": "name_modified",
-        "input": {
-            "type": "existing_version",
-            "v": "-2"
+            ]
         }
-    }
-    r["contributors"][0]["data_sources"][0] = new_data_source
-    data_source_list = {}
-    data_source_list["data_sources"] = [
-        new_data_source,
-        {
-            "name": "data_source_3",
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 201, print(self.to_json(raw))
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+
+
+    def test_post_contrib_one_data_source_with_data_format(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "data_format": "Neptune",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 201, print(self.to_json(raw))
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        assert r["contributors"][0]["data_sources"][0]["data_format"] == "Neptune"
+        assert r["contributors"][0]["data_sources"][0]["input"]["type"] == "url"
+        assert r["contributors"][0]["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
+
+
+    def test_post_contrib_two_data_source(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                },
+                {
+                    "name": "data_source_name2",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 201
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 2
+        assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
+
+
+    def test_patch_contrib_data_source_with_full_contributor(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.to_json(raw)
+        assert raw.status_code == 201, print(r)
+        r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
+        raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        patched_data_source = r["contributors"][0]["data_sources"][0]
+        assert patched_data_source["name"] == "name_modified"
+
+
+    def test_patch_contrib_data_source_only(self, data_source):
+        """
+        using /contributors endpoint
+        """
+        new_data_source = {
+            "id": data_source["id"],
+            "name": "name_modified",
             "input": {
-                "type": "url",
-                "url": "http://stif.com/od.zip"
+                "type": "existing_version",
+                "v": "-2"
             }
         }
-    ]
-    print("patching data with ", json.dumps(data_source_list))
-    raw = patch(app, '/contributors/id_test', json.dumps(data_source_list))
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["data_sources"]) == 3
-    patched_data_sources = r["contributors"][0]["data_sources"]
-    assert patched_data_sources[0]["data_format"] == "Neptune"
-    assert patched_data_sources[1]["data_format"] == "Neptune"
-    assert patched_data_sources[2]["data_format"] == "gtfs"
-    assert patched_data_sources[0]["name"] == "data_source_name"
-    assert patched_data_sources[1]["name"] == "name_modified"
-    assert patched_data_sources[2]["name"] == "data_source_3"
+        data_source_list = {}
+        data_source_list["data_sources"] = [new_data_source]
+        print("patching data with ", json.dumps(data_source_list))
+        raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        patched_data_source = r["contributors"][0]["data_sources"][0]
+        assert patched_data_source["name"] == "name_modified"
+        assert patched_data_source["data_format"] == "gtfs"
+        assert patched_data_source["input"]["type"] == "existing_version"
+        assert patched_data_source["input"]["v"] == "-2"
 
-def test_patch_contrib_preprocesses_without_id(app, contributor):
-    """
-    using /contributors endpoint
-    """
-    preprocesses = [
-        {
-            "type": "Ruspell",
-            "source_params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
-            }
-        },
-        {
-            "type": "ComputeDirections",
-            "source_params": {
-                "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+
+    def test_patch_contrib_one_data_source_name_of_two_and_add_one(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "data_format": "Neptune",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                },
+                {
+                    "name": "data_source_2",
+                    "data_format": "Neptune",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.to_json(raw)
+        assert raw.status_code == 201, print(r)
+        new_data_source = {
+            "id": r["contributors"][0]["data_sources"][1]["id"],
+            "name": "name_modified",
+            "input": {
+                "type": "existing_version",
+                "v": "-2"
             }
         }
-    ]
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r['contributors']) == 1
-    r["contributors"][0]["preprocesses"] = preprocesses
-    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["preprocesses"]) == 2
-    types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
-    excepted = [p.get("type") for p in preprocesses]
-    assert types.sort() == excepted.sort()
-
-def test_patch_contrib_preprocesses_with_id(app, contributor):
-    """
-    using /contributors endpoint
-    """
-    preprocesses = [
-        {
-            "id": "ruspell",
-            "type": "Ruspell",
-            "source_params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+        r["contributors"][0]["data_sources"][0] = new_data_source
+        data_source_list = {}
+        data_source_list["data_sources"] = [
+            new_data_source,
+            {
+                "name": "data_source_3",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/od.zip"
+                }
             }
-        }
-    ]
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r['contributors']) == 1
-    r["contributors"][0]["preprocesses"] = preprocesses
-    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r["contributors"][0]["preprocesses"]) == 1
-    assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
-    assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
+        ]
+        print("patching data with ", json.dumps(data_source_list))
+        raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["data_sources"]) == 3
+        patched_data_sources = r["contributors"][0]["data_sources"]
+        assert patched_data_sources[0]["data_format"] == "Neptune"
+        assert patched_data_sources[1]["data_format"] == "Neptune"
+        assert patched_data_sources[2]["data_format"] == "gtfs"
+        assert patched_data_sources[0]["name"] == "data_source_name"
+        assert patched_data_sources[1]["name"] == "name_modified"
+        assert patched_data_sources[2]["name"] == "data_source_3"
 
-
-def test_patch_contrib_preprocesses_type_unknown(app, contributor):
-    """
-    using /contributors endpoint
-    """
-    preprocesses = [
-        {
-            "id": "ruspell",
-            "type": "BOB",
-            "source_params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+    def test_patch_contrib_preprocesses_without_id(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        preprocesses = [
+            {
+                "type": "Ruspell",
+                "source_params": {
+                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                }
+            },
+            {
+                "type": "ComputeDirections",
+                "source_params": {
+                    "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+                }
             }
-        }
-    ]
-    raw = app.get('/contributors')
-    r = to_json(raw)
-    assert raw.status_code == 200, print(r)
-    assert len(r['contributors']) == 1
-    r["contributors"][0]["preprocesses"] = preprocesses
-    raw = patch(app, '/contributors/id_test', json.dumps(r["contributors"][0]))
-    r = to_json(raw)
-    assert raw.status_code == 400, print(r)
-    assert "contributors" not in r
-    assert "message" in r
-    assert "error" in r
-    assert r["message"] == "Invalid arguments"
-    assert r["error"] == "Invalid process type BOB"
+        ]
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r['contributors']) == 1
+        r["contributors"][0]["preprocesses"] = preprocesses
+        raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["preprocesses"]) == 2
+        types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
+        excepted = [p.get("type") for p in preprocesses]
+        assert types.sort() == excepted.sort()
+
+    def test_patch_contrib_preprocesses_with_id(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        preprocesses = [
+            {
+                "id": "ruspell",
+                "type": "Ruspell",
+                "source_params": {
+                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                }
+            }
+        ]
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r['contributors']) == 1
+        r["contributors"][0]["preprocesses"] = preprocesses
+        raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r["contributors"][0]["preprocesses"]) == 1
+        assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
+        assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
+
+
+    def test_patch_contrib_preprocesses_type_unknown(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        preprocesses = [
+            {
+                "id": "ruspell",
+                "type": "BOB",
+                "source_params": {
+                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                }
+            }
+        ]
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r['contributors']) == 1
+        r["contributors"][0]["preprocesses"] = preprocesses
+        raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
+        r = self.to_json(raw)
+        assert raw.status_code == 400, print(r)
+        assert "contributors" not in r
+        assert "message" in r
+        assert "error" in r
+        assert r["message"] == "Invalid arguments"
+        assert r["error"] == "Invalid process type BOB"
+
+    def test_add_contributor_request_without_json(self):
+        raw = self.post(url='/contributors',
+                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
+                        headers=None)
+        assert raw.status_code == 400
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+
+        assert len(r["contributors"]) == 1
+        assert isinstance(r["contributors"], list)
+        assert r["contributors"][0]["id"] == "id_test"
+        assert r["contributors"][0]["name"] == "name_test"
+        assert r["contributors"][0]["data_prefix"] == "AAA"

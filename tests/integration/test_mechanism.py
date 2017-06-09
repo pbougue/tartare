@@ -36,10 +36,10 @@ import json
 class TartareFixture(object):
     tester = app.test_client()
 
-    def post(self, url, params=None):
+    def post(self, url, params=None, headers={'Content-Type': 'application/json'}):
         data = params if params else {}
         return self.tester.post(url,
-                                headers={'Content-Type': 'application/json'},
+                                headers=headers,
                                 data=data)
 
     def get(self, url):
@@ -47,3 +47,12 @@ class TartareFixture(object):
 
     def to_json(self, response):
         return json.loads(response.data.decode('utf-8'))
+
+    def patch(self, url, params=None, headers={'Content-Type': 'application/json'}):
+        data = params if params else {}
+        return self.tester.patch(url,
+                                 headers=headers,
+                                 data=data)
+
+    def delete(self, url):
+        return self.tester.delete(url)

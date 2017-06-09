@@ -27,9 +27,10 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tartare.core.models import Coverage, CoverageExport
-from tartare.http_exceptions import ObjectNotFound
+from tartare.http_exceptions import ObjectNotFound, InvalidArguments
 import logging
 from functools import wraps
+from flask import request
 
 
 class publish_params_validate(object):
@@ -56,3 +57,17 @@ class publish_params_validate(object):
                 raise ObjectNotFound(msg)
             return func(*args, **kwargs)
         return wrapper
+
+
+class json_data_validate(object):
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            post_data = request.json
+            if not post_data:
+                msg = 'request without data.'
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+            return func(*args, **kwargs)
+        return wrapper
+
