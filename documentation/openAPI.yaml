@@ -407,6 +407,50 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /coverages/{coverage_id}/environments/{environment_id}/actions/publish:
+    post:
+      summary: Handle a file to coverage {coverage_id} for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
+      tags:
+        - data
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: path
+          name: environment_id
+          type: string
+          enum: ["integration", "preproduction", "production"]
+          description: Environment of the coverage {coverage_id} the DATA will be sent to
+          required: true
+        - in: formData
+          name: file
+          type: file
+          description: File to be sent to the coverage. Data type is automatically detected
+          required: true
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Valid fusio file provided : file.zip"
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
   /coverages/{coverage_id}/exports:
     get:
       summary: Display coverage exports

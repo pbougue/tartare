@@ -115,4 +115,4 @@ api.add_resource(CoverageExportResource,
                  coverage_and_id + '/actions/export')
 
 api.add_resource(DataPublisher,
-                 coverage_and_id + '/environments/<string:environment_id>/actions/export')
+                 coverage_and_id + '/environments/<string:environment_id>/actions/publish')

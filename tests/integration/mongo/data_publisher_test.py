@@ -36,7 +36,7 @@ import json
 
 class TestDataPublisher(TartareFixture):
     def test_publish_unknwon_coverage(self):
-        resp = self.post("/coverages/default/environments/production/actions/export")
+        resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
         assert r['message'] == 'Object Not Found'
@@ -67,7 +67,7 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
 
         #Launch data update
-        resp = self.post("/coverages/default/environments/bob/actions/export")
+        resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
         assert r['message'] == 'Object Not Found'
@@ -98,7 +98,7 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
 
         #Launch data update
-        resp = self.post("/coverages/default/environments/production/actions/export")
+        resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
         assert r['message'] == 'Object Not Found'
@@ -158,5 +158,5 @@ class TestDataPublisher(TartareFixture):
 
         #Launch data update
         with mock.patch('requests.post', mock_requests_post):
-            resp = self.post("/coverages/default/environments/production/actions/export")
+            resp = self.post("/coverages/default/environments/production/actions/publish")
             assert resp.status_code == 200
