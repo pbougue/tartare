@@ -44,6 +44,9 @@ class AbstractDocker(metaclass=ABCMeta):
     def volumes_bindings(self):
         return []
 
+    def _remove_temporary_files(self):
+        pass
+
     @abstractmethod
     def _fetch_image(self):
         pass
@@ -91,6 +94,8 @@ class AbstractDocker(metaclass=ABCMeta):
 
     def __exit__(self, *args, **kwargs):
         logging.getLogger(__name__).info("stopping the temporary docker")
+        if self.volumes:
+            self._remove_temporary_files()
         self.docker.stop(container=self.container_id)
 
         logging.getLogger(__name__).info("removing the temporary docker")
@@ -109,8 +114,12 @@ class DownloadHttpServerDocker(AbstractDocker):
         self.docker.pull(self.image_name)
 
     @property
+    def working_dir(self):
+        return '/var/www'
+
+    @property
     def volumes(self):
-        return ['/var/www']
+        return [self.working_dir]
 
     @property
     def container_name(self):
@@ -124,10 +133,17 @@ class DownloadHttpServerDocker(AbstractDocker):
     def volumes_bindings(self):
         return {
             os.path.join(self.fixtures_directory, 'gtfs'): {
-                'bind': '/var/www',
+                'bind': self.working_dir,
                 'mode': 'rw',
             },
         }
+
+    def _remove_temporary_files(self):
+        self.logger.info('removing temporary files')
+        exec_id = self.docker.exec_create(container=self.container_id,
+                                cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
+        self.docker.exec_start(exec_id=exec_id)
+
 
 
 class DownloadFtpServerDocker(AbstractDocker):
@@ -135,8 +151,12 @@ class DownloadFtpServerDocker(AbstractDocker):
         self.docker.pull(self.image_name)
 
     @property
+    def working_dir(self):
+        return '/var/lib/ftp'
+
+    @property
     def volumes(self):
-        return ['/var/lib/ftp']
+        return [self.working_dir]
 
     @property
     def container_name(self):
@@ -150,10 +170,13 @@ class DownloadFtpServerDocker(AbstractDocker):
     def volumes_bindings(self):
         return {
             os.path.join(self.fixtures_directory, 'gtfs'): {
-                'bind': '/var/lib/ftp',
+                'bind': self.working_dir,
                 'mode': 'rw',
             },
         }
+
+    def _remove_temporary_files(self):
+        pass
 
 
 class MongoDocker(AbstractDocker):
