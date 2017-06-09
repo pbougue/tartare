@@ -44,6 +44,7 @@ from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import CoverageExport, Coverage
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,25 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
             grifs_handler.delete_file_from_gridfs(file_id)
     except:
         logging.exception('error')
+
+
+@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
+def publish_data(self, coverage_id, environment_id):
+    gridfs_handler = GridFsHandler()
+    coverage = Coverage.get(coverage_id)
+    environment = coverage.get_environment(environment_id)
+    gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
+    file = gridfs_handler.get_file_from_gridfs(gridfs_id)
+    for platform in environment.publication_platforms:
+        url = '/'.join([platform.url, coverage.id])
+        logger.debug('trying to send data to %s', url)
+        response = upload_file(url, file.filename, file)
+        if response.status_code != 200:
+            raise self.retry()
+    # Upgrade current_ntfs_id
+    current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
+    coverage.update(coverage_id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self, coverage_id, environment_type):

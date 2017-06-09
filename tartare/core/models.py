@@ -84,6 +84,9 @@ class Coverage(object):
         gridfs_handler.delete_file_from_gridfs(self.grid_calendars_id)
         self.grid_calendars_id = id
 
+    def get_environment(self, environment_id):
+        return self.environments.get(environment_id)
+
     def get_grid_calendars(self):
         if not self.grid_calendars_id:
             return None
@@ -411,8 +414,8 @@ class MongoContributorSchema(Schema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, id, action_type, contributor_id=None, coverage_id=None, state='pending', step=None):
-        self.id = id
+    def __init__(self, action_type, contributor_id=None, coverage_id=None, state='pending', step=None):
+        self.id = str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
         self.coverage_id = coverage_id

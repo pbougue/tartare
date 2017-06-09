@@ -34,6 +34,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from glob import glob
 from contextlib import contextmanager
 import os
+from mock import MagicMock
 
 
 def to_json(response):
@@ -86,3 +87,9 @@ def mock_urlretrieve(url, target):
 
 def mock_zip_file(url, target):
     pass
+
+
+def mock_requests_post(url, files, timeout):
+    response = MagicMock()
+    response.status_code = 200
+    return response

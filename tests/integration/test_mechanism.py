@@ -36,10 +36,11 @@ import json
 class TartareFixture(object):
     tester = app.test_client()
 
-    def post(self, url, params):
+    def post(self, url, params=None):
+        data = params if params else {}
         return self.tester.post(url,
                                 headers={'Content-Type': 'application/json'},
-                                data=params)
+                                data=data)
 
     def get(self, url):
         return self.tester.get(url)

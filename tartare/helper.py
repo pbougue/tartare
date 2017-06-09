@@ -44,7 +44,7 @@ GridOut.__len__ = grid_out_len
 
 
 def upload_file(url, filename, file):
-    return requests.post(url, files={'file': file}, timeout=120)
+    return requests.post(url, files={'file': file, 'filename': filename}, timeout=120)
     #TODO: fix interaction between toolbets and gridfs file
     #form = encoder.MultipartEncoder({
     #    'file': (filename, file, 'application/octet-stream')

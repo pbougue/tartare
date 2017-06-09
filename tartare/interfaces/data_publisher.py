@@ -27,26 +27,16 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from gridfs import GridFS
-from bson.objectid import ObjectId
-from tartare import mongo
+import flask_restful
+import logging
+from tartare.tasks import publish_data
+from tartare.decorators import publish_params_validate
 
 
-class GridFsHandler(object):
-    def __init__(self, database=None):
-        if database is None:
-            database = mongo.db
-        self.gridfs = GridFS(database)
-
-    def save_file_in_gridfs(self, file, **kwargs):
-        return str(self.gridfs.put(file, **kwargs))
-
-    def get_file_from_gridfs(self, id):
-        return self.gridfs.get(ObjectId(id))
-
-    def delete_file_from_gridfs(self, id):
-        return self.gridfs.delete(ObjectId(id))
-
-    def copy_file(self, id):
-        file = self.get_file_from_gridfs(id)
-        return self.save_file_in_gridfs(file=file, filename=file.filename)
+class DataPublisher(flask_restful.Resource):
+    @publish_params_validate()
+    def post(self, coverage_id, environment_id):
+        logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
+                                                                                                       environment_id))
+        publish_data.delay(coverage_id, environment_id)
+        return {'message': 'OK'}, 200
