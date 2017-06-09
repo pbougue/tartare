@@ -64,7 +64,7 @@ class json_data_validate(object):
         @wraps(func)
         def wrapper(*args, **kwargs):
             post_data = request.json
-            if not post_data:
+            if post_data is None:
                 msg = 'request without data.'
                 logging.getLogger(__name__).error(msg)
                 raise InvalidArguments(msg)

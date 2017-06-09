@@ -115,6 +115,7 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
+    @json_data_validate()
     def patch(self, contributor_id):
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error
