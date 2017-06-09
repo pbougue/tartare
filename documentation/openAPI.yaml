@@ -420,18 +420,13 @@ paths:
         - in: path
           name: coverage_id
           type: string
-          description: Identifier of the coverage that needs to be modified
+          description: which we want to publish or somethin
           required: true
         - in: path
           name: environment_id
           type: string
           enum: ["integration", "preproduction", "production"]
           description: Environment of the coverage {coverage_id} the DATA will be sent to
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
           required: true
       responses:
         200:
@@ -441,7 +436,7 @@ paths:
             properties:
               message:
                 type: string
-                example: "Valid fusio file provided : file.zip"
+                example: "OK"
         400:
           description: Invalid arguments
           schema :
