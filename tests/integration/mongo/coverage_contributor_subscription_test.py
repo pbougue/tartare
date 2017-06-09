@@ -105,6 +105,6 @@ def test_delete_valid_contributor(app, coverage, contributor):
 def test_bad_coverage_without_headers(app):
     raw = post(app, '/coverages/unknown/contributors',
                '''{"id": "bob"}''', None)
-    assert raw.status_code == 400
+    assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'

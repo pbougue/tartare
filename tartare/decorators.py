@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tartare.core.models import Coverage, CoverageExport
-from tartare.http_exceptions import ObjectNotFound, InvalidArguments
+from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType
 import logging
 from functools import wraps
 from flask import request
@@ -67,7 +67,7 @@ class json_data_validate(object):
             if post_data is None:
                 msg = 'request without data.'
                 logging.getLogger(__name__).error(msg)
-                raise InvalidArguments(msg)
+                raise UnsupportedMediaType(msg)
             return func(*args, **kwargs)
         return wrapper
 

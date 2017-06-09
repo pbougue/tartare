@@ -276,7 +276,7 @@ def test_post_without_headers(app, contributor):
         }
     }
     raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds), None)
-    assert raw.status_code == 400
+    assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'
 
@@ -295,6 +295,6 @@ def test_patch_without_headers(app, contributor):
         }
     }
     raw = patch(app, '/contributors/id_test/data_sources', json.dumps(post_ds), None)
-    assert raw.status_code == 400
+    assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'

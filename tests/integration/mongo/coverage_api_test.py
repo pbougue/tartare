@@ -264,12 +264,12 @@ class TestCoverageApi(TartareFixture):
 
     def test_post_without_headers(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}', None)
-        assert raw.status_code == 400
+        assert raw.status_code == 415
         r = self.to_json(raw)
         assert r['error'] == 'request without data.'
 
     def test_patch_without_headers(self):
         raw = self.post('/coverages/id_test', '{"id": "id_test", "name":"name_test"}', None)
-        assert raw.status_code == 400
+        assert raw.status_code == 415
         r = self.to_json(raw)
         assert r['error'] == 'request without data.'

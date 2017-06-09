@@ -491,7 +491,7 @@ class TestContributors(TartareFixture):
         raw = self.post(url='/contributors',
                         params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
                         headers=None)
-        assert raw.status_code == 400
+        assert raw.status_code == 415
         r = self.to_json(raw)
         assert r['error'] == 'request without data.'
 
@@ -499,6 +499,6 @@ class TestContributors(TartareFixture):
         raw = self.post(url='/contributors',
                         params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
                         headers=None)
-        assert raw.status_code == 400
+        assert raw.status_code == 415
         r = self.to_json(raw)
         assert r['error'] == 'request without data.'
