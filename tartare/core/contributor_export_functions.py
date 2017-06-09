@@ -32,7 +32,7 @@ import os
 import tempfile
 import urllib.request
 import zipfile
-from urllib.error import ContentTooShortError, HTTPError
+from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
 
@@ -70,6 +70,9 @@ def fetch_datasets(contributor, context):
                     raise
                 except ContentTooShortError:
                     logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
+                    raise
+                except URLError as e:
+                    logger.error('error during download of file: {}'.format(str(e)))
                     raise
     return context
 

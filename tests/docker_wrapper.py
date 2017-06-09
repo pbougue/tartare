@@ -28,29 +28,36 @@
 import os
 import docker
 import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class AbstractDocker(metaclass=ABCMeta):
+    @property
+    def fixtures_directory(self):
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        return os.path.join(current_dir, 'fixtures')
+
     def _get_docker_file(self):
         return None
 
-    def _get_volumes_bindings(self):
+    @property
+    def volumes_bindings(self):
         return []
 
     @abstractmethod
     def _fetch_image(self):
         pass
 
-    @abstractmethod
-    def _get_image_name(self):
+    @abstractproperty
+    def image_name(self):
         pass
 
-    @abstractmethod
-    def _get_container_name(self):
+    @abstractproperty
+    def container_name(self):
         pass
 
-    def _get_volumes(self):
+    @property
+    def volumes(self):
         return []
 
     def __enter__(self):
@@ -59,7 +66,7 @@ class AbstractDocker(metaclass=ABCMeta):
     def execute_manual_build(self):
         self.logger.info('building docker image')
         for build_output in self.docker.build(fileobj=self._get_docker_file(),
-                                              tag=self._get_image_name(), rm=True):
+                                              tag=self.image_name, rm=True):
             self.logger.debug(build_output)
 
     def __init__(self):
@@ -67,15 +74,14 @@ class AbstractDocker(metaclass=ABCMeta):
         self.docker = docker.from_env()
         self._fetch_image()
 
-        volumes = self._get_volumes()
         host_config = self.docker.create_host_config(
-            binds=self._get_volumes_bindings()
-        ) if len(volumes) else None
+            binds=self.volumes_bindings
+        ) if self.volumes else None
 
-        self.container_id = self.docker.create_container(self._get_image_name(), name=self._get_container_name(),
-                                                         volumes=volumes, host_config=host_config).get('Id')
+        self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
+                                                         volumes=self.volumes, host_config=host_config).get('Id')
         self.logger.info("docker id is {}".format(self.container_id))
-        self.logger.info("starting the temporary docker for image {}".format(self._get_image_name()))
+        self.logger.info("starting the temporary docker for image {}".format(self.image_name))
         self.docker.start(self.container_id)
         self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
         if not self.ip_addr:
@@ -92,31 +98,59 @@ class AbstractDocker(metaclass=ABCMeta):
 
         # test to be sure the docker is removed at the end
         for cont in self.docker.containers(all=True):
-            if cont['Image'].split(':')[0] == self._get_image_name():
+            if cont['Image'].split(':')[0] == self.image_name:
                 if self.container_id in (name[1:] for name in cont['Names']):
                     self.logger.error("something is strange, the container is still there ...")
                     exit(1)
 
 
-class DownloadServerDocker(AbstractDocker):
+class DownloadHttpServerDocker(AbstractDocker):
     def _fetch_image(self):
-        self.docker.pull(self._get_image_name())
+        self.docker.pull(self.image_name)
 
-    def _get_volumes(self):
+    @property
+    def volumes(self):
         return ['/var/www']
 
-    def _get_container_name(self):
+    @property
+    def container_name(self):
         return 'http_download_server'
 
-    def _get_image_name(self):
+    @property
+    def image_name(self):
         return 'visity/webdav'
 
-    def _get_volumes_bindings(self):
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        gtfs_http_fixtures_dir = os.path.join(current_dir, 'fixtures', 'gtfs', 'http', '')
+    @property
+    def volumes_bindings(self):
         return {
-            gtfs_http_fixtures_dir: {
+            os.path.join(self.fixtures_directory, 'gtfs'): {
                 'bind': '/var/www',
+                'mode': 'rw',
+            },
+        }
+
+
+class DownloadFtpServerDocker(AbstractDocker):
+    def _fetch_image(self):
+        self.docker.pull(self.image_name)
+
+    @property
+    def volumes(self):
+        return ['/var/lib/ftp']
+
+    @property
+    def container_name(self):
+        return 'ftp_download_server'
+
+    @property
+    def image_name(self):
+        return 'gimoh/pureftpd'
+
+    @property
+    def volumes_bindings(self):
+        return {
+            os.path.join(self.fixtures_directory, 'gtfs'): {
+                'bind': '/var/lib/ftp',
                 'mode': 'rw',
             },
         }
@@ -139,10 +173,12 @@ class MongoDocker(AbstractDocker):
             is reduced by 10s
         """
         from io import BytesIO
-        return BytesIO("FROM {}".format(self._get_image_name()).encode())
+        return BytesIO("FROM {}".format(self.image_name).encode())
 
-    def _get_container_name(self):
+    @property
+    def container_name(self):
         return 'tartare_test_mongo'
 
-    def _get_image_name(self):
+    @property
+    def image_name(self):
         return 'mongo'
