@@ -29,7 +29,7 @@
 from tartare import app, mongo
 import pytest
 from tartare.core import models
-from tests.docker_wrapper import MongoDocker
+from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker
 from tests.utils import to_json
 
 
@@ -47,7 +47,7 @@ def init_mongo_db(docker):
     """
     when the docker is started, we init flask once for the new database
     """
-    app.config['MONGO_TEST_DBNAME'] = docker.DBNAME
+    app.config['MONGO_TEST_DBNAME'] = docker.db_name
     app.config['MONGO_TEST_HOST'] = docker.ip_addr
     mongo.init_app(app, 'MONGO_TEST')
 
@@ -56,8 +56,19 @@ def init_mongo_db(docker):
 def empty_mongo(docker):
     """Empty mongo db before each tests"""
     with app.app_context():
-        mongo.db.client.drop_database(docker.DBNAME)
+        mongo.db.client.drop_database(docker.db_name)
         models.init_mongo()
+
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def init_http_download_server():
+    with DownloadHttpServerDocker() as download_server:
+        yield download_server
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def init_ftp_download_server():
+    with DownloadFtpServerDocker() as download_server:
+        yield download_server
 
 
 @pytest.yield_fixture(scope="function")

@@ -25,59 +25,72 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+import os
 import docker
 import logging
-
-# python image
-MONGO_IMAGE = 'mongo'
-MONGO_CONTAINER_NAME = 'tartare_test_mongo'
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-def _get_docker_file():
-    """
-    Return a dumb DockerFile
+class AbstractDocker(metaclass=ABCMeta):
+    @property
+    def fixtures_directory(self):
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        return os.path.join(current_dir, 'fixtures')
 
-    The best way to get the image would be to get it from dockerhub,
-    but with this dumb wrapper the runtime time of the unit tests
-    is reduced by 10s
-    """
-    from io import BytesIO
-    return BytesIO("FROM {}".format(MONGO_IMAGE).encode())
+    def _get_docker_file(self):
+        return None
 
+    @property
+    def volumes_bindings(self):
+        return []
 
-class MongoDocker(object):
-    DBNAME = 'tartare_test'
-    """
-    launch a temporary docker for integration tests
-    """
-    def __init__(self):
-        log = logging.getLogger(__name__)
-        self.docker = docker.Client(base_url='unix://var/run/docker.sock')
+    @abstractmethod
+    def _fetch_image(self):
+        pass
 
-        log.info('building docker image')
-        for build_output in self.docker.build(fileobj=_get_docker_file(),
-                                              tag=MONGO_IMAGE, rm=True):
-            log.debug(build_output)
+    @abstractproperty
+    def image_name(self):
+        pass
 
-        self.container_id = self.docker.create_container(MONGO_IMAGE,
-                                                         name=MONGO_CONTAINER_NAME).get('Id')
+    @abstractproperty
+    def container_name(self):
+        pass
 
-        log.info("docker id is {}".format(self.container_id))
-
-        log.info("starting the temporary docker")
-        self.docker.start(self.container_id)
-        self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
-
-        if not self.ip_addr:
-            log.error("temporary docker {} not started".format(self.container_id))
-            assert False
+    @property
+    def volumes(self):
+        return []
 
     def __enter__(self):
         return self
 
+    def execute_manual_build(self):
+        self.logger.info('building docker image')
+        for build_output in self.docker.build(fileobj=self._get_docker_file(),
+                                              tag=self.image_name, rm=True):
+            self.logger.debug(build_output)
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.docker = docker.from_env()
+        self._fetch_image()
+
+        host_config = self.docker.create_host_config(
+            binds=self.volumes_bindings
+        ) if self.volumes else None
+
+        self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
+                                                         volumes=self.volumes, host_config=host_config).get('Id')
+        self.logger.info("docker id is {}".format(self.container_id))
+        self.logger.info("starting the temporary docker for image {}".format(self.image_name))
+        self.docker.start(self.container_id)
+        self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
+        if not self.ip_addr:
+            self.logger.error("temporary docker {} not started".format(self.container_id))
+            assert False
+        self.logger.info("IP addr is {}".format(self.ip_addr))
+
     def __exit__(self, *args, **kwargs):
-        logging.getLogger(__name__).info("stoping the temporary docker")
+        logging.getLogger(__name__).info("stopping the temporary docker")
         self.docker.stop(container=self.container_id)
 
         logging.getLogger(__name__).info("removing the temporary docker")
@@ -85,7 +98,87 @@ class MongoDocker(object):
 
         # test to be sure the docker is removed at the end
         for cont in self.docker.containers(all=True):
-            if cont['Image'].split(':')[0] == MONGO_IMAGE:
+            if cont['Image'].split(':')[0] == self.image_name:
                 if self.container_id in (name[1:] for name in cont['Names']):
-                    logging.getLogger(__name__).error("something is strange, the container is still there ...")
+                    self.logger.error("something is strange, the container is still there ...")
                     exit(1)
+
+
+class DownloadHttpServerDocker(AbstractDocker):
+    def _fetch_image(self):
+        self.docker.pull(self.image_name)
+
+    @property
+    def volumes(self):
+        return ['/var/www']
+
+    @property
+    def container_name(self):
+        return 'http_download_server'
+
+    @property
+    def image_name(self):
+        return 'visity/webdav'
+
+    @property
+    def volumes_bindings(self):
+        return {
+            os.path.join(self.fixtures_directory, 'gtfs'): {
+                'bind': '/var/www',
+                'mode': 'rw',
+            },
+        }
+
+
+class DownloadFtpServerDocker(AbstractDocker):
+    def _fetch_image(self):
+        self.docker.pull(self.image_name)
+
+    @property
+    def volumes(self):
+        return ['/var/lib/ftp']
+
+    @property
+    def container_name(self):
+        return 'ftp_download_server'
+
+    @property
+    def image_name(self):
+        return 'gimoh/pureftpd'
+
+    @property
+    def volumes_bindings(self):
+        return {
+            os.path.join(self.fixtures_directory, 'gtfs'): {
+                'bind': '/var/lib/ftp',
+                'mode': 'rw',
+            },
+        }
+
+
+class MongoDocker(AbstractDocker):
+    @property
+    def db_name(self):
+        return 'tartare_test'
+
+    def _fetch_image(self):
+        self.execute_manual_build()
+
+    def _get_docker_file(self):
+        """
+            Return a dumb DockerFile
+
+            The best way to get the image would be to get it from dockerhub,
+            but with this dumb wrapper the runtime time of the unit tests
+            is reduced by 10s
+        """
+        from io import BytesIO
+        return BytesIO("FROM {}".format(self.image_name).encode())
+
+    @property
+    def container_name(self):
+        return 'tartare_test_mongo'
+
+    @property
+    def image_name(self):
+        return 'mongo'

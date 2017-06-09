@@ -480,6 +480,7 @@ class MongoJobSchema(Schema):
     step = fields.String(required=False)
     started_at = fields.DateTime(required=False)
     updated_at = fields.DateTime(required=False)
+    error_message = fields.String(required=False)
 
 
 class ContributorExport(object):
