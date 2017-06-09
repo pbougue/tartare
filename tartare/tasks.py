@@ -96,7 +96,7 @@ def publish_data(self, coverage_id, environment_id):
     gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
     file = gridfs_handler.get_file_from_gridfs(gridfs_id)
     for platform in environment.publication_platforms:
-        url = '{}/{}'.format(platform.url, coverage.id)
+        url = '/'.join([platform.url, coverage.id])
         logger.debug('trying to send data to %s', url)
         response = upload_file(url, file.filename, file)
         if response.status_code != 200:
