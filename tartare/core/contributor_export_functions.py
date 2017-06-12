@@ -35,6 +35,7 @@ import zipfile
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
+from tartare.helper import get_filename
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def fetch_datasets(contributor, context):
             url = data_input.get('url')
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
-                filename = "gtfs-{data_source_id}.zip".format(data_source_id=data_source.id)
+                filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
