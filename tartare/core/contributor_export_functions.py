@@ -61,7 +61,9 @@ def fetch_datasets(contributor, context):
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
                     if not zipfile.is_zipfile(tmp_file_name):
-                        raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                        msg = 'downloaded file from url {} is not a zip file'.format(url)
+                        logger.error(msg)
+                        raise Exception(msg)
                     with open(tmp_file_name, 'rb') as file:
                         grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
                         context.add_data_source_grid(data_source_id=data_source.id, grid_fs_id=grid_fs_id)
