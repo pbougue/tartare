@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename
 import requests_mock
 from io import StringIO
 
@@ -80,3 +80,19 @@ def test_upload_file():
         assert request.method == 'POST'
         assert request.url == 'http://test.com/'
         #we can't really check the upload: we can only check how it's implemented in requests
+
+
+def test_get_filename_without_url():
+    assert get_filename(None, "1234") == "gtfs-1234.zip"
+
+
+def test_get_filename_url_without_zip():
+    assert get_filename('http://bob.com/filename', "1234") == "gtfs-1234.zip"
+
+
+def test_get_filename_url_ok():
+    assert get_filename('http://bob.com/filename.zip', "1234") == "filename.zip"
+
+
+def test_get_filename_ok():
+    assert get_filename('filename.zip', "1234") == "filename.zip"
