@@ -262,7 +262,7 @@ def test_post_without_headers(app, contributor):
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
         }
     }
-    raw = post(app, '/contributors/id_test/preprocesses', json.dumps(post_ps), None)
+    raw = post(app, '/contributors/id_test/preprocesses', json.dumps(post_ps), headers=None)
     assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'
@@ -279,7 +279,7 @@ def test_patch_without_headers(app, contributor):
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
         }
     }
-    raw = patch(app, '/contributors/id_test/preprocesses/1234', json.dumps(post_ps), None)
+    raw = patch(app, '/contributors/id_test/preprocesses/1234', json.dumps(post_ps), headers=None)
     assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'

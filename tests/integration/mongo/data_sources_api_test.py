@@ -275,7 +275,7 @@ def test_post_without_headers(app, contributor):
             "url": "http://stif.com/od.zip"
         }
     }
-    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds), None)
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds), headers=None)
     assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'
@@ -294,7 +294,7 @@ def test_patch_without_headers(app, contributor):
             "url": "http://stif.com/od.zip"
         }
     }
-    raw = patch(app, '/contributors/id_test/data_sources', json.dumps(post_ds), None)
+    raw = patch(app, '/contributors/id_test/data_sources', json.dumps(post_ds), headers=None)
     assert raw.status_code == 415
     r = to_json(raw)
     assert r['error'] == 'request without data.'
