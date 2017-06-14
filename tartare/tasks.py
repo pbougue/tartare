@@ -37,6 +37,7 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
+from tartare.core.coverage_export_publisher import HttpPublisher, FtpPublisher, PublishException
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
@@ -90,20 +91,30 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def publish_data(self, coverage_id, environment_id):
+    logger.info('publish_data')
     gridfs_handler = GridFsHandler()
     coverage = Coverage.get(coverage_id)
     environment = coverage.get_environment(environment_id)
     gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
     file = gridfs_handler.get_file_from_gridfs(gridfs_id)
     for platform in environment.publication_platforms:
-        url = '/'.join([platform.url, coverage.id])
-        logger.debug('trying to send data to %s', url)
-        response = upload_file(url, file.filename, file)
-        if response.status_code != 200:
-            raise self.retry()
-    # Upgrade current_ntfs_id
-    current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
-    coverage.update(coverage_id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+        publishers_by_type = {
+            "http": HttpPublisher,
+            "ftp": FtpPublisher
+        }
+        if platform.type not in publishers_by_type:
+            error_message = 'unknown platform type "{type}"'.format(type=platform.type)
+            logger.error(error_message)
+            raise Exception(error_message)
+        publisher = publishers_by_type[platform.type](platform.url, platform.authent)
+        try:
+            # Upgrade current_ntfs_id
+            publisher.publish(file)
+            current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
+            coverage.update(coverage_id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+        except PublishException:
+            self.retry()
+
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -113,7 +124,6 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
     grifs_handler = GridFsHandler()
     ntfs_file = grifs_handler.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
     grid_calendars_file = coverage.get_grid_calendars()
-    response = None
     if grid_calendars_file:
         with tempfile.TemporaryDirectory() as tmpdirname:
             output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip'\

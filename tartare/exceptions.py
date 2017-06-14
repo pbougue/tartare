@@ -1,4 +1,8 @@
+<<<<<<< 5c6e350def2f9e5d91218df53c649b44bed620a3
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+=======
+# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
+>>>>>>> first draft publish ftp and http working
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -41,3 +45,6 @@ class FileNotFound(Exception):
 class InvalidFile(Exception):
     def __init__(self, message=''):
         self.message = message
+
+class PublishException(Exception):
+    pass

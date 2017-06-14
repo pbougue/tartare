@@ -37,6 +37,7 @@ import uuid
 from datetime import datetime
 import logging
 
+
 @app.before_first_request
 def init_mongo():
     mongo.db['contributors'].create_index("data_prefix", unique=True)
@@ -55,6 +56,12 @@ class Environment(object):
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
+
+
+class Authent(object):
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
 
 
 class Platform(object):
@@ -184,6 +191,15 @@ class MongoContributorExportDataSourceSchema(Schema):
     @post_load
     def make_contributorexportdatasource(self, data):
         return ContributorExportDataSource(**data)
+
+
+class MongoPlatformAuthentSchema(Schema):
+    username = fields.String(required=True)
+    password = fields.String(required=True)
+
+    @post_load
+    def make_platform(self, data):
+        return Authent(**data)
 
 
 class MongoPlatformSchema(Schema):
@@ -398,7 +414,6 @@ class Contributor(object):
     def save(self):
         raw = MongoContributorSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
-
 
     @classmethod
     def get(cls, contributor_id=None):
