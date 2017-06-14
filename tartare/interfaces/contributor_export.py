@@ -31,7 +31,7 @@ import flask_restful
 from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
-from tartare.exceptions import ObjectNotFound
+from tartare.http_exceptions import ObjectNotFound
 
 
 class ContributorExportResource(flask_restful.Resource):

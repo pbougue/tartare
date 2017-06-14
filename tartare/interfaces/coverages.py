@@ -34,7 +34,7 @@ import logging
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from flask import request
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 class Coverage(flask_restful.Resource):

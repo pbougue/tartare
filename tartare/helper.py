@@ -34,7 +34,7 @@ import requests
 from gridfs.grid_file import GridOut
 import tartare.processes
 import logging
-from tartare.exceptions import InvalidArguments
+from tartare.http_exceptions import InvalidArguments
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way

@@ -38,7 +38,7 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 from tartare import tasks
-from tartare.exceptions import InvalidArguments, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 from tartare.core.gridfs_handler import GridFsHandler
 
 
