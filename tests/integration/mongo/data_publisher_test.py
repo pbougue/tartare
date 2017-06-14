@@ -157,7 +157,8 @@ class TestDataPublisher(TartareFixture):
         exports = r["exports"]
         assert len(exports) == 1
         assert exports[0]["production_date"]["start_date"] == "2015-03-25"
-        assert exports[0]["production_date"]["end_date"] == "2017-07-02"
+        assert exports[0]["production_date"]["end_date"] == "2015-08-26"
+
         assert exports[0]["gridfs_id"]
         data_sources = exports[0]["data_sources"]
         assert len(data_sources) == 1
@@ -172,7 +173,7 @@ class TestDataPublisher(TartareFixture):
         exports = r["exports"]
         assert len(exports) == 1
         assert exports[0]["production_date"]["start_date"] == "2015-03-25"
-        assert exports[0]["production_date"]["end_date"] == "2017-07-02"
+        assert exports[0]["production_date"]["end_date"] == "2015-08-26"
         assert exports[0]["gridfs_id"]
         contributors = exports[0]["contributors"]
         assert len(contributors) == 1

@@ -38,9 +38,9 @@ from tartare.exceptions import FileNotFound, InvalidFile
 
 class ProductionDateFinder(object):
     #TODO Management of case where the period exceeds one year
-    def __init__(self, date_format='%Y%m%d'):
-        self.start_date = date.max
-        self.end_date = date.min
+    def __init__(self, start_date=date.max, end_date=date.min, date_format='%Y%m%d'):
+        self.start_date = start_date
+        self.end_date = end_date
         self.date_format = date_format
 
     @staticmethod
@@ -59,7 +59,7 @@ class ProductionDateFinder(object):
     def get_index(filename, headers, column):
         try:
             return headers.index(column)
-        except Exception as e:
+        except Exception:
             msg = 'column name {} is not exist in file {}'.format(column, filename)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
@@ -75,10 +75,12 @@ class ProductionDateFinder(object):
                     header_start = self.get_index(filename, data, 'start_date')
                     header_end = self.get_index(filename, data, 'end_date')
                     continue
-                if self.start_date > self._str_date(data[header_start]):
-                    self.start_date = self._str_date(data[header_start])
-                if self.end_date < self._str_date(data[header_end]):
-                    self.end_date = self._str_date(data[header_end])
+                current_start_date = self._str_date(data[header_start])
+                current_end_date = self._str_date(data[header_end])
+                if self.start_date > current_start_date:
+                    self.start_date = current_start_date
+                if self.end_date < current_end_date:
+                    self.end_date = current_end_date
 
     def _parse_calendar_dates(self, files_zip):
         with files_zip.open('calendar_dates.txt', ) as file:
@@ -88,10 +90,11 @@ class ProductionDateFinder(object):
                 if not header_date:
                     header_date = data.index('date')
                     continue
-                if self.start_date > self._str_date(data[header_date]):
-                    self.start_date = self._str_date(data[header_date])
-                if self.end_date < self._str_date(data[header_date]):
-                    self.end_date = self._str_date(data[header_date])
+                current_date = self._str_date(data[header_date])
+                if self.start_date > current_date:
+                    self.start_date = current_date
+                if self.end_date < current_date:
+                    self.end_date = current_date
 
     @staticmethod
     def _check_zip_file(file):
