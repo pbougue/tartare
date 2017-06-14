@@ -122,7 +122,8 @@ def coverage_obj(tmpdir, get_app_context):
 def coverage_export_obj(tmpdir, get_app_context):
     p = models.ProductionDate(date(2017, 1, 1), date(2017, 1, 30))
     c = models.ContributorExportDataSource(data_source_id='1234', production_date=p)
-    contributors = models.CoverageExportContributor(contributor_id='fr-idf', production_date=p, data_sources=[c])
+    contributors = models.CoverageExportContributor(contributor_id='fr-idf',
+                                                    production_date=p, data_sources=[c])
     coverage_export = models.CoverageExport(coverage_id='coverage1',
                                             gridfs_id='1234',
                                             production_date=p,

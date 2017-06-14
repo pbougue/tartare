@@ -1101,12 +1101,35 @@ definitions:
       coverage_id:
         type: string
         example: fr-idf
+      created_at:
+        type: string
+        example: "2017-06-14T13:05:30.008401+00:00"
       contributors:
-        type: object
-        example: [contributor_stif, contributor_pdl]
+        type: array
+        items:
+          $ref: "#/definitions/contributors_coverage_export"
       gridfs_id:
         type: string
         example: 592d4b327053ad21a7626578
+      production_date:
+        type: array
+        items:
+          $ref: "#/definitions/production_date"
+
+  contributors_coverage_export:
+    type: object
+    properties:
+      contributor_id:
+        type: string
+      production_date:
+        type: array
+        items:
+          $ref: "#/definitions/production_date"
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/export_data_sources"
+      
 
   contributor_export_list:
     type: object
@@ -1125,12 +1148,41 @@ definitions:
       contributor_id:
         type: string
         example: contributor_stif
-      contributors:
-        type: object
-        example: [datasource_stif]
+      created_at:
+        type: string
+        example: "2017-06-14T12:46:21.119813+00:00"
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/export_data_sources"
       gridfs_id:
         type: string
         example: 592d4b327053ad21a7626578
+      production_date:
+        type: array
+        items:
+          $ref: "#/definitions/production_date"
+
+  export_data_sources:
+    type: object
+    properties:
+      data_source_id:
+        type: string
+        example: data_source_stif
+      production_date:
+        type: array
+        items:
+          $ref: "#/definitions/production_date"
+        
+  production_date:
+    type: object
+    properties:
+      start_date:
+        type: string
+        example: "2017-06-14"
+      end_date:
+        type: string
+        example: "2017-06-20"
 
   data_source_obj:
     type: object
