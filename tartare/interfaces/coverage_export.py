@@ -31,7 +31,7 @@ import flask_restful
 from tartare.tasks import coverage_export
 from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
-from tartare.exceptions import ObjectNotFound
+from tartare.http_exceptions import ObjectNotFound
 from tartare.interfaces.schema import CoverageExportSchema
 
 

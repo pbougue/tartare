@@ -37,7 +37,7 @@ from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 import shutil
-from tartare.exceptions import InvalidArguments, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 
 
 class DataSet(Resource):

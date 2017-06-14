@@ -33,7 +33,7 @@ from tartare.core import models
 from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.helper import validate_preprocesses_or_raise
 import uuid
 import logging

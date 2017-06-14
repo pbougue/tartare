@@ -32,7 +32,7 @@ import flask_restful
 from pymongo.errors import PyMongoError
 from tartare.core import models
 from tartare.interfaces import schema
-from tartare.exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 
 
 class CoverageContributorSubscription(flask_restful.Resource):

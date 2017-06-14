@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tartare.core.models import Coverage, CoverageExport
-from tartare.exceptions import ObjectNotFound
+from tartare.http_exceptions import ObjectNotFound
 import logging
 from functools import wraps
 

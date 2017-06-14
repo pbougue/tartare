@@ -36,7 +36,7 @@ from flask.globals import request
 from flask_restful import Resource
 from tartare import tasks
 from tartare.core import models
-from tartare.exceptions import InvalidArguments, ObjectNotFound
+from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_CALENDARS_HEADER = {'id', 'name', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',

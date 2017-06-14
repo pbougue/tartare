@@ -30,7 +30,7 @@
 import flask_restful
 from tartare.core import models
 from tartare.interfaces.schema import JobSchema
-from tartare.exceptions import ObjectNotFound
+from tartare.http_exceptions import ObjectNotFound
 
 
 class Job(flask_restful.Resource):
