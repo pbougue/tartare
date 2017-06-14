@@ -79,7 +79,12 @@ class TestCoverageExport(TartareFixture):
         assert len(r["exports"]) == 1
         assert r["exports"][0]["gridfs_id"] == "1234"
         assert r["exports"][0]["coverage_id"] == "coverage1"
-        assert r["exports"][0]["contributors"] == ["contributor1", "contributor2"]
+        assert r["exports"][0]['production_date']['start_date'] == '2017-01-01'
+        assert r["exports"][0]['production_date']['end_date'] == '2017-01-30'
+        assert len(r["exports"][0]["contributors"]) == 1
+        assert r["exports"][0]["contributors"][0]['contributor_id'] == 'fr-idf'
+        assert r["exports"][0]['contributors'][0]['production_date']['start_date'] == '2017-01-01'
+        assert r["exports"][0]['contributors'][0]['production_date']['end_date'] == '2017-01-30'
 
         # Exports for coverage2, 0 export
         exports = self.get('/coverages/coverage2/exports')

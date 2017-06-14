@@ -28,8 +28,9 @@
 # www.navitia.io
 
 import logging
-from tartare.core.models import ContributorExport, CoverageExport
+from tartare.core.models import ContributorExport, CoverageExport, CoverageExportContributor
 from tartare.core.gridfs_handler import GridFsHandler
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +58,20 @@ def initialize_context(coverage, context):
 
 
 def save_export(coverage, context):
+
     for ce in context.contributor_exports:
         if not ce.get("gridfs_id"):
             logger.info("contributor export {} without gridfs id.".format(ce.get("contributor_id")))
             continue
         new_grid_fs_id = GridFsHandler().copy_file(ce.get("gridfs_id"))
+        production_date = ce.get('production_date')
+        contributor = CoverageExportContributor(contributor_id=ce.get("contributor_id"),
+                                                production_date=production_date,
+                                                data_sources=ce.get("data_sources"))
         export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,
-                                contributors=[ce.get("contributor_id")])
+                                #TODO merge dates of all contributor
+                                production_date=production_date,
+                                contributors=[contributor])
         export.save()
         ce.update({'gridfs_id': new_grid_fs_id})
     return context

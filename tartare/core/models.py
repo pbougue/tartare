@@ -51,10 +51,10 @@ def get_contributor(contributor_id):
 
 
 class Environment(object):
-    def __init__(self, name=None, current_ntfs_id=None, publication_platforms=[]):
+    def __init__(self, name=None, current_ntfs_id=None, publication_platforms=None):
         self.name = name
         self.current_ntfs_id = current_ntfs_id
-        self.publication_platforms = publication_platforms
+        self.publication_platforms = publication_platforms if publication_platforms else []
 
 
 class Platform(object):
@@ -62,6 +62,18 @@ class Platform(object):
         self.name = name
         self.type = type
         self.url = url
+
+
+class ProductionDate(object):
+    def __init__(self, start_date, end_date):
+        self.start_date = start_date
+        self.end_date = end_date
+
+
+class ContributorExportDataSource(object):
+    def __init__(self, data_source_id=None, production_date=None):
+        self.data_source_id = data_source_id
+        self.production_date = production_date
 
 
 class Coverage(object):
@@ -121,9 +133,10 @@ class Coverage(object):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, coverage_id=None, dataset={}):
+    def update(cls, coverage_id=None, dataset=None):
         # we have to use "doted notation' to only update some fields of a nested object
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(dataset)})
+        tmp_dataset = dataset if dataset else {}
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(tmp_dataset)})
         if raw.matched_count == 0:
             return None
 
@@ -152,6 +165,24 @@ class Coverage(object):
         if contributor_id in self.contributors:
             self.contributors.remove(contributor_id)
             self.update(self.id, {"contributors": self.contributors})
+
+
+class MongoProductionDateSchema(Schema):
+    start_date = fields.Date(required=True)
+    end_date = fields.Date(required=True)
+
+    @post_load
+    def make_productiondate(self, data):
+        return ProductionDate(**data)
+
+
+class MongoContributorExportDataSourceSchema(Schema):
+    data_source_id = fields.String(required=True)
+    production_date = fields.Nested(MongoProductionDateSchema)
+
+    @post_load
+    def make_contributorexportdatasource(self, data):
+        return ContributorExportDataSource(**data)
 
 
 class MongoPlatformSchema(Schema):
@@ -186,14 +217,11 @@ class MongoEnvironmentListSchema(Schema):
 
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", input={}):
-        if not id:
-            self.id = str(uuid.uuid4())
-        else:
-            self.id = id
+    def __init__(self, id=None, name=None, data_format="gtfs", input=None):
+        self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
-        self.input = input
+        self.input = {} if not input else input
 
     def save(self, contributor_id):
         contributor = get_contributor(contributor_id)
@@ -234,18 +262,19 @@ class DataSource(object):
         return nb_delete
 
     @classmethod
-    def update(cls, contributor_id, data_source_id=None, dataset={}):
+    def update(cls, contributor_id, data_source_id=None, dataset=None):
+        tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
             raise ValueError('A data_source id is required')
         if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
             raise ValueError("No data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
-        if 'id' in dataset and dataset['id'] != data_source_id:
+        if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
             raise ValueError("Id from request {} doesn't match id from url {}"
-                             .format(dataset['id'], data_source_id))
+                             .format(tmp_dataset['id'], data_source_id))
 
         # `$` acts as a placeholder of the first match in the list
-        contrib_dataset = {'data_sources': {'$': dataset}}
+        contrib_dataset = {'data_sources': {'$': tmp_dataset}}
         raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
                                                                 {'$set': to_doted_notation(contrib_dataset)})
         if raw.matched_count == 0:
@@ -256,7 +285,7 @@ class DataSource(object):
 
 class PreProcess(object):
     def __init__(self, id=None, type=None, source_params=None):
-        self.id = str(uuid.uuid4()) if id is None else id
+        self.id = str(uuid.uuid4()) if not id else id
         self.type = type
         self.source_params = {} if source_params is None else source_params
 
@@ -391,8 +420,9 @@ class Contributor(object):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id=None, dataset={}):
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': dataset})
+    def update(cls, contributor_id=None, dataset=None):
+        tmp_dataset = dataset if dataset else {}
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
         if raw.matched_count == 0:
             return None
 
@@ -489,11 +519,12 @@ class MongoJobSchema(Schema):
 class ContributorExport(object):
     mongo_collection = 'contributor_exports'
 
-    def __init__(self, contributor_id, gridfs_id, data_sources=None):
+    def __init__(self, contributor_id, gridfs_id, production_date, data_sources=None):
         self.id = str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = datetime.utcnow()
+        self.production_date = production_date
         self.data_sources = [] if data_sources is None else data_sources
 
     def save(self):
@@ -520,16 +551,35 @@ class MongoContributorExportSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    data_sources = fields.List(fields.String())
+    production_date = fields.Nested(MongoProductionDateSchema)
+    data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
+
+
+class CoverageExportContributor(object):
+    def __init__(self, contributor_id, production_date=None, data_sources=None):
+        self.contributor_id = contributor_id
+        self.production_date = production_date
+        self.data_sources = [] if data_sources is None else data_sources
+
+
+class MongoCoverageExportContributorSchema(Schema):
+    contributor_id = fields.String(required=True)
+    production_date = fields.Nested(MongoProductionDateSchema)
+    data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
+
+    @post_load
+    def make_coverageexportcontributor(self, data):
+        return CoverageExportContributor(**data)
 
 
 class CoverageExport(object):
     mongo_collection = 'coverage_exports'
 
-    def __init__(self, coverage_id, gridfs_id, contributors=None):
+    def __init__(self, coverage_id, gridfs_id, production_date, contributors=None):
         self.id = str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
+        self.production_date = production_date
         self.created_at = datetime.utcnow()
         self.contributors = [] if contributors is None else contributors
 
@@ -551,9 +601,11 @@ class CoverageExport(object):
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
         return MongoCoverageExportSchema(many=True).load(raw).data
 
+
 class MongoCoverageExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     coverage_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    contributors = fields.List(fields.String())
+    production_date = fields.Nested(MongoProductionDateSchema)
+    contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)

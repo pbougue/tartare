@@ -27,19 +27,35 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from tartare.production_date_finder import ProductionDateFinder
+import os
+from datetime import date
+import pytest
+from tartare.exceptions import FileNotFound
 
-class Context():
-    def __init__(self):
-        self.data_sources_grid = []
-        self.contributor_exports = []
+current_path = os.path.dirname(os.path.dirname(__file__))
 
-    def add_data_source_grid(self, data_source_id, grid_fs_id, start_date, end_date):
-        tmp = {
-            "data_source_id": data_source_id,
-            "grid_fs_id": grid_fs_id,
-            "production_date": {
-                "start_date": start_date,
-                "end_date": end_date
-            }
-        }
-        self.data_sources_grid.append(tmp)
+
+def test_zip_file_only_calendar():
+    finder = ProductionDateFinder()
+    file = os.path.join(current_path, 'tests/fixtures/gtfs/some_archive.zip')
+    start_date, end_date = finder.get_production_date(file)
+    assert start_date == date(2015, 3, 25)
+    assert end_date == date(2015, 8, 26)
+
+
+def test_get_production_date_zip_file_invalid():
+    finder = ProductionDateFinder()
+    file = os.path.join(current_path, 'tests/fixtures/gtfs/bob.zip')
+    with pytest.raises(FileNotFound) as excinfo:
+            finder.get_production_date(file)
+    assert str(excinfo.value) == "File {} not found".format(file)
+
+
+def test_get_production_date_not_zipfile():
+    finder = ProductionDateFinder()
+    file = os.path.join(current_path, 'tests/fixtures/ntfs/calendar.txt')
+    with pytest.raises(Exception) as excinfo:
+            finder.get_production_date(file)
+    assert str(excinfo.value) == "{} is not a zip file".format(file)
+

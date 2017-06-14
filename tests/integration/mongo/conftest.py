@@ -31,6 +31,7 @@ import pytest
 from tartare.core import models
 from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker
 from tests.utils import to_json
+from datetime import date
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -119,6 +120,12 @@ def coverage_obj(tmpdir, get_app_context):
 
 @pytest.fixture(scope="function")
 def coverage_export_obj(tmpdir, get_app_context):
-    coverage_export = models.CoverageExport("coverage1", "1234", ["contributor1", "contributor2"])
+    p = models.ProductionDate(date(2017, 1, 1), date(2017, 1, 30))
+    c = models.ContributorExportDataSource(data_source_id='1234', production_date=p)
+    contributors = models.CoverageExportContributor(contributor_id='fr-idf', production_date=p, data_sources=[c])
+    coverage_export = models.CoverageExport(coverage_id='coverage1',
+                                            gridfs_id='1234',
+                                            production_date=p,
+                                            contributors=[contributors])
     coverage_export.save()
     return coverage_export
