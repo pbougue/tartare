@@ -29,6 +29,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import mock
+import pytest
+import ftplib
 from tests.utils import mock_urlretrieve, mock_requests_post
 from tests.integration.test_mechanism import TartareFixture
 import json
@@ -104,11 +106,10 @@ class TestDataPublisher(TartareFixture):
         assert r['message'] == 'Object Not Found'
         assert r['error'] == 'Coverage default without export.'
 
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_publish_ok(self, urlretrieve_func):
+    def _create_contributor(self, id, url = 'bob'):
         contributor = {
-            "id": "fr-idf",
-            "name": "fr idf",
+            "id": id,
+            "name": id,
             "data_prefix": "AAA",
             "data_sources": [
                 {
@@ -116,40 +117,48 @@ class TestDataPublisher(TartareFixture):
                     "data_format": "gtfs",
                     "input": {
                         "type": "url",
-                        "url": "bob"
+                        "url": url
                     }
                 }
             ]
         }
+        resp = self.post("/contributors", json.dumps(contributor))
+        assert resp.status_code == 201
+
+    def _create_coverage(self, id, contributor_id, publication_platform):
         coverage = {
             "contributors": [
-                "fr-idf"
+                contributor_id
             ],
             "environments": {
                 "production": {
                     "name": "production",
                     "publication_platforms": [
-                        {
+                        publication_platform
+                    ]
+                }
+            },
+            "id": id,
+            "name": id
+        }
+
+        resp = self.post("/coverages", json.dumps(coverage))
+        assert resp.status_code == 201
+
+    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
+    def test_publish_ok(self, urlretrieve_func):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        publication_platform = {
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
                         }
-                    ]
-                }
-            },
-            "id": "default",
-            "name": "default"
-        }
-        # Create Contributor
-        resp = self.post("/contributors", json.dumps(contributor))
-        assert resp.status_code == 201
-
-        #Create Coverage
-        resp = self.post("/coverages", json.dumps(coverage))
-        assert resp.status_code == 201
+        self._create_contributor(contributor_id)
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
 
         # Launch contributor export
-        resp = self.post("/contributors/fr-idf/actions/export")
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         assert resp.status_code == 201
 
         # List contributor export
@@ -166,6 +175,8 @@ class TestDataPublisher(TartareFixture):
 
         #Launch coverage export
         resp = self.post("/coverages/default/actions/export")
+        # Launch coverage export
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         assert resp.status_code == 201
 
         # List coverage export
@@ -182,6 +193,46 @@ class TestDataPublisher(TartareFixture):
         assert contributors[0]["data_sources"][0]["validity_period"]
 
         #Launch data update
+        # Launch data update
         with mock.patch('requests.post', mock_requests_post):
             resp = self.post("/coverages/default/environments/production/actions/publish")
             assert resp.status_code == 200
+
+    def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        ftp_username = 'tartare_user'
+        ftp_password = 'tartare_password'
+        filename = 'some_archive.zip'
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+        publication_platform = {
+            "name": "ods",
+            "type": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "authent": {
+                "username": ftp_username,
+                "password": ftp_password
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
+        assert resp.status_code == 200
+        # check if the file was successfully uploaded
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        try:
+            files = session.nlst()
+            print(files)
+        except ftplib.error_perm as resp:
+            if str(resp) == "550 No files found":
+                pytest.fail('uploaded file was not found on ftp server')
+            else:
+                raise
+        session.quit()

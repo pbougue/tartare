@@ -42,7 +42,7 @@ class AbstractDocker(metaclass=ABCMeta):
 
     @property
     def volumes_bindings(self):
-        return []
+        return None
 
     def _remove_temporary_files(self):
         pass
@@ -58,6 +58,18 @@ class AbstractDocker(metaclass=ABCMeta):
     @abstractproperty
     def container_name(self):
         pass
+
+    @property
+    def ports(self):
+        return None
+
+    @property
+    def port_bindings(self):
+        return None
+
+    @property
+    def env_vars(self):
+        return None
 
     @property
     def volumes(self):
@@ -78,10 +90,12 @@ class AbstractDocker(metaclass=ABCMeta):
         self._fetch_image()
 
         host_config = self.docker.create_host_config(
-            binds=self.volumes_bindings
-        ) if self.volumes else None
+            binds=self.volumes_bindings,
+            port_bindings=self.port_bindings
+        )
 
-        self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
+        self.container_id = self.docker.create_container(self.image_name, name=self.container_name, ports=self.ports,
+                                                         environment=self.env_vars,
                                                          volumes=self.volumes, host_config=host_config).get('Id')
         self.logger.info("docker id is {}".format(self.container_id))
         self.logger.info("starting the temporary docker for image {}".format(self.image_name))
@@ -141,9 +155,8 @@ class DownloadHttpServerDocker(AbstractDocker):
     def _remove_temporary_files(self):
         self.logger.info('removing temporary files')
         exec_id = self.docker.exec_create(container=self.container_id,
-                                cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
+                                          cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
         self.docker.exec_start(exec_id=exec_id)
-
 
 
 class DownloadFtpServerDocker(AbstractDocker):
@@ -172,6 +185,51 @@ class DownloadFtpServerDocker(AbstractDocker):
             os.path.join(self.fixtures_directory, 'gtfs'): {
                 'bind': self.working_dir,
                 'mode': 'rw',
+            },
+        }
+
+    def _remove_temporary_files(self):
+        pass
+
+
+class UploadFtpServerDocker(AbstractDocker):
+    def _fetch_image(self):
+        self.docker.pull(self.image_name)
+
+    @property
+    def conf_dir(self):
+        return '/etc/pure-ftpd/passwd'
+
+    @property
+    def volumes(self):
+        return [self.conf_dir]
+
+    @property
+    def container_name(self):
+        return 'ftp_upload_server'
+
+    @property
+    def image_name(self):
+        return 'stilliard/pure-ftpd:hardened'
+
+    @property
+    def port_bindings(self):
+        return {nb: nb for nb in range(30000, 30009)}
+
+    @property
+    def ports(self):
+        return [nb for nb in range(30000, 30009)]
+
+    @property
+    def env_vars(self):
+        return {'PUBLICHOST': 'localhost'}
+
+    @property
+    def volumes_bindings(self):
+        return {
+            os.path.join(self.fixtures_directory, 'authent', 'ftp_upload_users'): {
+                'bind': self.conf_dir,
+                'mode': 'ro',
             },
         }
 

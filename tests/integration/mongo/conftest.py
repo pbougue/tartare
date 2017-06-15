@@ -29,7 +29,7 @@
 from tartare import app, mongo
 import pytest
 from tartare.core import models
-from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker
+from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker
 from tests.utils import to_json
 from datetime import date
 
@@ -65,6 +65,11 @@ def empty_mongo(docker):
 def init_http_download_server():
     with DownloadHttpServerDocker() as download_server:
         yield download_server
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def init_ftp_upload_server():
+    with UploadFtpServerDocker() as upload_server:
+        yield upload_server
 
 @pytest.yield_fixture(scope="session", autouse=True)
 def init_ftp_download_server():
