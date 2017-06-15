@@ -34,6 +34,8 @@ from datetime import datetime
 import os
 import zipfile
 from tartare.exceptions import FileNotFound, InvalidFile
+import tempfile
+import numpy as np
 
 
 class ProductionDateFinder(object):
@@ -42,6 +44,14 @@ class ProductionDateFinder(object):
         self.start_date = start_date
         self.end_date = end_date
         self.date_format = date_format
+
+    @property
+    def calendar(self):
+        return 'calendar.txt'
+
+    @property
+    def calendar_dates(self):
+        return 'calendar_dates.txt'
 
     @staticmethod
     def _get_data(line):
@@ -55,46 +65,48 @@ class ProductionDateFinder(object):
     def _str_date(self, string_date):
         return datetime.strptime(string_date, self.date_format).date()
 
-    @staticmethod
-    def get_index(filename, headers, column):
-        try:
-            return headers.index(column)
-        except Exception:
-            msg = 'column name {} is not exist in file {}'.format(column, filename)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidFile(msg)
+    def datetime64_to_date(self, datetime64):
+        return self._str_date(np.datetime_as_string(datetime64))
+
+    def get_index(self, files_zip, filename, column):
+        with files_zip.open(filename, 'r') as file:
+            for line in file:
+                data = self._get_data(line)
+                try:
+                    return data.index(column)
+                except Exception:
+                    msg = 'column name {} is not exist in file {}'.format(column, filename)
+                    logging.getLogger(__name__).error(msg)
+                    raise InvalidFile(msg)
 
     def _parse_calendar(self, files_zip):
-        filename = 'calendar.txt'
-        with files_zip.open(filename, ) as file:
-            header_start = None
-            header_end = None
-            for line in file:
-                data = self._get_data(line)
-                if not header_start:
-                    header_start = self.get_index(filename, data, 'start_date')
-                    header_end = self.get_index(filename, data, 'end_date')
-                    continue
-                current_start_date = self._str_date(data[header_start])
-                current_end_date = self._str_date(data[header_end])
-                if self.start_date > current_start_date:
-                    self.start_date = current_start_date
-                if self.end_date < current_end_date:
-                    self.end_date = current_end_date
+        header_start = self.get_index(files_zip, self.calendar, 'start_date')
+        header_end = self.get_index(files_zip, self.calendar, 'end_date')
+        with tempfile.TemporaryDirectory() as tmp_path:
+            files_zip.extract(self.calendar, tmp_path)
+            start_dates, end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
+                                                delimiter=',',
+                                                skiprows=1,
+                                                usecols=[header_start, header_end],
+                                                dtype=np.datetime64)
+
+            self.start_date = self.datetime64_to_date(start_dates.min())
+            self.end_date = self.datetime64_to_date(end_dates.max())
 
     def _parse_calendar_dates(self, files_zip):
-        with files_zip.open('calendar_dates.txt', ) as file:
-            header_date = None
-            for line in file:
-                data = self._get_data(line)
-                if not header_date:
-                    header_date = data.index('date')
-                    continue
-                current_date = self._str_date(data[header_date])
-                if self.start_date > current_date:
-                    self.start_date = current_date
-                if self.end_date < current_date:
-                    self.end_date = current_date
+        header_date = self.get_index(files_zip, self.calendar_dates, 'date')
+        with tempfile.TemporaryDirectory() as tmp_path:
+            files_zip.extract(self.calendar_dates, tmp_path)
+            dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
+                               delimiter=',',
+                               skiprows=1,
+                               usecols=[header_date],
+                               dtype=np.datetime64)
+
+            if self.start_date > dates.min():
+                self.start_date = dates.min()
+            if self.end_date < dates.max():
+                self.end_date = dates.min()
 
     @staticmethod
     def _check_zip_file(file):
