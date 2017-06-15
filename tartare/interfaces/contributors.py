@@ -37,6 +37,7 @@ from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalSe
 from tartare.helper import validate_preprocesses_or_raise
 import uuid
 import logging
+from tartare.decorators import json_data_validate
 
 
 class Contributor(flask_restful.Resource):
@@ -67,6 +68,7 @@ class Contributor(flask_restful.Resource):
         for c in collections:
             c.setdefault('id', str(uuid.uuid4()))
 
+    @json_data_validate()
     def post(self):
         post_data = request.json
         if 'id' not in post_data:
@@ -113,6 +115,7 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
+    @json_data_validate()
     def patch(self, contributor_id):
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error

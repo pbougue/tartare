@@ -250,3 +250,36 @@ def test_update_preprocesses_with_id(app):
             p_titi = p
     assert p_titi
     assert p_titi['type'] == 'HeadsignShortName'
+
+def test_post_without_headers(app, contributor):
+    '''
+    using /preprocesses endpoint
+    '''
+    post_ps = {
+        "type": "Ruspell",
+        "source_params": {
+            "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+            "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+        }
+    }
+    raw = post(app, '/contributors/id_test/preprocesses', json.dumps(post_ps), headers=None)
+    assert raw.status_code == 415
+    r = to_json(raw)
+    assert r['error'] == 'request without data.'
+
+
+def test_patch_without_headers(app, contributor):
+    '''
+    using /preprocesses endpoint
+    '''
+    post_ps = {
+        "type": "Ruspell",
+        "source_params": {
+            "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
+            "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+        }
+    }
+    raw = patch(app, '/contributors/id_test/preprocesses/1234', json.dumps(post_ps), headers=None)
+    assert raw.status_code == 415
+    r = to_json(raw)
+    assert r['error'] == 'request without data.'

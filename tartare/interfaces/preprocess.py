@@ -35,9 +35,11 @@ from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
 from tartare.helper import validate_preprocesses_or_raise
+from tartare.decorators import json_data_validate
 
 
 class PreProcess(flask_restful.Resource):
+    @json_data_validate()
     def post(self, contributor_id):
         preprocess_schema = schema.PreProcessSchema(strict=True)
         try:
@@ -64,6 +66,7 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(ps).data}, 200
 
+    @json_data_validate()
     def patch(self, contributor_id, preprocess_id):
         ds = models.PreProcess.get(contributor_id, preprocess_id)
         if len(ds) != 1:

@@ -261,3 +261,40 @@ def test_post_ds_one_data_source_without_input(app, contributor):
     r = to_json(raw)
     assert raw.status_code == 200, print(r)
     assert len(r["data_sources"]) == 0
+
+def test_post_without_headers(app, contributor):
+    """
+    using /data_sources endpoint
+    """
+    post_ds = {
+        "id": "ds1_id",
+        "name": "data_source_name1",
+        "data_format": "Neptune",
+        "input": {
+            "type": "url",
+            "url": "http://stif.com/od.zip"
+        }
+    }
+    raw = post(app, '/contributors/id_test/data_sources', json.dumps(post_ds), headers=None)
+    assert raw.status_code == 415
+    r = to_json(raw)
+    assert r['error'] == 'request without data.'
+
+
+def test_patch_without_headers(app, contributor):
+    """
+    using /data_sources endpoint
+    """
+    post_ds = {
+        "id": "ds1_id",
+        "name": "data_source_name1",
+        "data_format": "Neptune",
+        "input": {
+            "type": "url",
+            "url": "http://stif.com/od.zip"
+        }
+    }
+    raw = patch(app, '/contributors/id_test/data_sources', json.dumps(post_ds), headers=None)
+    assert raw.status_code == 415
+    r = to_json(raw)
+    assert r['error'] == 'request without data.'

@@ -93,10 +93,10 @@ paths:
           description: Duplicate entry
           schema :
             $ref: '#/definitions/error_409'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
 
   /coverages/{coverage_id}:
     get:
@@ -153,10 +153,10 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
     delete:
       summary: Delete a coverage
       tags:
@@ -195,10 +195,6 @@ paths:
           description: Job created
           schema:
             $ref: "#/definitions/job"
-        500:
-          description: Internal Server Error
-          schema :
-            $ref: '#/definitions/error_500'
 
   /coverages/{coverage_id}/grid_calendar:
     post:
@@ -266,6 +262,10 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
 
   /coverages/{coverage_id}/contributors/{contributor_id}:
     delete:
@@ -509,10 +509,10 @@ paths:
           description: Duplicate entry
           schema :
             $ref: '#/definitions/error_409'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
 
   /contributors/{contributor_id}:
     get:
@@ -536,7 +536,6 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-
     delete:
       summary: delete contributor
       tags:
@@ -589,10 +588,10 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
 
   /contributors/{contributor_id}/actions/export:
     post:
@@ -612,10 +611,6 @@ paths:
           description: Job created
           schema:
             $ref: "#/definitions/job"
-        500:
-          description: Internal Server Error
-          schema :
-            $ref: '#/definitions/error_500'
 
   /contributors/{contributor_id}/data_sources:
     get:
@@ -667,14 +662,14 @@ paths:
           description: Invalid arguments
           schema :
             $ref: '#/definitions/error_400'
-        500:
-          description: Internal Server Error
-          schema :
-            $ref: '#/definitions/error_500'
         409:
           description: Duplicate data_source id
           schema :
             $ref: '#/definitions/error_409'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
 
   /contributors/{contributor_id}/data_sources/{data_source_id}:
     patch:
@@ -715,10 +710,10 @@ paths:
           description: Contributor not found
           schema :
             $ref: '#/definitions/error_404'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
     delete:
       summary: Delete a data_source from a contributor {contributor_id}
       tags:
@@ -793,10 +788,10 @@ paths:
           description: Invalid arguments
           schema :
             $ref: '#/definitions/error_400'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
 
   /contributors/{contributor_id}/preprocesses/{preprocess_id}:
     patch:
@@ -837,10 +832,11 @@ paths:
           description: Object not found
           schema :
             $ref: '#/definitions/error_404'
-        500:
-          description: Internal Server Error
+        415:
+          description: Unsupported Media Type
           schema :
-            $ref: '#/definitions/error_500'
+            $ref: '#/definitions/error_415'
+
     delete:
       summary: Delete a preprocess from a contributor {contributor_id}
       tags:
@@ -910,7 +906,6 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-
 
   /jobs:
     get:
@@ -1202,12 +1197,12 @@ definitions:
         type: string
         example: Detailed message
 
-  error_500:
+  error_415:
     type: object
     properties:
       message:
         type: string
-        example: Internal Server Error
+        example: Unsupported Media Type
       error:
         type: string
         example: Detailed message

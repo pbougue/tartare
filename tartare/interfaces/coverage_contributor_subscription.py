@@ -33,9 +33,11 @@ from pymongo.errors import PyMongoError
 from tartare.core import models
 from tartare.interfaces import schema
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.decorators import json_data_validate
 
 
 class CoverageContributorSubscription(flask_restful.Resource):
+    @json_data_validate()
     def post(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:

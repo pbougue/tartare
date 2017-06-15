@@ -34,9 +34,11 @@ from tartare.core import models
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.decorators import json_data_validate
 
 
 class DataSource(flask_restful.Resource):
+    @json_data_validate()
     def post(self, contributor_id):
         data_source_schema = schema.DataSourceSchema(strict=True)
         try:
@@ -75,7 +77,7 @@ class DataSource(flask_restful.Resource):
 
         return {'data_sources': []}, 204
 
-
+    @json_data_validate()
     def patch(self, contributor_id, data_source_id=None):
         ds = models.DataSource.get(contributor_id, data_source_id)
         if len(ds) != 1:

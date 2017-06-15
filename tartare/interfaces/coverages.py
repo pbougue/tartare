@@ -35,9 +35,11 @@ from tartare.interfaces import schema
 from marshmallow import ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.decorators import json_data_validate
 
 
 class Coverage(flask_restful.Resource):
+    @json_data_validate()
     def post(self):
         coverage_schema = schema.CoverageSchema(strict=True)
         try:
@@ -73,6 +75,7 @@ class Coverage(flask_restful.Resource):
             raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
         return "", 204
 
+    @json_data_validate()
     def patch(self, coverage_id):
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:

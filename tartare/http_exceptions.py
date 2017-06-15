@@ -60,3 +60,8 @@ class InternalServerError(TartareException):
 class ObjectNotFound(TartareException):
     code = 404
     message = 'Object Not Found'
+
+
+class UnsupportedMediaType(TartareException):
+    code = 415
+    message = 'Unsupported Media Type'
