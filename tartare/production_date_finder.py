@@ -30,7 +30,7 @@
 from zipfile import ZipFile
 from datetime import date
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import zipfile
 from tartare.exceptions import FileNotFound, InvalidFile
@@ -88,13 +88,51 @@ class ProductionDateFinder(object):
                                                 delimiter=',',
                                                 skiprows=1,
                                                 usecols=[header_start, header_end],
-                                                dtype=np.datetime64)
+                                                dtype=np.datetime64,
+                                                unpack=True)
 
             self.start_date = self.datetime64_to_date(start_dates.min())
             self.end_date = self.datetime64_to_date(end_dates.max())
 
+    def add_dates(self, dates, exception_type):
+        add_dates_idx = np.argwhere(exception_type == 1).flatten()
+        add_dates = list(set(dates[i] for i in add_dates_idx))
+        for d in add_dates:
+            current_date = self.datetime64_to_date(d)
+            if self.start_date > current_date:
+                self.start_date = current_date
+            else:
+                break
+
+        for d in add_dates[::-1]:
+            current_date = self.datetime64_to_date(d)
+            if self.end_date < current_date:
+                self.end_date = current_date
+            else:
+                break
+
+    def remove_dates(self, dates, exception_type):
+        remove_dates_idx = np.argwhere(exception_type == 2).flatten()
+
+        remove_dates = list(set(dates[i] for i in remove_dates_idx))
+
+        for d in remove_dates:
+            current_date = self.datetime64_to_date(d)
+            if self.start_date == current_date:
+                self.start_date = self.start_date + timedelta(days=1)
+            else:
+                break
+
+        for d in remove_dates[::-1]:
+            current_date = self.datetime64_to_date(d)
+            if self.end_date == current_date:
+                self.end_date = self.start_date - timedelta(days=1)
+            else:
+                break
+
     def _parse_calendar_dates(self, files_zip):
         header_date = self.get_index(files_zip, self.calendar_dates, 'date')
+        header_exception_type = self.get_index(files_zip, self.calendar_dates, 'exception_type')
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar_dates, tmp_path)
             dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
@@ -103,10 +141,13 @@ class ProductionDateFinder(object):
                                usecols=[header_date],
                                dtype=np.datetime64)
 
-            if self.start_date > dates.min():
-                self.start_date = dates.min()
-            if self.end_date < dates.max():
-                self.end_date = dates.min()
+            exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
+                                        delimiter=',',
+                                        skiprows=1,
+                                        usecols=[header_exception_type],
+                                        dtype=np.int)
+            self.add_dates(dates, exception_type)
+            self.remove_dates(dates, exception_type)
 
     @staticmethod
     def _check_zip_file(file):
@@ -121,18 +162,15 @@ class ProductionDateFinder(object):
             raise InvalidFile(msg)
 
     def get_production_date(self, file):
-
         self._check_zip_file(file)
-        map_file_func = {
-            'calendar.txt': self._parse_calendar,
-            'calendar_dates.txt': self._parse_calendar_dates
-        }
         with ZipFile(file, 'r') as files_zip:
             file_list = [s for s in files_zip.namelist() if s.startswith('calendar')]
             if not file_list:
                 msg = 'file zip {} without calendar.'.format(file)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
-            for f in file_list:
-                map_file_func.get(f)(files_zip)
+            if self.calendar in file_list:
+                self._parse_calendar(files_zip)
+            if self.calendar_dates in file_list:
+                self._parse_calendar_dates(files_zip)
         return self.start_date, self.end_date
