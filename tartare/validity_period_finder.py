@@ -118,6 +118,10 @@ class ValidityPeriodFinder(object):
                 break
 
     def remove_dates(self, dates, exception_type):
+        """
+        Removing dates extremities, google does not do it in transitfeed
+        https://github.com/google/transitfeed/blob/master/transitfeed/serviceperiod.py#L80
+        """
         remove_dates_idx = np.argwhere(exception_type == 2).flatten()
 
         remove_dates = [dates[i] for i in remove_dates_idx]

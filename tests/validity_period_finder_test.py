@@ -126,7 +126,6 @@ def test_add_dates():
     assert end_date == date(2017, 2, 15)
 
 
-
 def test_remove_dates():
     """
         calendar.txt   :     20170102                    20170131
