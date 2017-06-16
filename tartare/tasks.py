@@ -101,9 +101,9 @@ def publish_data_on_platform(self, platform, gridfs_id, coverage, environment_id
         error_message = 'unknown platform type "{type}"'.format(type=platform.type)
         logger.error(error_message)
         raise Exception(error_message)
-    publisher = publishers_by_type[platform.type](platform.url, platform.authent)
+    publisher = publishers_by_type[platform.type](platform.url, platform.authent, coverage.id)
     try:
-        publisher.publish(file)
+        publisher.publish(file, platform.directory)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})

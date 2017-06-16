@@ -173,8 +173,6 @@ class TestDataPublisher(TartareFixture):
         assert len(data_sources) == 1
         assert data_sources[0]["validity_period"]
 
-        #Launch coverage export
-        resp = self.post("/coverages/default/actions/export")
         # Launch coverage export
         resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         assert resp.status_code == 201
@@ -192,7 +190,6 @@ class TestDataPublisher(TartareFixture):
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
 
-        #Launch data update
         # Launch data update
         with mock.patch('requests.post', mock_requests_post):
             resp = self.post("/coverages/default/environments/production/actions/publish")

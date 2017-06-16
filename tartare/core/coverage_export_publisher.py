@@ -37,23 +37,24 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
-    def __init__(self, url, authent):
+    def __init__(self, url, authent, coverage_id):
         self.url = url
         self.authent = authent
+        self.filename = "{coverage}.zip".format(coverage=coverage_id)
 
     @abstractmethod
-    def publish(self, file):
+    def publish(self, file, directory=None):
         pass
 
 
 class HttpPublisher(AbstractPublisher):
-    def publish(self, file):
-        logger.info('publishing file {filename} on {url}...'.format(filename=file.filename, url=self.url))
+    def publish(self, file, directory=None):
+        logger.info('publishing file {filename} on {url}...'.format(filename=self.filename, url=self.url))
         if self.authent:
             response = requests.post(self.url, auth=(self.authent.username, self.authent.password),
-                                     files={'file': file, 'filename': file.filename}, timeout=TYR_UPLOAD_TIMEOUT)
+                                     files={'file': file, 'filename': self.filename}, timeout=TYR_UPLOAD_TIMEOUT)
         else:
-            response = requests.post(self.url, files={'file': file, 'filename': file.filename},
+            response = requests.post(self.url, files={'file': file, 'filename': self.filename},
                                      timeout=TYR_UPLOAD_TIMEOUT)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
@@ -63,13 +64,23 @@ class HttpPublisher(AbstractPublisher):
 
 
 class FtpPublisher(AbstractPublisher):
-    def publish(self, file):
-        logger.info('publishing file {filename} on ftp://{url}...'.format(filename=file.filename, url=self.url))
+    def publish(self, file, directory=None):
+        logger.info(
+            'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=self.filename, url=self.url,
+                                                                              directory=directory))
         if self.authent:
             session = ftplib.FTP(self.url, self.authent.username, self.authent.password)
         else:
             session = ftplib.FTP(self.url)
-        full_code = session.storbinary('STOR {filename}'.format(filename=file.filename), file)
+        if directory:
+            try:
+                session.cwd(directory)
+            except ftplib.error_perm as message:
+                logger.error(message)
+                session.quit()
+                raise PublishException(message)
+
+        full_code = session.storbinary('STOR {filename}'.format(filename=self.filename), file)
         file.close()
         session.quit()
         code, message = tuple(full_code.split('-'))
