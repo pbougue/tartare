@@ -64,16 +64,16 @@ class Platform(object):
         self.url = url
 
 
-class ProductionDate(object):
+class ValidityPeriod(object):
     def __init__(self, start_date, end_date):
         self.start_date = start_date
         self.end_date = end_date
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id=None, production_date=None):
+    def __init__(self, data_source_id=None, validity_period=None):
         self.data_source_id = data_source_id
-        self.production_date = production_date
+        self.validity_period = validity_period
 
 
 class Coverage(object):
@@ -167,18 +167,18 @@ class Coverage(object):
             self.update(self.id, {"contributors": self.contributors})
 
 
-class MongoProductionDateSchema(Schema):
+class MongoValidityPeriodSchema(Schema):
     start_date = fields.Date(required=True)
     end_date = fields.Date(required=True)
 
     @post_load
-    def make_productiondate(self, data):
-        return ProductionDate(**data)
+    def make_validityperiod(self, data):
+        return ValidityPeriod(**data)
 
 
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
-    production_date = fields.Nested(MongoProductionDateSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema)
 
     @post_load
     def make_contributorexportdatasource(self, data):
@@ -519,12 +519,12 @@ class MongoJobSchema(Schema):
 class ContributorExport(object):
     mongo_collection = 'contributor_exports'
 
-    def __init__(self, contributor_id, gridfs_id, production_date, data_sources=None):
+    def __init__(self, contributor_id, gridfs_id, validity_period, data_sources=None):
         self.id = str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = datetime.utcnow()
-        self.production_date = production_date
+        self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
     def save(self):
@@ -551,20 +551,20 @@ class MongoContributorExportSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    production_date = fields.Nested(MongoProductionDateSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
 
 
 class CoverageExportContributor(object):
-    def __init__(self, contributor_id, production_date=None, data_sources=None):
+    def __init__(self, contributor_id, validity_period=None, data_sources=None):
         self.contributor_id = contributor_id
-        self.production_date = production_date
+        self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
 
 class MongoCoverageExportContributorSchema(Schema):
     contributor_id = fields.String(required=True)
-    production_date = fields.Nested(MongoProductionDateSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
 
     @post_load
@@ -575,11 +575,11 @@ class MongoCoverageExportContributorSchema(Schema):
 class CoverageExport(object):
     mongo_collection = 'coverage_exports'
 
-    def __init__(self, coverage_id, gridfs_id, production_date, contributors=None):
+    def __init__(self, coverage_id, gridfs_id, validity_period, contributors=None):
         self.id = str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
-        self.production_date = production_date
+        self.validity_period = validity_period
         self.created_at = datetime.utcnow()
         self.contributors = [] if contributors is None else contributors
 
@@ -607,5 +607,5 @@ class MongoCoverageExportSchema(Schema):
     coverage_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    production_date = fields.Nested(MongoProductionDateSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema)
     contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)

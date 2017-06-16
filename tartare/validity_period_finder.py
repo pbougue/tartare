@@ -38,7 +38,7 @@ import tempfile
 import numpy as np
 
 
-class ProductionDateFinder(object):
+class ValidityPeriodFinder(object):
     #TODO Management of case where the period exceeds one year
     def __init__(self, start_date=date.max, end_date=date.min, date_format='%Y%m%d'):
         self.start_date = start_date
@@ -170,7 +170,7 @@ class ProductionDateFinder(object):
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
-    def get_production_date(self, file):
+    def get_validity_period(self, file):
         self._check_zip_file(file)
         with ZipFile(file, 'r') as files_zip:
             if self.calendar not in files_zip.namelist():

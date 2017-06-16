@@ -63,12 +63,12 @@ def save_export(coverage, context):
             logger.info("contributor export {} without gridfs id.".format(ce.get("contributor_id")))
             continue
         new_grid_fs_id = GridFsHandler().copy_file(ce.get("gridfs_id"))
-        production_date = ce.get('production_date')
+        validity_period = ce.get('validity_period')
         contributor = CoverageExportContributor(contributor_id=ce.get("contributor_id"),
-                                                production_date=production_date,
+                                                validity_period=validity_period,
                                                 data_sources=ce.get("data_sources"))
         export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,
-                                production_date=production_date,
+                                validity_period=validity_period,
                                 contributors=[contributor])
         export.save()
         ce.update({'gridfs_id': new_grid_fs_id})

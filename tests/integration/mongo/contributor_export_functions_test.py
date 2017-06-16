@@ -68,8 +68,8 @@ class TestFetcher():
             assert len(context.data_sources_grid) == 1
             assert context.data_sources_grid[0].get("data_source_id") == 666
             assert context.data_sources_grid[0].get("grid_fs_id")
-            assert context.data_sources_grid[0].get("production_date").get('end_date') == date(2015, 8, 26)
-            assert context.data_sources_grid[0].get("production_date").get('start_date') == date(2015, 3, 25)
+            assert context.data_sources_grid[0].get("validity_period").get('end_date') == date(2015, 8, 26)
+            assert context.data_sources_grid[0].get("validity_period").get('start_date') == date(2015, 3, 25)
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):

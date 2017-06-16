@@ -1111,20 +1111,20 @@ definitions:
       gridfs_id:
         type: string
         example: 592d4b327053ad21a7626578
-      production_date:
+      validity_period:
         type: array
         items:
-          $ref: "#/definitions/production_date"
+          $ref: "#/definitions/validity_period"
 
   contributor_source_list:
     type: object
     properties:
       contributor_id:
         type: string
-      production_date:
+      validity_period:
         type: array
         items:
-          $ref: "#/definitions/production_date"
+          $ref: "#/definitions/validity_period"
       data_sources:
         type: array
         items:
@@ -1158,10 +1158,10 @@ definitions:
       gridfs_id:
         type: string
         example: 592d4b327053ad21a7626578
-      production_date:
+      validity_period:
         type: array
         items:
-          $ref: "#/definitions/production_date"
+          $ref: "#/definitions/validity_period"
 
   export_data_source_list:
     type: object
@@ -1169,12 +1169,12 @@ definitions:
       data_source_id:
         type: string
         example: data_source_stif
-      production_date:
+      validity_period:
         type: array
         items:
-          $ref: "#/definitions/production_date"
+          $ref: "#/definitions/validity_period"
         
-  production_date:
+  validity_period:
     type: object
     properties:
       start_date:

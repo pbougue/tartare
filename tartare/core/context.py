@@ -37,7 +37,7 @@ class Context():
         tmp = {
             "data_source_id": data_source_id,
             "grid_fs_id": grid_fs_id,
-            "production_date": {
+            "validity_period": {
                 "start_date": start_date,
                 "end_date": end_date
             }
