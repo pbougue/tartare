@@ -68,7 +68,6 @@ def save_export(coverage, context):
                                                 production_date=production_date,
                                                 data_sources=ce.get("data_sources"))
         export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,
-                                #TODO merge dates of all contributor
                                 production_date=production_date,
                                 contributors=[contributor])
         export.save()

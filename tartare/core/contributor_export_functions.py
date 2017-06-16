@@ -97,7 +97,6 @@ def save_export(contributor, context):
         data_source = ContributorExportDataSource(data_source_id, production_date)
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_grid_fs_id,
-                                   #TODO merge dates of all data sources
                                    production_date=production_date,
                                    data_sources=[data_source])
         export.save()
