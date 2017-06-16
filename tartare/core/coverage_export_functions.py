@@ -58,7 +58,6 @@ def initialize_context(coverage, context):
 
 
 def save_export(coverage, context):
-
     for ce in context.contributor_exports:
         if not ce.get("gridfs_id"):
             logger.info("contributor export {} without gridfs id.".format(ce.get("contributor_id")))

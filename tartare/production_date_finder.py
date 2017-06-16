@@ -55,9 +55,9 @@ class ProductionDateFinder(object):
 
     @staticmethod
     def _get_data(line):
-        char_to_delate = ['\r', '\n']
+        char_to_delete = ['\r', '\n']
         l = line.decode('utf-8')
-        for c in char_to_delate:
+        for c in char_to_delete:
             l = l.replace(c, '')
 
         return l.split(',')
@@ -173,14 +173,12 @@ class ProductionDateFinder(object):
     def get_production_date(self, file):
         self._check_zip_file(file)
         with ZipFile(file, 'r') as files_zip:
-            file_list = [s for s in files_zip.namelist() if s.startswith('calendar')]
-            if self.calendar not in file_list:
+            if self.calendar not in files_zip.namelist():
                 msg = 'file zip {} without calendar.txt'.format(file)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
 
-            if self.calendar in file_list:
-                self._parse_calendar(files_zip)
-            if self.calendar_dates in file_list:
+            self._parse_calendar(files_zip)
+            if self.calendar_dates in files_zip.namelist():
                 self._parse_calendar_dates(files_zip)
         return self.start_date, self.end_date
