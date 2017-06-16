@@ -29,19 +29,17 @@
 import ftplib
 from abc import ABCMeta, abstractmethod
 import logging
-
 import requests
-
+from tartare.default_settings import TYR_UPLOAD_TIMEOUT
 from tartare.exceptions import PublishException
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
-    def __init__(self, url, authent, timeout=120):
+    def __init__(self, url, authent):
         self.url = url
         self.authent = authent
-        self.timeout = timeout
 
     @abstractmethod
     def publish(self, file):
@@ -53,9 +51,10 @@ class HttpPublisher(AbstractPublisher):
         logger.info('publishing file {filename} on {url}...'.format(filename=file.filename, url=self.url))
         if self.authent:
             response = requests.post(self.url, auth=(self.authent.username, self.authent.password),
-                                     files={'file': file, 'filename': file.filename}, timeout=self.timeout)
+                                     files={'file': file, 'filename': file.filename}, timeout=TYR_UPLOAD_TIMEOUT)
         else:
-            response = requests.post(self.url, files={'file': file, 'filename': file.filename}, timeout=self.timeout)
+            response = requests.post(self.url, files={'file': file, 'filename': file.filename},
+                                     timeout=TYR_UPLOAD_TIMEOUT)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
                 url=self.url, status_code=response.status_code)
@@ -71,10 +70,10 @@ class FtpPublisher(AbstractPublisher):
         else:
             session = ftplib.FTP(self.url)
         full_code = session.storbinary('STOR {filename}'.format(filename=file.filename), file)
+        file.close()
+        session.quit()
         code, message = tuple(full_code.split('-'))
         if code != '226':
             message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
             logger.error(message)
             raise PublishException(message)
-        file.close()
-        session.quit()

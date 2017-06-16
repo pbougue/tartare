@@ -45,7 +45,6 @@ from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage
 
 logger = logging.getLogger(__name__)
 
@@ -104,22 +103,12 @@ def publish_data_on_platform(self, platform, gridfs_id, coverage, environment_id
         raise Exception(error_message)
     publisher = publishers_by_type[platform.type](platform.url, platform.authent)
     try:
-        # Upgrade current_ntfs_id
         publisher.publish(file)
+        # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except PublishException:
         self.retry()
-
-
-@celery.task(bind=True, max_retries=1, acks_late=True)
-def publish_data(self, coverage_id, environment_id):
-    logger.info('publish_data')
-    coverage = Coverage.get(coverage_id)
-    environment = coverage.get_environment(environment_id)
-    gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
-    for platform in environment.publication_platforms:
-        publish_data_on_platform(platform, gridfs_id, coverage, environment_id)
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)

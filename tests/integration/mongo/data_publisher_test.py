@@ -64,11 +64,11 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        #Create Coverage
+        # Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        #Launch data update
+        # Launch data update
         resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
@@ -95,18 +95,18 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        #Create Coverage
+        # Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        #Launch data update
+        # Launch data update
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
         assert r['message'] == 'Object Not Found'
         assert r['error'] == 'Coverage default without export.'
 
-    def _create_contributor(self, id, url = 'bob'):
+    def _create_contributor(self, id, url='bob'):
         contributor = {
             "id": id,
             "name": id,
@@ -204,7 +204,8 @@ class TestDataPublisher(TartareFixture):
         ftp_username = 'tartare_user'
         ftp_password = 'tartare_password'
         filename = 'some_archive.zip'
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename=filename))
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "name": "ods",
@@ -227,12 +228,7 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 200
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
-        try:
-            files = session.nlst()
-            print(files)
-        except ftplib.error_perm as resp:
-            if str(resp) == "550 No files found":
-                pytest.fail('uploaded file was not found on ftp server')
-            else:
-                raise
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
         session.quit()
