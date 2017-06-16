@@ -74,7 +74,7 @@ class ProductionDateFinder(object):
                 data = self._get_data(line)
                 try:
                     return data.index(column)
-                except Exception:
+                except ValueError:
                     msg = 'column name {} is not exist in file {}'.format(column, filename)
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
@@ -84,19 +84,25 @@ class ProductionDateFinder(object):
         header_end = self.get_index(files_zip, self.calendar, 'end_date')
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar, tmp_path)
-            start_dates, end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
-                                                delimiter=',',
-                                                skiprows=1,
-                                                usecols=[header_start, header_end],
-                                                dtype=np.datetime64,
-                                                unpack=True)
+            try:
+                start_dates, end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
+                                                    delimiter=',',
+                                                    skiprows=1,
+                                                    usecols=[header_start, header_end],
+                                                    dtype=np.datetime64,
+                                                    unpack=True)
+            except ValueError as e:
+                    msg = 'Impossible to parse file {}, {}'.format(self.calendar, str(e))
+                    logging.getLogger(__name__).error(msg)
+                    raise InvalidFile(msg)
 
             self.start_date = self.datetime64_to_date(start_dates.min())
             self.end_date = self.datetime64_to_date(end_dates.max())
 
     def add_dates(self, dates, exception_type):
         add_dates_idx = np.argwhere(exception_type == 1).flatten()
-        add_dates = list(set(dates[i] for i in add_dates_idx))
+        add_dates = [dates[i] for i in add_dates_idx]
+        add_dates.sort()
         for d in add_dates:
             current_date = self.datetime64_to_date(d)
             if self.start_date > current_date:
@@ -114,8 +120,8 @@ class ProductionDateFinder(object):
     def remove_dates(self, dates, exception_type):
         remove_dates_idx = np.argwhere(exception_type == 2).flatten()
 
-        remove_dates = list(set(dates[i] for i in remove_dates_idx))
-
+        remove_dates = [dates[i] for i in remove_dates_idx]
+        remove_dates.sort()
         for d in remove_dates:
             current_date = self.datetime64_to_date(d)
             if self.start_date == current_date:
@@ -126,7 +132,7 @@ class ProductionDateFinder(object):
         for d in remove_dates[::-1]:
             current_date = self.datetime64_to_date(d)
             if self.end_date == current_date:
-                self.end_date = self.start_date - timedelta(days=1)
+                self.end_date = self.end_date - timedelta(days=1)
             else:
                 break
 
@@ -135,17 +141,20 @@ class ProductionDateFinder(object):
         header_exception_type = self.get_index(files_zip, self.calendar_dates, 'exception_type')
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar_dates, tmp_path)
-            dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
-                               delimiter=',',
-                               skiprows=1,
-                               usecols=[header_date],
-                               dtype=np.datetime64)
+            try:
+                dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
+                                   delimiter=',', skiprows=1, usecols=[header_date], dtype=np.datetime64)
 
-            exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
-                                        delimiter=',',
-                                        skiprows=1,
-                                        usecols=[header_exception_type],
-                                        dtype=np.int)
+                exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
+                                            delimiter=',',
+                                            skiprows=1,
+                                            usecols=[header_exception_type],
+                                            dtype=np.int)
+            except ValueError as e:
+                    msg = 'Impossible to parse file {}, {}'.format(self.calendar_dates, str(e))
+                    logging.getLogger(__name__).error(msg)
+                    raise InvalidFile(msg)
+
             self.add_dates(dates, exception_type)
             self.remove_dates(dates, exception_type)
 
@@ -165,10 +174,11 @@ class ProductionDateFinder(object):
         self._check_zip_file(file)
         with ZipFile(file, 'r') as files_zip:
             file_list = [s for s in files_zip.namelist() if s.startswith('calendar')]
-            if not file_list:
-                msg = 'file zip {} without calendar.'.format(file)
+            if self.calendar not in file_list:
+                msg = 'file zip {} without calendar.txt'.format(file)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
+
             if self.calendar in file_list:
                 self._parse_calendar(files_zip)
             if self.calendar_dates in file_list:
