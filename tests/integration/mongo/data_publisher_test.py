@@ -124,6 +124,7 @@ class TestDataPublisher(TartareFixture):
         }
         resp = self.post("/contributors", json.dumps(contributor))
         assert resp.status_code == 201
+        return resp
 
     def _create_coverage(self, id, contributor_id, publication_platform):
         coverage = {
@@ -144,6 +145,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
+        return resp
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_publish_ok(self, urlretrieve_func):
@@ -229,3 +231,24 @@ class TestDataPublisher(TartareFixture):
         assert len(directory_content) == 1
         assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
         session.quit()
+
+    def test_config_user_password(self):
+        user_to_set = 'user'
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        publication_platform = {
+            "name": "ods",
+            "type": "ftp",
+            "url": "whatever.com",
+            "authent": {
+                "username": user_to_set,
+                "password": 'password'
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
+        r = self.to_json(resp)['coverages'][0]
+        pub_platform = r['environments']['production']['publication_platforms'][0]
+        assert 'password' not in pub_platform['authent']
+        assert 'username' in pub_platform['authent']
+        assert user_to_set == pub_platform['authent']['username']

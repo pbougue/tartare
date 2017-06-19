@@ -198,7 +198,7 @@ class MongoPlatformAuthentSchema(Schema):
     password = fields.String(required=True)
 
     @post_load
-    def make_platform(self, data):
+    def make_authent(self, data):
         return Authent(**data)
 
 

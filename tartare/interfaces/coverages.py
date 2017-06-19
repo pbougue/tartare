@@ -32,13 +32,21 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 import logging
 from tartare.interfaces import schema
-from marshmallow import ValidationError
+from marshmallow import MarshalResult, ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.decorators import json_data_validate
 
 
 class Coverage(flask_restful.Resource):
+    def _hide_password_in_coverage_response(self, response):
+        for env_name, env_def in response.get('environments', []).items():
+            for (pub_idx, publication_platform) in enumerate(env_def.get('publication_platforms', [])):
+                if 'authent' in publication_platform and publication_platform['authent']:
+                    response['environments'][env_name]['publication_platforms'][pub_idx]['authent'].pop(
+                        'password', None)
+        return response
+
     @json_data_validate()
     def post(self):
         coverage_schema = schema.CoverageSchema(strict=True)
@@ -63,11 +71,15 @@ class Coverage(flask_restful.Resource):
                 raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
+            result = MarshalResult(data=self._hide_password_in_coverage_response(result.data), errors=result.errors)
             return {'coverages': [result.data]}, 200
 
-        coverages = models.Coverage.all()
+        coverages = schema.CoverageSchema(many=True).dump(models.Coverage.all())
+        processed_coverages = []
+        for (cov_idx, coverage) in enumerate(coverages.data):
+            processed_coverages.append(self._hide_password_in_coverage_response(coverage))
 
-        return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
+        return {'coverages': MarshalResult(data=processed_coverages, errors=coverages.errors).data}, 200
 
     def delete(self, coverage_id):
         c = models.Coverage.delete(coverage_id)

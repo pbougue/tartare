@@ -93,9 +93,6 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
         we override the make coverage from the schema model, this way we can add some specific logic
         This method need to have the same name as the one in the modelSchema else they will both be called
         """
-        def _default_dir(var, coverage_id):
-            return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
-
         envs = data.get('environments', {})
         environments = ['preproduction', 'production', 'integration']
         if not any([envs.get(e, False) for e in environments]):
