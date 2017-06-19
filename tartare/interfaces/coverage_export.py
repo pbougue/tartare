@@ -33,6 +33,7 @@ from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
 from tartare.http_exceptions import ObjectNotFound
 from tartare.interfaces.schema import CoverageExportSchema
+import logging
 
 
 class CoverageExportResource(flask_restful.Resource):
@@ -46,7 +47,9 @@ class CoverageExportResource(flask_restful.Resource):
     def post(self, coverage_id):
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
+            msg = 'Coverage not found: {}'.format(coverage_id)
+            logging.getLogger(__name__).error(msg)
+            raise ObjectNotFound(msg)
         job = self._export(coverage)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
@@ -54,6 +57,9 @@ class CoverageExportResource(flask_restful.Resource):
     def get(self, coverage_id):
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            raise ObjectNotFound('Coverage not found: {}'.format(coverage_id))
+            msg = 'Coverage not found: {}'.format(coverage_id)
+            logging.getLogger(__name__).error(msg)
+            raise ObjectNotFound(msg)
+
         exports = CoverageExport.get(coverage_id=coverage.id)
         return {'exports': CoverageExportSchema(many=True, strict=True).dump(exports).data}, 200

@@ -35,6 +35,7 @@ import zipfile
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
+from tartare.helper import get_filename
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +57,14 @@ def fetch_datasets(contributor, context):
             url = data_input.get('url')
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
-                filename = "gtfs-{data_source_id}.zip".format(data_source_id=data_source.id)
+                filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
                     if not zipfile.is_zipfile(tmp_file_name):
-                        raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                        msg = 'downloaded file from url {} is not a zip file'.format(url)
+                        logger.error(msg)
+                        raise Exception(msg)
                     with open(tmp_file_name, 'rb') as file:
                         grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
                         context.add_data_source_grid(data_source_id=data_source.id, grid_fs_id=grid_fs_id)

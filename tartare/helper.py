@@ -114,3 +114,14 @@ def validate_preprocesses_or_raise(preprocesses):
             msg = 'Invalid process type {}'.format(p_type)
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
+
+
+def get_filename(url, data_source_id):
+    filename = "gtfs-{data_source_id}.zip".format(data_source_id=data_source_id)
+    if not url:
+        return filename
+    parse_url = url.split('/')
+    tmp = parse_url[-1]
+    if tmp.endswith(".zip"):
+        return tmp
+    return filename
