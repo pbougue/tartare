@@ -48,9 +48,9 @@ def test_zip_file_only_calendar():
 def test_zip_file_invalid():
     finder = ValidityPeriodFinder()
     file = '{}/{}'.format(current_path, 'gtfs/bob.zip')
-    with pytest.raises(FileNotFound) as excinfo:
+    with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == "File {} not found".format(file)
+    assert str(excinfo.value) == "{} is not a zip file or not exist.".format(file)
 
 
 def test_not_zipfile():
@@ -58,7 +58,7 @@ def test_not_zipfile():
     file = '{}/{}'.format(current_path, 'ntfs/calendar.txt')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == "{} is not a zip file".format(file)
+    assert str(excinfo.value) == "{} is not a zip file or not exist.".format(file)
 
 
 def test_calendar_without_end_date_column():

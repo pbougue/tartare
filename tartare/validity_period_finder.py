@@ -27,12 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 from datetime import date
 import logging
 from datetime import datetime, timedelta
 import os
-import zipfile
 from tartare.exceptions import FileNotFound, InvalidFile
 import tempfile
 import numpy as np
@@ -150,10 +149,7 @@ class ValidityPeriodFinder(object):
                                    delimiter=',', skiprows=1, usecols=[header_date], dtype=np.datetime64)
 
                 exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
-                                            delimiter=',',
-                                            skiprows=1,
-                                            usecols=[header_exception_type],
-                                            dtype=np.int)
+                                            delimiter=',', skiprows=1, usecols=[header_exception_type], dtype=np.int)
             except ValueError as e:
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar_dates, str(e))
                     logging.getLogger(__name__).error(msg)
@@ -162,20 +158,13 @@ class ValidityPeriodFinder(object):
             self.add_dates(dates, exception_type)
             self.remove_dates(dates, exception_type)
 
-    @staticmethod
-    def _check_zip_file(file):
-        if not os.path.exists(file):
-            msg = "File {} not found".format(file)
-            logging.getLogger(__name__).error(msg)
-            raise FileNotFound(msg)
+    def get_validity_period(self, file):
 
-        if not zipfile.is_zipfile(file):
-            msg = '{} is not a zip file'.format(file)
+        if not is_zipfile(file):
+            msg = '{} is not a zip file or not exist.'.format(file)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
-    def get_validity_period(self, file):
-        self._check_zip_file(file)
         with ZipFile(file, 'r') as files_zip:
             if self.calendar not in files_zip.namelist():
                 msg = 'file zip {} without calendar.txt'.format(file)

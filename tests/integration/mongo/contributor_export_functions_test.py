@@ -37,7 +37,7 @@ from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app
 import pytest
 from urllib.error import ContentTooShortError
-from tartare.exceptions import FileNotFound
+from tartare.exceptions import InvalidFile
 from datetime import date
 
 
@@ -52,9 +52,9 @@ def test_fetch_data_from_input_failed(mocker):
 
     context = Context()
     #following test needs to be improved to handle file creation on local drive
-    with pytest.raises(FileNotFound) as excinfo:
+    with pytest.raises(InvalidFile) as excinfo:
         fetch_datasets(contrib, context)
-    assert str(excinfo.typename) == 'FileNotFound'
+    assert str(excinfo.typename) == 'InvalidFile'
 
 
 class TestFetcher():
