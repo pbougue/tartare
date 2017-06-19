@@ -1112,9 +1112,14 @@ definitions:
         type: string
         example: 592d4b327053ad21a7626578
       validity_period:
-        type: array
-        items:
-          $ref: "#/definitions/validity_period"
+        type: object
+        properties:
+          start_date:
+            type: string
+            example: "2017-06-14"
+          end_date:
+            type: string
+            example: "2017-06-20"
 
   contributor_source_list:
     type: object
@@ -1122,13 +1127,18 @@ definitions:
       contributor_id:
         type: string
       validity_period:
-        type: array
-        items:
-          $ref: "#/definitions/validity_period"
+        type: object
+        properties:
+          start_date:
+            type: string
+            example: "2017-06-14"
+          end_date:
+            type: string
+            example: "2017-06-20"
       data_sources:
         type: array
         items:
-          $ref: "#/definitions/export_data_sources"
+          $ref: "#/definitions/contributor_export_list"
       
 
   contributor_export_list:
@@ -1159,9 +1169,14 @@ definitions:
         type: string
         example: 592d4b327053ad21a7626578
       validity_period:
-        type: array
-        items:
-          $ref: "#/definitions/validity_period"
+        type: object
+        properties:
+          start_date:
+            type: string
+            example: "2017-06-14"
+          end_date:
+            type: string
+            example: "2017-06-20"
 
   export_data_source_list:
     type: object
@@ -1170,19 +1185,14 @@ definitions:
         type: string
         example: data_source_stif
       validity_period:
-        type: array
-        items:
-          $ref: "#/definitions/validity_period"
-        
-  validity_period:
-    type: object
-    properties:
-      start_date:
-        type: string
-        example: "2017-06-14"
-      end_date:
-        type: string
-        example: "2017-06-20"
+        type: object
+        properties:
+          start_date:
+            type: string
+            example: "2017-06-14"
+          end_date:
+            type: string
+            example: "2017-06-20"
 
   data_source_obj:
     type: object
