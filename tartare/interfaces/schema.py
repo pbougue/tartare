@@ -82,8 +82,8 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
 
     @staticmethod
     def _default_env(data):
-        platform = Platform(name='navitia',
-                            type='http',
+        platform = Platform(type='navitia',
+                            protocol='http',
                             url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
         return Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'), publication_platforms=[platform])
 

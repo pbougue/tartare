@@ -58,10 +58,11 @@ class Environment(object):
 
 
 class Platform(object):
-    def __init__(self, name, type, url):
-        self.name = name
+    def __init__(self, protocol, type, url, options=None):
         self.type = type
+        self.protocol = protocol
         self.url = url
+        self.options = {} if options is None else options
 
 
 class ValidityPeriod(object):
@@ -186,9 +187,10 @@ class MongoContributorExportDataSourceSchema(Schema):
 
 
 class MongoPlatformSchema(Schema):
-    name = fields.String(required=True)
     type = fields.String(required=True)
+    protocol = fields.String(required=True)
     url = fields.String(required=True)
+    options = fields.Dict(required=False)
 
     @post_load
     def make_platform(self, data):

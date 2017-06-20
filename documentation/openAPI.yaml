@@ -1031,12 +1031,30 @@ definitions:
       name:
         type: string
         example: integration
-      tyr_url:
-        type: string
-        example: http://tyr.dev.canaltp.fr/v0/jobs/fr-auv
       current_ntfs_id:
         type: string
         example: 5810cb2d3c96b7000108d074
+      publication_platforms:
+        type: array
+        items:
+          $ref: "#/definitions/publication_platform"
+
+
+  publication_platform:
+    type: object
+    properties:
+      type:
+        type: string
+        example: ods
+      protocol:
+        type: string
+        example: ftp
+      url:
+        type: string
+        example: ods.fr
+      options:
+        type: object
+        example: {"authent": {"password": "XXXX", "username": "ftp_user"}, "directory": "/path/" }
 
   contributor_obj:
     type: object

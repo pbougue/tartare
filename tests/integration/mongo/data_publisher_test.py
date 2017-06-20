@@ -52,8 +52,8 @@ class TestDataPublisher(TartareFixture):
                     "name": "production",
                     "publication_platforms": [
                         {
-                            "name": "navitia",
-                            "type": "http",
+                            "type": "navitia",
+                            "protocol": "http",
                             "url": "http://bob/v0/jobs"
                         }
                     ]
@@ -83,8 +83,8 @@ class TestDataPublisher(TartareFixture):
                     "name": "production",
                     "publication_platforms": [
                         {
-                            "name": "navitia",
-                            "type": "http",
+                            "type": "navitia",
+                            "protocol": "http",
                             "url": "http://bob/v0/jobs"
                         }
                     ]
@@ -130,8 +130,8 @@ class TestDataPublisher(TartareFixture):
                     "name": "production",
                     "publication_platforms": [
                         {
-                            "name": "navitia",
-                            "type": "http",
+                            "type": "navitia",
+                            "protocol": "http",
                             "url": "http://bob/v0/jobs"
                         }
                     ]

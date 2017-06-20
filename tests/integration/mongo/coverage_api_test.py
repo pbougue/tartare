@@ -62,8 +62,8 @@ class TestCoverageApi(TartareFixture):
         assert 'production' in coverage['environments']
         assert coverage['environments']['production']['name'] == 'production'
         publication_platform = coverage['environments']['production']['publication_platforms'][0]
-        assert publication_platform['name'] == 'navitia'
-        assert publication_platform['type'] == 'http'
+        assert publication_platform['type'] == 'navitia'
+        assert publication_platform['protocol'] == 'http'
         assert publication_platform['url'] == 'http://tyr.prod/v0/coverage/id_test/'
 
     def test_add_coverage_no_id(self):
