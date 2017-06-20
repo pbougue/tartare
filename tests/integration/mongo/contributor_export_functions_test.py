@@ -37,6 +37,8 @@ from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app
 import pytest
 from urllib.error import ContentTooShortError
+from tartare.exceptions import InvalidFile
+from datetime import date
 
 
 def test_fetch_data_from_input_failed(mocker):
@@ -50,9 +52,9 @@ def test_fetch_data_from_input_failed(mocker):
 
     context = Context()
     #following test needs to be improved to handle file creation on local drive
-    with pytest.raises(FileNotFoundError) as excinfo:
+    with pytest.raises(InvalidFile) as excinfo:
         fetch_datasets(contrib, context)
-    assert str(excinfo.value).startswith("[Errno 2] No such file or directory:")
+    assert str(excinfo.typename) == 'InvalidFile'
 
 
 class TestFetcher():
@@ -66,6 +68,8 @@ class TestFetcher():
             assert len(context.data_sources_grid) == 1
             assert context.data_sources_grid[0].get("data_source_id") == 666
             assert context.data_sources_grid[0].get("grid_fs_id")
+            assert context.data_sources_grid[0].get("validity_period").get('end_date') == date(2015, 8, 26)
+            assert context.data_sources_grid[0].get("validity_period").get('start_date') == date(2015, 3, 25)
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):

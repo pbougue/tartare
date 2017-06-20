@@ -28,18 +28,16 @@
 # www.navitia.io
 
 
-class Context():
-    def __init__(self):
-        self.data_sources_grid = []
-        self.contributor_exports = []
+class ColumnNotFound(Exception):
+    def __init__(self, message=''):
+        self.message = message
 
-    def add_data_source_grid(self, data_source_id, grid_fs_id, start_date, end_date):
-        tmp = {
-            "data_source_id": data_source_id,
-            "grid_fs_id": grid_fs_id,
-            "validity_period": {
-                "start_date": start_date,
-                "end_date": end_date
-            }
-        }
-        self.data_sources_grid.append(tmp)
+
+class FileNotFound(Exception):
+    def __init__(self, message=''):
+        self.message = message
+
+
+class InvalidFile(Exception):
+    def __init__(self, message=''):
+        self.message = message

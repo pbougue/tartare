@@ -34,8 +34,9 @@ import urllib.request
 import zipfile
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport
+from tartare.core.models import ContributorExport, ContributorExportDataSource
 from tartare.helper import get_filename
+from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +62,6 @@ def fetch_datasets(contributor, context):
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
-                    if not zipfile.is_zipfile(tmp_file_name):
-                        msg = 'downloaded file from url {} is not a zip file'.format(url)
-                        logger.error(msg)
-                        raise Exception(msg)
-                    with open(tmp_file_name, 'rb') as file:
-                        grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
-                        context.add_data_source_grid(data_source_id=data_source.id, grid_fs_id=grid_fs_id)
                 except HTTPError as e:
                     logger.error('error during download of file: {}'.format(str(e)))
                     raise
@@ -77,6 +71,17 @@ def fetch_datasets(contributor, context):
                 except URLError as e:
                     logger.error('error during download of file: {}'.format(str(e)))
                     raise
+                if not zipfile.is_zipfile(tmp_file_name):
+                    raise Exception('downloaded file from url {} is not a zip file'.format(url))
+
+                start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
+                logger.info('Production date {} to {}'.format(start_date, end_date))
+                with open(tmp_file_name, 'rb') as file:
+                    grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
+                    context.add_data_source_grid(data_source_id=data_source.id,
+                                                 grid_fs_id=grid_fs_id,
+                                                 start_date=start_date,
+                                                 end_date=end_date)
     return context
 
 
@@ -88,9 +93,12 @@ def save_export(contributor, context):
             logger.info("data source {} without gridfs id.".format(data_source_id))
             continue
         new_grid_fs_id = GridFsHandler().copy_file(grid_fs_id)
+        validity_period = dict_gridfs_id.get('validity_period')
+        data_source = ContributorExportDataSource(data_source_id, validity_period)
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_grid_fs_id,
-                                   data_sources=[data_source_id])
+                                   validity_period=validity_period,
+                                   data_sources=[data_source])
         export.save()
         dict_gridfs_id.update({'grid_fs_id': new_grid_fs_id})
     return context

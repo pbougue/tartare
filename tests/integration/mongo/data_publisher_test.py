@@ -152,9 +152,34 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/contributors/fr-idf/actions/export")
         assert resp.status_code == 201
 
+        # List contributor export
+        r = self.to_json(self.get("/contributors/fr-idf/exports"))
+        exports = r["exports"]
+        assert len(exports) == 1
+        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
+        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+
+        assert exports[0]["gridfs_id"]
+        data_sources = exports[0]["data_sources"]
+        assert len(data_sources) == 1
+        assert data_sources[0]["validity_period"]
+
         #Launch coverage export
         resp = self.post("/coverages/default/actions/export")
         assert resp.status_code == 201
+
+        # List coverage export
+        r = self.to_json(self.get("/coverages/default/exports"))
+        exports = r["exports"]
+        assert len(exports) == 1
+        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
+        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+        assert exports[0]["gridfs_id"]
+        contributors = exports[0]["contributors"]
+        assert len(contributors) == 1
+        assert contributors[0]["validity_period"]
+        assert len(contributors[0]["data_sources"]) == 1
+        assert contributors[0]["data_sources"][0]["validity_period"]
 
         #Launch data update
         with mock.patch('requests.post', mock_requests_post):
