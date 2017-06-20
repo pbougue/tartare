@@ -35,6 +35,7 @@ from gridfs.grid_file import GridOut
 import tartare.processes
 import logging
 from tartare.http_exceptions import InvalidArguments
+from hashlib import md5
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
@@ -125,3 +126,11 @@ def get_filename(url, data_source_id):
     if tmp.endswith(".zip"):
         return tmp
     return filename
+
+
+def get_md5_content_file(file):
+    hasher = md5()
+    with open(file, "rb") as f:
+        data = f.read()
+        hasher.update(data)
+        return hasher.hexdigest()

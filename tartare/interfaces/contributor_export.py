@@ -28,11 +28,12 @@
 # www.navitia.io
 
 import flask_restful
-from tartare.tasks import contributor_export
+from tartare.tasks import contributor_export, finish_job
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
 from tartare.http_exceptions import ObjectNotFound
 import logging
+from celery import chain
 
 
 class ContributorExportResource(flask_restful.Resource):
@@ -41,7 +42,11 @@ class ContributorExportResource(flask_restful.Resource):
     def _export(contributor):
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
-        contributor_export.delay(contributor, job)
+        try:
+            chain(contributor_export.si(contributor, job), finish_job.si(job.id)).delay()
+        except Exception as e:
+            # Exception when celery tasks aren't deferred, they are executed locally by blocking
+            logging.getLogger(__name__).error('Error : {}'.format(str(e)))
         return job
 
     def post(self, contributor_id):
@@ -50,6 +55,7 @@ class ContributorExportResource(flask_restful.Resource):
             msg = 'Contributor not found: {}'.format(contributor_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
+
         job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201

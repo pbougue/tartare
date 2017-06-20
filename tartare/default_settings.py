@@ -26,7 +26,14 @@ CELERY_QUEUES = (
 # configuration of celery, don't edit
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-CELERYBEAT_SCHEDULE = {}
+CELERYBEAT_SCHEDULE = {
+    'automatic-update-every-6-hours': {
+        'task': 'tartare.tasks.automatic_update',
+        'schedule': timedelta(hours=6),
+        'options': {'expires': 25}
+    }
+}
+
 CELERY_TIMEZONE = 'UTC'
 
 # http://docs.celeryproject.org/en/master/configuration.html#std:setting-CELERYBEAT_SCHEDULE_FILENAME

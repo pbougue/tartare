@@ -225,6 +225,44 @@ class MongoEnvironmentListSchema(Schema):
         return {key: value for key, value in data.items() if value is not None}
 
 
+class DataSourceFetched(object):
+    mongo_collection = 'data_source_fetched'
+
+    def __init__(self, contributor_id, data_source_id, validity_period, gridfs_id=None, created_at=None):
+        self.data_source_id = data_source_id
+        self.contributor_id = contributor_id
+        self.gridfs_id = gridfs_id
+        self.created_at = created_at if created_at else datetime.utcnow()
+        self.validity_period = validity_period
+
+    def save(self):
+        raw = MongoDataSourceFetchedSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get_last(cls, contributor_id, data_source_id):
+        if not contributor_id:
+            return None
+        where = {
+            'contributor_id': contributor_id,
+            'data_source_id': data_source_id
+        }
+        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
+        lasts = MongoDataSourceFetchedSchema(many=True).load(raw).data
+        return lasts[0] if lasts else None
+
+    def get_md5(self):
+        if not self.gridfs_id:
+            return None
+        file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
+        return file.md5
+
+    def save_dataset(self, tmp_file, filename):
+        with open(tmp_file, 'rb') as file:
+            self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
+                                                                 contributor_id=self.contributor_id)
+
+
 class DataSource(object):
     def __init__(self, id=None, name=None, data_format="gtfs", input=None, license=None):
         self.id = id if id else str(uuid.uuid4())
@@ -359,7 +397,6 @@ class PreProcess(object):
 
         return cls.get(contributor_id, preprocess_id)
 
-
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
     url = fields.String(required=False)
@@ -367,6 +404,17 @@ class MongoDataSourceLicenseSchema(Schema):
     @post_load
     def build_license(self, data):
         return License(**data)
+
+class MongoDataSourceFetchedSchema(Schema):
+    data_source_id = fields.String(required=True)
+    contributor_id = fields.String(required=True)
+    gridfs_id = fields.String(required=False)
+    created_at = fields.DateTime(required=False)
+    validity_period = fields.Nested(MongoValidityPeriodSchema)
+
+    @post_load
+    def build_data_source_fetched(self, data):
+        return DataSourceFetched(**data)
 
 
 class MongoDataSourceSchema(Schema):
@@ -563,7 +611,8 @@ class ContributorExport(object):
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
-        return MongoContributorExportSchema(many=True).load(raw).data
+        lasts = MongoContributorExportSchema(many=True).load(raw).data
+        return lasts[0] if lasts else None
 
 
 class MongoContributorExportSchema(Schema):
@@ -619,7 +668,8 @@ class CoverageExport(object):
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
-        return MongoCoverageExportSchema(many=True).load(raw).data
+        lasts = MongoCoverageExportSchema(many=True).load(raw).data
+        return lasts[0] if lasts else None
 
 
 class MongoCoverageExportSchema(Schema):

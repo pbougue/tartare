@@ -52,7 +52,7 @@ def initialize_context(coverage, context):
         if not export:
             logger.info("Contributor {} without export.".format(contributor_id), coverage.id)
             continue
-        context.contributor_exports.append(export[0])
+        context.contributor_exports.append(export)
 
     return context
 
