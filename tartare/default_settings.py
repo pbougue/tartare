@@ -37,6 +37,9 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost/tartare')
 TYR_UPLOAD_TIMEOUT = os.getenv('TYR_UPLOAD_TIMEOUT', 10)
 
+DEFAULT_LICENSE_URL = ''
+DEFAULT_LICENSE_NAME = 'Private (unspecified)'
+
 # GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
 # The absolute path is CURRENT_DATA_DIR/grid_calendar
 GRID_CALENDAR_DIR = 'grid_calendar'

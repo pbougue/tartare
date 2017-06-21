@@ -77,6 +77,12 @@ class ContributorExportDataSource(object):
         self.validity_period = validity_period
 
 
+class License(object):
+    def __init__(self, name=app.config.get('DEFAULT_LICENSE_NAME'), url=app.config.get('DEFAULT_LICENSE_URL')):
+        self.name = name
+        self.url = url
+
+
 class Coverage(object):
     mongo_collection = 'coverages'
 
@@ -219,11 +225,12 @@ class MongoEnvironmentListSchema(Schema):
 
 
 class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", input=None):
+    def __init__(self, id=None, name=None, data_format="gtfs", input=None, license=None):
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = {} if not input else input
+        self.license = license if license else License()
 
     def save(self, contributor_id):
         contributor = get_contributor(contributor_id)
@@ -352,10 +359,20 @@ class PreProcess(object):
         return cls.get(contributor_id, preprocess_id)
 
 
+class MongoDataSourceLicenseSchema(Schema):
+    name = fields.String(required=False)
+    url = fields.String(required=False)
+
+    @post_load
+    def build_license(self, data):
+        return License(**data)
+
+
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
+    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     input = fields.Dict(required=True)
 
     @post_load
