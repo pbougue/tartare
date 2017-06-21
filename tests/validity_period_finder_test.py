@@ -163,4 +163,4 @@ def test_calendar_with_headers_only():
     file = '{}/{}'.format(current_path, 'validity_period/calendar_with_headers_only.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == 'Impossible to parse file calendar.txt, need more than 0 values to unpack'
+    assert str(excinfo.value).startswith('Impossible to parse file calendar.txt,')
