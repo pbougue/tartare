@@ -76,7 +76,7 @@ class Coverage(flask_restful.Resource):
 
         coverages = schema.CoverageSchema(many=True).dump(models.Coverage.all())
         processed_coverages = []
-        for (cov_idx, coverage) in enumerate(coverages.data):
+        for coverage in coverages.data:
             processed_coverages.append(self._hide_password_in_coverage_response(coverage))
 
         return {'coverages': MarshalResult(data=processed_coverages, errors=coverages.errors).data}, 200

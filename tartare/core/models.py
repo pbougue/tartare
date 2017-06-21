@@ -57,13 +57,6 @@ class Environment(object):
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
 
-
-class Authent(object):
-    def __init__(self, username, password):
-        self.username = username
-        self.password = password
-
-
 class Platform(object):
     def __init__(self, protocol, type, url, options=None):
         self.type = type
@@ -191,15 +184,6 @@ class MongoContributorExportDataSourceSchema(Schema):
     @post_load
     def make_contributorexportdatasource(self, data):
         return ContributorExportDataSource(**data)
-
-
-class MongoPlatformAuthentSchema(Schema):
-    username = fields.String(required=True)
-    password = fields.String(required=True)
-
-    @post_load
-    def make_authent(self, data):
-        return Authent(**data)
 
 
 class MongoPlatformSchema(Schema):

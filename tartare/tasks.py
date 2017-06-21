@@ -37,7 +37,7 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
-from tartare.core.coverage_export_publisher import HttpPublisher, FtpPublisher, PublishException
+from tartare.core.publisher import HttpPublisher, FtpPublisher, PublishException
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
@@ -97,13 +97,13 @@ def publish_data_on_platform(self, platform, gridfs_id, coverage, environment_id
         "http": HttpPublisher,
         "ftp": FtpPublisher
     }
-    if platform.type not in publishers_by_type:
-        error_message = 'unknown platform type "{type}"'.format(type=platform.type)
+    if platform.protocol not in publishers_by_type:
+        error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
         logger.error(error_message)
         raise Exception(error_message)
-    publisher = publishers_by_type[platform.type](platform.url, platform.authent, coverage.id)
+    publisher = publishers_by_type[platform.protocol](platform.url, platform.options, coverage.id)
     try:
-        publisher.publish(file, platform.directory)
+        publisher.publish(file)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})

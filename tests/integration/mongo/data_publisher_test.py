@@ -207,12 +207,14 @@ class TestDataPublisher(TartareFixture):
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
-            "name": "ods",
-            "type": "ftp",
+            "type": "ods",
+            "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
-            "authent": {
-                "username": ftp_username,
-                "password": ftp_password
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                }
             }
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
@@ -237,18 +239,20 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
-            "name": "ods",
-            "type": "ftp",
+            "type": "ods",
+            "protocol": "ftp",
             "url": "whatever.com",
-            "authent": {
-                "username": user_to_set,
-                "password": 'password'
+            "options": {
+                "authent": {
+                    "username": user_to_set,
+                    "password": 'my_password'
+                }
             }
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
         resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
         r = self.to_json(resp)['coverages'][0]
         pub_platform = r['environments']['production']['publication_platforms'][0]
-        assert 'password' not in pub_platform['authent']
-        assert 'username' in pub_platform['authent']
-        assert user_to_set == pub_platform['authent']['username']
+        assert 'my_password' not in pub_platform['options']['authent']
+        assert 'username' in pub_platform['options']['authent']
+        assert user_to_set == pub_platform['options']['authent']['username']

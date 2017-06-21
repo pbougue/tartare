@@ -30,32 +30,31 @@ import ftplib
 from abc import ABCMeta, abstractmethod
 import logging
 import requests
-from tartare.default_settings import TYR_UPLOAD_TIMEOUT
 from tartare.exceptions import PublishException
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
-    def __init__(self, url, authent, coverage_id):
+    def __init__(self, url, options, coverage_id):
         self.url = url
-        self.authent = authent
+        self.options = options
         self.filename = "{coverage}.zip".format(coverage=coverage_id)
 
     @abstractmethod
-    def publish(self, file, directory=None):
+    def publish(self, file):
         pass
 
 
 class HttpPublisher(AbstractPublisher):
-    def publish(self, file, directory=None):
+    def publish(self, file):
         logger.info('publishing file {filename} on {url}...'.format(filename=self.filename, url=self.url))
-        if self.authent:
-            response = requests.post(self.url, auth=(self.authent.username, self.authent.password),
-                                     files={'file': file, 'filename': self.filename}, timeout=TYR_UPLOAD_TIMEOUT)
+        if self.options:
+            response = requests.post(self.url, auth=(self.options['authent']['username'], self['authent']['password']),
+                                     files={'file': file, 'filename': self.filename}, timeout=10)
         else:
             response = requests.post(self.url, files={'file': file, 'filename': self.filename},
-                                     timeout=TYR_UPLOAD_TIMEOUT)
+                                     timeout=10)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
                 url=self.url, status_code=response.status_code)
@@ -64,12 +63,15 @@ class HttpPublisher(AbstractPublisher):
 
 
 class FtpPublisher(AbstractPublisher):
-    def publish(self, file, directory=None):
+    def publish(self, file):
+        directory = None
+        if 'directory' in self.options and self.options['directory']:
+            directory = self.options['directory']
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=self.filename, url=self.url,
                                                                               directory=directory))
-        if self.authent:
-            session = ftplib.FTP(self.url, self.authent.username, self.authent.password)
+        if 'authent' in self.options:
+            session = ftplib.FTP(self.url, self.options['authent']['username'], self.options['authent']['password'])
         else:
             session = ftplib.FTP(self.url)
         if directory:
@@ -81,7 +83,6 @@ class FtpPublisher(AbstractPublisher):
                 raise PublishException(message)
 
         full_code = session.storbinary('STOR {filename}'.format(filename=self.filename), file)
-        file.close()
         session.quit()
         code, message = tuple(full_code.split('-'))
         if code != '226':
