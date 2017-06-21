@@ -57,14 +57,6 @@ class TestCoverageApi(TartareFixture):
         coverage = r["coverages"][0]
         assert coverage["id"] == "id_test"
         assert coverage["name"] == "name_test"
-        #A default environment should have been created
-        assert 'environments' in coverage
-        assert 'production' in coverage['environments']
-        assert coverage['environments']['production']['name'] == 'production'
-        publication_platform = coverage['environments']['production']['publication_platforms'][0]
-        assert publication_platform['type'] == 'navitia'
-        assert publication_platform['protocol'] == 'http'
-        assert publication_platform['url'] == 'http://tyr.prod/v0/coverage/id_test/'
 
     def test_add_coverage_no_id(self):
         raw = self.post('/coverages', '{"name": "name_test"}')
@@ -120,17 +112,7 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert 'error' in r
-        assert 'environments' in r['error']
-
-    def test_add_coverage_with_env_invalid_url(self):
-        raw = self.post('/coverages',
-                '''{"id": "id_test", "name": "name of the coverage",
-                    "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "foo"}}}''')
-
-        assert raw.status_code == 400
-        r = self.to_json(raw)
-        assert 'error' in r
-        assert 'environments' in r['error']
+        assert 'Unknown field name notvalidenv' in r['error']['environments']['_schema']
 
     def test_add_coverage_with_all_env(self):
         raw = self.post('/coverages',

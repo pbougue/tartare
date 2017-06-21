@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -41,3 +41,6 @@ class FileNotFound(Exception):
 class InvalidFile(Exception):
     def __init__(self, message=''):
         self.message = message
+
+class PublishException(Exception):
+    pass

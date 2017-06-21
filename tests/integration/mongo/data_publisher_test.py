@@ -29,6 +29,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import mock
+import pytest
+import ftplib
 from tests.utils import mock_urlretrieve, mock_requests_post
 from tests.integration.test_mechanism import TartareFixture
 import json
@@ -62,11 +64,11 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        #Create Coverage
+        # Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        #Launch data update
+        # Launch data update
         resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
@@ -93,22 +95,21 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        #Create Coverage
+        # Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        #Launch data update
+        # Launch data update
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
         assert r['message'] == 'Object Not Found'
         assert r['error'] == 'Coverage default without export.'
 
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_publish_ok(self, urlretrieve_func):
+    def _create_contributor(self, id, url='bob'):
         contributor = {
-            "id": "fr-idf",
-            "name": "fr idf",
+            "id": id,
+            "name": id,
             "data_prefix": "AAA",
             "data_sources": [
                 {
@@ -116,40 +117,50 @@ class TestDataPublisher(TartareFixture):
                     "data_format": "gtfs",
                     "input": {
                         "type": "url",
-                        "url": "bob"
+                        "url": url
                     }
                 }
             ]
         }
+        resp = self.post("/contributors", json.dumps(contributor))
+        assert resp.status_code == 201
+        return resp
+
+    def _create_coverage(self, id, contributor_id, publication_platform):
         coverage = {
             "contributors": [
-                "fr-idf"
+                contributor_id
             ],
             "environments": {
                 "production": {
                     "name": "production",
                     "publication_platforms": [
-                        {
+                        publication_platform
+                    ]
+                }
+            },
+            "id": id,
+            "name": id
+        }
+
+        resp = self.post("/coverages", json.dumps(coverage))
+        assert resp.status_code == 201
+        return resp
+
+    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
+    def test_publish_ok(self, urlretrieve_func):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        publication_platform = {
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
                         }
-                    ]
-                }
-            },
-            "id": "default",
-            "name": "default"
-        }
-        # Create Contributor
-        resp = self.post("/contributors", json.dumps(contributor))
-        assert resp.status_code == 201
-
-        #Create Coverage
-        resp = self.post("/coverages", json.dumps(coverage))
-        assert resp.status_code == 201
+        self._create_contributor(contributor_id)
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
 
         # Launch contributor export
-        resp = self.post("/contributors/fr-idf/actions/export")
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         assert resp.status_code == 201
 
         # List contributor export
@@ -164,8 +175,8 @@ class TestDataPublisher(TartareFixture):
         assert len(data_sources) == 1
         assert data_sources[0]["validity_period"]
 
-        #Launch coverage export
-        resp = self.post("/coverages/default/actions/export")
+        # Launch coverage export
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         assert resp.status_code == 201
 
         # List coverage export
@@ -181,7 +192,67 @@ class TestDataPublisher(TartareFixture):
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
 
-        #Launch data update
+        # Launch data update
         with mock.patch('requests.post', mock_requests_post):
             resp = self.post("/coverages/default/environments/production/actions/publish")
             assert resp.status_code == 200
+
+    def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        ftp_username = 'tartare_user'
+        ftp_password = 'tartare_password'
+        filename = 'some_archive.zip'
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+        publication_platform = {
+            "type": "ods",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                }
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
+        assert resp.status_code == 200
+        # check if the file was successfully uploaded
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
+        session.quit()
+
+    def test_config_user_password(self):
+        user_to_set = 'user'
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        publication_platform = {
+            "type": "ods",
+            "protocol": "ftp",
+            "url": "whatever.com",
+            "options": {
+                "authent": {
+                    "username": user_to_set,
+                    "password": 'my_password'
+                }
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
+        r = self.to_json(resp)['coverages'][0]
+        pub_platform = r['environments']['production']['publication_platforms'][0]
+        assert 'my_password' not in pub_platform['options']['authent']
+        assert 'username' in pub_platform['options']['authent']
+        assert user_to_set == pub_platform['options']['authent']['username']

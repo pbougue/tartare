@@ -80,27 +80,8 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     #read only
     grid_calendars_id = fields.String(dump_only=True)
 
-    @staticmethod
-    def _default_env(data):
-        platform = Platform(type='navitia',
-                            protocol='http',
-                            url=app.config.get('DEFAULT_ENVIRONMENT_TYR_URL_TEMPLATE').format(coverage=data['id']))
-        return Environment(name=app.config.get('DEFAULT_ENVIRONMENT_NAME'), publication_platforms=[platform])
-
     @post_load
     def make_coverage(self, data):
-        """
-        we override the make coverage from the schema model, this way we can add some specific logic
-        This method need to have the same name as the one in the modelSchema else they will both be called
-        """
-        def _default_dir(var, coverage_id):
-            return os.path.join(app.config.get(var), coverage_id) if coverage_id else None
-
-        envs = data.get('environments', {})
-        environments = ['preproduction', 'production', 'integration']
-        if not any([envs.get(e, False) for e in environments]):
-            data['environments'] = {}
-            data['environments']['production'] = self._default_env(data)
         return Coverage(**data)
 
 

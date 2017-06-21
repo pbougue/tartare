@@ -29,7 +29,9 @@
 
 import flask_restful
 import logging
-from tartare.tasks import publish_data
+
+from tartare.core.models import Coverage, CoverageExport
+from tartare.tasks import publish_data_on_platform
 from tartare.decorators import publish_params_validate
 
 
@@ -38,5 +40,9 @@ class DataPublisher(flask_restful.Resource):
     def post(self, coverage_id, environment_id):
         logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
                                                                                                        environment_id))
-        publish_data.delay(coverage_id, environment_id)
+        coverage = Coverage.get(coverage_id)
+        environment = coverage.get_environment(environment_id)
+        gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
+        for platform in environment.publication_platforms:
+            publish_data_on_platform.delay(platform, gridfs_id, coverage, environment_id)
         return {'message': 'OK'}, 200
