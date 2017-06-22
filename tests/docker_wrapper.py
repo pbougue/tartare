@@ -87,7 +87,8 @@ class AbstractDocker(metaclass=ABCMeta):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.docker = docker.from_env()
-        self._fetch_image()
+        if len(self.docker.images(name=self.image_name)) == 0:
+            self._fetch_image()
 
         host_config = self.docker.create_host_config(
             binds=self.volumes_bindings,

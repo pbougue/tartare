@@ -45,6 +45,9 @@ class TartareFixture(object):
     def get(self, url):
         return self.tester.get(url)
 
+    def dict_to_json(self, dict):
+        return json.dumps(dict)
+
     def to_json(self, response):
         return json.loads(response.data.decode('utf-8'))
 
