@@ -92,10 +92,10 @@ class TestContributorExport(TartareFixture):
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
     @pytest.mark.parametrize("method,filename,state,step,error_message", [
-        ('http', 'some_archive.zip', 'done', 'postprocess', None),
+        ('http', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('http', 'unexisting_file.zip', 'failed', 'fetching data', 'HTTP Error 404: Not Found'),
         ('http', 'not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file'),
-        ('ftp', 'some_archive.zip', 'done', 'postprocess', None),
+        ('ftp', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('ftp', 'unexisting_file.zip', 'failed', 'fetching data',
          """<urlopen error ftp error: URLError('ftp error: error_perm("550 Can\\'t change directory to unexisting_file.zip: No such file or directory",)',)>"""
          ),

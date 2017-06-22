@@ -46,6 +46,7 @@ from tartare.core import coverage_export_functions
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,22 +89,44 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
         logging.exception('error')
 
 
+def _get_publisher(platform):
+    from tartare import navitia_publisher, ods_publisher, stop_area_publisher
+    publishers_by_type = {
+        "navitia": navitia_publisher,
+        "ods": ods_publisher,
+        "stop_area": stop_area_publisher
+    }
+    if platform.type not in publishers_by_type:
+        error_message = 'unknown platform type "{type}"'.format(type=platform.type)
+        logger.error(error_message)
+        raise Exception(error_message)
+
+    return publishers_by_type[platform.type]
+
+
+def _get_protocol_publisher(platform, coverage):
+    publishers_by_protocol = {
+        "http": HttpPublisher,
+        "ftp": FtpPublisher
+    }
+    if platform.protocol not in publishers_by_protocol:
+        error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
+        logger.error(error_message)
+        raise Exception(error_message)
+
+    return publishers_by_protocol[platform.protocol](platform.url, platform.options, coverage.id)
+
+
 @celery.task(bind=True, default_retry_delay=3, max_retries=3, acks_late=True)
 def publish_data_on_platform(self, platform, gridfs_id, coverage, environment_id):
     logger.info('publish_data_on_platform {}'.format(platform.url))
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(gridfs_id)
-    publishers_by_type = {
-        "http": HttpPublisher,
-        "ftp": FtpPublisher
-    }
-    if platform.protocol not in publishers_by_type:
-        error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
-        logger.error(error_message)
-        raise Exception(error_message)
-    publisher = publishers_by_type[platform.protocol](platform.url, platform.options, coverage.id)
+
+    publisher = _get_publisher(platform)
+
     try:
-        publisher.publish(file)
+        publisher.publish(_get_protocol_publisher(platform, coverage), file)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
@@ -152,6 +175,7 @@ def contributor_export(contributor, job):
         context = contributor_export_functions.postprocess(contributor, context)
 
         # insert export in mongo db
+        models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
         contributor_export_functions.save_export(contributor, context)
 
         models.Job.update(job_id=job.id, state="done")
@@ -175,6 +199,7 @@ def coverage_export(coverage, job):
         coverage_export_functions.postprocess(coverage, context)
 
         # insert export in mongo db
+        models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
         coverage_export_functions.save_export(coverage, context)
 
         models.Job.update(job_id=job.id, state="done")

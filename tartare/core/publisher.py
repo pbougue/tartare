@@ -35,7 +35,7 @@ from tartare.exceptions import PublishException
 logger = logging.getLogger(__name__)
 
 
-class AbstractPublisher(metaclass=ABCMeta):
+class AbstractProtocolPublisher(metaclass=ABCMeta):
     def __init__(self, url, options, coverage_id):
         self.url = url
         self.options = options
@@ -46,7 +46,7 @@ class AbstractPublisher(metaclass=ABCMeta):
         pass
 
 
-class HttpPublisher(AbstractPublisher):
+class HttpPublisher(AbstractProtocolPublisher):
     def publish(self, file):
         logger.info('publishing file {filename} on {url}...'.format(filename=self.filename, url=self.url))
         if self.options:
@@ -62,7 +62,7 @@ class HttpPublisher(AbstractPublisher):
             raise PublishException(message)
 
 
-class FtpPublisher(AbstractPublisher):
+class FtpPublisher(AbstractProtocolPublisher):
     def publish(self, file):
         directory = None
         if 'directory' in self.options and self.options['directory']:
@@ -89,3 +89,27 @@ class FtpPublisher(AbstractPublisher):
             message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
             logger.error(message)
             raise PublishException(message)
+
+
+class AbstractPublisher(metaclass=ABCMeta):
+    @abstractmethod
+    def publish(self, protocol_publisher, file):
+        pass
+
+
+class NavitiaPublisher(AbstractPublisher):
+    def publish(self, protocol_publisher, file):
+        # do some things
+        protocol_publisher.publish(file)
+
+
+class ODSPublisher(AbstractPublisher):
+    def publish(self, protocol_publisher, file):
+        # do some things
+        protocol_publisher.publish(file)
+
+
+class StopAreaPublisher(AbstractPublisher):
+    def publish(self, protocol_publisher, file):
+        # do some things
+        protocol_publisher.publish(file)
