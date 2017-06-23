@@ -36,39 +36,38 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractProtocol(metaclass=ABCMeta):
-    def __init__(self, url, options, coverage_id):
+    def __init__(self, url, options):
         self.url = url
         self.options = options
-        self.filename = "{coverage}.zip".format(coverage=coverage_id)
 
     @abstractmethod
-    def publish(self, file):
+    def publish(self, file, filename):
         pass
 
 
 class HttpProtocol(AbstractProtocol):
-    def publish(self, file):
-        logger.info('publishing file {filename} on {url}...'.format(filename=self.filename, url=self.url))
+    def publish(self, file, filename):
+        logger.info('publishing file {filename} on {url}...'.format(filename=filename, url=self.url))
         if self.options:
             response = requests.post(self.url, auth=(self.options['authent']['username'], self['authent']['password']),
-                                     files={'file': file, 'filename': self.filename}, timeout=10)
+                                     files={'file': file, 'filename': filename}, timeout=10)
         else:
-            response = requests.post(self.url, files={'file': file, 'filename': self.filename},
+            response = requests.post(self.url, files={'file': file, 'filename': filename},
                                      timeout=10)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
                 url=self.url, status_code=response.status_code)
             logger.error(message)
-            raise PublishException(message)
+            raise ProtocolException(message)
 
 
 class FtpProtocol(AbstractProtocol):
-    def publish(self, file):
+    def publish(self, file, filename):
         directory = None
         if 'directory' in self.options and self.options['directory']:
             directory = self.options['directory']
         logger.info(
-            'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=self.filename, url=self.url,
+            'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
                                                                               directory=directory))
         if 'authent' in self.options:
             session = ftplib.FTP(self.url, self.options['authent']['username'], self.options['authent']['password'])
@@ -82,7 +81,7 @@ class FtpProtocol(AbstractProtocol):
                 session.quit()
                 raise ProtocolException(message)
 
-        full_code = session.storbinary('STOR {filename}'.format(filename=self.filename), file)
+        full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)
         session.quit()
         code, message = tuple(full_code.split('-'))
         if code != '226':
@@ -93,23 +92,35 @@ class FtpProtocol(AbstractProtocol):
 
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
-    def publish(self, protocol_uploader, file):
+    def publish(self, protocol_uploader, file, coverage_id):
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file):
+    def publish(self, protocol_uploader, file, coverage_id):
         # do some things
-        protocol_uploader.publish(file)
+        filename = "{coverage}.zip".format(coverage=coverage_id)
+        protocol_uploader.publish(file, filename)
 
 
 class ODSPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file):
+    def publish(self, protocol_uploader, file, coverage_id):
         # do some things
-        protocol_uploader.publish(file)
+        filename = "{coverage}.zip".format(coverage=coverage_id)
+        protocol_uploader.publish(file, filename)
 
 
 class StopAreaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file):
-        # do some things
-        protocol_uploader.publish(file)
+    def publish(self, protocol_uploader, file, coverage_id):
+        import tempfile
+        import os
+        from zipfile import ZipFile
+        source_filename = 'stops.txt'
+        dest_filename = "{coverage}_stops.txt".format(coverage=coverage_id)
+
+        with tempfile.TemporaryDirectory() as tmpdirname, ZipFile(file, 'r') as gtfs_zip:
+            dest_file_path = os.path.join(tmpdirname, source_filename)
+            logger.info('Extracting {} to {}.'.format(source_filename, dest_file_path))
+            gtfs_zip.extract(source_filename, tmpdirname)
+            with open(dest_file_path, 'rb') as fp:
+                protocol_uploader.publish(fp, dest_filename)

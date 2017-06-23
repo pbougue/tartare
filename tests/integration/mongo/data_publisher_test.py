@@ -232,6 +232,7 @@ class TestDataPublisher(TartareFixture):
         directory_content = session.nlst()
         assert len(directory_content) == 1
         assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
+        session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
         session.quit()
 
     def test_config_user_password(self):
@@ -256,3 +257,41 @@ class TestDataPublisher(TartareFixture):
         assert 'my_password' not in pub_platform['options']['authent']
         assert 'username' in pub_platform['options']['authent']
         assert user_to_set == pub_platform['options']['authent']['username']
+
+    def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        ftp_username = 'tartare_user'
+        ftp_password = 'tartare_password'
+        filename = 'some_archive.zip'
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+        publication_platform = {
+            "type": "stop_area",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                }
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
+        assert resp.status_code == 200
+        # check if the file was successfully uploaded
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        assert '{coverage_id}_stops.txt'.format(coverage_id=coverage_id) in directory_content
+        session.delete('{coverage_id}_stops.txt'.format(coverage_id=coverage_id))
+        session.quit()

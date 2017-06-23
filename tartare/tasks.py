@@ -104,7 +104,7 @@ def _get_publisher(platform):
     return publishers_by_type[platform.type]
 
 
-def _get_protocol_uploader(platform, coverage):
+def _get_protocol_uploader(platform):
     publishers_by_protocol = {
         "http": HttpProtocol,
         "ftp": FtpProtocol
@@ -114,7 +114,7 @@ def _get_protocol_uploader(platform, coverage):
         logger.error(error_message)
         raise Exception(error_message)
 
-    return publishers_by_protocol[platform.protocol](platform.url, platform.options, coverage.id)
+    return publishers_by_protocol[platform.protocol](platform.url, platform.options)
 
 
 @celery.task(bind=True, default_retry_delay=3, max_retries=3, acks_late=True)
@@ -126,11 +126,11 @@ def publish_data_on_platform(self, platform, gridfs_id, coverage, environment_id
     publisher = _get_publisher(platform)
 
     try:
-        publisher.publish(_get_protocol_uploader(platform, coverage), file)
+        publisher.publish(_get_protocol_uploader(platform), file, coverage.id)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except PublishException:
+    except ProtocolException:
         self.retry()
 
 
