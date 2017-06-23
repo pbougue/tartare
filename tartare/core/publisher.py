@@ -30,12 +30,12 @@ import ftplib
 from abc import ABCMeta, abstractmethod
 import logging
 import requests
-from tartare.exceptions import PublishException
+from tartare.exceptions import ProtocolException
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractProtocolPublisher(metaclass=ABCMeta):
+class AbstractProtocol(metaclass=ABCMeta):
     def __init__(self, url, options, coverage_id):
         self.url = url
         self.options = options
@@ -46,7 +46,7 @@ class AbstractProtocolPublisher(metaclass=ABCMeta):
         pass
 
 
-class HttpPublisher(AbstractProtocolPublisher):
+class HttpProtocol(AbstractProtocol):
     def publish(self, file):
         logger.info('publishing file {filename} on {url}...'.format(filename=self.filename, url=self.url))
         if self.options:
@@ -62,7 +62,7 @@ class HttpPublisher(AbstractProtocolPublisher):
             raise PublishException(message)
 
 
-class FtpPublisher(AbstractProtocolPublisher):
+class FtpProtocol(AbstractProtocol):
     def publish(self, file):
         directory = None
         if 'directory' in self.options and self.options['directory']:
@@ -80,7 +80,7 @@ class FtpPublisher(AbstractProtocolPublisher):
             except ftplib.error_perm as message:
                 logger.error(message)
                 session.quit()
-                raise PublishException(message)
+                raise ProtocolException(message)
 
         full_code = session.storbinary('STOR {filename}'.format(filename=self.filename), file)
         session.quit()
@@ -88,28 +88,28 @@ class FtpPublisher(AbstractProtocolPublisher):
         if code != '226':
             message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
             logger.error(message)
-            raise PublishException(message)
+            raise ProtocolException(message)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
-    def publish(self, protocol_publisher, file):
+    def publish(self, protocol_uploader, file):
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
-    def publish(self, protocol_publisher, file):
+    def publish(self, protocol_uploader, file):
         # do some things
-        protocol_publisher.publish(file)
+        protocol_uploader.publish(file)
 
 
 class ODSPublisher(AbstractPublisher):
-    def publish(self, protocol_publisher, file):
+    def publish(self, protocol_uploader, file):
         # do some things
-        protocol_publisher.publish(file)
+        protocol_uploader.publish(file)
 
 
 class StopAreaPublisher(AbstractPublisher):
-    def publish(self, protocol_publisher, file):
+    def publish(self, protocol_uploader, file):
         # do some things
-        protocol_publisher.publish(file)
+        protocol_uploader.publish(file)

@@ -43,5 +43,5 @@ class InvalidFile(Exception):
         self.message = message
 
 
-class PublishException(Exception):
+class ProtocolException(Exception):
     pass
