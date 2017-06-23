@@ -253,6 +253,6 @@ class TestDataPublisher(TartareFixture):
         resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
         r = self.to_json(resp)['coverages'][0]
         pub_platform = r['environments']['production']['publication_platforms'][0]
-        assert 'my_password' not in pub_platform['options']['authent']
+        assert 'password' not in pub_platform['options']['authent']
         assert 'username' in pub_platform['options']['authent']
         assert user_to_set == pub_platform['options']['authent']['username']
