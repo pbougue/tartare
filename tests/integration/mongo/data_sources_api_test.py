@@ -300,7 +300,7 @@ class TestDataSources(TartareFixture):
         (None, 'my license full name', 400),
         (None, None, 201),
     ])
-    def test_post_with_license(self, app, contributor, license_url, license_name, expected_status_code):
+    def test_post_with_license(self, contributor, license_url, license_name, expected_status_code):
 
         data_source = {
             "input": {

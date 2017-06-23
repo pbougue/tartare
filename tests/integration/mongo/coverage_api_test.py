@@ -29,7 +29,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tests.integration.test_mechanism import TartareFixture
-
+import pytest
+import tartare
 
 class TestCoverageApi(TartareFixture):
     def test_get_coverage_empty_success(self):
@@ -255,3 +256,32 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 415
         r = self.to_json(raw)
         assert r['error'] == 'request without data.'
+
+    @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
+        ('http://license.org/mycompany', 'my license', 201),
+        ('http://license.org/othercompany', 'my license full name', 201),
+        ('http://license.org/othercompany', None, 400),
+        (None, 'my license full name', 400),
+        (None, None, 201),
+    ])
+    def test_post_with_license(self, license_url, license_name, expected_status_code):
+        coverage = {
+            "id": "id_test",
+            "name": "name_test"
+        }
+        if license_name or license_url:
+            coverage['license'] = {
+                "url": license_url,
+                "name": license_name
+            }
+        response = self.post('/coverages', self.dict_to_json(coverage))
+        assert response.status_code == expected_status_code, print(response)
+        if expected_status_code == 201:
+            coverage_raw = self.get('/coverages/{cid}'.format(cid=coverage['id']))
+            coverage_from_api = self.to_json(coverage_raw)['coverages'][0]
+
+            with tartare.app.app_context():
+                expected_url = license_url if license_url else tartare.app.config.get('DEFAULT_LICENSE_URL')
+                expected_name = license_name if license_name else tartare.app.config.get('DEFAULT_LICENSE_NAME')
+                assert coverage_from_api['license']['url'] == expected_url
+                assert coverage_from_api['license']['name'] == expected_name

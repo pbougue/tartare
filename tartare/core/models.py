@@ -86,12 +86,13 @@ class License(object):
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
+        self.license = license if license else License()
 
     def save_grid_calendars(self, file):
         gridfs_handler = GridFsHandler()
@@ -396,6 +397,7 @@ class MongoCoverageSchema(Schema):
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
     contributors = fields.List(fields.String())
+    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
 
     @post_load
     def make_coverage(self, data):
