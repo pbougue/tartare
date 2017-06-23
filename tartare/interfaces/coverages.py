@@ -42,8 +42,9 @@ class Coverage(flask_restful.Resource):
     def _hide_password_in_coverage_response(self, response):
         for env_name, env_def in response.get('environments', []).items():
             for (pub_idx, publication_platform) in enumerate(env_def.get('publication_platforms', [])):
-                if 'authent' in publication_platform and publication_platform['authent']:
-                    response['environments'][env_name]['publication_platforms'][pub_idx]['authent'].pop(
+                if 'options' in publication_platform and 'authent' in publication_platform['options'] and \
+                        publication_platform['options']['authent']:
+                    response['environments'][env_name]['publication_platforms'][pub_idx]['options']['authent'].pop(
                         'password', None)
         return response
 
