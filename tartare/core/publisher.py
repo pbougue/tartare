@@ -68,7 +68,7 @@ class FtpProtocol(AbstractProtocol):
             directory = self.options['directory']
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
-                                                                              directory=directory))
+                                                                              directory=directory if directory else ''))
         if 'authent' in self.options:
             session = ftplib.FTP(self.url, self.options['authent']['username'], self.options['authent']['password'])
         else:
@@ -118,9 +118,9 @@ class StopAreaPublisher(AbstractPublisher):
         source_filename = 'stops.txt'
         dest_filename = "{coverage}_stops.txt".format(coverage=coverage_id)
 
-        with tempfile.TemporaryDirectory() as tmpdirname, ZipFile(file, 'r') as gtfs_zip:
-            dest_file_path = os.path.join(tmpdirname, source_filename)
+        with tempfile.TemporaryDirectory() as tmp_dirname, ZipFile(file, 'r') as gtfs_zip:
+            dest_file_path = os.path.join(tmp_dirname, source_filename)
             logger.info('Extracting {} to {}.'.format(source_filename, dest_file_path))
-            gtfs_zip.extract(source_filename, tmpdirname)
+            gtfs_zip.extract(source_filename, tmp_dirname)
             with open(dest_file_path, 'rb') as fp:
                 protocol_uploader.publish(fp, dest_filename)
