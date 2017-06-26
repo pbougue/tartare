@@ -215,11 +215,14 @@ class UploadFtpServerDocker(AbstractDocker):
 
     @property
     def port_bindings(self):
-        return {nb: nb for nb in range(30000, 30009)}
+        """
+        See https://github.com/stilliard/docker-pure-ftpd/blob/master/Dockerfile
+        """
+        return {nb: nb for nb in range(30000, 30010)}
 
     @property
     def ports(self):
-        return [nb for nb in range(30000, 30009)]
+        return [nb for nb in range(30000, 30010)]
 
     @property
     def env_vars(self):
