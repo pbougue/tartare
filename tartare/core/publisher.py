@@ -111,6 +111,11 @@ class ODSPublisher(AbstractPublisher):
         self.validity_period = validity_period
         self.license = license
 
+    @property
+    def metadata_ordered_columns(self):
+        return ['ID', 'Description', 'Format', 'Type file', 'Download', 'Validity start date', 'Validity end date',
+                'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
+
     def publish(self, protocol_uploader, file, coverage_id):
         import datetime
         meta_data_dict = [
@@ -124,12 +129,10 @@ class ODSPublisher(AbstractPublisher):
                 'Validity end date': self.validity_period.end_date.strftime('%Y%m%d'),
                 'Licence': self.license.name,
                 'Source link': self.license.url,
-                # 'Size': '',
-                # 'Update date': '',
                 'Publication update date': datetime.datetime.now().strftime('%d/%m/%Y')
             }
         ]
-        memory_csv = dic_to_memory_csv(meta_data_dict)
+        memory_csv = dic_to_memory_csv(meta_data_dict, self.metadata_ordered_columns)
         with tempfile.TemporaryDirectory() as tmp_dirname:
             zip_file_name = '{coverage}.zip'.format(coverage=coverage_id)
             zip_full_name = os.path.join(tmp_dirname, zip_file_name)
