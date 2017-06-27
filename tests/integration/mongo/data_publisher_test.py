@@ -28,9 +28,14 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import filecmp
+import os
+import tempfile
+from zipfile import ZipFile
 import mock
 import pytest
 import ftplib
+from freezegun import freeze_time
 from tests.utils import mock_urlretrieve, mock_requests_post
 from tests.integration.test_mechanism import TartareFixture
 import json
@@ -126,7 +131,7 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
         return resp
 
-    def _create_coverage(self, id, contributor_id, publication_platform):
+    def _create_coverage(self, id, contributor_id, publication_platform, license=None):
         coverage = {
             "contributors": [
                 contributor_id
@@ -142,6 +147,8 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
+        if license:
+            coverage['license'] = license
 
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
@@ -152,10 +159,10 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
-                            "type": "navitia",
-                            "protocol": "http",
-                            "url": "http://bob/v0/jobs"
-                        }
+            "type": "navitia",
+            "protocol": "http",
+            "url": "http://bob/v0/jobs"
+        }
         self._create_contributor(contributor_id)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
@@ -192,20 +199,17 @@ class TestDataPublisher(TartareFixture):
     def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
-        ftp_username = 'tartare_user'
-        ftp_password = 'tartare_password'
         filename = 'some_archive.zip'
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
-        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
-                    "username": ftp_username,
-                    "password": ftp_password
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
                 }
             }
         }
@@ -215,11 +219,72 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
 
         # check if the file was successfully uploaded
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
         directory_content = session.nlst()
         assert len(directory_content) == 1
         assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
         session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
+        session.quit()
+
+    @pytest.mark.parametrize("license_url,license_name,sample_data,coverage_id", [
+        # ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
+        (None, None, 'sample_1.zip', 'my-coverage-id')
+    ])
+    @freeze_time("2017-01-15")
+    def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, fixture_dir,
+                                           license_url, license_name, sample_data, coverage_id):
+        contributor_id = 'whatever'
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename=sample_data))
+        publication_platform = {
+            "type": "ods",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
+                }
+            }
+        }
+        license = {
+            "name": license_name,
+            "url": license_url
+        } if license_name or license_url else None
+
+        self._create_coverage(coverage_id, contributor_id, publication_platform, license)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+        assert resp.status_code == 201
+
+        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
+        assert resp.status_code == 200
+        # check if the file was successfully uploaded
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
+        directory_content = session.nlst()
+        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
+        assert len(directory_content) == 1
+        assert expected_filename in directory_content
+        # check that meta data from file on ftp server are correct
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
+            with ZipFile(transfered_full_name, 'r') as ods_zip:
+                metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+                ods_zip.extract(metadata_file_name, tmp_dirname)
+                fixture = os.path.join(fixture_dir, 'metadata', metadata_file_name)
+                metadata = os.path.join(tmp_dirname, metadata_file_name)
+                with open(metadata, 'r') as debug_metadata, open(fixture, 'r') as debug_fixture:
+                    assert filecmp.cmp(metadata, fixture), print(
+                        "<========>\n".join([debug_metadata.read(), debug_fixture.read()]))
         session.quit()
 
     def test_config_user_password(self):
@@ -248,20 +313,17 @@ class TestDataPublisher(TartareFixture):
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
-        ftp_username = 'tartare_user'
-        ftp_password = 'tartare_password'
         filename = 'some_archive.zip'
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
-        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "type": "stop_area",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
-                    "username": ftp_username,
-                    "password": ftp_password
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
                 }
             }
         }
@@ -271,7 +333,8 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
 
         # check if the file was successfully uploaded
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
         directory_content = session.nlst()
         assert len(directory_content) == 1
         assert '{coverage_id}_stops.txt'.format(coverage_id=coverage_id) in directory_content
