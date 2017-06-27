@@ -37,7 +37,7 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, ODSPublisher
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
@@ -102,11 +102,11 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
         logging.exception('error')
 
 
-def _get_publisher(platform, job):
-    from tartare import navitia_publisher, ods_publisher, stop_area_publisher
+def _get_publisher(platform, coverage_export, coverage, job):
+    from tartare import navitia_publisher, stop_area_publisher
     publishers_by_type = {
         "navitia": navitia_publisher,
-        "ods": ods_publisher,
+        "ods": ODSPublisher(coverage_export.get('validity_period'), coverage.license),
         "stop_area": stop_area_publisher
     }
     if platform.type not in publishers_by_type:
@@ -133,18 +133,17 @@ def _get_protocol_uploader(platform, job):
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True)
-def publish_data_on_platform(self, platform, coverage, environment_id, job):
-    gridfs_id = CoverageExport.get_last(coverage.id).get('gridfs_id')
+def publish_data_on_platform(self, platform, coverage_export, coverage, environment_id, job):
     logger.info('publish_data_on_platform {}'.format(platform.url))
     gridfs_handler = GridFsHandler()
-    file = gridfs_handler.get_file_from_gridfs(gridfs_id)
+    file = gridfs_handler.get_file_from_gridfs(coverage_export.get('gridfs_id'))
 
-    publisher = _get_publisher(platform, job)
+    publisher = _get_publisher(platform, coverage_export, coverage, job)
 
     try:
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage.id)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
+        current_ntfs_id = gridfs_handler.copy_file(coverage_export.get('gridfs_id'))
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except ProtocolException:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))

@@ -27,10 +27,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import ftplib
+import os
+import tempfile
 from abc import ABCMeta, abstractmethod
 import logging
 import requests
+from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.exceptions import ProtocolException
+from zipfile import ZipFile, ZIP_DEFLATED
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +87,7 @@ class FtpProtocol(AbstractProtocol):
 
         full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)
         session.quit()
-        code, message = tuple(full_code.split('-'))
-        if code != '226':
+        if not full_code.startswith('226'):
             message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
             logger.error(message)
             raise ProtocolException(message)
@@ -104,17 +107,44 @@ class NavitiaPublisher(AbstractPublisher):
 
 
 class ODSPublisher(AbstractPublisher):
+    def __init__(self, validity_period, license):
+        self.validity_period = validity_period
+        self.license = license
+
     def publish(self, protocol_uploader, file, coverage_id):
-        # do some things
-        filename = "{coverage}.zip".format(coverage=coverage_id)
-        protocol_uploader.publish(file, filename)
+        import datetime
+        meta_data_dict = [
+            {
+                'ID': coverage_id + '-GTFS',
+                'Description': 'Global transport in {coverage}'.format(coverage=coverage_id),
+                'Format': 'GTFS',
+                'Type file': 'Global',
+                'Download': 'gtfs.zip',
+                'Validity start date': self.validity_period.start_date.strftime('%Y%m%d'),
+                'Validity end date': self.validity_period.end_date.strftime('%Y%m%d'),
+                'Licence': self.license.name,
+                'Source link': self.license.url,
+                # 'Size': '',
+                # 'Update date': '',
+                'Publication update date': datetime.datetime.now().strftime('%d/%m/%Y')
+            }
+        ]
+        memory_csv = dic_to_memory_csv(meta_data_dict)
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            zip_file_name = '{coverage}.zip'.format(coverage=coverage_id)
+            zip_full_name = os.path.join(tmp_dirname, zip_file_name)
+            zip_out = ZipFile(zip_full_name, 'a', ZIP_DEFLATED, False)
+            zip_out.writestr('{coverage}.txt'.format(coverage=coverage_id), memory_csv.getvalue())
+            zip_out.writestr('GTFS.zip', file.read())
+            zip_out.close()
+            with open(zip_full_name, 'rb') as fp:
+                protocol_uploader.publish(fp, zip_file_name)
 
 
 class StopAreaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader, file, coverage_id):
         import tempfile
         import os
-        from zipfile import ZipFile
         source_filename = 'stops.txt'
         dest_filename = "{coverage}_stops.txt".format(coverage=coverage_id)
 
