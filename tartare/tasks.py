@@ -31,7 +31,6 @@ import glob
 import logging
 import os
 import datetime
-
 from zipfile import ZipFile
 from tartare import celery
 from tartare.core import calendar_handler, models
@@ -103,7 +102,7 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
 
 
 def _get_publisher(platform, job):
-    from tartare import navitia_publisher, ods_publisher, stop_area_publisher
+    from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
         "navitia": navitia_publisher,
         "ods": ods_publisher,
@@ -134,19 +133,19 @@ def _get_protocol_uploader(platform, job):
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True)
 def publish_data_on_platform(self, platform, coverage, environment_id, job):
-    gridfs_id = CoverageExport.get_last(coverage.id).get('gridfs_id')
     logger.info('publish_data_on_platform {}'.format(platform.url))
+    coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
-    file = gridfs_handler.get_file_from_gridfs(gridfs_id)
+    file = gridfs_handler.get_file_from_gridfs(coverage_export.get('gridfs_id'))
 
     publisher = _get_publisher(platform, job)
 
     try:
-        publisher.publish(_get_protocol_uploader(platform, job), file, coverage.id)
+        publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
+        current_ntfs_id = gridfs_handler.copy_file(coverage_export.get('gridfs_id'))
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except ProtocolException:
+    except ProtocolException as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
         self.retry()
 

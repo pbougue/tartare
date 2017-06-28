@@ -30,7 +30,11 @@ import ftplib
 from abc import ABCMeta, abstractmethod
 import logging
 import requests
+from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.exceptions import ProtocolException
+from zipfile import ZipFile, ZIP_DEFLATED
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +87,7 @@ class FtpProtocol(AbstractProtocol):
 
         full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)
         session.quit()
-        code, message = tuple(full_code.split('-'))
-        if code != '226':
+        if not full_code.startswith('226'):
             message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
             logger.error(message)
             raise ProtocolException(message)
@@ -92,31 +95,55 @@ class FtpProtocol(AbstractProtocol):
 
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
-    def publish(self, protocol_uploader, file, coverage_id):
+    def publish(self, protocol_uploader, file, coverage, coverage_export):
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file, coverage_id):
+    def publish(self, protocol_uploader, file, coverage, coverage_export):
         # do some things
-        filename = "{coverage}.zip".format(coverage=coverage_id)
+        filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
 
 
 class ODSPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file, coverage_id):
-        # do some things
-        filename = "{coverage}.zip".format(coverage=coverage_id)
-        protocol_uploader.publish(file, filename)
+
+    @property
+    def metadata_ordered_columns(self):
+        return ['ID', 'Description', 'Format', 'Type file', 'Download', 'Validity start date', 'Validity end date',
+                'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
+
+    def publish(self, protocol_uploader, file, coverage, coverage_export):
+        import datetime
+        meta_data_dict = [
+            {
+                'ID': coverage.id + '-GTFS',
+                'Description': 'Global transport in {coverage}'.format(coverage=coverage.id),
+                'Format': 'GTFS',
+                'Type file': 'Global',
+                'Download': 'gtfs.zip',
+                'Validity start date': coverage_export.get('validity_period').start_date.strftime('%Y%m%d'),
+                'Validity end date': coverage_export.get('validity_period').end_date.strftime('%Y%m%d'),
+                'Licence': coverage.license.name,
+                'Source link': coverage.license.url,
+                'Publication update date': datetime.datetime.now().strftime('%d/%m/%Y')
+            }
+        ]
+        memory_csv = dic_to_memory_csv(meta_data_dict, self.metadata_ordered_columns)
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            zip_file_name = '{coverage}.zip'.format(coverage=coverage.id)
+            zip_full_name = os.path.join(tmp_dirname, zip_file_name)
+            with ZipFile(zip_full_name, 'a', ZIP_DEFLATED, False) as zip_out:
+                zip_out.writestr('{coverage}.txt'.format(coverage=coverage.id), memory_csv.getvalue())
+                zip_out.writestr('GTFS.zip', file.read())
+            with open(zip_full_name, 'rb') as fp:
+                protocol_uploader.publish(fp, zip_file_name)
 
 
 class StopAreaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file, coverage_id):
-        import tempfile
-        import os
-        from zipfile import ZipFile
+    def publish(self, protocol_uploader, file, coverage, coverage_export):
         source_filename = 'stops.txt'
-        dest_filename = "{coverage}_stops.txt".format(coverage=coverage_id)
+        dest_filename = "{coverage}_stops.txt".format(coverage=coverage.id)
 
         with tempfile.TemporaryDirectory() as tmp_dirname, ZipFile(file, 'r') as gtfs_zip:
             dest_file_path = os.path.join(tmp_dirname, source_filename)

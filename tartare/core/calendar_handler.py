@@ -39,10 +39,11 @@ GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
 GRID_CALENDAR_REL_LINE = "grid_rel_calendar_line.txt"
 
 
-def dic_to_memory_csv(dic):
+def dic_to_memory_csv(dic, keys=None):
     if len(dic) == 0:
         return None
-    keys = dic[0].keys()
+    if not keys:
+        keys = dic[0].keys()
     f = StringIO()
     w = csv.DictWriter(f, keys)
     w.writeheader()

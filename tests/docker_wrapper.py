@@ -194,6 +194,16 @@ class DownloadFtpServerDocker(AbstractDocker):
 
 
 class UploadFtpServerDocker(AbstractDocker):
+    # see credentials copied here : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+    @property
+    def user(self):
+        return 'tartare_user'
+
+    @property
+    def password(self):
+        return 'tartare_password'
+    #end credentials
+
     def _fetch_image(self):
         self.docker.pull(self.image_name)
 
