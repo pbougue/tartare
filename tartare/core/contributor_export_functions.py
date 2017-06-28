@@ -32,8 +32,9 @@ import os
 import tempfile
 import urllib.request
 from urllib.error import ContentTooShortError, HTTPError, URLError
+from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ContributorExportDataSource
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor
 from tartare.validity_period_finder import ValidityPeriodFinder
 from tartare.helper import get_filename, get_md5_content_file
 from tartare.core import models
@@ -42,17 +43,17 @@ import zipfile
 logger = logging.getLogger(__name__)
 
 
-def merge(contributor, context):
+def merge(contributor: Contributor, context: Context) -> Context:
     logger.info("contributor_id : %s", contributor.id)
     return context
 
 
-def postprocess(contributor, context):
+def postprocess(contributor: Contributor, context: Context) -> Context:
     logger.info("contributor_id : %s", contributor.id)
     return context
 
 
-def save_export(contributor, context):
+def save_export(contributor: Contributor, context: Context) -> Context:
     for data_source_grid in context.data_sources_fetched:
         if not data_source_grid.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_grid.data_source_id))
@@ -68,7 +69,7 @@ def save_export(contributor, context):
     return context
 
 
-def fetch_datasets(contributor, context):
+def fetch_datasets(contributor: Contributor, context: Context) -> Context:
     for data_source in contributor.data_sources:
         if data_source.input:
             url = data_source.input.get('url')

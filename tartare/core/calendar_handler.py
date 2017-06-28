@@ -32,6 +32,7 @@
 from io import StringIO, BytesIO, TextIOWrapper
 import csv
 from zipfile import ZipFile, ZIP_DEFLATED
+from typing import List, Optional
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_PERIODS = "grid_periods.txt"
@@ -39,7 +40,31 @@ GRID_CALENDAR_NETWORK_LINE = "grid_rel_calendar_to_network_and_line.txt"
 GRID_CALENDAR_REL_LINE = "grid_rel_calendar_line.txt"
 
 
-def dic_to_memory_csv(dic, keys=None):
+class GridCalendarData(object):
+    def __init__(self):
+        self.grid_calendars = []
+        self.grid_periods = []
+        self.grid_rel_calendar_line = []
+
+    def load_zips(self, calendar_zip: ZipFile, ntfs_zip: ZipFile):
+        file_list = calendar_zip.namelist()
+        if GRID_CALENDARS not in file_list \
+                and GRID_PERIODS not in file_list \
+                and (GRID_CALENDAR_NETWORK_LINE not in file_list or GRID_CALENDAR_REL_LINE not in file_list):
+            return
+
+        self.grid_calendars = get_dict_from_zip(calendar_zip, GRID_CALENDARS)
+        self.grid_periods = get_dict_from_zip(calendar_zip, GRID_PERIODS)
+
+        if GRID_CALENDAR_REL_LINE not in file_list:
+            calendar_lines = get_dict_from_zip(calendar_zip, GRID_CALENDAR_NETWORK_LINE)
+            lines = get_dict_from_zip(ntfs_zip, 'lines.txt')
+            self.grid_rel_calendar_line = _join_calendar_lines(calendar_lines, lines)
+        else:
+            self.grid_rel_calendar_line = get_dict_from_zip(calendar_zip, GRID_CALENDAR_REL_LINE)
+
+
+def dic_to_memory_csv(dic: List[dict], keys: Optional[list] = None) -> StringIO:
     if len(dic) == 0:
         return None
     if not keys:
@@ -51,7 +76,7 @@ def dic_to_memory_csv(dic, keys=None):
     return f
 
 
-def _join_calendar_lines(calendar_lines, lines):
+def _join_calendar_lines(calendar_lines: List[dict], lines: List[dict]) -> list:
     grid_rel_calendar_line = []
 
     for calendar_line in calendar_lines:
@@ -66,7 +91,7 @@ def _join_calendar_lines(calendar_lines, lines):
     return grid_rel_calendar_line
 
 
-def merge_calendars_ntfs(grid_calendar_data, ntfs_zip):
+def merge_calendars_ntfs(grid_calendar_data: GridCalendarData, ntfs_zip: ZipFile) -> ZipFile:
     file_list = [(s, ntfs_zip.read(s)) for s in ntfs_zip.namelist() if not s.startswith('grid_')]
     zip_out = ZipFile(BytesIO(), 'a', ZIP_DEFLATED, False)
     for file_name, content in file_list:
@@ -87,7 +112,7 @@ def merge_calendars_ntfs(grid_calendar_data, ntfs_zip):
     return zip_out
 
 
-def save_zip_as_file(zip, filepath):
+def save_zip_as_file(zip: ZipFile, filepath: str):
     file_list = [(s, zip.read(s)) for s in zip.namelist()]
     zip_out = ZipFile(filepath, 'w', ZIP_DEFLATED, False)
     for file_name, content in file_list:
@@ -95,35 +120,6 @@ def save_zip_as_file(zip, filepath):
     zip_out.close()
 
 
-def get_dict_from_zip(zip, file_name):
+def get_dict_from_zip(zip: ZipFile, file_name: str) -> List[dict]:
     with zip.open(file_name) as file:
         return [l for l in csv.DictReader(TextIOWrapper(file, 'utf8'))]
-
-
-class GridCalendarData(object):
-    def __init__(self):
-        self.grid_calendars = []
-        self.grid_periods = []
-        self.grid_rel_calendar_line = []
-
-    """
-    Load zip and fill arrays,
-    and join calendar lines
-    """
-
-    def load_zips(self, calendar_zip, ntfs_zip):
-        file_list = calendar_zip.namelist()
-        if GRID_CALENDARS not in file_list \
-                and GRID_PERIODS not in file_list \
-                and (GRID_CALENDAR_NETWORK_LINE not in file_list or GRID_CALENDAR_REL_LINE not in file_list):
-            return
-
-        self.grid_calendars = get_dict_from_zip(calendar_zip, GRID_CALENDARS)
-        self.grid_periods = get_dict_from_zip(calendar_zip, GRID_PERIODS)
-
-        if GRID_CALENDAR_REL_LINE not in file_list:
-            calendar_lines = get_dict_from_zip(calendar_zip, GRID_CALENDAR_NETWORK_LINE)
-            lines = get_dict_from_zip(ntfs_zip, 'lines.txt')
-            self.grid_rel_calendar_line = _join_calendar_lines(calendar_lines, lines)
-        else:
-            self.grid_rel_calendar_line = get_dict_from_zip(calendar_zip, GRID_CALENDAR_REL_LINE)

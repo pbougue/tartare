@@ -35,8 +35,13 @@ from tartare.exceptions import ProtocolException
 from zipfile import ZipFile, ZIP_DEFLATED
 import tempfile
 import os
+from typing import Union, List
+from io import IOBase
+from gridfs.grid_file import GridOut
+from tartare.core.models import Coverage, CoverageExport
 
 logger = logging.getLogger(__name__)
+
 
 
 class AbstractProtocol(metaclass=ABCMeta):
@@ -45,7 +50,7 @@ class AbstractProtocol(metaclass=ABCMeta):
         self.options = options
 
     @abstractmethod
-    def publish(self, file, filename):
+    def publish(self, file: Union[str, bytes, IOBase, GridOut], filename: str):
         pass
 
 
@@ -95,21 +100,20 @@ class FtpProtocol(AbstractProtocol):
 
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
-    def publish(self, protocol_uploader, file, coverage, coverage_export):
+    def publish(self, protocol_uploader: AbstractProtocol, file: Union[str, bytes, IOBase, GridOut],
+                coverage: Coverage, coverage_export: CoverageExport):
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader, file, coverage, coverage_export):
-        # do some things
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
 
 
 class ODSPublisher(AbstractPublisher):
-
     @property
-    def metadata_ordered_columns(self):
+    def metadata_ordered_columns(self) -> List[str]:
         return ['ID', 'Description', 'Format', 'Type file', 'Download', 'Validity start date', 'Validity end date',
                 'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
 

@@ -28,24 +28,25 @@
 # www.navitia.io
 
 import logging
-from tartare.core.models import ContributorExport, CoverageExport, CoverageExportContributor
+from tartare.core.context import Context
+from tartare.core.models import ContributorExport, CoverageExport, CoverageExportContributor, Coverage
 from tartare.core.gridfs_handler import GridFsHandler
 
 
 logger = logging.getLogger(__name__)
 
 
-def merge(coverage, context):
+def merge(coverage: Coverage, context: Context) -> Context:
     logger.info("coverage_id : %s", coverage.id)
     return context
 
 
-def postprocess(coverage, context):
+def postprocess(coverage: Coverage, context: Context) -> Context:
     logger.info("coverage_id : %s", coverage.id)
     return context
 
 
-def initialize_context(coverage, context):
+def initialize_context(coverage: Coverage, context: Context) -> Context:
     logger.info('initialize context')
     for contributor_id in coverage.contributors:
         export = ContributorExport.get_last(contributor_id)
@@ -57,7 +58,7 @@ def initialize_context(coverage, context):
     return context
 
 
-def save_export(coverage, context):
+def save_export(coverage: Coverage, context: Context) -> Context:
     for ce in context.contributor_exports:
         if not ce.get("gridfs_id"):
             logger.info("contributor export {} without gridfs id.".format(ce.get("contributor_id")))

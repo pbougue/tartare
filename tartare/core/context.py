@@ -26,8 +26,9 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.models import ContributorExport, DataSourceFetched
+from tartare.core.models import ContributorExport, DataSourceFetched, DataSource
 import logging
+from typing import List
 
 
 class Context():
@@ -35,7 +36,7 @@ class Context():
         self.data_sources_fetched = []
         self.contributor_exports = []
 
-    def fill_contributor_exports(self, contributors):
+    def fill_contributor_exports(self, contributors: List[str]):
         logging.getLogger(__name__).info('initialize context')
         for contributor_id in contributors:
             export = ContributorExport.get_last(contributor_id)
@@ -44,7 +45,7 @@ class Context():
                 continue
             self.contributor_exports.append(export)
 
-    def fill_data_sources_fetched(self, contributor_id, data_sources):
+    def fill_data_sources_fetched(self, contributor_id: str, data_sources: List[DataSource]):
         logging.getLogger(__name__).info('initialize context')
         for data_source in data_sources:
             export = DataSourceFetched.get_last(contributor_id, data_source.id)
