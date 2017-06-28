@@ -35,21 +35,21 @@ class Context():
         self.data_sources_fetched = []
         self.contributor_exports = []
 
-    def fill_contributor_exports(self, coverage):
+    def fill_contributor_exports(self, contributors):
         logging.getLogger(__name__).info('initialize context')
-        for contributor_id in coverage.contributors:
+        for contributor_id in contributors:
             export = ContributorExport.get_last(contributor_id)
             if not export:
                 logging.getLogger(__name__).info("Contributor {} without export.".format(contributor_id))
                 continue
             self.contributor_exports.append(export)
 
-    def fill_data_sources_fetched(self, contributor):
+    def fill_data_sources_fetched(self, contributor_id, data_sources):
         logging.getLogger(__name__).info('initialize context')
-        for data_source in contributor.data_sources:
-            export = DataSourceFetched.get_last(contributor.id, data_source.id)
+        for data_source in data_sources:
+            export = DataSourceFetched.get_last(contributor_id, data_source.id)
             if not export:
                 logging.getLogger(__name__).info("Data source {} for contributor {} without data source fetched.".
-                                                 format(data_source.id, contributor.id))
+                                                 format(data_source.id, contributor_id))
                 continue
             self.data_sources_fetched.append(export)
