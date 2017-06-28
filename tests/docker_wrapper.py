@@ -126,7 +126,18 @@ class AbstractDocker(metaclass=ABCMeta):
 
 class DownloadHttpServerDocker(AbstractDocker):
     def _fetch_image(self):
-        self.docker.pull(self.image_name)
+        self.execute_manual_build()
+
+    def _get_docker_file(self):
+        """
+            Return a dumb DockerFile
+
+            The best way to get the image would be to get it from dockerhub,
+            but with this dumb wrapper the runtime time of the unit tests
+            is reduced by 10s
+        """
+        from io import BytesIO
+        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def working_dir(self):
@@ -162,7 +173,18 @@ class DownloadHttpServerDocker(AbstractDocker):
 
 class DownloadFtpServerDocker(AbstractDocker):
     def _fetch_image(self):
-        self.docker.pull(self.image_name)
+        self.execute_manual_build()
+
+    def _get_docker_file(self):
+        """
+            Return a dumb DockerFile
+
+            The best way to get the image would be to get it from dockerhub,
+            but with this dumb wrapper the runtime time of the unit tests
+            is reduced by 10s
+        """
+        from io import BytesIO
+        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def working_dir(self):
@@ -205,7 +227,18 @@ class UploadFtpServerDocker(AbstractDocker):
     #end credentials
 
     def _fetch_image(self):
-        self.docker.pull(self.image_name)
+        self.execute_manual_build()
+
+    def _get_docker_file(self):
+        """
+            Return a dumb DockerFile
+
+            The best way to get the image would be to get it from dockerhub,
+            but with this dumb wrapper the runtime time of the unit tests
+            is reduced by 10s
+        """
+        from io import BytesIO
+        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def conf_dir(self):

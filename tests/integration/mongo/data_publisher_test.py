@@ -227,6 +227,45 @@ class TestDataPublisher(TartareFixture):
         session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
         session.quit()
 
+    def test_publish_ftp_ods_with_directory(self, init_http_download_server, init_ftp_upload_server):
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        ftp_username = 'tartare_user'
+        ftp_password = 'tartare_password'
+        filename = 'some_archive.zip'
+        directory = "/ods"
+
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        # Create a directory in the ftp
+        session.mkd(directory)
+
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+        publication_platform = {
+            "type": "ods",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                },
+                "directory": directory
+            }
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        assert resp.status_code == 201
+
+        # check if the file was successfully uploaded
+        directory_content = session.nlst(directory)
+        assert len(directory_content) == 1
+        assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
+        session.delete('{directory}/{coverage_id}.zip'.format(directory=directory, coverage_id=coverage_id))
+        session.rmd(directory)
+
     @pytest.mark.parametrize("license_url,license_name,sample_data,coverage_id", [
         ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
         (None, None, 'sample_1.zip', 'my-coverage-id')
