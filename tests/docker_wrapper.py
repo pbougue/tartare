@@ -38,7 +38,15 @@ class AbstractDocker(metaclass=ABCMeta):
         return os.path.join(current_dir, 'fixtures')
 
     def _get_docker_file(self):
-        return None
+        """
+            Return a dumb DockerFile
+
+            The best way to get the image would be to get it from dockerhub,
+            but with this dumb wrapper the runtime time of the unit tests
+            is reduced by 10s
+        """
+        from io import BytesIO
+        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def volumes_bindings(self):
@@ -47,9 +55,8 @@ class AbstractDocker(metaclass=ABCMeta):
     def _remove_temporary_files(self):
         pass
 
-    @abstractmethod
     def _fetch_image(self):
-        pass
+        self.execute_manual_build()
 
     @abstractproperty
     def image_name(self):
@@ -125,20 +132,6 @@ class AbstractDocker(metaclass=ABCMeta):
 
 
 class DownloadHttpServerDocker(AbstractDocker):
-    def _fetch_image(self):
-        self.execute_manual_build()
-
-    def _get_docker_file(self):
-        """
-            Return a dumb DockerFile
-
-            The best way to get the image would be to get it from dockerhub,
-            but with this dumb wrapper the runtime time of the unit tests
-            is reduced by 10s
-        """
-        from io import BytesIO
-        return BytesIO("FROM {}".format(self.image_name).encode())
-
     @property
     def working_dir(self):
         return '/var/www'
@@ -172,20 +165,6 @@ class DownloadHttpServerDocker(AbstractDocker):
 
 
 class DownloadFtpServerDocker(AbstractDocker):
-    def _fetch_image(self):
-        self.execute_manual_build()
-
-    def _get_docker_file(self):
-        """
-            Return a dumb DockerFile
-
-            The best way to get the image would be to get it from dockerhub,
-            but with this dumb wrapper the runtime time of the unit tests
-            is reduced by 10s
-        """
-        from io import BytesIO
-        return BytesIO("FROM {}".format(self.image_name).encode())
-
     @property
     def working_dir(self):
         return '/var/lib/ftp'
@@ -224,21 +203,6 @@ class UploadFtpServerDocker(AbstractDocker):
     @property
     def password(self):
         return 'tartare_password'
-    #end credentials
-
-    def _fetch_image(self):
-        self.execute_manual_build()
-
-    def _get_docker_file(self):
-        """
-            Return a dumb DockerFile
-
-            The best way to get the image would be to get it from dockerhub,
-            but with this dumb wrapper the runtime time of the unit tests
-            is reduced by 10s
-        """
-        from io import BytesIO
-        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def conf_dir(self):
@@ -288,20 +252,6 @@ class MongoDocker(AbstractDocker):
     @property
     def db_name(self):
         return 'tartare_test'
-
-    def _fetch_image(self):
-        self.execute_manual_build()
-
-    def _get_docker_file(self):
-        """
-            Return a dumb DockerFile
-
-            The best way to get the image would be to get it from dockerhub,
-            but with this dumb wrapper the runtime time of the unit tests
-            is reduced by 10s
-        """
-        from io import BytesIO
-        return BytesIO("FROM {}".format(self.image_name).encode())
 
     @property
     def container_name(self):
