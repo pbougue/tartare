@@ -31,12 +31,13 @@ import logging
 import os
 import tempfile
 import urllib.request
-import zipfile
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource
-from tartare.helper import get_filename
 from tartare.validity_period_finder import ValidityPeriodFinder
+from tartare.helper import get_filename, get_md5_content_file
+from tartare.core import models
+import zipfile
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,26 @@ def postprocess(contributor, context):
     return context
 
 
+def save_export(contributor, context):
+    for data_source_grid in context.data_sources_fetched:
+        if not data_source_grid.gridfs_id:
+            logger.info("data source {} without gridfs id.".format(data_source_grid.data_source_id))
+            continue
+        new_grid_fs_id = GridFsHandler().copy_file(data_source_grid.gridfs_id)
+        data_source = ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+        export = ContributorExport(contributor_id=contributor.id,
+                                   gridfs_id=new_grid_fs_id,
+                                   validity_period=data_source_grid.validity_period,
+                                   data_sources=[data_source])
+        export.save()
+        context.contributor_exports.append(export)
+    return context
+
+
 def fetch_datasets(contributor, context):
     for data_source in contributor.data_sources:
-        data_input = data_source.input
-        if data_input:
-            url = data_input.get('url')
+        if data_source.input:
+            url = data_source.input.get('url')
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 filename = get_filename(url, data_source.id)
@@ -74,31 +90,20 @@ def fetch_datasets(contributor, context):
                 if not zipfile.is_zipfile(tmp_file_name):
                     raise Exception('downloaded file from url {} is not a zip file'.format(url))
 
+                data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
+                                                                        data_source_id=data_source.id)
+                if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(tmp_file_name):
+                        logger.debug('already existing file {} for contributor {}'.format(filename, contributor.id))
+                        continue
+                logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
+                    contributor.id, data_source.id
+                ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
-                logger.info('Production date {} to {}'.format(start_date, end_date))
-                with open(tmp_file_name, 'rb') as file:
-                    grid_fs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename)
-                    context.add_data_source_grid(data_source_id=data_source.id,
-                                                 grid_fs_id=grid_fs_id,
-                                                 start_date=start_date,
-                                                 end_date=end_date)
-    return context
-
-
-def save_export(contributor, context):
-    for dict_gridfs_id in context.data_sources_grid:
-        grid_fs_id = dict_gridfs_id.get("grid_fs_id")
-        data_source_id = dict_gridfs_id.get("data_source_id")
-        if not grid_fs_id:
-            logger.info("data source {} without gridfs id.".format(data_source_id))
-            continue
-        new_grid_fs_id = GridFsHandler().copy_file(grid_fs_id)
-        validity_period = dict_gridfs_id.get('validity_period')
-        data_source = ContributorExportDataSource(data_source_id, validity_period)
-        export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=new_grid_fs_id,
-                                   validity_period=validity_period,
-                                   data_sources=[data_source])
-        export.save()
-        dict_gridfs_id.update({'grid_fs_id': new_grid_fs_id})
+                validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
+                data_source = models.DataSourceFetched(contributor_id=contributor.id,
+                                                       data_source_id=data_source.id,
+                                                       validity_period=validity_period)
+                data_source.save_dataset(tmp_file_name, filename)
+                data_source.save()
+                context.data_sources_fetched.append(data_source)
     return context

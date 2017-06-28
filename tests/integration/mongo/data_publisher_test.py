@@ -95,11 +95,11 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        # Create Coverage
+        #Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        # Launch data update
+        #Launch data update
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
@@ -109,7 +109,7 @@ class TestDataPublisher(TartareFixture):
     def _create_contributor(self, id, url='bob'):
         contributor = {
             "id": id,
-            "name": id,
+            "name": "fr idf",
             "data_prefix": "AAA",
             "data_sources": [
                 {
@@ -139,8 +139,8 @@ class TestDataPublisher(TartareFixture):
                     ]
                 }
             },
-            "id": id,
-            "name": id
+            "id": "default",
+            "name": "default"
         }
 
         resp = self.post("/coverages", json.dumps(coverage))
@@ -160,8 +160,9 @@ class TestDataPublisher(TartareFixture):
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
         # Launch contributor export
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        assert resp.status_code == 201
+        with mock.patch('requests.post', mock_requests_post):
+            resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+            assert resp.status_code == 201
 
         # List contributor export
         r = self.to_json(self.get("/contributors/fr-idf/exports"))
@@ -175,10 +176,6 @@ class TestDataPublisher(TartareFixture):
         assert len(data_sources) == 1
         assert data_sources[0]["validity_period"]
 
-        # Launch coverage export
-        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
-        assert resp.status_code == 201
-
         # List coverage export
         r = self.to_json(self.get("/coverages/default/exports"))
         exports = r["exports"]
@@ -191,11 +188,6 @@ class TestDataPublisher(TartareFixture):
         assert contributors[0]["validity_period"]
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
-
-        # Launch data update
-        with mock.patch('requests.post', mock_requests_post):
-            resp = self.post("/coverages/default/environments/production/actions/publish")
-            assert resp.status_code == 200
 
     def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
@@ -222,11 +214,6 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         assert resp.status_code == 201
 
-        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
-        assert resp.status_code == 201
-
-        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
-        assert resp.status_code == 200
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
         directory_content = session.nlst()
@@ -283,11 +270,6 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         assert resp.status_code == 201
 
-        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
-        assert resp.status_code == 201
-
-        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
-        assert resp.status_code == 200
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
         directory_content = session.nlst()

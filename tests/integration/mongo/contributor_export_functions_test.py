@@ -29,9 +29,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.core.context import Context
 from tartare.core.contributor_export_functions import fetch_datasets
-from tartare.core.models import DataSource, Contributor
+from tartare.core.models import DataSource, Contributor, DataSourceFetched
 import mock
 from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app
@@ -39,7 +38,7 @@ import pytest
 from urllib.error import ContentTooShortError
 from tartare.exceptions import InvalidFile
 from datetime import date
-
+from tartare.core.context import Context
 
 def test_fetch_data_from_input_failed(mocker):
     url = "http://whatever.com/gtfs.zip"
@@ -50,10 +49,10 @@ def test_fetch_data_from_input_failed(mocker):
     mock_check = mocker.patch('zipfile.is_zipfile', autospec=True)
     mock_check.return_value = True
 
-    context = Context()
     #following test needs to be improved to handle file creation on local drive
     with pytest.raises(InvalidFile) as excinfo:
-        fetch_datasets(contrib, context)
+        with app.app_context():
+            fetch_datasets(contrib, Context())
     assert str(excinfo.typename) == 'InvalidFile'
 
 
@@ -62,14 +61,15 @@ class TestFetcher():
     def test_fetcher(self, urlretrieve_func):
         data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
+        context = Context()
         with app.app_context():
-            context = fetch_datasets(contrib, Context())
+            fetch_datasets(contrib, context)
             assert context
-            assert len(context.data_sources_grid) == 1
-            assert context.data_sources_grid[0].get("data_source_id") == 666
-            assert context.data_sources_grid[0].get("grid_fs_id")
-            assert context.data_sources_grid[0].get("validity_period").get('end_date') == date(2015, 8, 26)
-            assert context.data_sources_grid[0].get("validity_period").get('start_date') == date(2015, 3, 25)
+            assert len(context.data_sources_fetched) == 1
+            assert context.data_sources_fetched[0].data_source_id == 666
+            assert context.data_sources_fetched[0].gridfs_id
+            assert context.data_sources_fetched[0].validity_period.end_date == date(2015, 8, 26)
+            assert context.data_sources_fetched[0].validity_period.start_date == date(2015, 3, 25)
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):

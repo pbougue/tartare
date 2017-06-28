@@ -31,7 +31,7 @@
 
 from tests.integration.test_mechanism import TartareFixture
 import mock
-from tests.utils import mock_urlretrieve
+from tests.utils import mock_urlretrieve, mock_requests_post
 
 
 class TestCoverageExport(TartareFixture):
@@ -117,19 +117,16 @@ class TestCoverageExport(TartareFixture):
         # Add coverage with coverages
         self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors": ["id_test"]}')
         # launch contributor export
-        job = self.post('/contributors/id_test/actions/export', {})
-        assert job.status_code == 201
+        with mock.patch('requests.post', mock_requests_post):
+            job = self.post('/contributors/id_test/actions/export', {})
+            assert job.status_code == 201
 
-        # launch coverage export
-        jobs = self.post('/coverages/coverage1/exports', {})
-        assert job.status_code == 201
-
-        # jobs of coverage
-        jobs = self.get("/coverages/coverage1/jobs")
-        assert jobs.status_code == 200
-        json = self.to_json(jobs)
-        assert "jobs" in json
-        assert len(json.get("jobs")) == 1
+            # jobs of coverage
+            jobs = self.get("/jobs")
+            assert jobs.status_code == 200
+            json = self.to_json(jobs)
+            assert "jobs" in json
+            assert len(json.get("jobs")) == 1
 
         # coverage export
         ce = self.get("/coverages/coverage1/exports")

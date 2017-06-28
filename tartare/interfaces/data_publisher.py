@@ -30,9 +30,11 @@
 import flask_restful
 import logging
 
-from tartare.core.models import Coverage, CoverageExport
-from tartare.tasks import publish_data_on_platform
+from tartare.core.models import Coverage, CoverageExport, Job
+from tartare.tasks import publish_data_on_platform, finish_job
 from tartare.decorators import publish_params_validate
+from celery import chain
+from tartare.interfaces.schema import JobSchema
 
 
 class DataPublisher(flask_restful.Resource):
@@ -42,7 +44,13 @@ class DataPublisher(flask_restful.Resource):
                                                                                                        environment_id))
         coverage = Coverage.get(coverage_id)
         environment = coverage.get_environment(environment_id)
-        gridfs_id = CoverageExport.get_last(coverage.id)[0].get('gridfs_id')
+        job = Job(coverage_id=coverage_id, action_type="publish_data")
+        job.save()
+        actions = []
         for platform in environment.publication_platforms:
-            publish_data_on_platform.delay(platform, gridfs_id, coverage, environment_id)
-        return {'message': 'OK'}, 200
+            actions.append(publish_data_on_platform.si(platform, coverage, environment_id, job))
+        actions.append(finish_job(job.id))
+        if actions:
+            chain(*actions).delay()
+        job_schema = JobSchema(strict=True)
+        return {'job': job_schema.dump(job).data}, 201

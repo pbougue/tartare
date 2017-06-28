@@ -26,20 +26,30 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tartare.core.models import ContributorExport, DataSourceFetched
+import logging
 
 
 class Context():
     def __init__(self):
-        self.data_sources_grid = []
+        self.data_sources_fetched = []
         self.contributor_exports = []
 
-    def add_data_source_grid(self, data_source_id, grid_fs_id, start_date, end_date):
-        tmp = {
-            "data_source_id": data_source_id,
-            "grid_fs_id": grid_fs_id,
-            "validity_period": {
-                "start_date": start_date,
-                "end_date": end_date
-            }
-        }
-        self.data_sources_grid.append(tmp)
+    def fill_contributor_exports(self, contributors):
+        logging.getLogger(__name__).info('initialize context')
+        for contributor_id in contributors:
+            export = ContributorExport.get_last(contributor_id)
+            if not export:
+                logging.getLogger(__name__).info("Contributor {} without export.".format(contributor_id))
+                continue
+            self.contributor_exports.append(export)
+
+    def fill_data_sources_fetched(self, contributor_id, data_sources):
+        logging.getLogger(__name__).info('initialize context')
+        for data_source in data_sources:
+            export = DataSourceFetched.get_last(contributor_id, data_source.id)
+            if not export:
+                logging.getLogger(__name__).info("Data source {} for contributor {} without data source fetched.".
+                                                 format(data_source.id, contributor_id))
+                continue
+            self.data_sources_fetched.append(export)
