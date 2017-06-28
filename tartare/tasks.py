@@ -261,5 +261,5 @@ def automatic_update():
         # launch contributor export
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
-        chain(contributor_export.si(contributor, job), finish_job(job.id)).delay()
+        chain(contributor_export.si(contributor, job), finish_job.si(job.id)).delay()
 
