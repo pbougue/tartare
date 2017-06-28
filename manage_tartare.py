@@ -1,6 +1,7 @@
-# coding: utf-8
+#!/usr/bin/env python
+# coding=utf-8
 
-# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+#  Copyright (c) 2001-2014, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -29,36 +30,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask import Flask
+from tartare import app, manager
 
-from tartare.helper import configure_logger, make_celery
-from celery.signals import setup_logging
-from flask_pymongo import PyMongo
-from flask_script import Manager
-
-app = Flask(__name__)
-app.config.from_object('tartare.default_settings')
-app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
-app.config["ERROR_404_HELP"] = False  # Disable help message in 404 response
-manager = Manager(app)
-
-configure_logger(app.config)
-
-mongo = PyMongo(app)
-
-
-@setup_logging.connect
-def celery_setup_logging(*args, **kwargs):
-    # we don't want celery to mess with our logging configuration
-    pass
-
-celery = make_celery(app)
-
-
-from tartare import api
-
-from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPublisher
-
-navitia_publisher = NavitiaPublisher()
-ods_publisher = ODSPublisher()
-stop_area_publisher = StopAreaPublisher()
+if __name__ == '__main__':
+    app.config['DEBUG'] = True
+    manager.run()
