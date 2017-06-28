@@ -69,12 +69,12 @@ def save_export(contributor, context):
 
 
 def fetch_datasets(contributor, context):
-    for ds in contributor.data_sources:
-        if ds.input:
-            url = ds.input.get('url')
+    for data_source in contributor.data_sources:
+        if data_source.input:
+            url = data_source.input.get('url')
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
-                filename = get_filename(url, ds.id)
+                filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
                 try:
                     urllib.request.urlretrieve(url, tmp_file_name)
@@ -90,18 +90,18 @@ def fetch_datasets(contributor, context):
                 if not zipfile.is_zipfile(tmp_file_name):
                     raise Exception('downloaded file from url {} is not a zip file'.format(url))
 
-                dsf = models.DataSourceFetched.get_last(contributor_id=contributor.id,
-                                                        data_source_id=ds.id)
-                if dsf and dsf.get_md5() == get_md5_content_file(tmp_file_name):
+                data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
+                                                                        data_source_id=data_source.id)
+                if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(tmp_file_name):
                         logger.debug('already existing file {} for contributor {}'.format(filename, contributor.id))
                         continue
                 logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
-                    contributor.id, ds.id
+                    contributor.id, data_source.id
                 ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
                 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
                 data_source = models.DataSourceFetched(contributor_id=contributor.id,
-                                                       data_source_id=ds.id,
+                                                       data_source_id=data_source.id,
                                                        validity_period=validity_period)
                 data_source.save_dataset(tmp_file_name, filename)
                 data_source.save()

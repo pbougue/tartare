@@ -203,16 +203,11 @@ def contributor_export(self, contributor, job):
                     # Launch coverage export
                     coverage_export.delay(coverage, job)
 
-    except Exception as e:
+    except (HTTPError, ContentTooShortError, URLError, Exception) as e:
         models.Job.update(job_id=job.id, state="failed", error_message=str(e))
         logger.error('Contributor export failed, error {}'.format(str(e)))
         raise self.retry()
-    except HTTPError:
-        raise self.retry()
-    except ContentTooShortError:
-        raise self.retry()
-    except URLError:
-        raise self.retry()
+
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=MailSender)
 def coverage_export(self, coverage, job):
@@ -220,7 +215,7 @@ def coverage_export(self, coverage, job):
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context.context_by_coverage(coverage=coverage)
+        context.fill_contributor_exports(coverage=coverage)
         models.Job.update(job_id=job.id, state="running", step="merge")
         context = coverage_export_functions.merge(coverage, context)
 

@@ -35,7 +35,7 @@ class Context():
         self.data_sources_fetched = []
         self.contributor_exports = []
 
-    def context_by_coverage(self, coverage):
+    def fill_contributor_exports(self, coverage):
         logging.getLogger(__name__).info('initialize context')
         for contributor_id in coverage.contributors:
             export = ContributorExport.get_last(contributor_id)
@@ -44,7 +44,7 @@ class Context():
                 continue
             self.contributor_exports.append(export)
 
-    def context_by_contributor(self, contributor):
+    def fill_data_sources_fetched(self, contributor):
         logging.getLogger(__name__).info('initialize context')
         for data_source in contributor.data_sources:
             export = DataSourceFetched.get_last(contributor.id, data_source.id)
