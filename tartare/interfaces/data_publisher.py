@@ -43,13 +43,12 @@ class DataPublisher(flask_restful.Resource):
         logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
                                                                                                        environment_id))
         coverage = Coverage.get(coverage_id)
-        coverage_export = CoverageExport.get_last(coverage.id)
         environment = coverage.get_environment(environment_id)
         job = Job(coverage_id=coverage_id, action_type="publish_data")
         job.save()
         actions = []
         for platform in environment.publication_platforms:
-            actions.append(publish_data_on_platform.si(platform, coverage_export, coverage, environment_id, job))
+            actions.append(publish_data_on_platform.si(platform, coverage, environment_id, job))
         actions.append(finish_job(job.id))
         if actions:
             chain(*actions).delay()

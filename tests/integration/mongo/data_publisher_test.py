@@ -28,7 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import filecmp
+
 import os
 import tempfile
 from zipfile import ZipFile
@@ -144,8 +144,8 @@ class TestDataPublisher(TartareFixture):
                     ]
                 }
             },
-            "id": "default",
-            "name": "default"
+            "id": id,
+            "name": id
         }
         if license:
             coverage['license'] = license
@@ -228,7 +228,7 @@ class TestDataPublisher(TartareFixture):
         session.quit()
 
     @pytest.mark.parametrize("license_url,license_name,sample_data,coverage_id", [
-        # ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
+        ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
         (None, None, 'sample_1.zip', 'my-coverage-id')
     ])
     @freeze_time("2017-01-15")
@@ -257,12 +257,6 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         assert resp.status_code == 201
-
-        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
-        assert resp.status_code == 201
-
-        resp = self.post("/coverages/{}/environments/production/actions/publish".format(coverage_id))
-        assert resp.status_code == 200
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
                              init_ftp_upload_server.password)
@@ -276,15 +270,17 @@ class TestDataPublisher(TartareFixture):
             with open(transfered_full_name, 'wb') as dest_file:
                 session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
                                    dest_file.write)
-                session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
+                session.delete(expected_filename)
             with ZipFile(transfered_full_name, 'r') as ods_zip:
                 metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
                 ods_zip.extract(metadata_file_name, tmp_dirname)
                 fixture = os.path.join(fixture_dir, 'metadata', metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
                 with open(metadata, 'r') as debug_metadata, open(fixture, 'r') as debug_fixture:
-                    assert filecmp.cmp(metadata, fixture), print(
-                        "<========>\n".join([debug_metadata.read(), debug_fixture.read()]))
+                    uploaded_metadata = debug_metadata.read()
+                    expected_metadata = debug_fixture.read()
+                    assert uploaded_metadata == expected_metadata, print(
+                        "<========>\n".join([uploaded_metadata, expected_metadata]))
         session.quit()
 
     def test_config_user_password(self):
