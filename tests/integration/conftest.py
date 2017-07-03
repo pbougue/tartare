@@ -49,6 +49,7 @@ def local_celery():
     celery tasks aren't deferred, they are executed locally by blocking
     """
     tartare.app.config['CELERY_ALWAYS_EAGER'] = True
-    tartare.app.config['CELERY_EAGER_PROPAGATES_EXCEPTIONS'] = True
+    tartare.app.config['CELERY_TASK_EAGER_PROPAGATES'] = True
+    tartare.app.config['ENABLE_SEND_ERROR_EMAILS'] = False
     tartare.celery.conf.update(tartare.app.config)
 

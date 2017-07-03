@@ -31,6 +31,7 @@ import glob
 import logging
 import os
 import datetime
+
 from zipfile import ZipFile
 from tartare import celery
 from tartare.core import calendar_handler, models
@@ -47,6 +48,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage
 from celery import chain
 from urllib.error import ContentTooShortError, HTTPError, URLError
+from tartare.core.mailer import Mailer
 
 
 
@@ -73,14 +75,33 @@ def _get_current_nfts_file(current_data_dir):
     return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
 
 
-class MailSender(tartare.celery.Task):
+class CallbackTask(tartare.celery.Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
-        self.send_mail()
-        super(MailSender, self).on_failure(exc, task_id, args, kwargs, einfo)
+        self.update_job(args, exc)
+        self.send_mail(args)
+        super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
-    def send_mail(self):
-        # TODO sendmail
-        pass
+    def send_mail(self, args):
+        job = self.get_job(args)
+        if job:
+            mailer = Mailer(tartare.app.config.get('NOTIFICATIONS'),
+                            tartare.app.config.get('ENABLE_SEND_ERROR_EMAILS', True))
+            mailer.send_mail(job)
+
+    @staticmethod
+    def get_job(args):
+        for arg in args:
+            if isinstance(arg, models.Job):
+                with tartare.app.app_context():
+                    return models.Job.get(job_id=arg.id)
+        return None
+
+    def update_job(self, args, exc):
+        job = self.get_job(args)
+        if job:
+            with tartare.app.app_context():
+                models.Job.update(job_id=job.get('id'), state="failed", step='fetching data', error_message=str(exc))
+
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
@@ -110,7 +131,6 @@ def _get_publisher(platform, job):
     }
     if platform.type not in publishers_by_type:
         error_message = 'unknown platform type "{type}"'.format(type=platform.type)
-        models.Job.update(job_id=job.id, state="failed", error_message=error_message)
         logger.error(error_message)
         raise Exception(error_message)
 
@@ -138,16 +158,16 @@ def publish_data_on_platform(self, platform, coverage, environment_id, job):
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(coverage_export.get('gridfs_id'))
 
-    publisher = _get_publisher(platform, job)
-
     try:
-        publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
+        publisher = _get_publisher(platform, job)
+        publisher.publish(_get_protocol_uploader(platform, job), file, coverage.id)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(coverage_export.get('gridfs_id'))
+        current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except ProtocolException as e:
-        models.Job.update(job_id=job.id, state="failed", error_message=str(e))
-        self.retry()
+    except (ProtocolException, Exception) as exc:
+        msg = 'publish data on  platform failed, error {}'.format(str(exc))
+        logger.error(msg)
+        self.retry(exc=exc)
 
 @celery.task()
 def finish_job(job_id):
@@ -202,10 +222,10 @@ def contributor_export(self, contributor, job):
                     # Launch coverage export
                     coverage_export.delay(coverage, job)
 
-    except (HTTPError, ContentTooShortError, URLError, Exception) as e:
-        models.Job.update(job_id=job.id, state="failed", error_message=str(e))
-        logger.error('Contributor export failed, error {}'.format(str(e)))
-        raise self.retry()
+    except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
+        msg = 'Contributor export failed, error {}'.format(str(exc))
+        logger.error(msg)
+        raise self.retry(exc=exc)
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=MailSender)
@@ -232,10 +252,10 @@ def coverage_export(self, coverage, job):
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
         if actions:
             chain(*actions).delay()
-    except Exception as e:
-        models.Job.update(job_id=job.id, state="failed", error_message=str(e))
-        logger.error('coverage export failed, error {}'.format(str(e)))
-        raise self.retry()
+    except Exception as exc:
+        msg = 'coverage export failed, error {}'.format(str(exc))
+        logger.error(msg)
+        raise self.retry(exc=exc)
 
 
 def launch(processes, context):

@@ -52,6 +52,19 @@ DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 GRID_CALENDAR_DIR = 'grid_calendar'
 CALENDAR_FILE = 'export_calendars.zip'
 
+ENABLE_SEND_ERROR_EMAILS = True
+
+NOTIFICATIONS = {
+    'smtp': {
+        'host': 'localhost',
+        'port': 25,
+        'timeout': 1
+    },
+    'from': 'from@canaltp.fr',
+    'to': 'to@canaltp.fr',
+    'cc': [],
+}
+
 LOGGER = {
     'version': 1,
     'disable_existing_loggers': True,
