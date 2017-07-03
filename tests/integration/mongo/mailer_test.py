@@ -77,7 +77,7 @@ class TestMailer():
         with app.app_context():
             job = Job('coverage_export', coverage_id='fr-idf', state='failed',
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
-                      started_at='2017-06-30 06:52:54.004120+00:00')
+                      started_at=now)
             job.save()
             mailer = Mailer({}, False)
             t = mailer.get_message(Job.get(job_id=job.id))
@@ -86,7 +86,7 @@ class TestMailer():
                 'Problem Tartare',
                 '',
                 '',
-                'Start execution :  {}'.format(now.isoformat(sep=' ')),
+                'Start execution : {}'.format(now.isoformat(sep=' ')),
                 'End execution : None',
                 'Action type: coverage_export',
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
@@ -99,14 +99,14 @@ class TestMailer():
                 'Automatic email from Tartare',
                 '==========================================================================='
             ]
-            assert result.sort() == excepted.sort()
+            self._same_list(excepted, result)
 
     def test_automatic_update(self):
         now = datetime.datetime(2017, 5, 6, 16, 29, 43, tzinfo=datetime.timezone.utc)
         with app.app_context():
             job = Job('automatic_update', contributor_id='fr-idf', state='failed',
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
-                      started_at='2017-06-30 06:52:54.004120+00:00')
+                      started_at=now)
             job.save()
             mailer = Mailer({}, False)
             t = mailer.get_message(Job.get(job_id=job.id))
@@ -115,7 +115,7 @@ class TestMailer():
                 'Problem Tartare',
                 '',
                 '',
-                'Start execution :  {}'.format(now.isoformat(sep=' ')),
+                'Start execution : {}'.format(now.isoformat(sep=' ')),
                 'End execution : None',
                 'Action type: automatic_update',
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
@@ -128,4 +128,4 @@ class TestMailer():
                 'Automatic email from Tartare',
                 '==========================================================================='
             ]
-            assert result.sort() == excepted.sort()
+            self._same_list(excepted, result)
