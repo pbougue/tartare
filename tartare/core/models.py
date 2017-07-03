@@ -332,8 +332,9 @@ class DataSource(object):
 
 
 class PreProcess(object):
-    def __init__(self, id=None, type=None, source_params=None):
+    def __init__(self, id=None, type=None, source_params=None, sequence=0):
         self.id = str(uuid.uuid4()) if not id else id
+        self.sequence = sequence
         self.type = type
         self.source_params = {} if source_params is None else source_params
 
@@ -431,6 +432,7 @@ class MongoDataSourceSchema(Schema):
 
 class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
+    sequence = fields.Integer(required=True)
     type = fields.String(required=True)
     source_params = fields.Dict(required=True)
 

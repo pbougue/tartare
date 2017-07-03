@@ -38,6 +38,7 @@ def test_post_ds_one_data_source_without_id(app, contributor):
     '''
     post_ps = {
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
@@ -75,6 +76,7 @@ def test_post_contrib_one_data_source_with_id(app):
     post_data["preprocesses"] = [{
         "id": "toto",
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -96,6 +98,7 @@ def test_update_preprocess_with_id(app):
     post_data["preprocesses"] = [{
         "id": "toto",
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -110,6 +113,7 @@ def test_update_preprocess_with_id(app):
     preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
     new_preprocess = {
         "type": "ComputeDirections",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
         }
@@ -131,6 +135,7 @@ def test_delete_preprocess(app):
     post_data["preprocesses"] = [{
         "id": "toto",
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -154,6 +159,7 @@ def test_post_preprocess_with_unknown_type(app, contributor):
     '''
     post_ps = {
         "type": "bob",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
@@ -174,6 +180,7 @@ def test_update_preprocess_with_unknown_type(app):
     post_data["preprocesses"] = [{
         "id": "toto",
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -186,6 +193,7 @@ def test_update_preprocess_with_unknown_type(app):
     preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
     new_preprocess = {
         "type": "bob",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
         }
@@ -207,6 +215,7 @@ def test_update_preprocesses_with_id(app):
         {
             "id": "toto",
             "type": "Ruspell",
+            "sequence": 1,
             "source_params": {
                 "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources_id", "value": "bano_75"}
@@ -215,6 +224,7 @@ def test_update_preprocesses_with_id(app):
         {
             "id": "titi",
             "type": "ComputeDirections",
+            "sequence": 2,
             "source_params": {
                 "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
             }
@@ -229,6 +239,7 @@ def test_update_preprocesses_with_id(app):
     assert len(r["contributors"][0]["preprocesses"]) == 2
     new_preprocess = {
         "type": "HeadsignShortName",
+        "sequence": 3,
         "source_params": {
             "tc_data": {"key": "data_sources.data_format", "value": "ffff"}
         }
@@ -257,6 +268,7 @@ def test_post_without_headers(app, contributor):
     '''
     post_ps = {
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
@@ -274,6 +286,7 @@ def test_patch_without_headers(app, contributor):
     '''
     post_ps = {
         "type": "Ruspell",
+        "sequence": 1,
         "source_params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
