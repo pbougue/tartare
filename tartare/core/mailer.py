@@ -91,10 +91,10 @@ class Mailer(object):
                 server.connect(host=self.host, port=self.port)
                 server.sendmail(self.from_, self.to, mail.as_string())
             except smtplib.SMTPException:
-                logging.getLogger(__name__).fatal("Error of sendmail [from = %s, to = %s], error message :%s" %
+                logging.getLogger(__name__).fatal("Sendmail error [from = %s, to = %s], error message :%s" %
                                                   (self.from_, self.to))
             except (socket.gaierror, Exception) as e:
-                logging.getLogger(__name__).fatal("Error of connection [host = %s], error message :%s" %
+                logging.getLogger(__name__).fatal("Connection error [host = %s], error message :%s" %
                                                   (self.host, str(e)))
             finally:
                 server.quit()
