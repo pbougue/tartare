@@ -100,7 +100,7 @@ class CallbackTask(tartare.celery.Task):
         job = self.get_job(args)
         if job:
             with tartare.app.app_context():
-                models.Job.update(job_id=job.get('id'), state="failed", step='fetching data', error_message=str(exc))
+                models.Job.update(job_id=job.get('id'), state="failed", error_message=str(exc))
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
