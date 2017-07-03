@@ -58,3 +58,27 @@ class HeadsignShortName(AbstractProcess):
 
     def do(self):
         return self.context
+
+
+class FusioDataUpdate(AbstractProcess):
+    def __init__(self, context):
+        self.context = context
+
+    def do(self):
+        return self.context
+
+
+class FusioImport(AbstractProcess):
+    def __init__(self, context):
+        self.context = context
+
+    def do(self):
+        return self.context
+
+
+class FusioExport(AbstractProcess):
+    def __init__(self, context):
+        self.context = context
+
+    def do(self):
+        return self.context

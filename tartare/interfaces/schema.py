@@ -33,10 +33,8 @@ from flask_restful import unpack
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
-from tartare.core.models import MongoContributorSchema, Environment, MongoDataSourceSchema, MongoJobSchema, \
-    MongoPreProcessSchema, MongoContributorExportSchema, Platform, MongoCoverageExportSchema
-import os
-from tartare import app
+from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
+    MongoContributorExportSchema, MongoCoverageExportSchema
 
 
 class serialize_with(object):
@@ -70,7 +68,6 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
     production = fields.Nested(EnvironmentSchema, allow_none=True)
     preproduction = fields.Nested(EnvironmentSchema, allow_none=True)
     integration = fields.Nested(EnvironmentSchema, allow_none=True)
-
 
 
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):

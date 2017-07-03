@@ -57,6 +57,7 @@ class Environment(object):
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
 
+
 class Platform(object):
     def __init__(self, protocol, type, url, options=None):
         self.type = type
@@ -86,13 +87,14 @@ class License(object):
 class Coverage(object):
     mongo_collection = 'coverages'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None, preprocesses=None):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
+        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save_grid_calendars(self, file):
         gridfs_handler = GridFsHandler()
@@ -448,6 +450,7 @@ class MongoCoverageSchema(Schema):
     grid_calendars_id = fields.String(allow_none=True)
     contributors = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
+    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
 
     @post_load
     def make_coverage(self, data):
