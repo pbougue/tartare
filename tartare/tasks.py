@@ -151,7 +151,7 @@ def _get_protocol_uploader(platform, job):
     return publishers_by_protocol[platform.protocol](platform.url, platform.options)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True)
+@celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
 def publish_data_on_platform(self, platform, coverage, environment_id, job):
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
@@ -160,9 +160,9 @@ def publish_data_on_platform(self, platform, coverage, environment_id, job):
 
     try:
         publisher = _get_publisher(platform, job)
-        publisher.publish(_get_protocol_uploader(platform, job), file, coverage.id)
+        publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(gridfs_id)
+        current_ntfs_id = gridfs_handler.copy_file(coverage_export.get('gridfs_id'))
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
         msg = 'publish data on  platform failed, error {}'.format(str(exc))
@@ -196,7 +196,7 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
     if response.status_code != 200:
         raise self.retry()
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=MailSender)
+@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
 def contributor_export(self, contributor, job):
     try:
         context = Context()
@@ -228,7 +228,7 @@ def contributor_export(self, contributor, job):
         raise self.retry(exc=exc)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=MailSender)
+@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
 def coverage_export(self, coverage, job):
     logger.info('coverage_export')
     try:
