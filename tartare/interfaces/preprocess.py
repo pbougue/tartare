@@ -52,7 +52,7 @@ class PreProcess(flask_restful.Resource):
             raise InvalidArguments(err.messages)
 
         try:
-            preprocess.save(contributor_id)
+            preprocess.save(contributor_id=contributor_id)
         except (PyMongoError, ValueError) as e:
             raise InternalServerError('Impossible to add data source.')
 
@@ -60,7 +60,8 @@ class PreProcess(flask_restful.Resource):
 
     def get(self, contributor_id: str, preprocess_id: Optional[str]=None) -> Response:
         try:
-            ps = models.PreProcess.get(contributor_id, preprocess_id)
+            ps = models.PreProcess.get(preprocess_id=preprocess_id,
+                                       contributor_id=contributor_id)
             if not ps and preprocess_id:
                 raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
         except ValueError as e:
@@ -70,7 +71,8 @@ class PreProcess(flask_restful.Resource):
 
     @json_data_validate()
     def patch(self, contributor_id: str, preprocess_id: str) -> Response:
-        ds = models.PreProcess.get(contributor_id, preprocess_id)
+        ds = models.PreProcess.get(preprocess_id=preprocess_id,
+                                   contributor_id=contributor_id)
         if len(ds) != 1:
             abort(404)
 
