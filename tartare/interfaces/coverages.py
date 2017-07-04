@@ -26,8 +26,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Tuple, Optional
 
 import flask_restful
+from flask import Response
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 import logging
@@ -39,7 +41,7 @@ from tartare.decorators import json_data_validate, validate_contributors
 
 
 class Coverage(flask_restful.Resource):
-    def _hide_password_in_coverage_response(self, response):
+    def _hide_password_in_coverage_response(self, response: dict) -> dict:
         for env_name, env_def in response.get('environments', []).items():
             for (pub_idx, publication_platform) in enumerate(env_def.get('publication_platforms', [])):
                 if 'options' in publication_platform and 'authent' in publication_platform['options'] and \
@@ -50,7 +52,7 @@ class Coverage(flask_restful.Resource):
 
     @json_data_validate()
     @validate_contributors()
-    def post(self):
+    def post(self) -> Response:
         coverage_schema = schema.CoverageSchema(strict=True)
         try:
             coverage = coverage_schema.load(request.json).data
@@ -66,7 +68,7 @@ class Coverage(flask_restful.Resource):
 
         return {'coverages': coverage_schema.dump([coverage], many=True).data}, 201
 
-    def get(self, coverage_id=None):
+    def get(self, coverage_id: Optional[str]=None) -> Response:
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
@@ -83,7 +85,7 @@ class Coverage(flask_restful.Resource):
 
         return {'coverages': MarshalResult(data=processed_coverages, errors=coverages.errors).data}, 200
 
-    def delete(self, coverage_id):
+    def delete(self, coverage_id: str) -> Response:
         c = models.Coverage.delete(coverage_id)
         if c == 0:
             raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
@@ -91,7 +93,7 @@ class Coverage(flask_restful.Resource):
 
     @json_data_validate()
     @validate_contributors()
-    def patch(self, coverage_id):
+    def patch(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))

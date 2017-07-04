@@ -26,7 +26,9 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
 
+from flask import Response
 from flask_restful import abort, request
 import flask_restful
 from pymongo.errors import PyMongoError
@@ -40,7 +42,7 @@ from tartare.decorators import json_data_validate
 
 class PreProcess(flask_restful.Resource):
     @json_data_validate()
-    def post(self, contributor_id):
+    def post(self, contributor_id: str) -> Response:
         preprocess_schema = schema.PreProcessSchema(strict=True)
         try:
             d = request.json
@@ -56,7 +58,7 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump([preprocess]).data}, 201
 
-    def get(self, contributor_id, preprocess_id=None):
+    def get(self, contributor_id: str, preprocess_id: Optional[str]=None) -> Response:
         try:
             ps = models.PreProcess.get(contributor_id, preprocess_id)
             if not ps and preprocess_id:
@@ -67,7 +69,7 @@ class PreProcess(flask_restful.Resource):
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(ps).data}, 200
 
     @json_data_validate()
-    def patch(self, contributor_id, preprocess_id):
+    def patch(self, contributor_id: str, preprocess_id: str) -> Response:
         ds = models.PreProcess.get(contributor_id, preprocess_id)
         if len(ds) != 1:
             abort(404)
@@ -88,7 +90,7 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(preprocesses).data}, 200
 
-    def delete(self, contributor_id, preprocess_id):
+    def delete(self, contributor_id: str, preprocess_id: str) -> Response:
         try:
             nb_deleted = models.PreProcess.delete(contributor_id, preprocess_id)
             if nb_deleted == 0:

@@ -31,7 +31,10 @@
 # www.navitia.io
 
 import logging
-import zipfile
+from typing import Tuple, List
+from zipfile import ZipFile, is_zipfile
+
+from flask import Response
 from flask.globals import request
 from flask_restful import Resource
 from tartare import tasks
@@ -50,7 +53,10 @@ CALENDAR_REQUESTED_FILE = {GRID_CALENDARS: GRID_CALENDARS_HEADER,
                            GRID_CALENDAR_NETWORK_LINE: GRID_CALENDAR_NETWORK_LINE_HEADER}
 
 
-def is_valid_file(zip_file):
+def is_valid_file(zip_file: ZipFile) -> Tuple[bool, List[str]]:
+    """
+        :return: list of missing files among CALENDAR_REQUESTED_FILE
+    """
     valid_file = True
     missing_files = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
@@ -62,7 +68,10 @@ def is_valid_file(zip_file):
     return valid_file, missing_files
 
 
-def check_files_header(zip_file):
+def check_files_header(zip_file: ZipFile) -> Tuple[bool, List[str]]:
+    """
+        :return: list of invalid files among CALENDAR_REQUESTED_FILE
+    """
     valid_header = True
     invalid_files = []
     for request_file, header in CALENDAR_REQUESTED_FILE.items():
@@ -80,7 +89,7 @@ def check_files_header(zip_file):
 
 
 class GridCalendar(Resource):
-    def post(self, coverage_id):
+    def post(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
@@ -90,9 +99,9 @@ class GridCalendar(Resource):
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
-        if not zipfile.is_zipfile(content):
+        if not is_zipfile(content):
             raise InvalidArguments('Invalid ZIP.')
-        zip_file = zipfile.ZipFile(content)
+        zip_file = ZipFile(content)
         valid_file, missing_files = is_valid_file(zip_file)
         if not valid_file:
             raise InvalidArguments('File(s) missing : {}.'.format(''.join(missing_files)))

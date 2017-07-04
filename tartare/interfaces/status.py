@@ -33,8 +33,10 @@
 import flask_restful
 import os
 
+from flask import Response
+
 
 class Status(flask_restful.Resource):
-    def get(self):
+    def get(self) -> Response:
         version = os.getenv('TARTARE_VERSION', 'unknown_version')
         return {'version': version}, 200

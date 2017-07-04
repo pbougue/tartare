@@ -26,10 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
 
 import flask_restful
+from flask import Response
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
+from tartare.core.models import DataSource
 from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
@@ -42,7 +45,7 @@ from tartare.decorators import json_data_validate
 
 class Contributor(flask_restful.Resource):
     @staticmethod
-    def upgrade_dict(source, request_data, key):
+    def upgrade_dict(source: DataSource, request_data: dict, key: str):
         map_model = {
             "data_sources": schema.DataSourceSchema,
             "preprocesses": schema.PreProcessSchema
@@ -64,12 +67,12 @@ class Contributor(flask_restful.Resource):
             request_data[key] = patched_data
 
     @staticmethod
-    def set_ids(collections):
+    def set_ids(collections: dict):
         for c in collections:
             c.setdefault('id', str(uuid.uuid4()))
 
     @json_data_validate()
-    def post(self):
+    def post(self) -> Response:
         post_data = request.json
         if 'id' not in post_data:
             raise InvalidArguments('contributor id has to be specified')
@@ -99,7 +102,7 @@ class Contributor(flask_restful.Resource):
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
 
-    def get(self, contributor_id=None):
+    def get(self, contributor_id: Optional[str]=None) -> Response:
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
@@ -109,14 +112,14 @@ class Contributor(flask_restful.Resource):
         contributors = models.Contributor.all()
         return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
 
-    def delete(self, contributor_id):
+    def delete(self, contributor_id: str) -> Response:
         c = models.Contributor.delete(contributor_id)
         if c == 0:
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
     @json_data_validate()
-    def patch(self, contributor_id):
+    def patch(self, contributor_id: str) -> Response:
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
