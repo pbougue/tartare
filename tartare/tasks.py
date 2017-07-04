@@ -83,10 +83,8 @@ class CallbackTask(tartare.celery.Task):
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
     def send_mail(self, args):
-        job = self.get_job(args)
-        if job:
-            from tartare import mailer
-            mailer.send_mail(job)
+        from tartare import mailer
+        mailer.analyse_job_to_send_mail(self.get_job(args))
 
     @staticmethod
     def get_job(args):
