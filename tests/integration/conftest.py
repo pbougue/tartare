@@ -29,6 +29,7 @@
 import tartare
 import pytest
 import os
+import mock
 
 
 @pytest.fixture(scope="module")
@@ -49,6 +50,11 @@ def local_celery():
     celery tasks aren't deferred, they are executed locally by blocking
     """
     tartare.app.config['CELERY_ALWAYS_EAGER'] = True
-    tartare.app.config['CELERY_EAGER_PROPAGATES_EXCEPTIONS'] = True
+    tartare.app.config['CELERY_TASK_EAGER_PROPAGATES'] = True
     tartare.celery.conf.update(tartare.app.config)
 
+@pytest.fixture(scope="session", autouse=True)
+def not_send_mail():
+    def mock_send(arg):
+        pass
+    tartare.mailer.send = mock.Mock(side_effect=mock_send)

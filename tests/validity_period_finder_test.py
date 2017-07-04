@@ -31,7 +31,7 @@ from tartare.validity_period_finder import ValidityPeriodFinder
 import os
 from datetime import date
 import pytest
-from tartare.exceptions import FileNotFound, InvalidFile
+from tartare.exceptions import InvalidFile
 
 
 current_path = '{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'tests/fixtures')

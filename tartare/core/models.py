@@ -512,8 +512,10 @@ class MongoContributorSchema(Schema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type, contributor_id=None, coverage_id=None, state='pending', step=None):
-        self.id = str(uuid.uuid4())
+    def __init__(self, action_type, contributor_id=None, coverage_id=None, state='pending',
+                 step=None, id=str(uuid.uuid4()),
+                 started_at=datetime.utcnow()):
+        self.id = id
         self.action_type = action_type
         self.contributor_id = contributor_id
         self.coverage_id = coverage_id
@@ -521,7 +523,7 @@ class Job(object):
         # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = ""
-        self.started_at = datetime.utcnow()
+        self.started_at = started_at
         self.updated_at = None
 
     def save(self):

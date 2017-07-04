@@ -40,6 +40,7 @@ from tartare.exceptions import InvalidFile
 from datetime import date
 from tartare.core.context import Context
 
+
 def test_fetch_data_from_input_failed(mocker):
     url = "http://whatever.com/gtfs.zip"
     data_source = DataSource('myDSId', 'myDS', 'gtfs', {"type": "ftp", "url": url})

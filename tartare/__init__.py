@@ -36,6 +36,7 @@ from celery.signals import setup_logging
 from flask_pymongo import PyMongo
 from flask_script import Manager
 
+
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')
 app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
@@ -62,3 +63,6 @@ from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPubli
 navitia_publisher = NavitiaPublisher()
 ods_publisher = ODSPublisher()
 stop_area_publisher = StopAreaPublisher()
+
+from tartare.core.mailer import Mailer
+mailer = Mailer(app.config.get('MAILER'))
