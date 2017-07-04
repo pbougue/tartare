@@ -17,4 +17,5 @@ marshmallow==2.10.0
 requests==2.11.1
 requests-toolbelt==0.7.0
 numpy==1.13.0
+typing==3.6.1
 Flask-Script==0.6.7

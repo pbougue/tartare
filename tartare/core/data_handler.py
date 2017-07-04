@@ -31,26 +31,28 @@
 
 import os
 import zipfile
+from typing import Union, Tuple
 
 
-def type_of_data(filename):
+def type_of_data(filename: Union[str, list]) -> Tuple[str, str]:
     """
-    return the type of data contains in a file + the path to load it
-    this type can be one in:
-     - 'gtfs'
-     - 'fusio'
-     - 'fare'
-     - 'osm'
-     - 'geopal'
-     - 'fusio'
-     - 'poi'
-     - 'synonym'
-     - 'shape'
-     if only_one_file is True, so consider only a zip for all pt data
-     else we consider also them for multi files
-    for 'fusio', 'gtfs', 'fares' and 'poi', we return the directory since there are several file to load
+        return the type of data contains in a file + the path to load it
+        this type can be one in:
+         - 'gtfs'
+         - 'fusio'
+         - 'fare'
+         - 'osm'
+         - 'geopal'
+         - 'fusio'
+         - 'poi'
+         - 'synonym'
+         - 'shape'
+         if only_one_file is True, so consider only a zip for all pt data
+         else we consider also them for multi files
+        for 'fusio', 'gtfs', 'fares' and 'poi', we return the directory since there are several file to load
     """
-    def files_type(files):
+
+    def files_type(files: list) -> Union[str, None]:
         # first we try fusio, because it can load fares too
         if any(f for f in files if f.endswith("contributors.txt")):
             return 'fusio'
@@ -102,9 +104,9 @@ def type_of_data(filename):
     return None, None
 
 
-def is_ntfs_data(input_file):
+def is_ntfs_data(input_file: str) -> bool:
     return type_of_data(input_file)[0] == 'fusio'
 
 
-def is_calendar_data(input_file):
+def is_calendar_data(input_file: str) -> bool:
     return type_of_data(input_file)[0] == 'calendar'
