@@ -48,7 +48,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage
 from celery import chain
 from urllib.error import ContentTooShortError, HTTPError, URLError
-from tartare.core.mailer import Mailer
+
 
 
 
@@ -77,6 +77,7 @@ def _get_current_nfts_file(current_data_dir):
 
 class CallbackTask(tartare.celery.Task):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
+
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -84,8 +85,7 @@ class CallbackTask(tartare.celery.Task):
     def send_mail(self, args):
         job = self.get_job(args)
         if job:
-            mailer = Mailer(tartare.app.config.get('NOTIFICATIONS'),
-                            tartare.app.config.get('ENABLE_SEND_ERROR_EMAILS', True))
+            from tartare import mailer
             mailer.send_mail(job)
 
     @staticmethod
@@ -281,4 +281,3 @@ def automatic_update():
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
         chain(contributor_export.si(contributor, job), finish_job.si(job.id)).delay()
-

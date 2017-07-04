@@ -52,8 +52,6 @@ DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 GRID_CALENDAR_DIR = 'grid_calendar'
 CALENDAR_FILE = 'export_calendars.zip'
 
-ENABLE_SEND_ERROR_EMAILS = True
-
 NOTIFICATIONS = {
     'smtp': {
         'host': 'localhost',

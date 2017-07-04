@@ -49,7 +49,7 @@ class TestMailer():
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
                       started_at=now)
             job.save()
-            mailer = Mailer({}, False)
+            mailer = Mailer({})
             t = mailer.get_message(Job.get(job_id=job.id))
             result = t.split('\n')
 
@@ -79,7 +79,7 @@ class TestMailer():
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
                       started_at=now)
             job.save()
-            mailer = Mailer({}, False)
+            mailer = Mailer({})
             t = mailer.get_message(Job.get(job_id=job.id))
             result = t.split('\n')
             excepted = [
@@ -108,7 +108,7 @@ class TestMailer():
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
                       started_at=now)
             job.save()
-            mailer = Mailer({}, False)
+            mailer = Mailer({})
             t = mailer.get_message(Job.get(job_id=job.id))
             result = t.split('\n')
             excepted = [
