@@ -1252,7 +1252,7 @@ definitions:
     properties:
       name:
         type: string
-        example: "url"
+        example: "navitia.io license"
       url:
         type: string
         example: "http://navitia.io"
