@@ -94,7 +94,7 @@ class Mailer(object):
         finally:
             server.quit()
 
-    def analyse_job_to_send_mail(self, job):
+    def build_msg_and_send_mail(self, job):
         if job:
             mail = self.format_mail(job)
             self.send(mail)

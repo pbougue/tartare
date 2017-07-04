@@ -65,4 +65,4 @@ ods_publisher = ODSPublisher()
 stop_area_publisher = StopAreaPublisher()
 
 from tartare.core.mailer import Mailer
-mailer = Mailer(app.config.get('NOTIFICATIONS'))
+mailer = Mailer(app.config.get('MAILER'))

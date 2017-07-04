@@ -52,7 +52,7 @@ DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 GRID_CALENDAR_DIR = 'grid_calendar'
 CALENDAR_FILE = 'export_calendars.zip'
 
-NOTIFICATIONS = {
+MAILER = {
     'smtp': {
         'host': 'localhost',
         'port': 25,

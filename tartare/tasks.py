@@ -84,7 +84,7 @@ class CallbackTask(tartare.celery.Task):
 
     def send_mail(self, args):
         from tartare import mailer
-        mailer.analyse_job_to_send_mail(self.get_job(args))
+        mailer.build_msg_and_send_mail(self.get_job(args))
 
     @staticmethod
     def get_job(args):
