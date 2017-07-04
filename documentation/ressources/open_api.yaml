@@ -1233,9 +1233,9 @@ definitions:
         type: string
         example: "gtfs"
       input:
-        type: array
-        items:
-          $ref: "#/definitions/input"
+        $ref: "#/definitions/input"
+      license:
+        $ref: "#/definitions/license"
 
   input:
     type: object
@@ -1246,6 +1246,16 @@ definitions:
       url:
         type: string
         example: "http://stif.com/od.zip"
+
+  license:
+    type: object
+    properties:
+      name:
+        type: string
+        example: "url"
+      url:
+        type: string
+        example: "http://navitia.io"
 
   error_400:
     type: object
