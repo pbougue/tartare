@@ -289,9 +289,24 @@ class TestCoverageApi(TartareFixture):
     def test_add_coverage_with_unknown_contributor(self):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
-        assert raw.status_code == 404
+        assert raw.status_code == 400
         r = self.to_json(raw)
         assert r['error'] == 'Contributor unknown not found.'
+
+    def test_decorator_priority(self):
+        """
+        This test is just to see if we execute json_data_validate decorator first
+
+        @json_data_validate()
+        @validate_contributors()
+        def patch(self, coverage_id):
+           ....
+        """
+        raw = self.post('/coverages',
+                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}', headers=None)
+        assert raw.status_code == 415
+        r = self.to_json(raw)
+        assert r['error'] == 'request without data.'
 
     def test_add_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
@@ -303,7 +318,7 @@ class TestCoverageApi(TartareFixture):
 
     def test_patch_coverage_with_unknown_contributor(self, coverage):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["unknown"]}')
-        assert raw.status_code == 404
+        assert raw.status_code == 400
         r = self.to_json(raw)
         assert r['error'] == 'Contributor unknown not found.'
 
