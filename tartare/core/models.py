@@ -340,15 +340,33 @@ class PreProcess(object):
         self.type = type
         self.source_params = {} if source_params is None else source_params
 
-    def save(self, contributor_id):
-        contributor = get_contributor(contributor_id)
+    def _save_data(self, model_object, content_object, mongo_model_object):
+        """
+        :param model_object: models.Contributor or models.Coverage
+        :param content_object:  contributor or coverage data
+        :param mongo_model_object: MongoCoverageSchema or MongoContributorSchema
+        :return:
+        """
+        if self.id in [p.id for p in content_object.preprocesses]:
+            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
 
-        if self.id in [p.id for p in contributor.preprocesses]:
-            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+        content_object.preprocesses.append(self)
+        raw_contrib = mongo_model_object().dump(content_object).data
+        mongo.db[model_object.mongo_collection].find_one_and_replace({'_id': content_object.id}, raw_contrib)
 
-        contributor.preprocesses.append(self)
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+    def save(self, contributor_id=None, coverage_id=None):
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            contributor = Contributor.get(contributor_id)
+            if contributor is None:
+                raise ValueError('Bad contributor {}'.format(contributor_id))
+            self._save_data(Contributor, contributor, MongoContributorSchema)
+        if coverage_id:
+            coverage = Coverage.get(coverage_id)
+            if coverage is None:
+                raise ValueError('Bad coverage {}'.format(coverage_id))
+            self._save_data(Coverage, coverage, MongoCoverageSchema)
 
     @classmethod
     def get(cls, contributor_id=None, preprocess_id=None):
@@ -363,12 +381,11 @@ class PreProcess(object):
             raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
 
         preprocesses = contributor.preprocesses
-
+        
         if preprocess_id is None:
             return preprocesses
         p = next((p for p in preprocesses if p.id == preprocess_id), None)
         return [p] if p else []
-
 
     @classmethod
     def delete(cls, contributor_id, preprocess_id):
@@ -399,6 +416,7 @@ class PreProcess(object):
             return None
 
         return cls.get(contributor_id, preprocess_id)
+
 
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
