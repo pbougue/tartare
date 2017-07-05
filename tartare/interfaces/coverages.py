@@ -37,8 +37,8 @@ from tartare.interfaces import schema
 from marshmallow import MarshalResult, ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate, validate_contributors, 
-validate_preprocesses_or_raise, setdefault_ids
+from tartare.decorators import json_data_validate, validate_contributors
+from tartare.helper import validate_preprocesses_or_raise, setdefault_ids
 
 
 class Coverage(flask_restful.Resource):

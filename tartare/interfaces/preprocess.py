@@ -58,7 +58,8 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump([preprocess]).data}, 201
 
-    def get(self, contributor_id: : Optional[str]=None, coverage_id: Optional[str]=None, preprocess_id: Optional[str]=None) -> Response:
+    def get(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+            preprocess_id: Optional[str]=None) -> Response:
         try:
             ps = models.PreProcess.get(preprocess_id=preprocess_id,
                                        contributor_id=contributor_id,
@@ -71,9 +72,11 @@ class PreProcess(flask_restful.Resource):
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(ps).data}, 200
 
     @json_data_validate()
-    def patch(self, contributor_id: Optional[str]=None, preprocess_id: Optional[str]=None, coverage_id: Optional[str]=None) -> Response:
+    def patch(self, contributor_id: Optional[str]=None, preprocess_id: Optional[str]=None,
+              coverage_id: Optional[str]=None) -> Response:
         ds = models.PreProcess.get(preprocess_id=preprocess_id,
-                                   contributor_id=contributor_id)
+                                   contributor_id=contributor_id,
+                                   coverage_id=coverage_id)
         if len(ds) != 1:
             abort(404)
 
@@ -96,7 +99,8 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(preprocesses).data}, 200
 
-    def delete(self, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
+    def delete(self, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+               coverage_id: Optional[str]=None):
         try:
             nb_deleted = models.PreProcess.delete(preprocess_id, coverage_id=coverage_id, contributor_id=contributor_id)
             if nb_deleted == 0:
