@@ -26,20 +26,21 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
 
 
 class ColumnNotFound(Exception):
-    def __init__(self, message=''):
+    def __init__(self, message: Optional[str]=''):
         self.message = message
 
 
 class FileNotFound(Exception):
-    def __init__(self, message=''):
+    def __init__(self, message: Optional[str]=''):
         self.message = message
 
 
 class InvalidFile(Exception):
-    def __init__(self, message=''):
+    def __init__(self, message: Optional[str]=''):
         self.message = message
 
 

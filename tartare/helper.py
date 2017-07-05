@@ -28,9 +28,14 @@
 # www.navitia.io
 
 import logging.config
+from io import IOBase
+from typing import Union, Any, Optional
 import celery
+from celery import Celery
 from collections.abc import Mapping
 import requests
+from flask import Flask
+from requests import Response
 from gridfs.grid_file import GridOut
 import tartare.processes
 import logging
@@ -39,22 +44,17 @@ from hashlib import md5
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
-def grid_out_len(self):
+def grid_out_len(self: GridOut) -> int:
     return self.length
 GridOut.__len__ = grid_out_len
 
 
-def upload_file(url, filename, file):
+def upload_file(url: str, filename: str, file: Union[str, bytes, IOBase, GridOut]) -> Response:
     return requests.post(url, files={'file': file, 'filename': filename}, timeout=120)
     #TODO: fix interaction between toolbets and gridfs file
-    #form = encoder.MultipartEncoder({
-    #    'file': (filename, file, 'application/octet-stream')
-    #})
-    #headers =  {'Content-Type': form.content_type}
-    #return requests.post(url, headers=headers, data=form, timeout=10)
 
 
-def configure_logger(app_config):
+def configure_logger(app_config: dict):
     """
     initialize logging
     """
@@ -64,7 +64,7 @@ def configure_logger(app_config):
         logging.basicConfig(level='INFO')
 
 
-def make_celery(app):
+def make_celery(app: Flask) -> Celery:
     celery_app = celery.Celery(app.import_name,
                                broker=app.config['CELERY_BROKER_URL'])
     celery_app.conf.update(app.config)
@@ -84,11 +84,11 @@ def make_celery(app):
     return celery_app
 
 
-def _make_doted_key(*args):
+def _make_doted_key(*args: Mapping) -> Mapping:
     return '.'.join([e for e in args if e])
 
 
-def to_doted_notation(data, prefix=None):
+def to_doted_notation(data: Mapping, prefix: Optional[Any]=None) -> Mapping:
     result = {}
     for k, v in data.items():
         key = _make_doted_key(prefix, k)
@@ -107,7 +107,7 @@ def to_doted_notation(data, prefix=None):
     return result
 
 
-def validate_preprocesses_or_raise(preprocesses):
+def validate_preprocesses_or_raise(preprocesses: dict):
     for p in preprocesses:
         p_type = p.get('type')
         kls = getattr(tartare.processes, p_type, None)
@@ -117,7 +117,7 @@ def validate_preprocesses_or_raise(preprocesses):
             raise InvalidArguments(msg)
 
 
-def get_filename(url, data_source_id):
+def get_filename(url: str, data_source_id: str) -> str:
     filename = "gtfs-{data_source_id}.zip".format(data_source_id=data_source_id)
     if not url:
         return filename
@@ -128,7 +128,7 @@ def get_filename(url, data_source_id):
     return filename
 
 
-def get_md5_content_file(file):
+def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
     hasher = md5()
     with open(file, "rb") as f:
         data = f.read()

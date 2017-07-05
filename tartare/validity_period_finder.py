@@ -28,11 +28,10 @@
 # www.navitia.io
 
 from zipfile import ZipFile, is_zipfile
-from datetime import date
 import logging
-from datetime import datetime, timedelta
-import os
-from tartare.exceptions import FileNotFound, InvalidFile
+from datetime import datetime, timedelta, date
+from typing import List, Tuple
+from tartare.exceptions import InvalidFile
 import tempfile
 import numpy as np
 
@@ -45,15 +44,15 @@ class ValidityPeriodFinder(object):
         self.date_format = date_format
 
     @property
-    def calendar(self):
+    def calendar(self) -> str:
         return 'calendar.txt'
 
     @property
-    def calendar_dates(self):
+    def calendar_dates(self) -> str:
         return 'calendar_dates.txt'
 
     @staticmethod
-    def _get_data(line):
+    def _get_data(line: bytes) -> str:
         char_to_delete = ['\r', '\n']
         l = line.decode('utf-8')
         for c in char_to_delete:
@@ -61,13 +60,13 @@ class ValidityPeriodFinder(object):
 
         return l.split(',')
 
-    def _str_date(self, string_date):
+    def _str_date(self, string_date: str) -> datetime:
         return datetime.strptime(string_date, self.date_format).date()
 
-    def datetime64_to_date(self, datetime64):
+    def datetime64_to_date(self, datetime64: np.datetime64) -> datetime:
         return self._str_date(np.datetime_as_string(datetime64))
 
-    def get_index(self, files_zip, filename, column):
+    def get_index(self, files_zip: ZipFile, filename: str, column: str) -> int:
         with files_zip.open(filename, 'r') as file:
             for line in file:
                 data = self._get_data(line)
@@ -78,7 +77,7 @@ class ValidityPeriodFinder(object):
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
 
-    def _parse_calendar(self, files_zip):
+    def _parse_calendar(self, files_zip: ZipFile):
         header_start = self.get_index(files_zip, self.calendar, 'start_date')
         header_end = self.get_index(files_zip, self.calendar, 'end_date')
         with tempfile.TemporaryDirectory() as tmp_path:
@@ -98,7 +97,7 @@ class ValidityPeriodFinder(object):
             self.start_date = self.datetime64_to_date(start_dates.min())
             self.end_date = self.datetime64_to_date(end_dates.max())
 
-    def add_dates(self, dates, exception_type):
+    def add_dates(self, dates: np.ndarray, exception_type: np.ndarray):
         add_dates_idx = np.argwhere(exception_type == 1).flatten()
         add_dates = [dates[i] for i in add_dates_idx]
         add_dates.sort()
@@ -116,7 +115,7 @@ class ValidityPeriodFinder(object):
             else:
                 break
 
-    def remove_dates(self, dates, exception_type):
+    def remove_dates(self, dates: np.ndarray, exception_type: np.ndarray):
         """
         Removing dates extremities, google does not do it in transitfeed
         https://github.com/google/transitfeed/blob/master/transitfeed/serviceperiod.py#L80
@@ -139,7 +138,7 @@ class ValidityPeriodFinder(object):
             else:
                 break
 
-    def _parse_calendar_dates(self, files_zip):
+    def _parse_calendar_dates(self, files_zip: ZipFile):
         header_date = self.get_index(files_zip, self.calendar_dates, 'date')
         header_exception_type = self.get_index(files_zip, self.calendar_dates, 'exception_type')
         with tempfile.TemporaryDirectory() as tmp_path:
@@ -158,7 +157,7 @@ class ValidityPeriodFinder(object):
             self.add_dates(dates, exception_type)
             self.remove_dates(dates, exception_type)
 
-    def get_validity_period(self, file):
+    def get_validity_period(self, file: str) -> Tuple[datetime, datetime]:
 
         if not is_zipfile(file):
             msg = '{} is not a zip file or not exist.'.format(file)

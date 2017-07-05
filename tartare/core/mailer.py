@@ -37,7 +37,7 @@ import logging
 
 
 class Mailer(object):
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.from_ = config.get("from", 'tartare@canaltp.fr')
         self.to = config.get("to")
         self.cc = config.get("cc", [])
@@ -45,7 +45,7 @@ class Mailer(object):
         self.port = config.get('smtp', {}).get("port", 25)
         self.timeout = config.get('smtp', {}).get("timeout", 1)
 
-    def get_message(self, job):
+    def get_message(self, job: dict) -> str:
         message = ["Problem Tartare",
                    "",
                    "",
@@ -61,13 +61,13 @@ class Mailer(object):
         message = message + ["Error Message : {}".format(job.get('error_message')),
                              "",
                              "",
-                             "="*75,
+                             "=" * 75,
                              "Automatic email from Tartare",
-                             "="*75]
+                             "=" * 75]
         str_message = "\n".join(message)
         return str_message.format(job=job)
 
-    def format_mail(self, job):
+    def format_mail(self, job: dict) -> MIMEMultipart:
         attachment = MIMEBase('application', "text/html")
 
         mail = MIMEMultipart("alternative")
@@ -79,22 +79,22 @@ class Mailer(object):
         mail.attach(attachment)
         return mail
 
-    def send(self, mail):
+    def send(self, mail: MIMEMultipart):
+        server = smtplib.SMTP()
+        server.timeout = self.timeout
         try:
-            server = smtplib.SMTP()
-            server.timeout = self.timeout
             server.connect(host=self.host, port=self.port)
             server.sendmail(self.from_, self.to, mail.as_string())
-        except smtplib.SMTPException:
+        except smtplib.SMTPException as exception:
             logging.getLogger(__name__).fatal("Sendmail error [from = %s, to = %s], error message :%s" %
-                                              (self.from_, self.to))
+                                              (self.from_, self.to, str(exception)))
         except (socket.gaierror, Exception) as e:
             logging.getLogger(__name__).fatal("Connection error [host = %s], error message :%s" %
                                               (self.host, str(e)))
         finally:
             server.quit()
 
-    def build_msg_and_send_mail(self, job):
+    def build_msg_and_send_mail(self, job: dict):
         if job:
             mail = self.format_mail(job)
             self.send(mail)
