@@ -37,7 +37,8 @@ from tartare.interfaces import schema
 from marshmallow import MarshalResult, ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate, validate_contributors
+from tartare.decorators import json_data_validate, validate_contributors, 
+validate_preprocesses_or_raise, setdefault_ids
 
 
 class Coverage(flask_restful.Resource):
@@ -54,8 +55,16 @@ class Coverage(flask_restful.Resource):
     @validate_contributors()
     def post(self) -> Response:
         coverage_schema = schema.CoverageSchema(strict=True)
+        post_data = request.json
+
+        preprocesses = post_data.get('preprocesses', [])
+
+        validate_preprocesses_or_raise(preprocesses)
+
+        setdefault_ids(preprocesses)
+
         try:
-            coverage = coverage_schema.load(request.json).data
+            coverage = coverage_schema.load(post_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 

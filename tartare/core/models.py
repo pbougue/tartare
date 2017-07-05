@@ -335,11 +335,12 @@ class DataSource(object):
 
 
 class GenericPreProcess(object):
-    def __init__(self, id=None, type=None, source_params=None, sequence=0):
+    def __init__(self, id=None, type=None, source_params=None, params=None, sequence=0):
         self.id = str(uuid.uuid4()) if not id else id
         self.sequence = sequence
+        self.params = params if params else {}
         self.type = type
-        self.source_params = {} if source_params is None else source_params
+        self.source_params = source_params if source_params else {}
 
     def save_data(self, model_object, mongo_model_object, object_id):
         data = model_object.get(object_id)
@@ -399,7 +400,7 @@ class GenericPreProcess(object):
                              .format(preprocess['id'], preprocess_id))
 
         preprocess['id'] = preprocess_id
-        raw = mongo.db[Contributor.mongo_collection].update_one({'preprocesses.id': preprocess_id},
+        raw = mongo.db[model_object.mongo_collection].update_one({'preprocesses.id': preprocess_id},
                                                                 {'$set': {'preprocesses.$': preprocess}})
         if raw.matched_count == 0:
             return None
@@ -418,7 +419,7 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id)
 
     @classmethod
-    def get(cls, preprocess_id, contributor_id=None, coverage_id=None):
+    def get(cls, preprocess_id=None, contributor_id=None, coverage_id=None):
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -427,7 +428,7 @@ class PreProcess(GenericPreProcess):
             return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def delete(cls, contributor_id, preprocess_id, coverage_id=None):
+    def delete(cls, preprocess_id, contributor_id=None, coverage_id=None):
         if preprocess_id is None:
             raise ValueError('A preprocess id is required')
         if not any([coverage_id, contributor_id]):
@@ -438,7 +439,7 @@ class PreProcess(GenericPreProcess):
             return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def update(cls, contributor_id, preprocess_id, preprocess=None, coverage_id=None):
+    def update(cls, preprocess_id, contributor_id=None, coverage_id=None, preprocess=None):
         if preprocess_id is None:
             raise ValueError('A PreProcess id is required')
 
@@ -476,7 +477,7 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
+    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Dict(required=True)
 
     @post_load
@@ -488,7 +489,8 @@ class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
     sequence = fields.Integer(required=True)
     type = fields.String(required=True)
-    source_params = fields.Dict(required=True)
+    source_params = fields.Dict(required=False)
+    params = fields.Dict(required=False)
 
     @post_load
     def build_data_source(self, data):

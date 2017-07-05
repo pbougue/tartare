@@ -41,6 +41,7 @@ import tartare.processes
 import logging
 from tartare.http_exceptions import InvalidArguments
 from hashlib import md5
+import uuid
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
@@ -134,3 +135,8 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
         data = f.read()
         hasher.update(data)
         return hasher.hexdigest()
+
+
+def setdefault_ids(collections):
+    for c in collections:
+        c.setdefault('id', str(uuid.uuid4()))
