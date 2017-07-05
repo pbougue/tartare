@@ -392,8 +392,8 @@ class GenericPreProcess(object):
             raise ValueError('Bad {} {}'.format(model_object.label, object_id))
 
         if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
-            raise ValueError("No preprocesses id {} exists in contributor with id {}"
-                             .format(object_id, preprocess_id))
+            raise ValueError("No preprocesses id {} exists in {} with id {}"
+                             .format(object_id, model_object.label, preprocess_id))
         if 'id' in preprocess and preprocess['id'] != preprocess_id:
             raise ValueError("Id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
