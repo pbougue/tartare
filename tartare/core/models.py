@@ -342,28 +342,28 @@ class GenericPreProcess(object):
         self.type = type
         self.source_params = source_params if source_params else {}
 
-    def save_data(self, model_object, mongo_model_object, object_id):
-        data = model_object.get(object_id)
+    def save_data(self, class_name, mongo_schema, object_id):
+        data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(model_object.label, object_id))
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
         if self.id in [p.id for p in data.preprocesses]:
             raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
 
         data.preprocesses.append(self)
-        raw_contrib = mongo_model_object().dump(data).data
-        mongo.db[model_object.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, model_object, mongo_model_object, object_id, preprocess_id):
+    def get_data(cls, class_name, mongo_schema, object_id, preprocess_id):
         if object_id is not None:
-            data = model_object.get(object_id)
+            data = class_name.get(object_id)
             if data is None:
-                raise ValueError('Bad {} {}'.format(model_object.label, object_id))
+                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
         elif preprocess_id is not None:
-            raw = mongo.db[model_object.mongo_collection].find_one({'preprocesses.id': preprocess_id})
+            raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
             if raw is None:
                 return None
-            data = mongo_model_object(strict=True).load(raw).data
+            data = mongo_schema(strict=True).load(raw).data
         else:
             raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
 
@@ -375,37 +375,37 @@ class GenericPreProcess(object):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, model_object, mongo_model_object, object_id, preprocess_id):
-        data = model_object.get(object_id)
+    def delete_data(cls, class_name, mongo_schema, object_id, preprocess_id):
+        data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(model_object.label, object_id))
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
 
         nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
         data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
-        raw_contrib = mongo_model_object().dump(data).data
-        mongo.db[model_object.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
         return nb_delete
 
     @classmethod
-    def update_data(cls, model_object, mongo_model_object, object_id, preprocess_id, preprocess=None):
-        data = model_object.get(object_id)
+    def update_data(cls, class_name, mongo_schema, object_id, preprocess_id, preprocess=None):
+        data = class_name.get(object_id)
         if not data:
-            raise ValueError('Bad {} {}'.format(model_object.label, object_id))
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
 
         if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
             raise ValueError("No preprocesses id {} exists in {} with id {}"
-                             .format(object_id, model_object.label, preprocess_id))
+                             .format(object_id, class_name.label, preprocess_id))
         if 'id' in preprocess and preprocess['id'] != preprocess_id:
             raise ValueError("Id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
 
         preprocess['id'] = preprocess_id
-        raw = mongo.db[model_object.mongo_collection].update_one({'preprocesses.id': preprocess_id},
+        raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
                                                                 {'$set': {'preprocesses.$': preprocess}})
         if raw.matched_count == 0:
             return None
 
-        return cls.get_data(model_object, mongo_model_object, object_id, preprocess_id)
+        return cls.get_data(class_name, mongo_schema, object_id, preprocess_id)
 
 
 class PreProcess(GenericPreProcess):
