@@ -285,3 +285,46 @@ class TestCoverageApi(TartareFixture):
                 expected_name = license_name if license_name else tartare.app.config.get('DEFAULT_LICENSE_NAME')
                 assert coverage_from_api['license']['url'] == expected_url
                 assert coverage_from_api['license']['name'] == expected_name
+
+    def test_add_coverage_with_unknown_contributor(self):
+        raw = self.post('/coverages',
+                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r['error'] == 'Contributor unknown not found.'
+
+    def test_decorator_priority(self):
+        """
+        This test is just to see if we execute json_data_validate decorator first
+
+        @json_data_validate()
+        @validate_contributors()
+        def patch(self, coverage_id):
+           ....
+        """
+        raw = self.post('/coverages',
+                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}', headers=None)
+        assert raw.status_code == 415
+        r = self.to_json(raw)
+        assert r['error'] == 'request without data.'
+
+    def test_add_coverage_with_existing_contributor(self, contributor):
+        raw = self.post('/coverages',
+                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["id_test"]}')
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert len(r["coverages"][0]['contributors']) == 1
+        assert r["coverages"][0]['contributors'][0] == 'id_test'
+
+    def test_patch_coverage_with_unknown_contributor(self, coverage):
+        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["unknown"]}')
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r['error'] == 'Contributor unknown not found.'
+
+    def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
+        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["id_test"]}')
+        assert raw.status_code == 200
+        r = self.to_json(raw)
+        assert len(r["coverages"][0]['contributors']) == 1
+        assert r["coverages"][0]['contributors'][0] == 'id_test'

@@ -27,10 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tartare.core.models import Coverage, CoverageExport
-from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType
+from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 import logging
 from functools import wraps
 from flask import request
+from tartare.core import models
 
 
 class publish_params_validate(object):
@@ -71,3 +72,18 @@ class json_data_validate(object):
             return func(*args, **kwargs)
         return wrapper
 
+
+class validate_contributors(object):
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            post_data = request.json
+            if "contributors" in post_data:
+                for contributor_id in post_data.get("contributors"):
+                    contributor_model = models.Contributor.get(contributor_id)
+                    if not contributor_model:
+                        msg = "Contributor {} not found.".format(contributor_id)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
+            return func(*args, **kwargs)
+        return wrapper

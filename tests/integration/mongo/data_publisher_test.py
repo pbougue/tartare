@@ -49,10 +49,10 @@ class TestDataPublisher(TartareFixture):
         assert r['message'] == 'Object Not Found'
         assert r['error'] == 'Coverage not found: default'
 
-    def test_publish_unknwon_environment(self):
+    def test_publish_unknwon_environment(self, contributor):
         coverage = {
             "contributors": [
-                "fr-idf"
+                "id_test"
             ],
             "environments": {
                 "production": {
@@ -80,10 +80,10 @@ class TestDataPublisher(TartareFixture):
         assert r['message'] == 'Object Not Found'
         assert r['error'] == 'Environment not found: bob'
 
-    def test_publish_coverage_without_export(self):
+    def test_publish_coverage_without_export(self, contributor):
         coverage = {
             "contributors": [
-                "fr-idf"
+                "id_test"
             ],
             "environments": {
                 "production": {
@@ -165,6 +165,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_contributor(contributor_id)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
+
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
@@ -322,7 +323,7 @@ class TestDataPublisher(TartareFixture):
                         "<========>\n".join([uploaded_metadata, expected_metadata]))
         session.quit()
 
-    def test_config_user_password(self):
+    def test_config_user_password(self, contributor):
         user_to_set = 'user'
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -337,7 +338,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor['id'], publication_platform)
         resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
         r = self.to_json(resp)['coverages'][0]
         pub_platform = r['environments']['production']['publication_platforms'][0]
