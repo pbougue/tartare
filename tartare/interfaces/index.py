@@ -31,11 +31,12 @@
 # www.navitia.io
 
 import flask_restful
+from flask import Response
 from flask import url_for
 
 collection = ["status", "coverages", "contributors", "jobs"]
 
 
 class Index(flask_restful.Resource):
-    def get(self):
+    def get(self) -> Response:
         return ({'_links': {ap: {'href': url_for(ap, _external=True)} for ap in collection}}, 200)

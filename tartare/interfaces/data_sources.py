@@ -26,9 +26,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Tuple, Optional
 
 from flask_restful import abort, request
 import flask_restful
+from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
 from tartare.interfaces import schema
@@ -39,7 +41,7 @@ from tartare.decorators import json_data_validate
 
 class DataSource(flask_restful.Resource):
     @json_data_validate()
-    def post(self, contributor_id):
+    def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
         try:
             d = request.json
@@ -55,8 +57,7 @@ class DataSource(flask_restful.Resource):
         except ValueError as e:
             raise DuplicateEntry(str(e))
 
-
-    def get(self, contributor_id, data_source_id=None):
+    def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
             if ds is None:
@@ -66,8 +67,7 @@ class DataSource(flask_restful.Resource):
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
-
-    def delete(self, contributor_id, data_source_id=None):
+    def delete(self, contributor_id: str, data_source_id:Optional[str]=None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
@@ -78,7 +78,7 @@ class DataSource(flask_restful.Resource):
         return {'data_sources': []}, 204
 
     @json_data_validate()
-    def patch(self, contributor_id, data_source_id=None):
+    def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         ds = models.DataSource.get(contributor_id, data_source_id)
         if len(ds) != 1:
             abort(404)

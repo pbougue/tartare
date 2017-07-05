@@ -28,6 +28,7 @@
 # www.navitia.io
 
 import flask_restful
+from flask import Response
 from tartare.tasks import contributor_export, finish_job
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
@@ -35,11 +36,10 @@ from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
 
-
 class ContributorExportResource(flask_restful.Resource):
 
     @staticmethod
-    def _export(contributor):
+    def _export(contributor: Contributor) -> Job:
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
         try:
@@ -49,7 +49,7 @@ class ContributorExportResource(flask_restful.Resource):
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
         return job
 
-    def post(self, contributor_id):
+    def post(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
             msg = 'Contributor not found: {}'.format(contributor_id)
@@ -60,7 +60,7 @@ class ContributorExportResource(flask_restful.Resource):
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
-    def get(self, contributor_id):
+    def get(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
             msg = 'Contributor not found: {}'.format(contributor_id)

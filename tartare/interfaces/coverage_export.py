@@ -26,8 +26,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Tuple
 
 import flask_restful
+from flask import Response
 from tartare.tasks import coverage_export, finish_job
 from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
@@ -39,13 +41,13 @@ from celery import chain
 
 class CoverageExportResource(flask_restful.Resource):
     @staticmethod
-    def _export(coverage):
+    def _export(coverage: Coverage) -> Job:
         job = Job(coverage_id=coverage.id, action_type="coverage_export")
         job.save()
         chain(coverage_export.si(coverage, job), finish_job.si(job.id)).delay()
         return job
 
-    def post(self, coverage_id):
+    def post(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
             msg = 'Coverage not found: {}'.format(coverage_id)
@@ -55,7 +57,7 @@ class CoverageExportResource(flask_restful.Resource):
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
-    def get(self, coverage_id):
+    def get(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
             msg = 'Coverage not found: {}'.format(coverage_id)

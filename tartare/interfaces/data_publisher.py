@@ -26,11 +26,12 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Tuple
 
 import flask_restful
 import logging
-
-from tartare.core.models import Coverage, CoverageExport, Job
+from flask import Response
+from tartare.core.models import Coverage, Job
 from tartare.tasks import publish_data_on_platform, finish_job
 from tartare.decorators import publish_params_validate
 from celery import chain
@@ -39,7 +40,7 @@ from tartare.interfaces.schema import JobSchema
 
 class DataPublisher(flask_restful.Resource):
     @publish_params_validate()
-    def post(self, coverage_id, environment_id):
+    def post(self, coverage_id: str, environment_id: str) -> Response:
         logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
                                                                                                        environment_id))
         coverage = Coverage.get(coverage_id)

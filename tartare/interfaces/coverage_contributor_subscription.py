@@ -26,9 +26,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Tuple
 
 from flask_restful import request
 import flask_restful
+from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
 from tartare.interfaces import schema
@@ -38,7 +40,7 @@ from tartare.decorators import json_data_validate
 
 class CoverageContributorSubscription(flask_restful.Resource):
     @json_data_validate()
-    def post(self, coverage_id):
+    def post(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
@@ -64,7 +66,7 @@ class CoverageContributorSubscription(flask_restful.Resource):
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 201
 
-    def delete(self, coverage_id, contributor_id):
+    def delete(self, coverage_id: str, contributor_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
             raise ObjectNotFound('Unknown coverage id "{}".'.format(coverage_id))

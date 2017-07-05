@@ -32,17 +32,21 @@
 
 import logging
 import os
+from typing import Optional
+
 import flask
+from flask import Response
 from flask.globals import request
 from flask_restful import Resource
 from tartare.core import models, data_handler
 import tempfile
 from tartare import tasks
+from tartare.core.models import Coverage
 from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 from tartare.core.gridfs_handler import GridFsHandler
 
 
-def add_coverage_data(coverage_id, coverage, environment_type):
+def add_coverage_data(coverage_id: str, coverage: Coverage, environment_type: str) -> Response:
     if coverage is None:
         raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
 
@@ -76,16 +80,16 @@ def add_coverage_data(coverage_id, coverage, environment_type):
     return {'message': 'Valid {} file provided : {}'.format(file_type, file_name)}, 200
 
 class DataUpdate(Resource):
-    def post(self, coverage_id, environment_type):
+    def post(self, coverage_id: str, environment_type: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         return add_coverage_data(coverage_id, coverage, environment_type)
 
 class CoverageData(Resource):
-    def post(self, coverage_id, environment_type, data_type=None):
+    def post(self, coverage_id: str, environment_type: str, data_type: Optional[str]=None) -> Response:
         coverage = models.Coverage.get(coverage_id)
-        return add_coverage_data(coverage, environment_type)
+        return add_coverage_data(coverage_id, coverage, environment_type)
 
-    def get(self, coverage_id, environment_type, data_type):
+    def get(self, coverage_id: str, environment_type: str, data_type: str) -> Response:
         available_data_types = ['ntfs']
         if data_type.lower() not in available_data_types:
             raise InvalidArguments('Bad data type {} (expected formats: {}).'

@@ -26,15 +26,19 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
 
 import flask_restful
+from flask import Response
+
 from tartare.core import models
 from tartare.interfaces.schema import JobSchema
 from tartare.http_exceptions import ObjectNotFound
 
 
 class Job(flask_restful.Resource):
-    def get(self, contributor_id=None, coverage_id=None, job_id=None):
+    def get(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
+            job_id: Optional[str] = None) -> Response:
         jobs = models.Job.get(contributor_id, coverage_id, job_id)
         if job_id:
             if jobs:
