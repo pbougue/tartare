@@ -30,6 +30,8 @@
 from tartare.processes.processes import PreProcess
 from tartare.processes.contributor import *
 from tartare.processes.coverage import *
+from tartare.http_exceptions import InvalidArguments
+import pytest
 
 
 def test_ruspell_preprocess():
@@ -54,3 +56,27 @@ def test_fusio_import_preprocess():
 
 def test_fusio_preprod_preprocess():
     assert isinstance(PreProcess.get_preprocess(None, 'FusioPreProd', 'coverage'), FusioPreProd)
+
+
+def test_coverage_invalid_preprocess():
+    with pytest.raises(InvalidArguments) as excinfo:
+        isinstance(PreProcess.get_preprocess(None, 'AA', 'coverage'), FusioPreProd)
+    assert str(excinfo.typename) == "InvalidArguments"
+
+
+def test_contributor_invalid_preprocess():
+    with pytest.raises(InvalidArguments) as excinfo:
+        isinstance(PreProcess.get_preprocess(None, 'AA', 'contributor'), FusioPreProd)
+    assert str(excinfo.typename) == "InvalidArguments"
+
+
+def test_contributor_fusio_preprod_preprocess():
+    with pytest.raises(InvalidArguments) as excinfo:
+        isinstance(PreProcess.get_preprocess(None, 'FusioPreProd', 'contributor'), FusioPreProd)
+    assert str(excinfo.typename) == "InvalidArguments"
+
+
+def test_coverage_compute_directions_preprocess():
+    with pytest.raises(InvalidArguments) as excinfo:
+        isinstance(PreProcess.get_preprocess(None, 'ComputeDirections', 'coverage'), FusioPreProd)
+    assert str(excinfo.typename) == "InvalidArguments"
