@@ -489,7 +489,7 @@ class TestContributors(TartareFixture):
         assert "message" in r
         assert "error" in r
         assert r["message"] == "Invalid arguments"
-        assert r["error"] == "Invalid process type BOB"
+        assert r["error"] == "impossible to build preprocess BOB : 'module' object has no attribute 'BOB'"
 
     def test_post_request_without_headers(self):
         raw = self.post(url='/contributors',

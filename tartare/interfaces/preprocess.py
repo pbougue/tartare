@@ -44,9 +44,10 @@ class PreProcess(flask_restful.Resource):
     @json_data_validate()
     def post(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> Response:
         preprocess_schema = schema.PreProcessSchema(strict=True)
+        instance = 'contributor' if contributor_id else 'coverage'
         try:
             json_data = request.json
-            validate_preprocesses_or_raise([json_data])
+            validate_preprocesses_or_raise([json_data], instance)
             preprocess = preprocess_schema.load(json_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
@@ -87,7 +88,8 @@ class PreProcess(flask_restful.Resource):
 
         try:
             p = request.json
-            validate_preprocesses_or_raise([p])
+            instance = 'contributor' if contributor_id else 'coverage'
+            validate_preprocesses_or_raise([p], instance)
             preprocesses = models.PreProcess.update(preprocess_id,
                                                     contributor_id=contributor_id,
                                                     coverage_id=coverage_id,

@@ -27,55 +27,30 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from abc import ABCMeta, abstractmethod
+from tartare.processes.processes import PreProcess
+from tartare.processes.contributor import *
+from tartare.processes.coverage import *
 
 
-class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context):
-        self.context = context
-
-    @abstractmethod
-    def do(self):
-        pass
+def test_ruspell_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'Ruspell', 'contributor'), Ruspell)
 
 
-class Ruspell(AbstractProcess):
-
-    def do(self):
-        return self.context
+def test_compute_directions_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'ComputeDirections', 'contributor'), ComputeDirections)
 
 
-class ComputeDirections(AbstractProcess):
-
-    def do(self):
-        return self.context
+def test_headsign_short_name_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'HeadsignShortName', 'contributor'), HeadsignShortName)
 
 
-class HeadsignShortName(AbstractProcess):
-
-    def do(self):
-        return self.context
+def test_fusio_data_update_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'FusioDataUpdate', 'coverage'), FusioDataUpdate)
 
 
-class FusioDataUpdate(AbstractProcess):
-
-    def do(self):
-        return self.context
+def test_fusio_import_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'FusioImport', 'coverage'), FusioImport)
 
 
-class FusioImport(AbstractProcess):
-
-    def do(self):
-        return self.context
-
-
-class FusioPreProd(AbstractProcess):
-
-    def do(self):
-        return self.context
-
-
-class FusioExport(AbstractProcess):
-
-    def do(self):
-        return self.context
+def test_fusio_preprod_preprocess():
+    assert isinstance(PreProcess.get_preprocess(None, 'FusioPreProd', 'coverage'), FusioPreProd)

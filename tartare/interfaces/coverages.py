@@ -59,7 +59,7 @@ class Coverage(flask_restful.Resource):
 
         preprocesses = post_data.get('preprocesses', [])
 
-        validate_preprocesses_or_raise(preprocesses)
+        validate_preprocesses_or_raise(preprocesses, 'coverage')
 
         setdefault_ids(preprocesses)
 

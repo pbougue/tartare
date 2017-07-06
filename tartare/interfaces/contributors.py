@@ -54,7 +54,7 @@ class Contributor(flask_restful.Resource):
 
         preprocesses = post_data.get('preprocesses', [])
 
-        validate_preprocesses_or_raise(preprocesses)
+        validate_preprocesses_or_raise(preprocesses, 'contributor')
 
         setdefault_ids(preprocesses)
 
@@ -103,7 +103,7 @@ class Contributor(flask_restful.Resource):
         # checking errors before updating PATCH data
         setdefault_ids(request_data.get('data_sources', []))
         setdefault_ids(request_data.get('preprocesses', []))
-        validate_preprocesses_or_raise(request_data.get('preprocesses', []))
+        validate_preprocesses_or_raise(request_data.get('preprocesses', []), 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)
