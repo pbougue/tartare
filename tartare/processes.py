@@ -31,62 +31,51 @@ from abc import ABCMeta, abstractmethod
 
 
 class AbstractProcess(metaclass=ABCMeta):
+    def __init__(self, context):
+        self.context = context
+
     @abstractmethod
     def do(self):
         pass
 
 
 class Ruspell(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class ComputeDirections(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class HeadsignShortName(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class FusioDataUpdate(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class FusioImport(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class FusioPreProd(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
 
 
 class FusioExport(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
 
     def do(self):
         return self.context
