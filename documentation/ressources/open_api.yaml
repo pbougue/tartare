@@ -987,6 +987,10 @@ definitions:
 
   coverage:
     type: object
+    required: [
+      id,
+      name
+    ]
     properties:
       id:
         type: string
@@ -1027,6 +1031,9 @@ definitions:
 
   environment_type:
     type: object
+    required: [
+      name
+    ]
     properties:
       name:
         type: string
@@ -1042,6 +1049,11 @@ definitions:
 
   publication_platform:
     type: object
+    required: [
+      type,
+      protocol,
+      url
+    ]
     properties:
       type:
         type: string
@@ -1066,6 +1078,10 @@ definitions:
 
   contributor_type:
     type: object
+    required: [
+      name,
+      data_prefix
+    ]
     properties:
       id:
         type: string
@@ -1091,6 +1107,11 @@ definitions:
 
   preprocess:
     type: object
+    required: [
+      id,
+      type,
+      source_params
+    ]
     properties:
       id:
         type: string
@@ -1112,6 +1133,12 @@ definitions:
 
   coverage_export:
     type: object
+    required: [
+      id,
+      coverage_id,
+      gridfs_id,
+      created_at
+    ]
     properties:
       id:
         type: string
