@@ -38,19 +38,18 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
-import tartare.processes
+from tartare.processes.processes import PreProcess
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
 from celery import chain
 from urllib.error import ContentTooShortError, HTTPError, URLError
-
-
+import tartare
 
 
 logger = logging.getLogger(__name__)
@@ -130,7 +129,6 @@ def _get_publisher(platform: Platform, job: Job) -> AbstractPublisher:
     }
     if platform.type not in publishers_by_type:
         error_message = 'unknown platform type "{type}"'.format(type=platform.type)
-        models.Job.update(job_id=job.id, state="failed", error_message=error_message)
         logger.error(error_message)
         raise Exception(error_message)
 
@@ -232,7 +230,7 @@ def contributor_export(self, contributor: Contributor, job: Job):
 def coverage_export(self, coverage: Coverage, job: Job):
     logger.info('coverage_export')
     try:
-        context = Context()
+        context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         context.fill_contributor_exports(contributors=coverage.contributors)
         models.Job.update(job_id=job.id, state="running", step="merge")
@@ -259,16 +257,17 @@ def coverage_export(self, coverage: Coverage, job: Job):
 
 
 def launch(processes: list, context: Context) -> Context:
+    def compare(d1, d2):
+        if d1['sequence'] > d2['sequence']:
+            return 1
+        if d1['sequence'] < d2['sequence']:
+            return -1
+        return 0
+    if not processes:
+        return context
+    processes.sort(cmp=compare)
     for p in processes:
-        p_type = p.get('type')
-        # Call p_type class
-
-        kls = getattr(tartare.processes, p_type, None)
-        if kls is None:
-            logger.error('Unknown type %s', p_type)
-            continue
-        context = kls(context, p.get("source_params")).do()
-
+        context = PreProcess.get_preprocess(context, p.get('type')).do()
     return context
 
 

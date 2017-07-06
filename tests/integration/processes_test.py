@@ -34,49 +34,54 @@ from tartare.http_exceptions import InvalidArguments
 import pytest
 
 
+class obj(object):
+    def __init__(self, instance):
+        self.instance = instance
+
+
 def test_ruspell_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'Ruspell', 'contributor'), Ruspell)
+    assert isinstance(PreProcess.get_preprocess(obj('contributor'), 'Ruspell'), Ruspell)
 
 
 def test_compute_directions_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'ComputeDirections', 'contributor'), ComputeDirections)
+    assert isinstance(PreProcess.get_preprocess(obj('contributor'), 'ComputeDirections'), ComputeDirections)
 
 
 def test_headsign_short_name_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'HeadsignShortName', 'contributor'), HeadsignShortName)
+    assert isinstance(PreProcess.get_preprocess(obj('contributor'), 'HeadsignShortName'), HeadsignShortName)
 
 
 def test_fusio_data_update_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'FusioDataUpdate', 'coverage'), FusioDataUpdate)
+    assert isinstance(PreProcess.get_preprocess(obj('coverage'), 'FusioDataUpdate'), FusioDataUpdate)
 
 
 def test_fusio_import_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'FusioImport', 'coverage'), FusioImport)
+    assert isinstance(PreProcess.get_preprocess(obj('coverage'), 'FusioImport'), FusioImport)
 
 
 def test_fusio_preprod_preprocess():
-    assert isinstance(PreProcess.get_preprocess(None, 'FusioPreProd', 'coverage'), FusioPreProd)
+    assert isinstance(PreProcess.get_preprocess(obj('coverage'), 'FusioPreProd'), FusioPreProd)
 
 
 def test_coverage_invalid_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcess.get_preprocess(None, 'AA', 'coverage'), FusioPreProd)
+        isinstance(PreProcess.get_preprocess(obj('coverage'), 'AA'), FusioPreProd)
     assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_contributor_invalid_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcess.get_preprocess(None, 'AA', 'contributor'), FusioPreProd)
+        isinstance(PreProcess.get_preprocess(obj('contributor'), 'AA'), FusioPreProd)
     assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_contributor_fusio_preprod_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcess.get_preprocess(None, 'FusioPreProd', 'contributor'), FusioPreProd)
+        isinstance(PreProcess.get_preprocess(obj('contributor'), 'FusioPreProd'), FusioPreProd)
     assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_coverage_compute_directions_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcess.get_preprocess(None, 'ComputeDirections', 'coverage'), FusioPreProd)
+        isinstance(PreProcess.get_preprocess(obj('coverage'), 'ComputeDirections'), FusioPreProd)
     assert str(excinfo.typename) == "InvalidArguments"

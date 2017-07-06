@@ -58,14 +58,14 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context, preprocess_name, instance):
+    def get_preprocess(cls, context, preprocess_name):
         """
         :param context:
         :param preprocess_name: Ruspell, FusioImport, ....
         :param instance: coverage or contributor
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
-        attr = cls.is_valid(preprocess_name, instance)
+        attr = cls.is_valid(preprocess_name, context.instance)
         try:
             return attr(context)  # call to the contructor, with all the args
         except TypeError as e:
