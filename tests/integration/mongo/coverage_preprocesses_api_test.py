@@ -91,6 +91,7 @@ class TestCoveragePreProcesses(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 200, print(r)
         assert len(r["coverages"][0]["preprocesses"]) == 1
+        assert r["coverages"][0]["preprocesses"][0]['id'] == 'toto'
 
     def test_update_preprocess_with_id(self):
         '''
@@ -261,44 +262,3 @@ class TestCoveragePreProcesses(TartareFixture):
         assert p_titi
         assert p_titi['type'] == 'FusioPreProd'
 
-    def test_post_without_headers(self):
-        '''
-        using /preprocesses endpoint
-        '''
-
-        contributor = {"id": "jdr", "name": "name of the coverage jdr"}
-        raw = self.post('/coverages', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
-
-        post_ps = {
-            "type": "FusioPreProd",
-            "sequence": 3,
-            "params": {
-                "url": "http://fusio.canaltp.fr/fusio.dll"
-            }
-        }
-        raw = self.post('/coverages/jdr/preprocesses', json.dumps(post_ps), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_without_headers(self):
-        '''
-        using /preprocesses endpoint
-        '''
-
-        contributor = {"id": "jdr", "name": "name of the coverage jdr"}
-        raw = self.post('/coverages', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
-
-        post_ps = {
-            "type": "FusioPreProd",
-            "sequence": 3,
-            "params": {
-                "url": "http://fusio.canaltp.fr/fusio.dll"
-            }
-        }
-        raw = self.patch('/coverages/jdr/preprocesses/1234', json.dumps(post_ps), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'

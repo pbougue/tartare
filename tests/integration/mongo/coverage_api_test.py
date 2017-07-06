@@ -245,18 +245,6 @@ class TestCoverageApi(TartareFixture):
         assert 'preproduction' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
 
-    def test_post_without_headers(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}', headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_without_headers(self):
-        raw = self.post('/coverages/id_test', '{"id": "id_test", "name":"name_test"}', headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
         ('http://license.org/othercompany', 'my license full name', 201),
@@ -292,21 +280,6 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert r['error'] == 'Contributor unknown not found.'
-
-    def test_decorator_priority(self):
-        """
-        This test is just to see if we execute json_data_validate decorator first
-
-        @json_data_validate()
-        @validate_contributors()
-        def patch(self, coverage_id):
-           ....
-        """
-        raw = self.post('/coverages',
-                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}', headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
 
     def test_add_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',

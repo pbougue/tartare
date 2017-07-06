@@ -257,16 +257,10 @@ def coverage_export(self, coverage: Coverage, job: Job):
 
 
 def launch(processes: list, context: Context) -> Context:
-    def compare(d1, d2):
-        if d1['sequence'] > d2['sequence']:
-            return 1
-        if d1['sequence'] < d2['sequence']:
-            return -1
-        return 0
     if not processes:
         return context
-    processes.sort(cmp=compare)
-    for p in processes:
+    tmp_processes = sorted(processes, key=lambda x: ['sequence'])
+    for p in tmp_processes:
         context = PreProcess.get_preprocess(context, p.get('type')).do()
     return context
 

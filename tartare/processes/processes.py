@@ -49,11 +49,11 @@ class PreProcess(object):
             module = import_module('tartare.processes.{}'.format(instance))
             return getattr(module, preprocess_name)
         except AttributeError as e:
-            msg = 'impossible to build preprocess {} : {}'.format(preprocess_name, e)
+            msg = 'impossible to build preprocess {} : {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
-        except ImportError:
-            msg = 'impossible to build preprocess {}, cannot find class'.format(preprocess_name)
+        except ImportError as e:
+            msg = 'cannot find class {} : {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 

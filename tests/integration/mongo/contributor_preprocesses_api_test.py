@@ -69,6 +69,12 @@ class TestContributorPreProcesses(TartareFixture):
         assert r["preprocesses"][0]["type"] == post_ps["type"]
         assert r["preprocesses"][0]["source_params"] == post_ps["source_params"]
 
+    def test_preprocess_not_found(self):
+
+        contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
+        raw = self.post('/contributors', json.dumps(contributor))
+        assert raw.status_code == 201, print(self.to_json(raw))
+
         raw = self.get('/contributors/id_test/preprocesses/toto')
         r = self.to_json(raw)
         assert raw.status_code == 404, print(r)
@@ -93,6 +99,7 @@ class TestContributorPreProcesses(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 200, print(r)
         assert len(r["contributors"][0]["preprocesses"]) == 1
+        assert r["contributors"][0]["preprocesses"][0]['id'] == 'toto'
 
     def test_update_preprocess_with_id(self):
         '''
@@ -266,47 +273,3 @@ class TestContributorPreProcesses(TartareFixture):
                 p_titi = p
         assert p_titi
         assert p_titi['type'] == 'HeadsignShortName'
-
-    def test_post_without_headers(self):
-        '''
-        using /preprocesses endpoint
-        '''
-
-        contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
-        raw = self.post('/contributors', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
-
-        post_ps = {
-            "type": "Ruspell",
-            "sequence": 1,
-            "source_params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
-            }
-        }
-        raw = self.post('/contributors/id_test/preprocesses', json.dumps(post_ps), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_without_headers(self):
-        '''
-        using /preprocesses endpoint
-        '''
-
-        contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
-        raw = self.post('/contributors', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
-
-        post_ps = {
-            "type": "Ruspell",
-            "sequence": 1,
-            "source_params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
-            }
-        }
-        raw = self.patch('/contributors/id_test/preprocesses/1234', json.dumps(post_ps), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'

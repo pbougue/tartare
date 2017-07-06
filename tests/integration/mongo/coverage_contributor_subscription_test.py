@@ -100,11 +100,3 @@ def test_delete_valid_contributor(app, coverage, contributor):
     raw = app.get('/coverages/jdr')
     r = to_json(raw)
     assert len(r['coverages'][0]['contributors']) == 0
-
-
-def test_coverage_without_headers(app):
-    raw = post(app, '/coverages/unknown/contributors',
-               '''{"id": "bob"}''', headers=None)
-    assert raw.status_code == 415
-    r = to_json(raw)
-    assert r['error'] == 'request without data.'

@@ -491,18 +491,3 @@ class TestContributors(TartareFixture):
         assert r["message"] == "Invalid arguments"
         assert r["error"] == "impossible to build preprocess BOB : 'module' object has no attribute 'BOB'"
 
-    def test_post_request_without_headers(self):
-        raw = self.post(url='/contributors',
-                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
-                        headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_request_without_headers(self):
-        raw = self.post(url='/contributors',
-                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
-                        headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
