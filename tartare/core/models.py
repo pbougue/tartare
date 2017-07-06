@@ -31,12 +31,11 @@ from marshmallow import Schema, fields, post_load
 from tartare import app
 from tartare.helper import to_doted_notation
 from tartare.core.gridfs_handler import GridFsHandler
-
 import pymongo
 import uuid
 from datetime import datetime
 import logging
-
+from typing import Optional
 
 @app.before_first_request
 def init_mongo():
@@ -335,7 +334,9 @@ class DataSource(object):
 
 
 class GenericPreProcess(object):
-    def __init__(self, id=None, type=None, source_params=None, params=None, sequence=0):
+    def __init__(self, id: Optional[str]=None, type: Optional[str]=None,
+                 source_params: Optional[dict]=None, params: Optional[dict]=None,
+                 sequence: Optional[int]=0):
         self.id = str(uuid.uuid4()) if not id else id
         self.sequence = sequence
         self.params = params if params else {}
@@ -387,7 +388,7 @@ class GenericPreProcess(object):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name, mongo_schema, object_id, preprocess_id, preprocess=None):
+    def update_data(cls, class_name, mongo_schema, object_id, preprocess_id, preprocess: Optional[dict]=None):
         data = class_name.get(object_id)
         if not data:
             raise ValueError('Bad {} {}'.format(class_name.label, object_id))
@@ -401,7 +402,7 @@ class GenericPreProcess(object):
 
         preprocess['id'] = preprocess_id
         raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
-                                                                {'$set': {'preprocesses.$': preprocess}})
+                                                               {'$set': {'preprocesses.$': preprocess}})
         if raw.matched_count == 0:
             return None
 
@@ -410,7 +411,7 @@ class GenericPreProcess(object):
 
 class PreProcess(GenericPreProcess):
 
-    def save(self, contributor_id=None, coverage_id=None):
+    def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -419,7 +420,8 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id)
 
     @classmethod
-    def get(cls, preprocess_id=None, contributor_id=None, coverage_id=None):
+    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+            coverage_id: Optional[str]=None):
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -428,7 +430,7 @@ class PreProcess(GenericPreProcess):
             return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def delete(cls, preprocess_id, contributor_id=None, coverage_id=None):
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
         if preprocess_id is None:
             raise ValueError('A preprocess id is required')
         if not any([coverage_id, contributor_id]):
@@ -439,7 +441,8 @@ class PreProcess(GenericPreProcess):
             return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def update(cls, preprocess_id, contributor_id=None, coverage_id=None, preprocess=None):
+    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+               preprocess: Optional[dict]=None):
         if preprocess_id is None:
             raise ValueError('A PreProcess id is required')
 
