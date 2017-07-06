@@ -62,7 +62,6 @@ class PreProcess(object):
         """
         :param context:
         :param preprocess_name: Ruspell, FusioImport, ....
-        :param instance: coverage or contributor
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
         attr = cls.is_valid(preprocess_name, context.instance)
