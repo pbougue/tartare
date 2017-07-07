@@ -38,7 +38,7 @@ from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
