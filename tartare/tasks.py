@@ -31,13 +31,14 @@ import glob
 import logging
 import os
 import datetime
+from typing import Optional
 
 from zipfile import ZipFile
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
@@ -45,7 +46,7 @@ from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 import tartare.processes
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
 from celery import chain
 from urllib.error import ContentTooShortError, HTTPError, URLError
 
@@ -55,13 +56,13 @@ from urllib.error import ContentTooShortError, HTTPError, URLError
 logger = logging.getLogger(__name__)
 
 
-def create_dir(directory):
+def create_dir(directory: str):
     """create directory if needed"""
     if not os.path.exists(directory):
         os.makedirs(directory)
 
 
-def _do_merge_calendar(calendar_file, ntfs_file, output_file):
+def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
         grid_calendar_data = GridCalendarData()
         grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
@@ -69,7 +70,7 @@ def _do_merge_calendar(calendar_file, ntfs_file, output_file):
         calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
 
 
-def _get_current_nfts_file(current_data_dir):
+def _get_current_nfts_file(current_data_dir: str) -> str:
     files = glob.glob(os.path.join(current_data_dir, "*"))
 
     return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
@@ -87,7 +88,7 @@ class CallbackTask(tartare.celery.Task):
         mailer.build_msg_and_send_mail(self.get_job(args))
 
     @staticmethod
-    def get_job(args):
+    def get_job(args: list) -> Optional[Job]:
         for arg in args:
             if isinstance(arg, models.Job):
                 with tartare.app.app_context():
@@ -102,7 +103,7 @@ class CallbackTask(tartare.celery.Task):
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
+def send_file_to_tyr_and_discard(self, coverage_id: str, environment_type: str, file_id: str):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -120,7 +121,7 @@ def send_file_to_tyr_and_discard(self, coverage_id, environment_type, file_id):
         logging.exception('error')
 
 
-def _get_publisher(platform, job):
+def _get_publisher(platform: Platform, job: Job) -> AbstractPublisher:
     from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
         "navitia": navitia_publisher,
@@ -129,13 +130,14 @@ def _get_publisher(platform, job):
     }
     if platform.type not in publishers_by_type:
         error_message = 'unknown platform type "{type}"'.format(type=platform.type)
+        models.Job.update(job_id=job.id, state="failed", error_message=error_message)
         logger.error(error_message)
         raise Exception(error_message)
 
     return publishers_by_type[platform.type]
 
 
-def _get_protocol_uploader(platform, job):
+def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
     publishers_by_protocol = {
         "http": HttpProtocol,
         "ftp": FtpProtocol
@@ -150,7 +152,7 @@ def _get_protocol_uploader(platform, job):
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
-def publish_data_on_platform(self, platform, coverage, environment_id, job):
+def publish_data_on_platform(self, platform: Platform, coverage: Coverage, environment_id: str, job: Job):
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
@@ -168,11 +170,11 @@ def publish_data_on_platform(self, platform, coverage, environment_id, job):
         self.retry(exc=exc)
 
 @celery.task()
-def finish_job(job_id):
+def finish_job(job_id: str):
     models.Job.update(job_id=job_id, state="done")
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_ntfs_to_tyr(self, coverage_id, environment_type):
+def send_ntfs_to_tyr(self, coverage_id: str, environment_type: str):
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -195,7 +197,7 @@ def send_ntfs_to_tyr(self, coverage_id, environment_type):
         raise self.retry()
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self, contributor, job):
+def contributor_export(self, contributor: Contributor, job: Job):
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
@@ -227,7 +229,7 @@ def contributor_export(self, contributor, job):
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def coverage_export(self, coverage, job):
+def coverage_export(self, coverage: Coverage, job: Job):
     logger.info('coverage_export')
     try:
         context = Context()
@@ -256,7 +258,7 @@ def coverage_export(self, coverage, job):
         raise self.retry(exc=exc)
 
 
-def launch(processes, context):
+def launch(processes: list, context: Context) -> Context:
     for p in processes:
         p_type = p.get('type')
         # Call p_type class

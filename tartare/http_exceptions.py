@@ -26,6 +26,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
+
 from werkzeug.exceptions import HTTPException
 
 
@@ -33,7 +35,7 @@ class TartareException(HTTPException):
     """
     All tartare exceptions must inherit from this one and define a code and a short message
     """
-    def __init__(self, detailed_message=None):
+    def __init__(self, detailed_message: Optional[str]=None):
         super(TartareException, self).__init__()
         self.data = {
             'message': self.message,
