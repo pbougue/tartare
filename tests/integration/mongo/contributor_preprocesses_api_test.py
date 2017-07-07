@@ -40,7 +40,7 @@ class TestContributorPreProcesses(TartareFixture):
         post_ps = {
             "type": "Ruspell",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources.id", "value": "bano_75"}
             }
@@ -58,7 +58,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
-        assert r["preprocesses"][0]["source_params"] == post_ps["source_params"]
+        assert r["preprocesses"][0]["params"] == post_ps["params"]
 
         preprocess_id = r["preprocesses"][0]["id"]
 
@@ -67,7 +67,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
-        assert r["preprocesses"][0]["source_params"] == post_ps["source_params"]
+        assert r["preprocesses"][0]["params"] == post_ps["params"]
 
     def test_preprocess_not_found(self):
 
@@ -88,7 +88,7 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources_id", "value": "bano_75"}
             }
@@ -110,7 +110,7 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources_id", "value": "bano_75"}
             }
@@ -125,7 +125,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "ComputeDirections",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
             }
         }
@@ -135,7 +135,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == new_preprocess["type"]
-        assert r["preprocesses"][0]["source_params"] == new_preprocess["source_params"]
+        assert r["preprocesses"][0]["params"] == new_preprocess["params"]
 
     def test_delete_preprocess(self):
         '''
@@ -146,7 +146,7 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources_id", "value": "bano_75"}
             }
@@ -174,7 +174,7 @@ class TestContributorPreProcesses(TartareFixture):
         post_ps = {
             "type": "bob",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources.id", "value": "bano_75"}
             }
@@ -194,7 +194,7 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                 "bano_data": {"key": "data_sources_id", "value": "bano_75"}
             }
@@ -207,7 +207,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "bob",
             "sequence": 1,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
             }
         }
@@ -228,7 +228,7 @@ class TestContributorPreProcesses(TartareFixture):
                 "id": "toto",
                 "type": "Ruspell",
                 "sequence": 1,
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources_id", "value": "bano_75"}
                 }
@@ -237,7 +237,7 @@ class TestContributorPreProcesses(TartareFixture):
                 "id": "titi",
                 "type": "ComputeDirections",
                 "sequence": 2,
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
                 }
             }
@@ -252,7 +252,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "HeadsignShortName",
             "sequence": 3,
-            "source_params": {
+            "params": {
                 "tc_data": {"key": "data_sources.data_format", "value": "ffff"}
             }
         }

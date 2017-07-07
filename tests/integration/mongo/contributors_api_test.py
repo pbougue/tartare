@@ -409,7 +409,7 @@ class TestContributors(TartareFixture):
             {
                 "type": "Ruspell",
                 "sequence": 1,
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }
@@ -417,7 +417,7 @@ class TestContributors(TartareFixture):
             {
                 "type": "ComputeDirections",
                 "sequence": 2,
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
                 }
             }
@@ -444,7 +444,7 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "type": "Ruspell",
                 "sequence": 1,
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }
@@ -471,7 +471,7 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "sequence": 1,
                 "type": "BOB",
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }

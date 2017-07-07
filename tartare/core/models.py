@@ -334,14 +334,12 @@ class DataSource(object):
 
 
 class GenericPreProcess(object):
-    def __init__(self, id: Optional[str]=None, type: Optional[str]=None,
-                 source_params: Optional[dict]=None, params: Optional[dict]=None,
+    def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
                  sequence: Optional[int]=0):
         self.id = str(uuid.uuid4()) if not id else id
         self.sequence = sequence
         self.params = params if params else {}
         self.type = type
-        self.source_params = source_params if source_params else {}
 
     def save_data(self, class_name, mongo_schema, object_id):
         data = class_name.get(object_id)
@@ -492,7 +490,6 @@ class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
     sequence = fields.Integer(required=True)
     type = fields.String(required=True)
-    source_params = fields.Dict(required=False)
     params = fields.Dict(required=False)
 
     @post_load

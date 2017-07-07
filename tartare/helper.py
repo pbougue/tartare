@@ -110,7 +110,7 @@ def to_doted_notation(data: Mapping, prefix: Optional[Any]=None) -> Mapping:
 
 def validate_preprocesses_or_raise(preprocesses: dict, instance: str):
     for p in preprocesses:
-        PreProcess.is_valid(p.get('type'), instance)
+        PreProcess.get_preprocess_class(p.get('type'), instance)
 
 
 def get_filename(url: str, data_source_id: str) -> str:

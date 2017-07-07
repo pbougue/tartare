@@ -44,7 +44,7 @@ class AbstractProcess(metaclass=ABCMeta):
 
 class PreProcess(object):
     @classmethod
-    def is_valid(cls, preprocess_name, instance):
+    def get_preprocess_class(cls, preprocess_name, instance):
         try:
             module = import_module('tartare.processes.{}'.format(instance))
             return getattr(module, preprocess_name)
@@ -64,7 +64,7 @@ class PreProcess(object):
         :param preprocess_name: Ruspell, FusioImport, ....
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
-        attr = cls.is_valid(preprocess_name, context.instance)
+        attr = cls.get_preprocess_class(preprocess_name, context.instance)
         try:
             return attr(context)  # call to the contructor, with all the args
         except TypeError as e:
