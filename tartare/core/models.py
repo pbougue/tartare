@@ -31,12 +31,11 @@ from marshmallow import Schema, fields, post_load
 from tartare import app
 from tartare.helper import to_doted_notation
 from tartare.core.gridfs_handler import GridFsHandler
-
 import pymongo
 import uuid
 from datetime import datetime
 import logging
-
+from typing import Optional
 
 @app.before_first_request
 def init_mongo():
@@ -56,6 +55,7 @@ class Environment(object):
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
+
 
 class Platform(object):
     def __init__(self, protocol, type, url, options=None):
@@ -85,14 +85,16 @@ class License(object):
 
 class Coverage(object):
     mongo_collection = 'coverages'
+    label = 'Coverage'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None):
+    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None, preprocesses=None):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
+        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save_grid_calendars(self, file):
         gridfs_handler = GridFsHandler()
@@ -331,71 +333,125 @@ class DataSource(object):
         return cls.get(contributor_id, data_source_id)
 
 
-class PreProcess(object):
-    def __init__(self, id=None, type=None, source_params=None):
+class GenericPreProcess(object):
+    def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
+                 sequence: Optional[int]=0):
         self.id = str(uuid.uuid4()) if not id else id
+        self.sequence = sequence
+        self.params = params if params else {}
         self.type = type
-        self.source_params = {} if source_params is None else source_params
 
-    def save(self, contributor_id):
-        contributor = get_contributor(contributor_id)
+    def save_data(self, class_name, mongo_schema, object_id):
+        data = class_name.get(object_id)
+        if data is None:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+        if self.id in [p.id for p in data.preprocesses]:
+            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
 
-        if self.id in [p.id for p in contributor.preprocesses]:
-            raise ValueError("Duplicate data_source id '{}'".format(self.id))
-
-        contributor.preprocesses.append(self)
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+        data.preprocesses.append(self)
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id=None, preprocess_id=None):
-        if contributor_id is not None:
-            contributor = get_contributor(contributor_id)
+    def get_data(cls, class_name, mongo_schema, object_id, preprocess_id):
+        if object_id is not None:
+            data = class_name.get(object_id)
+            if data is None:
+                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
         elif preprocess_id is not None:
-            raw = mongo.db[Contributor.mongo_collection].find_one({'preprocesses.id': preprocess_id})
+            raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
             if raw is None:
                 return None
-            contributor = MongoContributorSchema(strict=True).load(raw).data
+            data = mongo_schema(strict=True).load(raw).data
         else:
             raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
 
-        preprocesses = contributor.preprocesses
+        preprocesses = data.preprocesses
 
         if preprocess_id is None:
             return preprocesses
         p = next((p for p in preprocesses if p.id == preprocess_id), None)
         return [p] if p else []
 
-
     @classmethod
-    def delete(cls, contributor_id, preprocess_id):
-        if preprocess_id is None:
-            raise ValueError('A preprocess id is required')
-        contributor = get_contributor(contributor_id)
-        nb_delete = len([p for p in contributor.preprocesses if p.id == preprocess_id])
-        contributor.preprocesses = [p for p in contributor.preprocesses if p.id != preprocess_id]
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+    def delete_data(cls, class_name, mongo_schema, object_id, preprocess_id):
+        data = class_name.get(object_id)
+        if data is None:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+
+        nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
+        data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
         return nb_delete
 
     @classmethod
-    def update(cls, contributor_id, preprocess_id, preprocess=None):
-        if preprocess_id is None:
-            raise ValueError('A data_source id is required')
-        if not [ps for ps in get_contributor(contributor_id).preprocesses if ps.id == preprocess_id]:
-            raise ValueError("No preprocesses id {} exists in contributor with id {}"
-                             .format(contributor_id, preprocess_id))
+    def update_data(cls, class_name, mongo_schema, object_id, preprocess_id, preprocess: Optional[dict]=None):
+        data = class_name.get(object_id)
+        if not data:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+
+        if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
+            raise ValueError("No preprocesses id {} exists in {} with id {}"
+                             .format(object_id, class_name.label, preprocess_id))
         if 'id' in preprocess and preprocess['id'] != preprocess_id:
             raise ValueError("Id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
 
         preprocess['id'] = preprocess_id
-        raw = mongo.db[Contributor.mongo_collection].update_one({'preprocesses.id': preprocess_id},
-                                                                {'$set': {'preprocesses.$': preprocess}})
+        raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
+                                                               {'$set': {'preprocesses.$': preprocess}})
         if raw.matched_count == 0:
             return None
 
-        return cls.get(contributor_id, preprocess_id)
+        return cls.get_data(class_name, mongo_schema, object_id, preprocess_id)
+
+
+class PreProcess(GenericPreProcess):
+
+    def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            self.save_data(Contributor, MongoContributorSchema, contributor_id)
+        if coverage_id:
+            self.save_data(Coverage, MongoCoverageSchema, coverage_id)
+
+    @classmethod
+    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+            coverage_id: Optional[str]=None):
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+        if coverage_id:
+            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+
+    @classmethod
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
+        if preprocess_id is None:
+            raise ValueError('A preprocess id is required')
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+        if coverage_id:
+            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+
+    @classmethod
+    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+               preprocess: Optional[dict]=None):
+        if preprocess_id is None:
+            raise ValueError('A PreProcess id is required')
+
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+
+        if contributor_id:
+            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
+        if coverage_id:
+            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
+
 
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
@@ -404,6 +460,7 @@ class MongoDataSourceLicenseSchema(Schema):
     @post_load
     def build_license(self, data):
         return License(**data)
+
 
 class MongoDataSourceFetchedSchema(Schema):
     data_source_id = fields.String(required=True)
@@ -421,7 +478,7 @@ class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = fields.String(required=False)
-    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
+    license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Dict(required=True)
 
     @post_load
@@ -431,8 +488,9 @@ class MongoDataSourceSchema(Schema):
 
 class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
+    sequence = fields.Integer(required=True)
     type = fields.String(required=True)
-    source_params = fields.Dict(required=True)
+    params = fields.Dict(required=False)
 
     @post_load
     def build_data_source(self, data):
@@ -446,6 +504,7 @@ class MongoCoverageSchema(Schema):
     grid_calendars_id = fields.String(allow_none=True)
     contributors = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
+    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
 
     @post_load
     def make_coverage(self, data):
@@ -454,6 +513,7 @@ class MongoCoverageSchema(Schema):
 
 class Contributor(object):
     mongo_collection = 'contributors'
+    label = 'Contributor'
 
     def __init__(self, id, name, data_prefix, data_sources=None, preprocesses=None):
         self.id = id

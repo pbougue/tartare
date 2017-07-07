@@ -64,26 +64,26 @@ POSSIBLE EVOS:
       "preprocess": [
         {
           "type": "ruspell",
-          "source_params": {
+          "params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "bano_data": {"key": "data_sources.id", "value": "bano_75"}
           }
         },
         {
           "type": "compute_directions",
-          "source_params": {
+          "params": {
             "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
           }
         },
         {
           "type": "headsign_short_name",
-          "source_params": {
+          "params": {
             "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
           }
         },
         {
           "type": "compute_external_code_rules",
-          "source_params": {
+          "params": {
             "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
             "rt_code_json": {"key": "data_sources.id", "value": "datasource_rt_code_stif"}
           }

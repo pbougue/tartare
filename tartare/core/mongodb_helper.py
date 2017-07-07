@@ -27,34 +27,27 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from abc import ABCMeta, abstractmethod
+import logging
+from tartare.interfaces import schema
 
 
-class AbstractProcess(metaclass=ABCMeta):
-    @abstractmethod
-    def do(self):
-        pass
-
-
-class Ruspell(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
-
-    def do(self):
-        return self.context
-
-
-class ComputeDirections(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
-
-    def do(self):
-        return self.context
-
-
-class HeadsignShortName(AbstractProcess):
-    def __init__(self, context):
-        self.context = context
-
-    def do(self):
-        return self.context
+def upgrade_dict(source, request_data, key):
+    map_model = {
+        "data_sources": schema.DataSourceSchema,
+        "preprocesses": schema.PreProcessSchema
+    }
+    existing_id = [d.id for d in source]
+    logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
+    # constructing PATCH data
+    patched_data = None
+    if key in request_data:
+        patched_data = map_model.get(key)(many=True).dump(source).data
+        for item in request_data[key]:
+            if item['id'] in existing_id:
+                item2update = next((p for p in patched_data if p['id'] == item['id']), None)
+                if item2update:
+                    item2update.update(item)
+            else:
+                patched_data.append(item)
+    if patched_data:
+        request_data[key] = patched_data

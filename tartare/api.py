@@ -91,7 +91,9 @@ api.add_resource(DataSource,
 
 api.add_resource(PreProcess,
                  contributor_and_id + '/preprocesses',
-                 contributor_and_id + '/preprocesses/<string:preprocess_id>')
+                 contributor_and_id + '/preprocesses/<string:preprocess_id>',
+                 coverage_and_id + '/preprocesses',
+                 coverage_and_id + '/preprocesses/<string:preprocess_id>')
 
 api.add_resource(CoverageContributorSubscription,
                  coverage_and_id + contributor,

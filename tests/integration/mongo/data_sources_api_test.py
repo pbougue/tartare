@@ -257,42 +257,6 @@ class TestDataSources(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["data_sources"]) == 0
 
-    def test_post_without_headers(self, contributor):
-        """
-        using /data_sources endpoint
-        """
-        post_ds = {
-            "id": "ds1_id",
-            "name": "data_source_name1",
-            "data_format": "Neptune",
-            "input": {
-                "type": "url",
-                "url": "http://stif.com/od.zip"
-            }
-        }
-        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_without_headers(self, contributor):
-        """
-        using /data_sources endpoint
-        """
-        post_ds = {
-            "id": "ds1_id",
-            "name": "data_source_name1",
-            "data_format": "Neptune",
-            "input": {
-                "type": "url",
-                "url": "http://stif.com/od.zip"
-            }
-        }
-        raw = self.patch('/contributors/id_test/data_sources', self.dict_to_json(post_ds), headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
         ('http://license.org/othercompany', 'my license full name', 201),

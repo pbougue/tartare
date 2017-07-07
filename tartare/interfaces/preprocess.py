@@ -42,25 +42,29 @@ from tartare.decorators import json_data_validate
 
 class PreProcess(flask_restful.Resource):
     @json_data_validate()
-    def post(self, contributor_id: str) -> Response:
+    def post(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> Response:
         preprocess_schema = schema.PreProcessSchema(strict=True)
+        instance = 'contributor' if contributor_id else 'coverage'
         try:
-            d = request.json
-            validate_preprocesses_or_raise([d])
-            preprocess = preprocess_schema.load(d).data
+            json_data = request.json
+            validate_preprocesses_or_raise([json_data], instance)
+            preprocess = preprocess_schema.load(json_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
         try:
-            preprocess.save(contributor_id)
+            preprocess.save(contributor_id=contributor_id, coverage_id=coverage_id)
         except (PyMongoError, ValueError) as e:
             raise InternalServerError('Impossible to add data source.')
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump([preprocess]).data}, 201
 
-    def get(self, contributor_id: str, preprocess_id: Optional[str]=None) -> Response:
+    def get(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+            preprocess_id: Optional[str]=None) -> Response:
         try:
-            ps = models.PreProcess.get(contributor_id, preprocess_id)
+            ps = models.PreProcess.get(preprocess_id=preprocess_id,
+                                       contributor_id=contributor_id,
+                                       coverage_id=coverage_id)
             if not ps and preprocess_id:
                 raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
         except ValueError as e:
@@ -69,32 +73,40 @@ class PreProcess(flask_restful.Resource):
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(ps).data}, 200
 
     @json_data_validate()
-    def patch(self, contributor_id: str, preprocess_id: str) -> Response:
-        ds = models.PreProcess.get(contributor_id, preprocess_id)
+    def patch(self, contributor_id: Optional[str]=None, preprocess_id: Optional[str]=None,
+              coverage_id: Optional[str]=None) -> Response:
+        ds = models.PreProcess.get(preprocess_id=preprocess_id,
+                                   contributor_id=contributor_id,
+                                   coverage_id=coverage_id)
         if len(ds) != 1:
             abort(404)
 
         schema_preprocess = schema.PreProcessSchema(partial=True)
         errors = schema_preprocess.validate(request.json, partial=True)
         if errors:
-            raise ObjectNotFound("Preprocess '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
 
         try:
             p = request.json
-            validate_preprocesses_or_raise([p])
-            preprocesses = models.PreProcess.update(contributor_id, preprocess_id, p)
+            instance = 'contributor' if contributor_id else 'coverage'
+            validate_preprocesses_or_raise([p], instance)
+            preprocesses = models.PreProcess.update(preprocess_id,
+                                                    contributor_id=contributor_id,
+                                                    coverage_id=coverage_id,
+                                                    preprocess=p)
         except ValueError as e:
             raise InvalidArguments(str(e))
-        except PyMongoError as e:
+        except PyMongoError:
             raise InternalServerError('impossible to update contributor with preprocess {}'.format(p))
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(preprocesses).data}, 200
 
-    def delete(self, contributor_id: str, preprocess_id: str) -> Response:
+    def delete(self, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+               coverage_id: Optional[str]=None):
         try:
-            nb_deleted = models.PreProcess.delete(contributor_id, preprocess_id)
+            nb_deleted = models.PreProcess.delete(preprocess_id, coverage_id=coverage_id, contributor_id=contributor_id)
             if nb_deleted == 0:
-                raise ObjectNotFound("Preprocess '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 

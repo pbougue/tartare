@@ -811,7 +811,7 @@ paths:
         - in: path
           name: contributor_id
           type: string
-          description: Identifier of the contributor of the data source
+          description: Identifier of the contributor of the preprocess
           required: true
         - in: body
           name: body
@@ -838,7 +838,7 @@ paths:
             $ref: '#/definitions/error_415'
 
     delete:
-      summary: Delete a preprocess from a contributor {contributor_id}
+      summary: Delete a preprocess from the contributor {contributor_id}
       tags:
         - contributors
       parameters:
@@ -855,6 +855,129 @@ paths:
       responses:
         204:
           description: When preprocess {preprocess_id} is correctly deleted from contributor
+        404:
+          description: Object not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+
+  /coverages/{coverage_id}/preprocesses:
+    get:
+      summary: Display coverage preprocesses
+      tags:
+        - coverages
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+      responses:
+        200:
+          description: Requested coverage preprocesses
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+    post:
+      summary: Create preprocess for a coverage
+      tags:
+        - coverages
+      parameters:
+        - in: body
+          name: body
+          description: Preprocess object that needs to be added to given coverage
+          required: true
+          schema:
+            $ref: "#/definitions/preprocess"
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      responses:
+        201:
+          description: Preprocess created
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
+
+  /coverages/{coverage_id}/preprocesses/{preprocess_id}:
+    patch:
+      summary: Modify a preprocess for a coverage
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: preprocess_id
+          type: string
+          description: Identifier of the preprocess that needs to be modified
+          required: true
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage of the preprocess
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the coverage's preprocess that needs to be modified
+          required: true
+          schema:
+            $ref: "#/definitions/preprocess"
+      responses:
+        200:
+          description: Preprocess modified
+          schema:
+            $ref: '#/definitions/preprocess_list'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Object not found
+          schema :
+            $ref: '#/definitions/error_404'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
+
+    delete:
+      summary: Delete a preprocess from the coverage {coverage_id}
+      tags:
+        - coverages
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: path
+          name: preprocess_id
+          type: string
+          description: Identifier of the preprocess that needs to be removed from the coverage
+          required: true
+      responses:
+        204:
+          description: When preprocess {preprocess_id} is correctly deleted from coverage
         404:
           description: Object not found
           schema :
@@ -1109,8 +1232,7 @@ definitions:
     type: object
     required: [
       id,
-      type,
-      source_params
+      type
     ]
     properties:
       id:
@@ -1119,7 +1241,7 @@ definitions:
       type:
         type: string
         example: Ruspell
-      source_params:
+      params:
         type: object
         example: {bano_data: {key: data_sources_id, value: bano_75}}
 

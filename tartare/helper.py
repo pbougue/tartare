@@ -37,10 +37,11 @@ import requests
 from flask import Flask
 from requests import Response
 from gridfs.grid_file import GridOut
-import tartare.processes
+from tartare.processes.processes import PreProcess
 import logging
 from tartare.http_exceptions import InvalidArguments
 from hashlib import md5
+import uuid
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
@@ -107,14 +108,9 @@ def to_doted_notation(data: Mapping, prefix: Optional[Any]=None) -> Mapping:
     return result
 
 
-def validate_preprocesses_or_raise(preprocesses: dict):
+def validate_preprocesses_or_raise(preprocesses: dict, instance: str):
     for p in preprocesses:
-        p_type = p.get('type')
-        kls = getattr(tartare.processes, p_type, None)
-        if kls is None:
-            msg = 'Invalid process type {}'.format(p_type)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
+        PreProcess.get_preprocess_class(p.get('type'), instance)
 
 
 def get_filename(url: str, data_source_id: str) -> str:
@@ -134,3 +130,8 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
         data = f.read()
         hasher.update(data)
         return hasher.hexdigest()
+
+
+def setdefault_ids(collections):
+    for c in collections:
+        c.setdefault('id', str(uuid.uuid4()))

@@ -408,14 +408,16 @@ class TestContributors(TartareFixture):
         preprocesses = [
             {
                 "type": "Ruspell",
-                "source_params": {
+                "sequence": 1,
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }
             },
             {
                 "type": "ComputeDirections",
-                "source_params": {
+                "sequence": 2,
+                "params": {
                     "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
                 }
             }
@@ -441,7 +443,8 @@ class TestContributors(TartareFixture):
             {
                 "id": "ruspell",
                 "type": "Ruspell",
-                "source_params": {
+                "sequence": 1,
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }
@@ -466,8 +469,9 @@ class TestContributors(TartareFixture):
         preprocesses = [
             {
                 "id": "ruspell",
+                "sequence": 1,
                 "type": "BOB",
-                "source_params": {
+                "params": {
                     "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
                     "bano_data": {"key": "data_sources.id", "value": "bano_75"}
                 }
@@ -485,20 +489,5 @@ class TestContributors(TartareFixture):
         assert "message" in r
         assert "error" in r
         assert r["message"] == "Invalid arguments"
-        assert r["error"] == "Invalid process type BOB"
+        assert r["error"] == "impossible to build preprocess BOB : 'module' object has no attribute 'BOB'"
 
-    def test_post_request_without_headers(self):
-        raw = self.post(url='/contributors',
-                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
-                        headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
-
-    def test_patch_request_without_headers(self):
-        raw = self.post(url='/contributors',
-                        params='{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}',
-                        headers=None)
-        assert raw.status_code == 415
-        r = self.to_json(raw)
-        assert r['error'] == 'request without data.'
