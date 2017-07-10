@@ -489,5 +489,6 @@ class TestContributors(TartareFixture):
         assert "message" in r
         assert "error" in r
         assert r["message"] == "Invalid arguments"
-        assert r["error"] == "impossible to build preprocess BOB : 'module' object has no attribute 'BOB'"
+        assert r['error'] == "impossible to build preprocess BOB : " \
+                             "module tartare.processes.contributor has no class BOB"
 

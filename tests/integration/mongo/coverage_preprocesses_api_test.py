@@ -173,7 +173,8 @@ class TestCoveragePreProcesses(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 400, print(r)
         assert 'error' in r
-        assert r['error'] == "impossible to build preprocess bob : 'module' object has no attribute 'bob'"
+        assert r['error'] == "impossible to build preprocess bob : " \
+                             + "module tartare.processes.coverage has no class bob"
 
     def test_update_preprocess_with_unknown_type(self):
         '''
@@ -205,7 +206,8 @@ class TestCoveragePreProcesses(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 400, print(r)
         assert 'error' in r
-        assert r['error'] == "impossible to build preprocess bob : 'module' object has no attribute 'bob'"
+        assert r['error'] == "impossible to build preprocess bob : " \
+                             + "module tartare.processes.coverage has no class bob"
 
     def test_update_preprocesses_with_id(self):
         '''
