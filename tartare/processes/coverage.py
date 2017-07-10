@@ -27,11 +27,39 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from tartare.processes.processes import AbstractProcess
+from tartare.processes.fusio import Fusio
+from tartare.core.gridfs_handler import GridFsHandler
+import requests
+from tartare.core.models import Contributor
 
 
 class FusioDataUpdate(AbstractProcess):
 
     def do(self):
+        fusio = Fusio(self.params.get("url"))
+        for contributor_export in self.context.contributor_exports:
+            if not contributor_export.gridfs_id:
+                continue
+            file = GridFsHandler().get_file_from_gridfs(contributor_export.gridfs_id)
+            validity_period = contributor_export.validity_period
+            params = {
+                "action": 'dataupdate',
+                'contributorexternalcode': contributor_export.contributor_id,
+                'isadapted': 0,
+                'dutype': 'update',
+                'serviceid': 1,
+                'libelle': 'unlibelle',
+                'DateDebut': validity_period.start_date.strftime('%d/%m/%Y'),
+                'DateFin': validity_period.end_date.strftime('%d/%m/%Y')
+            }
+            files = {
+                "file": file,
+                "filename": file.filename
+            }
+        resp = fusio.call(requests.post, params, files=files, headers={'content-type': 'multipart/form-data'})
+        import logging
+        logging.getLogger(__name__).info(resp)
+        fusio.wait_for_action_terminated(fusio.get_action_id(resp))
         return self.context
 
 

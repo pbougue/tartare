@@ -30,13 +30,13 @@
 from importlib import import_module
 from abc import ABCMeta, abstractmethod
 import logging
-
 from tartare.http_exceptions import InvalidArguments
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: 'Context'):
+    def __init__(self, context: 'Context', params):
         self.context = context
+        self.params = params
 
     @abstractmethod
     def do(self):
@@ -60,7 +60,7 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: 'Context', preprocess_name: str) -> AbstractProcess:
+    def get_preprocess(cls, context: 'Context', preprocess_name: str, params) -> AbstractProcess:
         """
         :param context:
         :param preprocess_name: Ruspell, FusioImport, ....
@@ -68,7 +68,7 @@ class PreProcess(object):
         """
         attr = cls.get_preprocess_class(preprocess_name, context.instance)
         try:
-            return attr(context)  # call to the contructor, with all the args
+            return attr(context, params)  # call to the contructor, with all the args
         except TypeError as e:
             msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
