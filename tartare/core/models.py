@@ -26,6 +26,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from io import IOBase
+
+from gridfs import GridOut
+
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
@@ -35,7 +39,8 @@ import pymongo
 import uuid
 from datetime import datetime
 import logging
-from typing import Optional
+from typing import Optional, List, Union
+
 
 @app.before_first_request
 def init_mongo():
@@ -43,51 +48,292 @@ def init_mongo():
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 
-def get_contributor(contributor_id):
-    contributor = Contributor.get(contributor_id)
-    if contributor is None:
-        raise ValueError('Bad contributor {}'.format(contributor_id))
-    return contributor
-
-
-class Environment(object):
-    def __init__(self, name=None, current_ntfs_id=None, publication_platforms=None):
-        self.name = name
-        self.current_ntfs_id = current_ntfs_id
-        self.publication_platforms = publication_platforms if publication_platforms else []
-
-
 class Platform(object):
-    def __init__(self, protocol, type, url, options=None):
+    def __init__(self, protocol: str, type: str, url: str, options: dict = None):
         self.type = type
         self.protocol = protocol
         self.url = url
         self.options = {} if options is None else options
 
 
+class Environment(object):
+    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None):
+        self.name = name
+        self.current_ntfs_id = current_ntfs_id
+        self.publication_platforms = publication_platforms if publication_platforms else []
+
+
 class ValidityPeriod(object):
-    def __init__(self, start_date, end_date):
+    def __init__(self, start_date: datetime, end_date: datetime):
         self.start_date = start_date
         self.end_date = end_date
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id=None, validity_period=None):
+    def __init__(self, data_source_id: str = None, validity_period: ValidityPeriod = None):
         self.data_source_id = data_source_id
         self.validity_period = validity_period
 
 
 class License(object):
-    def __init__(self, name=app.config.get('DEFAULT_LICENSE_NAME'), url=app.config.get('DEFAULT_LICENSE_URL')):
+    def __init__(self, name: str = app.config.get('DEFAULT_LICENSE_NAME'),
+                 url: str = app.config.get('DEFAULT_LICENSE_URL')):
         self.name = name
         self.url = url
+
+
+class DataSource(object):
+    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, data_format: Optional[str] = "gtfs",
+                 input: Optional[dict] = None, license: Optional[License] = None):
+        self.id = id if id else str(uuid.uuid4())
+        self.name = name
+        self.data_format = data_format
+        self.input = {} if not input else input
+        self.license = license if license else License()
+
+    def save(self, contributor_id: str):
+        contributor = get_contributor(contributor_id)
+        if self.id in [ds.id for ds in contributor.data_sources]:
+            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+        contributor.data_sources.append(self)
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+
+    @classmethod
+    def get(cls, contributor_id: str = None, data_source_id: str = None) -> 'DataSource':
+        if contributor_id is not None:
+            contributor = get_contributor(contributor_id)
+        elif data_source_id is not None:
+            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
+            if raw is None:
+                return None
+            contributor = MongoContributorSchema(strict=True).load(raw).data
+        else:
+            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
+
+        data_sources = contributor.data_sources
+        if data_source_id is not None:
+            data_sources = [ds for ds in data_sources if ds.id == data_source_id]
+            if not data_sources:
+                return None
+        return data_sources
+
+    @classmethod
+    def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        contributor = get_contributor(contributor_id)
+        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
+        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
+        raw_contrib = MongoContributorSchema().dump(contributor).data
+        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
+        return nb_delete
+
+    @classmethod
+    def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> 'DataSource':
+        tmp_dataset = dataset if dataset else {}
+        if data_source_id is None:
+            raise ValueError('A data_source id is required')
+        if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+            raise ValueError("No data_source id {} exists in contributor with id {}"
+                             .format(contributor_id, data_source_id))
+        if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
+            raise ValueError("Id from request {} doesn't match id from url {}"
+                             .format(tmp_dataset['id'], data_source_id))
+
+        # `$` acts as a placeholder of the first match in the list
+        contrib_dataset = {'data_sources': {'$': tmp_dataset}}
+        raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
+                                                                {'$set': to_doted_notation(contrib_dataset)})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor_id, data_source_id)
+
+
+class GenericPreProcess(object):
+    def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
+                 sequence: Optional[int] = 0):
+        self.id = str(uuid.uuid4()) if not id else id
+        self.sequence = sequence
+        self.params = params if params else {}
+        self.type = type
+
+    def save_data(self, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id: str):
+        data = class_name.get(object_id)
+        if data is None:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+        if self.id in [p.id for p in data.preprocesses]:
+            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
+
+        data.preprocesses.append(self)
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
+
+    @classmethod
+    def get_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id,
+                 preprocess_id) -> 'PreProcess':
+        if object_id is not None:
+            data = class_name.get(object_id)
+            if data is None:
+                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+        elif preprocess_id is not None:
+            raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
+            if raw is None:
+                return None
+            data = mongo_schema(strict=True).load(raw).data
+        else:
+            raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
+
+        preprocesses = data.preprocesses
+
+        if preprocess_id is None:
+            return preprocesses
+        p = next((p for p in preprocesses if p.id == preprocess_id), None)
+        return [p] if p else []
+
+    @classmethod
+    def delete_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id,
+                    preprocess_id) -> int:
+        data = class_name.get(object_id)
+        if data is None:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+
+        nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
+        data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
+        raw_contrib = mongo_schema().dump(data).data
+        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
+        return nb_delete
+
+    @classmethod
+    def update_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id, preprocess_id,
+                    preprocess: Optional[dict] = None) -> 'PreProcess':
+        data = class_name.get(object_id)
+        if not data:
+            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+
+        if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
+            raise ValueError("No preprocesses id {} exists in {} with id {}"
+                             .format(object_id, class_name.label, preprocess_id))
+        if 'id' in preprocess and preprocess['id'] != preprocess_id:
+            raise ValueError("Id from request {} doesn't match id from url {}"
+                             .format(preprocess['id'], preprocess_id))
+
+        preprocess['id'] = preprocess_id
+        raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
+                                                               {'$set': {'preprocesses.$': preprocess}})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get_data(class_name, mongo_schema, object_id, preprocess_id)
+
+
+class PreProcess(GenericPreProcess):
+    def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None):
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            self.save_data(Contributor, MongoContributorSchema, contributor_id)
+        if coverage_id:
+            self.save_data(Coverage, MongoCoverageSchema, coverage_id)
+
+    @classmethod
+    def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
+            coverage_id: Optional[str] = None) -> GenericPreProcess:
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+        if coverage_id:
+            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+
+    @classmethod
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None):
+        if preprocess_id is None:
+            raise ValueError('A preprocess id is required')
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+        if contributor_id:
+            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+        if coverage_id:
+            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+
+    @classmethod
+    def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
+               preprocess: Optional[dict] = None):
+        if preprocess_id is None:
+            raise ValueError('A PreProcess id is required')
+
+        if not any([coverage_id, contributor_id]):
+            raise ValueError('Bad arguments.')
+
+        if contributor_id:
+            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
+        if coverage_id:
+            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
+
+
+class Contributor(object):
+    mongo_collection = 'contributors'
+    label = 'Contributor'
+
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
+                 preprocesses: List[PreProcess] = None):
+        self.id = id
+        self.name = name
+        self.data_prefix = data_prefix
+        self.data_sources = [] if data_sources is None else data_sources
+        self.preprocesses = [] if preprocesses is None else preprocesses
+
+    def save(self):
+        raw = MongoContributorSchema().dump(self).data
+        mongo.db[self.mongo_collection].insert_one(raw)
+
+    @classmethod
+    def get(cls, contributor_id: str) -> 'Contributor':
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
+        if raw is None:
+            return None
+        return MongoContributorSchema(strict=True).load(raw).data
+
+    @classmethod
+    def delete(cls, contributor_id: str) -> int:
+        raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
+        return raw.deleted_count
+
+    @classmethod
+    def find(cls, filter: dict) -> List['Contributor']:
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        return MongoContributorSchema(many=True).load(raw).data
+
+    @classmethod
+    def all(cls) -> List['Contributor']:
+        return cls.find(filter={})
+
+    @classmethod
+    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
+        tmp_dataset = dataset if dataset else {}
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
+        if raw.matched_count == 0:
+            return None
+
+        return cls.get(contributor_id)
+
+
+def get_contributor(contributor_id: str) -> Contributor:
+    contributor = Contributor.get(contributor_id)
+    if contributor is None:
+        raise ValueError('Bad contributor {}'.format(contributor_id))
+    return contributor
 
 
 class Coverage(object):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
-    def __init__(self, id, name, environments=None, grid_calendars_id=None, contributors=None, license=None, preprocesses=None):
+    def __init__(self, id: str, name: str, environments: List[Environment] = None, grid_calendars_id: str = None,
+                 contributors: List[Contributor] = None, license: License = None,
+                 preprocesses: List[PreProcess] = None):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
@@ -96,7 +342,7 @@ class Coverage(object):
         self.license = license if license else License()
         self.preprocesses = [] if preprocesses is None else preprocesses
 
-    def save_grid_calendars(self, file):
+    def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]):
         gridfs_handler = GridFsHandler()
         filename = '{coverage}_calendars.zip'.format(coverage=self.id)
         id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
@@ -106,10 +352,10 @@ class Coverage(object):
         gridfs_handler.delete_file_from_gridfs(self.grid_calendars_id)
         self.grid_calendars_id = id
 
-    def get_environment(self, environment_id):
+    def get_environment(self, environment_id: str) -> Environment:
         return self.environments.get(environment_id)
 
-    def get_grid_calendars(self):
+    def get_grid_calendars(self) -> str:
         if not self.grid_calendars_id:
             return None
 
@@ -121,7 +367,7 @@ class Coverage(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id=None):
+    def get(cls, coverage_id=None) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
             return None
@@ -134,16 +380,16 @@ class Coverage(object):
         return raw.deleted_count
 
     @classmethod
-    def find(cls, filter):
+    def find(cls, filter) -> List['Coverage']:
         raw = mongo.db[cls.mongo_collection].find(filter)
         return MongoCoverageSchema(many=True).load(raw).data
 
     @classmethod
-    def all(cls):
+    def all(cls) -> List['Coverage']:
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, coverage_id=None, dataset=None):
+    def update(cls, coverage_id: str = None, dataset: dict = None) -> 'Coverage':
         # we have to use "doted notation' to only update some fields of a nested object
         tmp_dataset = dataset if dataset else {}
         raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(tmp_dataset)})
@@ -152,7 +398,7 @@ class Coverage(object):
 
         return cls.get(coverage_id)
 
-    def save_ntfs(self, environment_type, file):
+    def save_ntfs(self, environment_type: str, file: Union[str, bytes, IOBase, GridOut]):
         if environment_type not in self.environments.keys():
             raise ValueError('invalid value for environment_type')
         filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
@@ -164,14 +410,14 @@ class Coverage(object):
         gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
         self.environments[environment_type].current_ntfs_id = id
 
-    def has_contributor(self, contributor):
+    def has_contributor(self, contributor: Contributor) -> bool:
         return contributor.id in self.contributors
 
-    def add_contributor(self, contributor):
+    def add_contributor(self, contributor: Contributor):
         self.contributors.append(contributor.id)
         self.update(self.id, {"contributors": self.contributors})
 
-    def remove_contributor(self, contributor_id):
+    def remove_contributor(self, contributor_id: str):
         if contributor_id in self.contributors:
             self.contributors.remove(contributor_id)
             self.update(self.id, {"contributors": self.contributors})
@@ -230,7 +476,8 @@ class MongoEnvironmentListSchema(Schema):
 class DataSourceFetched(object):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id, data_source_id, validity_period, gridfs_id=None, created_at=None):
+    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str = None,
+                 created_at: datetime = None):
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
@@ -242,7 +489,7 @@ class DataSourceFetched(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get_last(cls, contributor_id, data_source_id):
+    def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
         if not contributor_id:
             return None
         where = {
@@ -253,204 +500,16 @@ class DataSourceFetched(object):
         lasts = MongoDataSourceFetchedSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
 
-    def get_md5(self):
+    def get_md5(self) -> str:
         if not self.gridfs_id:
             return None
         file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
         return file.md5
 
-    def save_dataset(self, tmp_file, filename):
+    def save_dataset(self, tmp_file: Union[str, bytes, IOBase, GridOut], filename: str):
         with open(tmp_file, 'rb') as file:
             self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
                                                                  contributor_id=self.contributor_id)
-
-
-class DataSource(object):
-    def __init__(self, id=None, name=None, data_format="gtfs", input=None, license=None):
-        self.id = id if id else str(uuid.uuid4())
-        self.name = name
-        self.data_format = data_format
-        self.input = {} if not input else input
-        self.license = license if license else License()
-
-    def save(self, contributor_id):
-        contributor = get_contributor(contributor_id)
-        if self.id in [ds.id for ds in contributor.data_sources]:
-            raise ValueError("Duplicate data_source id '{}'".format(self.id))
-        contributor.data_sources.append(self)
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
-
-    @classmethod
-    def get(cls, contributor_id=None, data_source_id=None):
-        if contributor_id is not None:
-            contributor = get_contributor(contributor_id)
-        elif data_source_id is not None:
-            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
-            if raw is None:
-                return None
-            contributor = MongoContributorSchema(strict=True).load(raw).data
-        else:
-            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
-
-        data_sources = contributor.data_sources
-        if data_source_id is not None:
-            data_sources = [ds for ds in data_sources if ds.id == data_source_id]
-            if not data_sources:
-                return None
-        return data_sources
-
-    @classmethod
-    def delete(cls, contributor_id, data_source_id=None):
-        if data_source_id is None:
-            raise ValueError('A data_source id is required')
-        contributor = get_contributor(contributor_id)
-        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
-        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
-        return nb_delete
-
-    @classmethod
-    def update(cls, contributor_id, data_source_id=None, dataset=None):
-        tmp_dataset = dataset if dataset else {}
-        if data_source_id is None:
-            raise ValueError('A data_source id is required')
-        if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
-            raise ValueError("No data_source id {} exists in contributor with id {}"
-                             .format(contributor_id, data_source_id))
-        if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
-                             .format(tmp_dataset['id'], data_source_id))
-
-        # `$` acts as a placeholder of the first match in the list
-        contrib_dataset = {'data_sources': {'$': tmp_dataset}}
-        raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
-                                                                {'$set': to_doted_notation(contrib_dataset)})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get(contributor_id, data_source_id)
-
-
-class GenericPreProcess(object):
-    def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
-                 sequence: Optional[int]=0):
-        self.id = str(uuid.uuid4()) if not id else id
-        self.sequence = sequence
-        self.params = params if params else {}
-        self.type = type
-
-    def save_data(self, class_name, mongo_schema, object_id):
-        data = class_name.get(object_id)
-        if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
-        if self.id in [p.id for p in data.preprocesses]:
-            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
-
-        data.preprocesses.append(self)
-        raw_contrib = mongo_schema().dump(data).data
-        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
-
-    @classmethod
-    def get_data(cls, class_name, mongo_schema, object_id, preprocess_id):
-        if object_id is not None:
-            data = class_name.get(object_id)
-            if data is None:
-                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
-        elif preprocess_id is not None:
-            raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
-            if raw is None:
-                return None
-            data = mongo_schema(strict=True).load(raw).data
-        else:
-            raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
-
-        preprocesses = data.preprocesses
-
-        if preprocess_id is None:
-            return preprocesses
-        p = next((p for p in preprocesses if p.id == preprocess_id), None)
-        return [p] if p else []
-
-    @classmethod
-    def delete_data(cls, class_name, mongo_schema, object_id, preprocess_id):
-        data = class_name.get(object_id)
-        if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
-
-        nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
-        data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
-        raw_contrib = mongo_schema().dump(data).data
-        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
-        return nb_delete
-
-    @classmethod
-    def update_data(cls, class_name, mongo_schema, object_id, preprocess_id, preprocess: Optional[dict]=None):
-        data = class_name.get(object_id)
-        if not data:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
-
-        if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
-            raise ValueError("No preprocesses id {} exists in {} with id {}"
-                             .format(object_id, class_name.label, preprocess_id))
-        if 'id' in preprocess and preprocess['id'] != preprocess_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
-                             .format(preprocess['id'], preprocess_id))
-
-        preprocess['id'] = preprocess_id
-        raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
-                                                               {'$set': {'preprocesses.$': preprocess}})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get_data(class_name, mongo_schema, object_id, preprocess_id)
-
-
-class PreProcess(GenericPreProcess):
-
-    def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
-        if contributor_id:
-            self.save_data(Contributor, MongoContributorSchema, contributor_id)
-        if coverage_id:
-            self.save_data(Coverage, MongoCoverageSchema, coverage_id)
-
-    @classmethod
-    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
-            coverage_id: Optional[str]=None):
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
-        if contributor_id:
-            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
-        if coverage_id:
-            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
-
-    @classmethod
-    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None):
-        if preprocess_id is None:
-            raise ValueError('A preprocess id is required')
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
-        if contributor_id:
-            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
-        if coverage_id:
-            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
-
-    @classmethod
-    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
-               preprocess: Optional[dict]=None):
-        if preprocess_id is None:
-            raise ValueError('A PreProcess id is required')
-
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
-
-        if contributor_id:
-            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
-        if coverage_id:
-            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -511,52 +570,6 @@ class MongoCoverageSchema(Schema):
         return Coverage(**data)
 
 
-class Contributor(object):
-    mongo_collection = 'contributors'
-    label = 'Contributor'
-
-    def __init__(self, id, name, data_prefix, data_sources=None, preprocesses=None):
-        self.id = id
-        self.name = name
-        self.data_prefix = data_prefix
-        self.data_sources = [] if data_sources is None else data_sources
-        self.preprocesses = [] if preprocesses is None else preprocesses
-
-    def save(self):
-        raw = MongoContributorSchema().dump(self).data
-        mongo.db[self.mongo_collection].insert_one(raw)
-
-    @classmethod
-    def get(cls, contributor_id=None):
-        raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
-        if raw is None:
-            return None
-        return MongoContributorSchema(strict=True).load(raw).data
-
-    @classmethod
-    def delete(cls, contributor_id=None):
-        raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
-        return raw.deleted_count
-
-    @classmethod
-    def find(cls, filter):
-        raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoContributorSchema(many=True).load(raw).data
-
-    @classmethod
-    def all(cls):
-        return cls.find(filter={})
-
-    @classmethod
-    def update(cls, contributor_id=None, dataset=None):
-        tmp_dataset = dataset if dataset else {}
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get(contributor_id)
-
-
 class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
@@ -572,8 +585,8 @@ class MongoContributorSchema(Schema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type, contributor_id=None, coverage_id=None, state='pending',
-                 step=None, id=None, started_at=None):
+    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
+                 step: str = None, id: str = None, started_at: datetime = None):
         self.id = id if id else str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
@@ -590,12 +603,12 @@ class Job(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def find(cls, filter):
+    def find(cls, filter) -> Union[dict, List[dict]]:
         raw = mongo.db[cls.mongo_collection].find(filter)
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get(cls, contributor_id=None, coverage_id=None, job_id=None):
+    def get(cls, contributor_id: str = None, coverage_id: str = None, job_id: str = None) -> Union[dict, List[dict]]:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
@@ -609,7 +622,7 @@ class Job(object):
         return cls.find(filter=find_filter)
 
     @classmethod
-    def update(cls, job_id, state=None, step=None, error_message=None):
+    def update(cls, job_id: str, state: str = None, step: str = None, error_message: str = None) -> Optional[dict]:
         logger = logging.getLogger(__name__)
         if not job_id:
             logger.error('job_id cannot be empty')
@@ -648,7 +661,7 @@ class MongoJobSchema(Schema):
 class ContributorExport(object):
     mongo_collection = 'contributor_exports'
 
-    def __init__(self, contributor_id, gridfs_id, validity_period, data_sources=None):
+    def __init__(self, contributor_id: str, gridfs_id: str, validity_period: ValidityPeriod, data_sources: List[DataSource]=None):
         self.id = str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
@@ -661,14 +674,14 @@ class ContributorExport(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, contributor_id):
+    def get(cls, contributor_id: str) -> Optional['ContributorExport']:
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
         return MongoContributorExportSchema(many=True).load(raw).data
 
     @classmethod
-    def get_last(cls, contributor_id):
+    def get_last(cls, contributor_id: str) -> Optional['ContributorExport']:
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
@@ -705,7 +718,7 @@ class MongoCoverageExportContributorSchema(Schema):
 class CoverageExport(object):
     mongo_collection = 'coverage_exports'
 
-    def __init__(self, coverage_id, gridfs_id, validity_period, contributors=None):
+    def __init__(self, coverage_id: str, gridfs_id: str, validity_period: str, contributors: List[Contributor]=None):
         self.id = str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
@@ -718,14 +731,14 @@ class CoverageExport(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id):
+    def get(cls, coverage_id: str) -> Optional['ContributorExport']:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)
         return MongoCoverageExportSchema(many=True).load(raw).data
 
     @classmethod
-    def get_last(cls, coverage_id):
+    def get_last(cls, coverage_id: str) -> Optional['ContributorExport']:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
