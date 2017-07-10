@@ -29,7 +29,7 @@
 
 import logging.config
 from io import IOBase
-from typing import Union, Any, Optional
+from typing import Union, Any, Optional, List
 import celery
 from celery import Celery
 from collections.abc import Mapping
@@ -132,6 +132,6 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
         return hasher.hexdigest()
 
 
-def setdefault_ids(collections):
+def setdefault_ids(collections: List[dict]):
     for c in collections:
         c.setdefault('id', str(uuid.uuid4()))
