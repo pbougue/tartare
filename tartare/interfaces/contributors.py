@@ -29,6 +29,8 @@
 from typing import Optional
 
 import flask_restful
+import uuid
+import logging
 from flask import Response
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
@@ -41,15 +43,43 @@ from tartare.helper import validate_preprocesses_or_raise, setdefault_ids
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import json_data_validate
 
-
 class Contributor(flask_restful.Resource):
+    @staticmethod
+    def upgrade_dict(source: DataSource, request_data: dict, key: str):
+        map_model = {
+            "data_sources": schema.DataSourceSchema,
+            "preprocesses": schema.PreProcessSchema
+        }
+        existing_id = [d.id for d in source]
+        logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
+        # constructing PATCH data
+        patched_data = None
+        if key in request_data:
+            patched_data = map_model.get(key)(many=True).dump(source).data
+            for item in request_data[key]:
+                if item['id'] in existing_id:
+                    item2update = next((p for p in patched_data if p['id'] == item['id']), None)
+                    if item2update:
+                        item2update.update(item)
+                else:
+                    patched_data.append(item)
+        if patched_data:
+            request_data[key] = patched_data
+
+    @staticmethod
+    def set_ids(collections: dict):
+        for c in collections:
+            c.setdefault('id', str(uuid.uuid4()))
 
     @json_data_validate()
     def post(self):
         post_data = request.json
-        if 'id' not in post_data:
-            raise InvalidArguments('contributor id has to be specified')
-        # first a check on the data_sources id and providing a uuid if not provided
+        if 'data_prefix' not in post_data:
+            raise InvalidArguments('contributor data_prefix has to be specified')
+        # first a check on the contributor id and providing a uuid if not provided
+        post_data.setdefault('id', str(uuid.uuid4()))
+
+        # then a check on the data_sources id and providing a uuid if not provided
         setdefault_ids(post_data.get('data_sources', []))
 
         preprocesses = post_data.get('preprocesses', [])
