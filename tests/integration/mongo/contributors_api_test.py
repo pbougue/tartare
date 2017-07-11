@@ -58,7 +58,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == "contributor data_prefix has to be specified"
+        assert r['error'] == "contributor data_prefix must be specified"
 
     def test_add_contributor_returns_success(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
