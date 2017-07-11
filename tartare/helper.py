@@ -41,7 +41,7 @@ from tartare.processes.processes import PreProcess
 import logging
 from hashlib import md5
 import uuid
-import xml.etree.cElementTree as ElementTree
+
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self: GridOut) -> int:
@@ -134,12 +134,3 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
 def setdefault_ids(collections: List[dict]):
     for c in collections:
         c.setdefault('id', str(uuid.uuid4()))
-
-
-def parse_xml(raw_xml):
-    try:
-        root = ElementTree.fromstring(raw_xml)
-    except ElementTree.ParseError as e:
-        raise Exception("invalid xml: {}".format(e.message))
-
-    return root

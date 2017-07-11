@@ -60,7 +60,7 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: 'Context', preprocess_name: str, params) -> AbstractProcess:
+    def get_preprocess(cls, context: 'Context', preprocess_name: str, params=None) -> AbstractProcess:
         """
         :param context:
         :param preprocess_name: Ruspell, FusioImport, ....
