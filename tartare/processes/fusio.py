@@ -51,8 +51,8 @@ class Fusio(object):
     def __parse_xml(raw_xml):
         try:
             root = ElementTree.fromstring(raw_xml)
-        except ElementTree.ParseError as e:
-            raise FusioException("invalid xml: {}".format(e.message))
+        except (ElementTree.ParseError, TypeError) as e:
+            raise FusioException("invalid xml: {}".format(str(e)))
         return root
 
     def get_action_id(self, raw_xml):
@@ -78,7 +78,7 @@ class Fusio(object):
             raise FusioException(msg)
 
         if response.status_code != 200:
-            FusioException('fusio query failed: {}'.format(response))
+            raise FusioException('fusio query failed: {}'.format(response))
         return response
 
     @retry(retry_on_result=retry_if_action_not_terminated, stop_max_delay=120 * 60 * 1000, wait_fixed=10 * 1000)

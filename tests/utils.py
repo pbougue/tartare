@@ -90,6 +90,10 @@ def mock_zip_file(url, target):
 
 
 def mock_requests_post(url, files, timeout):
+    return get_response()
+
+
+def get_response(status_code=200):
     response = MagicMock()
-    response.status_code = 200
+    response.status_code = status_code
     return response

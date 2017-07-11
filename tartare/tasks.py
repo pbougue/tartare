@@ -233,6 +233,10 @@ def coverage_export(self, coverage: Coverage, job: Job):
         context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         context.fill_contributor_exports(contributors=coverage.contributors)
+
+        models.Job.update(job_id=job.id, state="running", step="preprocess")
+        context = launch(coverage.preprocesses, context)
+
         models.Job.update(job_id=job.id, state="running", step="merge")
         context = coverage_export_functions.merge(coverage, context)
 
