@@ -31,6 +31,7 @@ from importlib import import_module
 from abc import ABCMeta, abstractmethod
 import logging
 from tartare.http_exceptions import InvalidArguments
+from typing import Optional
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -60,7 +61,7 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: 'Context', preprocess_name: str, params=None) -> AbstractProcess:
+    def get_preprocess(cls, context: 'Context', preprocess_name: str, params: Optional[dict]=None) -> AbstractProcess:
         """
         :param context:
         :param preprocess_name: Ruspell, FusioImport, ....

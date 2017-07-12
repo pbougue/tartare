@@ -265,7 +265,7 @@ def launch(processes: list, context: Context) -> Context:
         return context
     tmp_processes = sorted(processes, key=lambda x: ['sequence'])
     for p in tmp_processes:
-        context = PreProcess.get_preprocess(context, p.get('type')).do()
+        context = PreProcess.get_preprocess(context, preprocess_name=p.get('type'), params=p.get('params', None)).do()
     return context
 
 

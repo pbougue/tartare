@@ -32,6 +32,7 @@ from retrying import retry
 import requests
 from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
+from xml.etree.cElementTree import Element
 from tartare import app
 from typing import Optional
 
@@ -50,14 +51,14 @@ class Fusio(object):
         self.url = url
 
     @staticmethod
-    def __parse_xml(raw_xml):
+    def __parse_xml(raw_xml: bytes) -> Element:
         try:
             root = ElementTree.fromstring(raw_xml)
         except (ElementTree.ParseError, TypeError) as e:
             raise FusioException("invalid xml: {}".format(str(e)))
         return root
 
-    def get_action_id(self, raw_xml) -> str:
+    def get_action_id(self, raw_xml: str) -> str:
         root = self.__parse_xml(raw_xml)
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text
@@ -67,7 +68,9 @@ class Fusio(object):
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method, api: Optional[str]=None, data: Optional[dict]=None, files: Optional[dict]=None):
+    def call(self, method, api: Optional[str]=None,
+             data: Optional[dict]=None,
+             files: Optional[dict]=None) -> requests.Response:
         try:
             response = method(self.url + api, data=data, files=files)
         except requests.exceptions.Timeout as e:
