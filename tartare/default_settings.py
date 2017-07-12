@@ -44,6 +44,10 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost/tartare')
 TYR_UPLOAD_TIMEOUT = os.getenv('TYR_UPLOAD_TIMEOUT', 10)
 
+FUSIO_STOP_MAX_ATTEMPT_NUMBER = 100
+# 10 seconds
+FUSIO_FUSIO_WAIT_FIXED = 10*1000
+
 DEFAULT_LICENSE_URL = ''
 DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 

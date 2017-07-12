@@ -60,10 +60,10 @@ class FusioDataUpdate(AbstractProcess):
         }
 
     def do(self):
-        fusio = Fusio(self.params.get("url"))
         for contributor_export in self.context.contributor_exports:
             if not contributor_export.gridfs_id:
                 continue
+            fusio = Fusio(self.params.get("url"))
             resp = fusio.call(requests.post, api='api',
                               data=self._get_data(contributor_export),
                               files=self._get_files(contributor_export.gridfs_id))

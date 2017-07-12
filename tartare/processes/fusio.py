@@ -32,6 +32,7 @@ from retrying import retry
 import requests
 from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
+from tartare import app
 
 
 def retry_if_action_not_terminated(status):
@@ -81,7 +82,9 @@ class Fusio(object):
             raise FusioException('fusio query failed: {}'.format(response))
         return response
 
-    @retry(retry_on_result=retry_if_action_not_terminated, stop_max_delay=120 * 60 * 1000, wait_fixed=10 * 1000)
+    @retry(retry_on_result=retry_if_action_not_terminated,
+           stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
+           wait_fixed=app.config['FUSIO_FUSIO_WAIT_FIXED'])
     def wait_for_action_terminated(self, action_id):
         response = self.call(requests.get, api='info')
         return self.__get_status_by_action_id(action_id, response.content)

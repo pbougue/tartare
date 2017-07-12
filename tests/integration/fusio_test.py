@@ -33,6 +33,7 @@ import pytest
 import mock
 import requests
 from tests.utils import get_response
+from tartare import app
 
 
 def test_get_action_id_none_xml():
@@ -87,3 +88,39 @@ def test_call_fusio_status_404(RequestException):
     with pytest.raises(FusioException) as excinfo:
         Fusio(url='bob').call(requests.post, api='api')
     assert str(excinfo.typename) == "FusioException"
+
+
+wait_for_action_terminated_retry_count = 0
+
+
+def action_status(*args, **kwargs):
+    global wait_for_action_terminated_retry_count
+    wait_for_action_terminated_retry_count += 1
+    response = mock.MagicMock()
+    response.content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+        <Info title="Information sur projet régional">
+            <ActionList ActionCount="1" TerminatedCount="0" WaitingCount="0" AbortedCount="0" WorkingCount="1" \
+            ThreadSuspended="False">
+                <Action ActionType="Mise à jour" ActionCaption="dataupdate" \
+                ActionDesc="" Contributor="NAN - Nantes Métropole (TAN)" ContributorId="5" \
+                ActionId="1607281547155684" LastError="">
+                    <PostDate><Year>2016</Year><Month>07</Month><Day>28</Day></PostDate>
+                    <PostTime><Hour>15</Hour><Minute>47</Minute><Second>15</Second></PostTime>
+                    <WorkStartDate><Year>2016</Year><Month>07</Month><Day>28</Day></WorkStartDate>
+                    <WorkStartTime><Hour>15</Hour><Minute>47</Minute><Second>17</Second></WorkStartTime>
+                    <MiddleDuration><Day>0</Day><Hour>00</Hour><Minute>00</Minute><Second>00</Second></MiddleDuration>
+                    <WorkDuration><Day>0</Day><Hour>00</Hour><Minute>03</Minute><Second>09</Second></WorkDuration>
+                    <ActionProgression Status="Working" Description="" StepCount="5" CurrentStep="5"/>
+                </Action>
+            </ActionList>
+        </Info>"""
+    response.status_code = 200
+
+    return response
+from retrying import RetryError
+@mock.patch('requests.get',  side_effect=action_status)
+def test_wait_for_action_terminated_retry(action_status):
+    with pytest.raises(RetryError) as excinfo:
+        Fusio(url='bob').wait_for_action_terminated('1607281547155684')
+    assert wait_for_action_terminated_retry_count == app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER']
+

@@ -1,0 +1,6 @@
+# encoding: utf-8
+
+FUSIO_STOP_MAX_ATTEMPT_NUMBER = 3
+# 10 seconds
+FUSIO_FUSIO_WAIT_FIXED = 1*1000
+
