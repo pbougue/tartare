@@ -58,7 +58,7 @@ class Fusio(object):
             raise FusioException("invalid xml: {}".format(str(e)))
         return root
 
-    def get_action_id(self, raw_xml: str) -> str:
+    def get_action_id(self, raw_xml: bytes) -> str:
         root = self.__parse_xml(raw_xml)
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text

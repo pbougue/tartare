@@ -33,7 +33,6 @@ import requests
 from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
-from gridfs.grid_file import GridOut
 
 
 class FusioDataUpdate(AbstractProcess):
