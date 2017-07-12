@@ -34,7 +34,7 @@ from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
 from xml.etree.cElementTree import Element
 from tartare import app
-from typing import Optional
+from typing import Optional, Callable
 
 
 def retry_if_action_not_terminated(status: str) -> bool:
@@ -68,7 +68,7 @@ class Fusio(object):
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method, api: Optional[str]=None,
+    def call(self, method: Callable, api: Optional[str]=None,
              data: Optional[dict]=None,
              files: Optional[dict]=None) -> requests.Response:
         try:
@@ -88,7 +88,7 @@ class Fusio(object):
 
     @retry(retry_on_result=retry_if_action_not_terminated,
            stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
-           wait_fixed=app.config['FUSIO_FUSIO_WAIT_FIXED'])
+           wait_fixed=app.config['FUSIO_WAIT_FIXED'])
     def wait_for_action_terminated(self, action_id: str) -> str:
         response = self.call(requests.get, api='info')
         return self.__get_status_by_action_id(action_id, response.content)
