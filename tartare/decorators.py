@@ -87,3 +87,19 @@ class validate_contributors(object):
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)
         return wrapper
+
+
+class validate_patch_coverages(object):
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            post_data = request.json
+            if "environments" in post_data:
+                for coverage in post_data.get("environments"):
+                    coverage = post_data.get("environments").get(coverage)
+                    if "publication_platforms" in coverage:
+                        msg = "'publication_platforms' field can't be updated"
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
+            return func(*args, **kwargs)
+        return wrapper
