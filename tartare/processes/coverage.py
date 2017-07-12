@@ -42,8 +42,8 @@ class FusioDataUpdate(AbstractProcess):
         }
 
     @staticmethod
-    def _format_date(_date: date, fromat: str='%d/%m/%Y') -> str:
-        return _date.strftime(fromat)
+    def _format_date(_date: date, format: str='%d/%m/%Y') -> str:
+        return _date.strftime(format)
 
     def _get_data(self, contributor_export):
         validity_period = contributor_export.validity_period

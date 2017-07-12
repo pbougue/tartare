@@ -33,9 +33,10 @@ import requests
 from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
 from tartare import app
+from typing import Optional
 
 
-def retry_if_action_not_terminated(status):
+def retry_if_action_not_terminated(status: str) -> bool:
     if not status:
         raise FusioException('error publishing data on fusio: action not found')
 
@@ -45,7 +46,7 @@ def retry_if_action_not_terminated(status):
 
 
 class Fusio(object):
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.url = url
 
     @staticmethod
@@ -56,17 +57,17 @@ class Fusio(object):
             raise FusioException("invalid xml: {}".format(str(e)))
         return root
 
-    def get_action_id(self, raw_xml):
+    def get_action_id(self, raw_xml) -> str:
         root = self.__parse_xml(raw_xml)
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text
 
-    def __get_status_by_action_id(self, action_id, raw_xml):
+    def __get_status_by_action_id(self, action_id: str, raw_xml: str) -> str:
         root = self.__parse_xml(raw_xml)
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method, api=None, data=None, files=None):
+    def call(self, method, api: Optional[str]=None, data: Optional[dict]=None, files: Optional[dict]=None):
         try:
             response = method(self.url + api, data=data, files=files)
         except requests.exceptions.Timeout as e:
@@ -85,6 +86,6 @@ class Fusio(object):
     @retry(retry_on_result=retry_if_action_not_terminated,
            stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
            wait_fixed=app.config['FUSIO_FUSIO_WAIT_FIXED'])
-    def wait_for_action_terminated(self, action_id):
+    def wait_for_action_terminated(self, action_id: str) -> str:
         response = self.call(requests.get, api='info')
         return self.__get_status_by_action_id(action_id, response.content)
