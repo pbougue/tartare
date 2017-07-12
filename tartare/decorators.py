@@ -97,7 +97,7 @@ class validate_patch_coverages(object):
             if "environments" in post_data:
                 for coverage in post_data.get("environments"):
                     coverage = post_data.get("environments").get(coverage)
-                    if "publication_platforms" in coverage:
+                    if coverage is not None and "publication_platforms" in coverage:
                         msg = "'publication_platforms' field can't be updated"
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
