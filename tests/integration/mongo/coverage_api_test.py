@@ -245,6 +245,10 @@ class TestCoverageApi(TartareFixture):
         assert 'preproduction' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
 
+    def test_update_coverage_environment_with_validation(self):
+        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
+        assert raw.status_code == 201
+
         raw = self.patch('/coverages/id_test',
                          '''{"environments" : {
                          "preproduction": {"publication_platform":  [ { "options": { "authent": { "username": "test" }, "directory": "/" }}]},
