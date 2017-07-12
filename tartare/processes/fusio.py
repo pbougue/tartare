@@ -37,7 +37,7 @@ from tartare import app
 from typing import Optional, Callable
 
 
-def retry_if_action_not_terminated(status: str) -> bool:
+def is_running(status: str) -> bool:
     if not status:
         raise FusioException('error publishing data on fusio: action not found')
 
@@ -86,7 +86,7 @@ class Fusio(object):
             raise FusioException('fusio query failed: {}'.format(response))
         return response
 
-    @retry(retry_on_result=retry_if_action_not_terminated,
+    @retry(retry_on_result=is_running,
            stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
            wait_fixed=app.config['FUSIO_WAIT_FIXED'])
     def wait_for_action_terminated(self, action_id: str) -> str:
