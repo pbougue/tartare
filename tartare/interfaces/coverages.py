@@ -37,7 +37,7 @@ from tartare.interfaces import schema
 from marshmallow import MarshalResult, ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate, validate_contributors
+from tartare.decorators import json_data_validate, validate_contributors, validate_patch_coverages
 from tartare.helper import validate_preprocesses_or_raise, setdefault_ids
 
 
@@ -102,6 +102,7 @@ class Coverage(flask_restful.Resource):
 
     @json_data_validate()
     @validate_contributors()
+    @validate_patch_coverages()
     def patch(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:

@@ -245,6 +245,19 @@ class TestCoverageApi(TartareFixture):
         assert 'preproduction' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
 
+    def test_update_coverage_environment_with_validation(self):
+        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
+        assert raw.status_code == 201
+
+        raw = self.patch('/coverages/id_test',
+                         '''{"environments" : {
+                         "preproduction": {"publication_platform":  [ { "options": { "authent": { "username": "test" }, "directory": "/" }}]},
+                         "production": null
+                        }}''')
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'error' in r
+
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
         ('http://license.org/othercompany', 'my license full name', 201),

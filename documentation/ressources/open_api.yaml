@@ -139,7 +139,7 @@ paths:
           description: Attributes of the coverage {coverage_id} that needs to be modified
           required: true
           schema:
-            $ref: "#/definitions/coverage"
+            $ref: "#/definitions/coverage_patch"
       responses:
         200:
           description: Modified coverage
@@ -1108,6 +1108,27 @@ definitions:
         items:
           $ref: "#/definitions/coverage"
 
+  coverage_patch:
+    type: object
+    required: [
+      id,
+      name
+    ]
+    properties:
+      id:
+        type: string
+        example: fr-auv
+      name:
+        type: string
+        example: auv
+      grid_calendars_id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
+      environments:
+        $ref: "#/definitions/environments_patch"
+      contributors:
+        $ref: "#/definitions/array_of_strings"
+
   coverage:
     type: object
     required: [
@@ -1141,6 +1162,29 @@ definitions:
       id:
         type: string
         example: ABCD
+
+  environments_patch:
+    type: object
+    properties:
+      production:
+        $ref: "#/definitions/environment_type_patch"
+      preproduction:
+        $ref: "#/definitions/environment_type_patch"
+      integration:
+        $ref: "#/definitions/environment_type_patch"
+
+  environment_type_patch:
+    type: object
+    required: [
+      name
+    ]
+    properties:
+      name:
+        type: string
+        example: integration
+      current_ntfs_id:
+        type: string
+        example: 5810cb2d3c96b7000108d074
 
   environments:
     type: object
