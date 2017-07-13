@@ -29,12 +29,9 @@
 from typing import Optional
 
 import flask_restful
-import uuid
-import logging
 from flask import Response
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
-from tartare.core.models import DataSource
 from flask import request
 from tartare.interfaces import schema
 from marshmallow import ValidationError
@@ -44,18 +41,13 @@ from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import json_data_validate
 
 class Contributor(flask_restful.Resource):
-    @staticmethod
-    def set_ids(collections: dict):
-        for c in collections:
-            c.setdefault('id', str(uuid.uuid4()))
-
     @json_data_validate()
     def post(self):
         post_data = request.json
         if 'data_prefix' not in post_data:
             raise InvalidArguments('contributor data_prefix must be specified')
         # first a check on the contributor id and providing a uuid if not provided
-        post_data.setdefault('id', str(uuid.uuid4()))
+        setdefault_ids([post_data])
 
         # then a check on the data_sources id and providing a uuid if not provided
         setdefault_ids(post_data.get('data_sources', []))
