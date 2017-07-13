@@ -39,7 +39,7 @@ from flask_script import Manager
 
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')
-app.config.from_envvar('TARTARE_CONFIG_FILE', silent=False)
+app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
 app.config["ERROR_404_HELP"] = False  # Disable help message in 404 response
 manager = Manager(app)
 
