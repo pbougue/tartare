@@ -1,4 +1,4 @@
-FROM python:3.4-alpine
+FROM python:3.5-alpine
 
 RUN addgroup -g 8110 tartare
 RUN adduser -H -D -u 8110 -G tartare tartare
