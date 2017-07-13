@@ -32,7 +32,7 @@ from typing import List
 
 
 class Context():
-    def __init__(self, instance: str = 'contributor'):
+    def __init__(self, instance: str='contributor'):
         self.instance = instance
         self.data_sources_fetched = []
         self.contributor_exports = []
