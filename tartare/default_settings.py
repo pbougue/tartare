@@ -58,13 +58,13 @@ CALENDAR_FILE = 'export_calendars.zip'
 
 MAILER = {
     'smtp': {
-        'host': 'localhost',
+        'host': os.getenv('MAILER_SMTP_HOST', 'smtp.canaltp.local'),
         'port': 25,
         'timeout': 1
     },
-    'from': 'from@canaltp.fr',
-    'to': 'to@canaltp.fr',
-    'cc': [],
+    'from': os.getenv('MAILER_FROM', 'tartare@canaltp.fr'),
+    'to': os.getenv('MAILER_TO', 'charles.beaute@kisio.org'),
+    'cc': os.getenv('MAILER_CC').split(',') if os.getenv('MAILER_CC') else []
 }
 
 LOGGER = {
@@ -77,7 +77,7 @@ LOGGER = {
     },
     'handlers': {
         'default': {
-            'level': 'DEBUG',
+            'level': os.getenv('LOGGER_LEVEL', 'DEBUG'),
             'class': 'logging.StreamHandler',
             'formatter': 'default',
         },
@@ -85,10 +85,10 @@ LOGGER = {
     'loggers': {
         '': {
             'handlers': ['default'],
-            'level': 'DEBUG',
+            'level': os.getenv('LOGGER_LEVEL', 'DEBUG')
         },
         'celery': {
-            'level': 'INFO',
+            'level': 'INFO'
         },
     }
 }
