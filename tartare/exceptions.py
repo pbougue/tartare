@@ -46,3 +46,7 @@ class InvalidFile(Exception):
 
 class ProtocolException(Exception):
     pass
+
+
+class FusioException(Exception):
+    pass

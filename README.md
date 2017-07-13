@@ -23,7 +23,7 @@ pip install -r requirements_dev.txt
 ## Run the application (for development)
 ```
 cd path/to/tartare
-honcho start
+TARTARE_CONFIG_FILE=default_settings.py honcho start
 ```
 
 ## Run the application with [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
@@ -69,5 +69,5 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ## Tests
 ```
 cd path/to/tartare
-PYTHONPATH=. py.test tests
+TARTARE_CONFIG_FILE=../tests/testing_settings.py PYTHONPATH=. py.test tests
 ```

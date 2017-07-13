@@ -233,6 +233,10 @@ def coverage_export(self, coverage: Coverage, job: Job):
         context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         context.fill_contributor_exports(contributors=coverage.contributors)
+
+        models.Job.update(job_id=job.id, state="running", step="preprocess")
+        context = launch(coverage.preprocesses, context)
+
         models.Job.update(job_id=job.id, state="running", step="merge")
         context = coverage_export_functions.merge(coverage, context)
 
@@ -261,7 +265,7 @@ def launch(processes: list, context: Context) -> Context:
         return context
     tmp_processes = sorted(processes, key=lambda x: ['sequence'])
     for p in tmp_processes:
-        context = PreProcess.get_preprocess(context, p.get('type')).do()
+        context = PreProcess.get_preprocess(context, preprocess_name=p.type, params=p.params).do()
     return context
 
 

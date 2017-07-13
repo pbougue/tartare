@@ -39,7 +39,6 @@ from requests import Response
 from gridfs.grid_file import GridOut
 from tartare.processes.processes import PreProcess
 import logging
-from tartare.http_exceptions import InvalidArguments
 from hashlib import md5
 import uuid
 
