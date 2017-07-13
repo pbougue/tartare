@@ -34,6 +34,29 @@ import mock
 import requests
 from tests.utils import get_response
 from tartare import app
+from tartare.processes.fusio import is_running
+
+
+def test_is_running_none_status():
+    with pytest.raises(FusioException) as excinfo:
+        is_running(status=None)
+    assert str(excinfo.value) == "Error publishing data on fusio: action not found"
+    assert str(excinfo.typename) == "FusioException"
+
+
+def test_is_running_abort_status():
+    with pytest.raises(FusioException) as excinfo:
+        is_running(status='aborted')
+    assert str(excinfo.value) == "Error publishing data on fusio: action aborted"
+    assert str(excinfo.typename) == "FusioException"
+
+
+def test_is_running_terminated_status():
+    assert not is_running(status='terminated')
+
+
+def test_is_running_action():
+    assert is_running(status='working')
 
 
 def test_get_action_id_none_xml():

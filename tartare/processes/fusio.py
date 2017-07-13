@@ -39,11 +39,11 @@ from typing import Optional, Callable
 
 def is_running(status: str) -> bool:
     if not status:
-        raise FusioException('error publishing data on fusio: action not found')
+        raise FusioException('Error publishing data on fusio: action not found')
 
-    if status == 'Aborted':
-        raise FusioException('error publishing data on fusio: action aborted')
-    return status != 'Terminated'
+    if status.lower() == 'aborted':
+        raise FusioException('Error publishing data on fusio: action aborted')
+    return status.lower() != 'terminated'
 
 
 class Fusio(object):
