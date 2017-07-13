@@ -54,7 +54,6 @@ paths:
 
 
   /coverages:
-
     get:
       summary: Display available coverages
       tags:
@@ -1149,6 +1148,19 @@ definitions:
         $ref: "#/definitions/environments"
       contributors:
         $ref: "#/definitions/array_of_strings"
+      preprocesses:
+        type: array
+        items:
+          $ref: "#/definitions/preprocess"
+        example:
+          - {
+            id: "fusio",
+            type: "FusioDataUpdate",
+            params: {
+              url: "http://fusio_host/cgi-bin/fusio.dll/api"
+            },
+            sequence: 0
+          }
 
   array_of_strings:
     type: array
