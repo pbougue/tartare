@@ -1,11 +1,8 @@
 # How to create contributor
 
 ```bash
-curl -X POST "http://tartare.localhost/contributors"
-```
-```json
-curl -X POST "http://tartare.localhost/contributors"
-{
+curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: application/json" -d \
+'{
   "id": "AMI",
   "name": "contrib-amien",
   "data_prefix": "AMI",
@@ -19,16 +16,14 @@ curl -X POST "http://tartare.localhost/contributors"
     	}
     }
   ]
-}
+}'
 ```
 
 # How to create coverage with preprocesses
 
 ```bash
-curl -X POST "http://tartare.localhost/coverages"
-```
-```json
-{
+curl -X POST "http://tartare.localhost/coverages" -H "Content-Type: application/json" -d \
+'{
     "id": "AMI",
     "name": "AMI",
     "preprocesses": [
@@ -63,7 +58,7 @@ curl -X POST "http://tartare.localhost/coverages"
     	"AMI"
     ]
 
-}
+}'
 ```
 
 # How to run export
