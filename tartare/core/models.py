@@ -159,7 +159,8 @@ class GenericPreProcess(object):
         self.params = params if params else {}
         self.type = type
 
-    def save_data(self, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id: str):
+    def save_data(self, class_name: Union['Contributor', 'Coverage'],
+                  mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id: str):
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('Bad {} {}'.format(class_name.label, object_id))
@@ -171,7 +172,8 @@ class GenericPreProcess(object):
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id,
+    def get_data(cls, class_name: Union['Contributor', 'Coverage'],
+                 mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id,
                  preprocess_id) -> 'PreProcess':
         if object_id is not None:
             data = class_name.get(object_id)
@@ -193,7 +195,8 @@ class GenericPreProcess(object):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id,
+    def delete_data(cls, class_name: Union['Contributor', 'Coverage'],
+                    mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id,
                     preprocess_id) -> int:
         data = class_name.get(object_id)
         if data is None:
@@ -206,7 +209,8 @@ class GenericPreProcess(object):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id, preprocess_id,
+    def update_data(cls, class_name: Union['Contributor', 'Coverage'],
+                    mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id, preprocess_id,
                     preprocess: Optional[dict] = None) -> 'PreProcess':
         data = class_name.get(object_id)
         if not data:
@@ -661,7 +665,8 @@ class MongoJobSchema(Schema):
 class ContributorExport(object):
     mongo_collection = 'contributor_exports'
 
-    def __init__(self, contributor_id: str, gridfs_id: str, validity_period: ValidityPeriod, data_sources: List[DataSource]=None):
+    def __init__(self, contributor_id: str, gridfs_id: str, validity_period: ValidityPeriod,
+                 data_sources: List[DataSource] = None):
         self.id = str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
@@ -718,7 +723,7 @@ class MongoCoverageExportContributorSchema(Schema):
 class CoverageExport(object):
     mongo_collection = 'coverage_exports'
 
-    def __init__(self, coverage_id: str, gridfs_id: str, validity_period: str, contributors: List[Contributor]=None):
+    def __init__(self, coverage_id: str, gridfs_id: str, validity_period: str, contributors: List[Contributor] = None):
         self.id = str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
