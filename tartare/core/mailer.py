@@ -73,6 +73,7 @@ class Mailer(object):
         mail = MIMEMultipart("alternative")
         mail["From"] = self.from_
         mail["To"] = self.to
+        mail["Cc"] = self.cc
         mail["Subject"] = 'Problem Tartare'
         mail['X-MSMail-Priority'] = 'High'
         mail.attach(MIMEText(self.get_message(job), 'plain', "utf-8"))
