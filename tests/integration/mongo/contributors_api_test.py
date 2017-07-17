@@ -49,10 +49,16 @@ class TestContributors(TartareFixture):
 
     def test_add_contributor_without_id(self):
         raw = self.post('/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+
+    def test_add_contributor_without_data_prefix(self):
+        raw = self.post('/contributors', '{"id": "id_test", "name":"whatever"}')
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == "contributor id has to be specified"
+        assert r['error'] == "contributor data_prefix must be specified"
 
     def test_add_contributor_returns_success(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
