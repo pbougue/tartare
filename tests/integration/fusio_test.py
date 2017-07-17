@@ -61,8 +61,8 @@ def test_is_running_action():
 
 def test_get_action_id_none_xml():
     with pytest.raises(FusioException) as excinfo:
-        Fusio(url=None).get_action_id(raw_xml=None)
-    assert str(excinfo.value) == "invalid xml: 'NoneType' does not support the buffer interface"
+        Fusio(url=None).get_action_id(raw_xml=bytes())
+    assert str(excinfo.value).startswith('invalid xml:')
     assert str(excinfo.typename) == "FusioException"
 
 
