@@ -28,6 +28,7 @@
 # www.navitia.io
 
 import logging
+from datetime import date
 from retrying import retry
 import requests
 from types import MethodType
@@ -49,8 +50,8 @@ def is_running(status: str) -> bool:
 
 class Fusio(object):
     @staticmethod
-    def date_format() -> str:
-        return '%d/%m/%Y'
+    def format_date(date: date, format='%d/%m/%Y') -> str:
+        return date.strftime(format)
 
     def __init__(self, url: str) -> None:
         self.url = url
@@ -73,9 +74,9 @@ class Fusio(object):
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method: MethodType, api: Optional[str] = None,
-             data: Optional[dict] = None,
-             files: Optional[dict] = None) -> requests.Response:
+    def call(self, method: MethodType, api: Optional[str]=None,
+             data: Optional[dict]=None,
+             files: Optional[dict]=None) -> requests.Response:
         try:
             response = method(self.url.rstrip('/') + '/' + api, data=data, files=files)
         except requests.exceptions.Timeout as e:

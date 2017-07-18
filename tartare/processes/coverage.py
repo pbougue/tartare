@@ -32,7 +32,6 @@ from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
 
@@ -53,8 +52,8 @@ class FusioDataUpdate(AbstractProcess):
             'dutype': 'update',
             'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
             'libelle': 'unlibelle',
-            'DateDebut': validity_period.start_date.strftime(Fusio.date_format()),
-            'DateFin': validity_period.end_date.strftime(Fusio.date_format()),
+            'DateDebut': Fusio.format_date(validity_period.start_date),
+            'DateFin': Fusio.format_date(validity_period.end_date),
             'content-type': 'multipart/form-data',
         }
 
@@ -74,14 +73,13 @@ class FusioImport(AbstractProcess):
     def do(self):
         fusio = Fusio(self.params.get("url"))
         min_contributor = min(self.context.contributor_exports,
-                              key=lambda contrib: contrib.get('validity_period').start_date)
+                              key=lambda contrib: contrib.validity_period.start_date)
         max_contributor = min(self.context.contributor_exports,
-                              key=lambda contrib: contrib.get('validity_period').end_date)
+                              key=lambda contrib: contrib.validity_period.end_date)
         resp = fusio.call(requests.post, api='api',
                           data={
-                              'DateDebut': min_contributor.get('validity_period').start_date.strftime(
-                                  Fusio.date_format()),
-                              'DateFin': max_contributor.get('validity_period').end_date.strftime(Fusio.date_format()),
+                              'DateDebut': Fusio.format_date(min_contributor.validity_period.start_date),
+                              'DateFin': Fusio.format_date(max_contributor.validity_period.end_date),
                               'action': 'regionalimport',
                           })
         fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
