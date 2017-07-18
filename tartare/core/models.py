@@ -765,3 +765,7 @@ class MongoCoverageExportSchema(Schema):
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema)
     contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)
+
+    @post_load
+    def make_coverage_export(self, data):
+        return CoverageExport(**data)

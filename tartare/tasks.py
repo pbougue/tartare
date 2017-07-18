@@ -154,13 +154,13 @@ def publish_data_on_platform(self, platform: Platform, coverage: Coverage, envir
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
-    file = gridfs_handler.get_file_from_gridfs(coverage_export.get('gridfs_id'))
+    file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
     try:
         publisher = _get_publisher(platform, job)
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(coverage_export.get('gridfs_id'))
+        current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
         msg = 'publish data on  platform failed, error {}'.format(str(exc))
