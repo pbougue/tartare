@@ -126,8 +126,8 @@ class ODSPublisher(AbstractPublisher):
                 'Format': 'GTFS',
                 'Type file': 'Global',
                 'Download': 'gtfs.zip',
-                'Validity start date': coverage_export.get('validity_period').start_date.strftime('%Y%m%d'),
-                'Validity end date': coverage_export.get('validity_period').end_date.strftime('%Y%m%d'),
+                'Validity start date': coverage_export.validity_period.start_date.strftime('%Y%m%d'),
+                'Validity end date': coverage_export.validity_period.end_date.strftime('%Y%m%d'),
                 'Licence': coverage.license.name,
                 'Source link': coverage.license.url,
                 'Publication update date': datetime.datetime.now().strftime('%d/%m/%Y')

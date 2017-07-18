@@ -48,13 +48,13 @@ class FusioDataUpdate(AbstractProcess):
         return _date.strftime(format)
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
-        validity_period = contributor_export.get('validity_period')
+        validity_period = contributor_export.validity_period
         return {
             'action': 'dataupdate',
-            'contributorexternalcode': contributor_export.get('contributor_id'),
+            'contributorexternalcode': contributor_export.contributor_id,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': contributor_export.get('data_sources')[0].data_source_id,
+            'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
             'libelle': 'unlibelle',
             'DateDebut': self._format_date(validity_period.start_date),
             'DateFin': self._format_date(validity_period.end_date),
@@ -64,11 +64,11 @@ class FusioDataUpdate(AbstractProcess):
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         for contributor_export in self.context.contributor_exports:
-            if not contributor_export.get('gridfs_id'):
+            if not contributor_export.gridfs_id:
                 continue
             resp = fusio.call(requests.post, api='api',
                               data=self._get_data(contributor_export),
-                              files=self._get_files(contributor_export.get('gridfs_id')))
+                              files=self._get_files(contributor_export.gridfs_id))
             fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
         return self.context
 

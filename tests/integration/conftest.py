@@ -45,15 +45,6 @@ def fixture_dir():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def local_celery():
-    """
-    celery tasks aren't deferred, they are executed locally by blocking
-    """
-    tartare.app.config['CELERY_ALWAYS_EAGER'] = True
-    tartare.app.config['CELERY_TASK_EAGER_PROPAGATES'] = True
-    tartare.celery.conf.update(tartare.app.config)
-
-@pytest.fixture(scope="session", autouse=True)
 def not_send_mail():
     def mock_send(arg):
         pass
