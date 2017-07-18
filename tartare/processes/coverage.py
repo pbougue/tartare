@@ -26,6 +26,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
+
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
@@ -36,16 +38,11 @@ from tartare.core.context import Context
 
 
 class FusioDataUpdate(AbstractProcess):
-
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
             "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
         }
-
-    @staticmethod
-    def _format_date(_date: date, format: str='%d/%m/%Y') -> str:
-        return _date.strftime(format)
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
         validity_period = contributor_export.validity_period
@@ -56,8 +53,8 @@ class FusioDataUpdate(AbstractProcess):
             'dutype': 'update',
             'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
             'libelle': 'unlibelle',
-            'DateDebut': self._format_date(validity_period.start_date),
-            'DateFin': self._format_date(validity_period.end_date),
+            'DateDebut': validity_period.start_date.strftime(Fusio.date_format()),
+            'DateFin': validity_period.end_date.strftime(Fusio.date_format()),
             'content-type': 'multipart/form-data',
         }
 
@@ -74,13 +71,24 @@ class FusioDataUpdate(AbstractProcess):
 
 
 class FusioImport(AbstractProcess):
-
     def do(self):
+        fusio = Fusio(self.params.get("url"))
+        min_contributor = min(self.context.contributor_exports,
+                              key=lambda contrib: contrib.get('validity_period').start_date)
+        max_contributor = min(self.context.contributor_exports,
+                              key=lambda contrib: contrib.get('validity_period').end_date)
+        resp = fusio.call(requests.post, api='api',
+                          data={
+                              'DateDebut': min_contributor.get('validity_period').start_date.strftime(
+                                  Fusio.date_format()),
+                              'DateFin': max_contributor.get('validity_period').end_date.strftime(Fusio.date_format()),
+                              'action': 'regionalimport',
+                          })
+        fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
         return self.context
 
 
 class FusioPreProd(AbstractProcess):
-
     def do(self):
         fusio = Fusio(self.params.get("url"))
         resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
@@ -89,7 +97,5 @@ class FusioPreProd(AbstractProcess):
 
 
 class FusioExport(AbstractProcess):
-
     def do(self):
         return self.context
-

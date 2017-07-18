@@ -13,6 +13,17 @@ List of preprocesses for coverages
     "sequence": 0
  }
 ```
+### FusioImport
+```json
+{
+    "id": "my-preprocess-id",
+    "type": "FusioImport",
+    "params": {
+        "url": "http://fusio_host/cgi-bin/fusio.dll/"
+    },
+    "sequence": 1
+ }
+```
 
 ### FusioPreProd
 ```json
