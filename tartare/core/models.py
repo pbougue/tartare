@@ -681,7 +681,7 @@ class ContributorExport(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, contributor_id: str) -> Optional(List['ContributorExport']):
+    def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
