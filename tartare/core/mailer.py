@@ -80,12 +80,15 @@ class Mailer(object):
         mail.attach(attachment)
         return mail
 
+    def get_to_addrs(self):
+        return [self.to] + self.cc.split(',') if self.cc else self.to
+
     def send(self, mail: MIMEMultipart):
         server = smtplib.SMTP()
         server.timeout = self.timeout
         try:
             server.connect(host=self.host, port=self.port)
-            server.sendmail(self.from_, [self.to] + self.cc.split(','), mail.as_string())
+            server.sendmail(self.from_, self.get_to_addrs(), mail.as_string())
         except smtplib.SMTPException as exception:
             logging.getLogger(__name__).fatal("Sendmail error [from = %s, to = %s], error message :%s" %
                                               (self.from_, self.to, str(exception)))
