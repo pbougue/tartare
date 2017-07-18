@@ -147,6 +147,8 @@ class ValidityPeriodFinder(object):
                 dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
                                    delimiter=',', skiprows=1, usecols=[header_date], dtype=np.datetime64)
 
+                if not dates.size:
+                    return
                 exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
                                             delimiter=',', skiprows=1, usecols=[header_exception_type], dtype=np.int)
             except ValueError as e:

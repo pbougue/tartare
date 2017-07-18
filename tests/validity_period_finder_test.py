@@ -164,3 +164,11 @@ def test_calendar_with_headers_only():
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
     assert str(excinfo.value).startswith('Impossible to parse file calendar.txt,')
+
+
+def test_calendar_with_headers_only():
+    finder = ValidityPeriodFinder()
+    file = '{}/{}'.format(current_path, 'validity_period/calendar_dates_with_empty_line.zip')
+    start_date, end_date =finder.get_validity_period(file)
+    assert start_date == date(2017, 1, 2)
+    assert end_date == date(2017, 1, 20)
