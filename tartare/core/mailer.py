@@ -89,6 +89,7 @@ class Mailer(object):
         try:
             server.connect(host=self.host, port=self.port)
             server.sendmail(self.from_, self.get_to_addrs(), mail.as_string())
+            logging.getLogger(__name__).debug("Mail sent to %s" % self.get_to_addrs())
         except smtplib.SMTPException as exception:
             logging.getLogger(__name__).fatal("Sendmail error [from = %s, to = %s], error message :%s" %
                                               (self.from_, self.to, str(exception)))
