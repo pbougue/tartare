@@ -64,7 +64,7 @@ MAILER = {
     },
     'from': os.getenv('MAILER_FROM', 'tartare@canaltp.fr'),
     'to': os.getenv('MAILER_TO', 'charles.beaute@kisio.org'),
-    'cc': os.getenv('MAILER_CC').split(',') if os.getenv('MAILER_CC') else []
+    'cc': os.getenv('MAILER_CC') if os.getenv('MAILER_CC') else ''
 }
 
 LOGGER = {
