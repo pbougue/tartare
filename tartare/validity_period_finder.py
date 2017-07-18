@@ -148,6 +148,7 @@ class ValidityPeriodFinder(object):
                                    delimiter=',', skiprows=1, usecols=[header_date], dtype=np.datetime64)
 
                 if not dates.size:
+                    logging.getLogger(__name__).debug('Calendar_dates is empty file')
                     return
                 exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
                                             delimiter=',', skiprows=1, usecols=[header_exception_type], dtype=np.int)
