@@ -64,10 +64,13 @@ Serving Flask app "tartare.api"
 Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ```
 
-
-
 ## Tests
 ```
 cd path/to/tartare
 TARTARE_CONFIG_FILE=../tests/testing_settings.py PYTHONPATH=. py.test tests
+```
+
+### Type checking
+```
+mypy --disallow-untyped-defs --ignore-missing-imports tartare
 ```
