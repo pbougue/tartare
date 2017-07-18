@@ -72,7 +72,7 @@ class Fusio(object):
              data: Optional[dict]=None,
              files: Optional[dict]=None) -> requests.Response:
         try:
-            response = method(self.url + api, data=data, files=files)
+            response = method(self.url.rstrip('/') + '/' + api, data=data, files=files)
         except requests.exceptions.Timeout as e:
             msg = 'call to fusio timeout, error: {}'.format(str(e))
             logging.getLogger(__name__).error(msg)
