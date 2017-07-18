@@ -70,7 +70,7 @@ class ValidityPeriod(object):
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str = None, validity_period: ValidityPeriod = None):
+    def __init__(self, data_source_id: str=None, validity_period: ValidityPeriod=None):
         self.data_source_id = data_source_id
         self.validity_period = validity_period
 
@@ -681,7 +681,7 @@ class ContributorExport(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, contributor_id: str) -> List['ContributorExport']:
+    def get(cls, contributor_id: str) -> Optional(List['ContributorExport']):
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1)
