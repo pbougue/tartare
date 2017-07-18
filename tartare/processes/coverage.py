@@ -57,7 +57,7 @@ class FusioDataUpdate(AbstractProcess):
             'serviceexternalcode': contributor_export.get('data_sources')[0].data_source_id,
             'libelle': 'unlibelle',
             'DateDebut': self._format_date(validity_period.start_date),
-            'DateFin': self._format_date(validity_period.start_date),
+            'DateFin': self._format_date(validity_period.end_date),
             'content-type': 'multipart/form-data',
         }
 
@@ -82,6 +82,10 @@ class FusioImport(AbstractProcess):
 class FusioPreProd(AbstractProcess):
 
     def do(self):
+        fusio = Fusio(self.params.get("url"))
+        for contributor_export in self.context.contributor_exports:
+            resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
+            fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
         return self.context
 
 
