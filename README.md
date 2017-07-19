@@ -3,21 +3,17 @@ data integration
 The global architecture is available in the [architecture.md](documentation/architecture.md) file.
 
 ## Requirements
-- python 3.4
+- python 3.5
 - [RabbitMQ](https://www.rabbitmq.com/)
+- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
 
 ## Installation
 
-You can use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) for creating virtual environments.
-
 ```
-mkvirtualenv tartare -p python3.4
+cd path/to/tartare
+mkvirtualenv tartare -p python3.5
 workon tartare
-```
-
-Installation of dependencies
-```
-pip install -r requirements_dev.txt
+make build
 ```
 
 ## Run the application (for development)
@@ -67,10 +63,15 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ## Tests
 ```
 cd path/to/tartare
-TARTARE_CONFIG_FILE=../tests/testing_settings.py PYTHONPATH=. py.test tests
+mkvirtualenv tartare -p python3.5
+workon tartare
+make test
 ```
 
 ### Type checking
 ```
-mypy --disallow-untyped-defs --ignore-missing-imports tartare
+cd path/to/tartare
+mkvirtualenv tartare -p python3.5
+workon tartare
+make check
 ```

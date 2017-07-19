@@ -1,13 +1,14 @@
-VIRTUALENV_DIR=venv
-VIRTUALENV_BIN_DIR=$(VIRTUALENV_DIR)/bin
-PYTHONPATH=$(VIRTUALENV_BIN_DIR)/python
+build:
+	pip install -r requirements.txt
 
-build: clean
-		virtualenv venv -p python3.5
-		$(VIRTUALENV_BIN_DIR)/pip install -r requirements_dev.txt
+build_dev:
+	pip install -r requirements_dev.txt
+
+test: build_dev
+	TARTARE_CONFIG_FILE=../tests/testing_settings.py py.test tests --cov=tartare --cov-report term-missing --cov-report xml
+
+check: build_dev
+	mypy --disallow-untyped-defs --ignore-missing-imports tartare
 
 clean:
-		rm -rf venv
-
-test:
-		TARTARE_CONFIG_FILE=../tests/testing_settings.py $(VIRTUALENV_BIN_DIR)/py.test tests --cov=tartare --cov-report term-missing --cov-report xml
+	rm -rf .coverage .mypy_cache coverage.xml
