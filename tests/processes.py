@@ -33,9 +33,8 @@ from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
 from tartare.exceptions import IntegrityException
-from tartare.processes.coverage import FusioImport
+from tartare.processes.coverage import FusioImport, FusioPreProd
 from datetime import date
-
 from tests.utils import get_response
 
 
@@ -115,3 +114,17 @@ class TestFusioProcesses:
             fusio_import = FusioImport(context, {"url": "whatever"})
             fusio_import.do()
         assert str(excinfo.value) == expected_message
+
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_call_fusio_preprod(self, fusio_call, fusio_wait_for_action_terminated):
+        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                <serverfusio>
+                    <ActionId>1607281547155684</ActionId>
+                </serverfusio>"""
+        fusio_call.return_value = get_response(200, content)
+        fusio_preprod = FusioPreProd(context=Context('coverage'), params={'url': 'http://fusio_host'})
+        fusio_preprod.do()
+
+        fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
+        fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
