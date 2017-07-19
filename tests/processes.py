@@ -27,16 +27,22 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import pytest
+import requests
 from freezegun import freeze_time
 from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
 from tartare.processes.coverage import FusioImport
 from datetime import date
+from tests.utils import get_response
 
 
-class TestFusioImportProcess:
+class TestFusioProcesses:
     @freeze_time("2017-01-15")
+    # /!\following patches are parameters reversed in function signature
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    @mock.patch('tartare.processes.fusio.Fusio.get_action_id')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @pytest.mark.parametrize(
         "begin_date_validity1,end_date_validity1,begin_date_validity2,end_date_validity2,expected_data", [
             # cross
@@ -58,7 +64,8 @@ class TestFusioImportProcess:
             (date(2018, 1, 1), date(2018, 7, 1), date(2019, 3, 1), date(2019, 9, 1),
              {'DateDebut': '01/01/2018', 'DateFin': '31/12/2018', 'action': 'regionalimport'}),
         ])
-    def test_fusio_import_valid_dates(self, mocker, begin_date_validity1, end_date_validity1,
+    def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
+                                      begin_date_validity1, end_date_validity1,
                                       begin_date_validity2, end_date_validity2, expected_data):
         contrib_export1 = ContributorExport('', '',
                                             validity_period=ValidityPeriod(begin_date_validity1, end_date_validity1))
@@ -66,27 +73,15 @@ class TestFusioImportProcess:
                                             validity_period=ValidityPeriod(begin_date_validity2, end_date_validity2))
         context = Context(contributor_exports=[contrib_export1, contrib_export2])
 
-        keep_response = 'fusio_response'
+        keep_response_content = 'fusio_response'
         action_id = 42
-        def fusio_call_mocked(*args, **kwargs):
-            nonlocal expected_data
-            nonlocal keep_response
-            assert kwargs['data'] == expected_data
-            response = mock.MagicMock()
-            response.content = keep_response
-            return response
 
-        def fusio_get_action_id_mocked(*args, **kwargs):
-            nonlocal keep_response
-            assert args[0] == keep_response
-            return action_id
+        fusio_call.return_value = get_response(200, keep_response_content)
+        fusio_get_action_id.return_value = action_id
 
-        def fusio_wait_for_action_terminated_mocked(*args, **kwargs):
-            nonlocal action_id
-            assert args[0] == action_id
-
-        mocker.patch('tartare.processes.fusio.Fusio.call', side_effect=fusio_call_mocked)
-        mocker.patch('tartare.processes.fusio.Fusio.get_action_id', side_effect=fusio_get_action_id_mocked)
-        mocker.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated', side_effect=fusio_wait_for_action_terminated_mocked)
         fusio_import = FusioImport(context, {"url": "whatever"})
         fusio_import.do()
+
+        fusio_call.assert_called_with(requests.post, api="api", data=expected_data)
+        fusio_get_action_id.assert_called_with(keep_response_content)
+        wait_for_action_terminated.assert_called_with(action_id)

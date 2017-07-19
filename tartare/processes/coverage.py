@@ -72,17 +72,24 @@ class FusioDataUpdate(AbstractProcess):
 
 
 class FusioImport(AbstractProcess):
-    def do(self):
-        fusio = Fusio(self.params.get("url"))
+    def _get_period_bounds(self) -> tuple:
         min_contributor = min(self.context.contributor_exports,
                               key=lambda contrib: contrib.validity_period.start_date)
+
         max_contributor = max(self.context.contributor_exports,
                               key=lambda contrib: contrib.validity_period.end_date)
         begin_date = min_contributor.validity_period.start_date
         end_date = max_contributor.validity_period.end_date
         if abs(begin_date - end_date).days > 365:
+            logging.getLogger(__name__).warning(
+                'period bounds for union of contributors validity periods exceed one year')
             begin_date = max(begin_date, datetime.now().date())
             end_date = min(begin_date + timedelta(days=364), end_date)
+        return begin_date, end_date
+
+    def do(self):
+        fusio = Fusio(self.params.get("url"))
+        begin_date, end_date = self._get_period_bounds()
         resp = fusio.call(requests.post, api='api',
                           data={
                               'DateDebut': Fusio.format_date(begin_date),
