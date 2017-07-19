@@ -163,12 +163,28 @@ def test_calendar_with_headers_only():
     file = '{}/{}'.format(current_path, 'validity_period/calendar_with_headers_only.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value).startswith('Impossible to parse file calendar.txt,')
+    assert str(excinfo.value).startswith('Impossible to find validity period')
 
 
-def test_calendar_with_headers_only():
+def test_calendar_dates_with_empty_line():
     finder = ValidityPeriodFinder()
     file = '{}/{}'.format(current_path, 'validity_period/calendar_dates_with_empty_line.zip')
     start_date, end_date =finder.get_validity_period(file)
     assert start_date == date(2017, 1, 2)
     assert end_date == date(2017, 1, 20)
+
+
+def test_calendar_with_empty_line_and_remove_date_only():
+    finder = ValidityPeriodFinder()
+    file = '{}/{}'.format(current_path, 'validity_period/calendar_with_empty_line_remove_dates_only.zip')
+    with pytest.raises(InvalidFile) as excinfo:
+            finder.get_validity_period(file)
+    assert str(excinfo.value).startswith('Impossible to find validity period')
+
+
+def test_calendar_with_empty_line_and_add_date_only():
+    finder = ValidityPeriodFinder()
+    file = '{}/{}'.format(current_path, 'validity_period/calendar_with_empty_line_add_dates_only.zip')
+    start_date, end_date =finder.get_validity_period(file)
+    assert start_date == date(2017, 1, 2)
+    assert end_date == date(2017, 1, 31)

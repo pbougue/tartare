@@ -38,10 +38,16 @@ import numpy as np
 
 class ValidityPeriodFinder(object):
     #TODO Management of case where the period exceeds one year
-    def __init__(self, start_date=date.max, end_date=date.min, date_format='%Y%m%d'):
-        self.start_date = start_date
-        self.end_date = end_date
+    def __init__(self, date_format='%Y%m%d'):
+        self.start_date = date.max
+        self.end_date = date.min
         self.date_format = date_format
+
+    def start_date_valid(self):
+        return self.start_date != date.max
+
+    def end_date_valid(self):
+        return self.end_date != date.min
 
     @property
     def calendar(self) -> str:
@@ -83,17 +89,23 @@ class ValidityPeriodFinder(object):
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar, tmp_path)
             try:
-                start_dates, end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
-                                                    delimiter=',',
-                                                    skiprows=1,
-                                                    usecols=[header_start, header_end],
-                                                    dtype=np.datetime64,
-                                                    unpack=True)
+                start_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
+                                         delimiter=',',
+                                         skiprows=1,
+                                         usecols=[header_start],
+                                         dtype=np.datetime64)
+                end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
+                                       delimiter=',',
+                                       skiprows=1,
+                                       usecols=[header_end],
+                                       dtype=np.datetime64)
+                if not start_dates.size or not end_dates.size:
+                    logging.getLogger(__name__).debug('Calendar is empty file')
+                    return
             except ValueError as e:
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
-
             self.start_date = self.datetime64_to_date(start_dates.min())
             self.end_date = self.datetime64_to_date(end_dates.max())
 
@@ -176,4 +188,9 @@ class ValidityPeriodFinder(object):
             self._parse_calendar(files_zip)
             if self.calendar_dates in files_zip.namelist():
                 self._parse_calendar_dates(files_zip)
+        if not self.start_date_valid() or not self.end_date_valid():
+            msg = 'Impossible to find validity period'
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
+
         return self.start_date, self.end_date
