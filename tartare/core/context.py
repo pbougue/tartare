@@ -31,11 +31,12 @@ import logging
 from typing import List
 
 
-class Context():
-    def __init__(self, instance: str='contributor'):
+class Context:
+    def __init__(self, instance: str = 'contributor', data_sources_fetched: List[DataSourceFetched]=None,
+                 contributor_exports: List[ContributorExport]=None):
         self.instance = instance
-        self.data_sources_fetched = []
-        self.contributor_exports = []
+        self.data_sources_fetched = data_sources_fetched if data_sources_fetched else []
+        self.contributor_exports = contributor_exports if contributor_exports else []
 
     def fill_contributor_exports(self, contributors: List[str]):
         logging.getLogger(__name__).info('initialize context')

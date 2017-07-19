@@ -28,6 +28,8 @@
 # www.navitia.io
 import logging
 
+from datetime import datetime, timedelta
+
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
@@ -74,12 +76,17 @@ class FusioImport(AbstractProcess):
         fusio = Fusio(self.params.get("url"))
         min_contributor = min(self.context.contributor_exports,
                               key=lambda contrib: contrib.validity_period.start_date)
-        max_contributor = min(self.context.contributor_exports,
+        max_contributor = max(self.context.contributor_exports,
                               key=lambda contrib: contrib.validity_period.end_date)
+        begin_date = min_contributor.validity_period.start_date
+        end_date = max_contributor.validity_period.end_date
+        if abs(begin_date - end_date).days > 365:
+            begin_date = max(begin_date, datetime.now().date())
+            end_date = min(begin_date + timedelta(days=364), end_date)
         resp = fusio.call(requests.post, api='api',
                           data={
-                              'DateDebut': Fusio.format_date(min_contributor.validity_period.start_date),
-                              'DateFin': Fusio.format_date(max_contributor.validity_period.end_date),
+                              'DateDebut': Fusio.format_date(begin_date),
+                              'DateFin': Fusio.format_date(end_date),
                               'action': 'regionalimport',
                           })
         fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
