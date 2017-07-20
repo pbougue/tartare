@@ -38,15 +38,15 @@ import numpy as np
 
 class ValidityPeriodFinder(object):
     #TODO Management of case where the period exceeds one year
-    def __init__(self, date_format='%Y%m%d'):
+    def __init__(self, date_format: str='%Y%m%d') -> None:
         self.start_date = date.max
         self.end_date = date.min
         self.date_format = date_format
 
-    def start_date_valid(self):
+    def start_date_valid(self) -> bool:
         return self.start_date != date.max
 
-    def end_date_valid(self):
+    def end_date_valid(self) -> bool:
         return self.end_date != date.min
 
     @property
@@ -58,7 +58,7 @@ class ValidityPeriodFinder(object):
         return 'calendar_dates.txt'
 
     @staticmethod
-    def _get_data(line: bytes) -> str:
+    def _get_data(line: bytes) -> List[str]:
         char_to_delete = ['\r', '\n']
         l = line.decode('utf-8')
         for c in char_to_delete:
@@ -66,10 +66,10 @@ class ValidityPeriodFinder(object):
 
         return l.split(',')
 
-    def _str_date(self, string_date: str) -> datetime:
+    def _str_date(self, string_date: str) -> date:
         return datetime.strptime(string_date, self.date_format).date()
 
-    def datetime64_to_date(self, datetime64: np.datetime64) -> datetime:
+    def datetime64_to_date(self, datetime64: np.datetime64) -> date:
         return self._str_date(np.datetime_as_string(datetime64))
 
     def get_headers(self, files_zip: ZipFile, filename: str, columns: List[str]) -> dict:
@@ -79,20 +79,22 @@ class ValidityPeriodFinder(object):
         :param columns: list of header name
         :return: position headers in file {"c1": 1, "c2": 3, ...}
         """
-        headers = {key: None for key in columns}
+        headers = {}
         with files_zip.open(filename, 'r') as file:
             for line in file:
                 data = self._get_data(line)
                 try:
-                    for key in headers.keys():
+
+                    for key in columns:
                         headers[key] = data.index(key)
-                    return headers
+                    break
                 except ValueError as e:
                     msg = 'Error in file {}, Error : {}'.format(filename, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
+        return headers
 
-    def _parse_calendar(self, files_zip: ZipFile):
+    def _parse_calendar(self, files_zip: ZipFile) -> None:
         headers = self.get_headers(files_zip, self.calendar, ['start_date', 'end_date'])
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar, tmp_path)
@@ -115,7 +117,7 @@ class ValidityPeriodFinder(object):
                 self.start_date = self.datetime64_to_date(dates.min(axis=0).min())
                 self.end_date = self.datetime64_to_date(dates.max(axis=1).max())
 
-    def add_dates(self, dates: np.ndarray, exception_type: np.ndarray):
+    def add_dates(self, dates: np.ndarray, exception_type: np.ndarray) -> None:
         add_dates_idx = np.argwhere(exception_type == 1).flatten()
         add_dates = [dates[i] for i in add_dates_idx]
         add_dates.sort()
@@ -133,7 +135,7 @@ class ValidityPeriodFinder(object):
             else:
                 break
 
-    def remove_dates(self, dates: np.ndarray, exception_type: np.ndarray):
+    def remove_dates(self, dates: np.ndarray, exception_type: np.ndarray) -> None:
         """
         Removing dates extremities, google does not do it in transitfeed
         https://github.com/google/transitfeed/blob/master/transitfeed/serviceperiod.py#L80
@@ -156,7 +158,7 @@ class ValidityPeriodFinder(object):
             else:
                 break
 
-    def _parse_calendar_dates(self, files_zip: ZipFile):
+    def _parse_calendar_dates(self, files_zip: ZipFile) -> None:
         headers = self.get_headers(files_zip, self.calendar_dates, ['date', 'exception_type'])
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar_dates, tmp_path)
@@ -178,7 +180,7 @@ class ValidityPeriodFinder(object):
             self.add_dates(dates, exception_type)
             self.remove_dates(dates, exception_type)
 
-    def get_validity_period(self, file: str) -> Tuple[datetime, datetime]:
+    def get_validity_period(self, file: str) -> Tuple[date, date]:
 
         if not is_zipfile(file):
             msg = '{} is not a zip file or not exist.'.format(file)
