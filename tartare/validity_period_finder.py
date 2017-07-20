@@ -78,7 +78,6 @@ class ValidityPeriodFinder(object):
             for line in file:
                 data = self._get_data(line)
                 try:
-
                     for key in columns:
                         headers[key] = data.index(key)
                     break
@@ -170,7 +169,6 @@ class ValidityPeriodFinder(object):
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar_dates, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
-
             self.add_dates(dates, exception_type)
             self.remove_dates(dates, exception_type)
 
