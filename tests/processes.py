@@ -32,8 +32,10 @@ from freezegun import freeze_time
 from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
+from tartare.exceptions import IntegrityException
 from tartare.processes.coverage import FusioImport
 from datetime import date
+
 from tests.utils import get_response
 
 
@@ -44,34 +46,46 @@ class TestFusioProcesses:
     @mock.patch('tartare.processes.fusio.Fusio.get_action_id')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @pytest.mark.parametrize(
-        "begin_date_validity1,end_date_validity1,begin_date_validity2,end_date_validity2,expected_data", [
+        "contributor_validity_period_dates,expected_data", [
+            # one contributor
+            ([(date(2017, 1, 20), date(2017, 7, 14))],
+             {'DateDebut': '20/01/2017', 'DateFin': '14/07/2017', 'action': 'regionalimport'}),
+            # one contributor more than one year now inside
+            ([(date(2017, 1, 1), date(2018, 3, 15))],
+             {'DateDebut': '15/01/2017', 'DateFin': '14/01/2018', 'action': 'regionalimport'}),
+            # one contributor more than one year now outside
+            ([(date(2018, 1, 15), date(2020, 1, 15))],
+             {'DateDebut': '15/01/2018', 'DateFin': '14/01/2019', 'action': 'regionalimport'}),
             # cross
-            (date(2015, 1, 1), date(2015, 7, 1), date(2015, 3, 1), date(2015, 9, 1),
-             {'DateDebut': '01/01/2015', 'DateFin': '01/09/2015', 'action': 'regionalimport'}),
+            ([(date(2017, 1, 1), date(2017, 7, 1)), (date(2017, 3, 1), date(2017, 9, 1))],
+             {'DateDebut': '01/01/2017', 'DateFin': '01/09/2017', 'action': 'regionalimport'}),
             # next
-            (date(2015, 1, 15), date(2015, 3, 1), date(2015, 7, 1), date(2015, 12, 11),
-             {'DateDebut': '15/01/2015', 'DateFin': '11/12/2015', 'action': 'regionalimport'}),
+            ([(date(2017, 1, 15), date(2017, 3, 1)), (date(2017, 7, 1), date(2017, 12, 11))],
+             {'DateDebut': '15/01/2017', 'DateFin': '11/12/2017', 'action': 'regionalimport'}),
             # before
-            (date(2015, 7, 1), date(2015, 9, 1), date(2015, 1, 9), date(2015, 3, 1),
-             {'DateDebut': '09/01/2015', 'DateFin': '01/09/2015', 'action': 'regionalimport'}),
+            ([(date(2017, 7, 1), date(2017, 9, 1)), (date(2017, 1, 9), date(2017, 3, 1))],
+             {'DateDebut': '09/01/2017', 'DateFin': '01/09/2017', 'action': 'regionalimport'}),
             # included
-            (date(2015, 1, 1), date(2015, 12, 1), date(2015, 3, 9), date(2015, 3, 6),
-             {'DateDebut': '01/01/2015', 'DateFin': '01/12/2015', 'action': 'regionalimport'}),
+            ([(date(2017, 1, 1), date(2017, 12, 1)), (date(2017, 3, 9), date(2017, 3, 6))],
+             {'DateDebut': '01/01/2017', 'DateFin': '01/12/2017', 'action': 'regionalimport'}),
             # more than one year now inside
-            (date(2017, 1, 1), date(2017, 7, 1), date(2018, 3, 1), date(2018, 9, 1),
+            ([(date(2017, 1, 1), date(2017, 7, 1)), (date(2018, 3, 1), date(2018, 9, 1))],
              {'DateDebut': '15/01/2017', 'DateFin': '14/01/2018', 'action': 'regionalimport'}),
             # more than one year now outside
-            (date(2018, 1, 1), date(2018, 7, 1), date(2019, 3, 1), date(2019, 9, 1),
+            ([(date(2018, 1, 1), date(2018, 7, 1)), (date(2019, 3, 1), date(2019, 9, 1))],
              {'DateDebut': '01/01/2018', 'DateFin': '31/12/2018', 'action': 'regionalimport'}),
+            # 3 contrib
+            ([(date(2018, 1, 1), date(2018, 4, 1)), (date(2018, 10, 1), date(2018, 12, 11)), (date(2018, 8, 11), date(2018, 10, 13))],
+             {'DateDebut': '01/01/2018', 'DateFin': '11/12/2018', 'action': 'regionalimport'}),
         ])
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
-                                      begin_date_validity1, end_date_validity1,
-                                      begin_date_validity2, end_date_validity2, expected_data):
-        contrib_export1 = ContributorExport('', '',
-                                            validity_period=ValidityPeriod(begin_date_validity1, end_date_validity1))
-        contrib_export2 = ContributorExport('', '',
-                                            validity_period=ValidityPeriod(begin_date_validity2, end_date_validity2))
-        context = Context(contributor_exports=[contrib_export1, contrib_export2])
+                                      contributor_validity_period_dates, expected_data):
+        contributors = []
+        for contrib_begin_date, contrib_end_date in contributor_validity_period_dates:
+            contrib_export = ContributorExport('', '',
+                                               validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date))
+            contributors.append(contrib_export)
+        context = Context(contributor_exports=contributors)
 
         keep_response_content = 'fusio_response'
         action_id = 42
@@ -85,3 +99,19 @@ class TestFusioProcesses:
         fusio_call.assert_called_with(requests.post, api="api", data=expected_data)
         fusio_get_action_id.assert_called_with(keep_response_content)
         wait_for_action_terminated.assert_called_with(action_id)
+
+    @freeze_time("2017-01-15")
+    @pytest.mark.parametrize(
+        "contrib_begin_date,contrib_end_date,expected_message", [
+            # one contributor
+            (date(2015, 1, 20), date(2015, 7, 14), "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
+            (date(2017, 1, 1), date(2017, 1, 14), "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
+        ])
+    def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
+        with pytest.raises(IntegrityException) as excinfo:
+            contrib_export = ContributorExport('', '',
+                                               validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date))
+            context = Context(contributor_exports=[contrib_export])
+            fusio_import = FusioImport(context, {"url": "whatever"})
+            fusio_import.do()
+        assert str(excinfo.value) == expected_message
