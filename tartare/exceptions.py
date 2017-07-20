@@ -50,3 +50,7 @@ class ProtocolException(Exception):
 
 class FusioException(Exception):
     pass
+
+
+class IntegrityException(Exception):
+    pass

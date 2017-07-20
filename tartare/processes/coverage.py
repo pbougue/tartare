@@ -30,10 +30,12 @@ import logging
 
 from datetime import datetime, timedelta
 
+from tartare.exceptions import IntegrityException
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
+from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
 
@@ -80,10 +82,14 @@ class FusioImport(AbstractProcess):
                               key=lambda contrib: contrib.validity_period.end_date)
         begin_date = min_contributor.validity_period.start_date
         end_date = max_contributor.validity_period.end_date
+        now_date = datetime.now().date()
+        if end_date < now_date:
+            raise IntegrityException('bounds date from fusio import incorrect (end_date: {end} < now: {now})'.format(
+                end=Fusio.format_date(end_date), now=Fusio.format_date(now_date)))
         if abs(begin_date - end_date).days > 365:
             logging.getLogger(__name__).warning(
                 'period bounds for union of contributors validity periods exceed one year')
-            begin_date = max(begin_date, datetime.now().date())
+            begin_date = max(begin_date, now_date)
             end_date = min(begin_date + timedelta(days=364), end_date)
         return begin_date, end_date
 
