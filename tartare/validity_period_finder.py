@@ -72,42 +72,48 @@ class ValidityPeriodFinder(object):
     def datetime64_to_date(self, datetime64: np.datetime64) -> datetime:
         return self._str_date(np.datetime_as_string(datetime64))
 
-    def get_index(self, files_zip: ZipFile, filename: str, column: str) -> int:
+    def get_headers(self, files_zip: ZipFile, filename: str, columns: List[str]) -> dict:
+        """
+        :param files_zip:
+        :param filename:
+        :param columns: list of header name
+        :return: position headers in file {"c1": 1, "c2": 3, ...}
+        """
+        headers = {key: None for key in columns}
         with files_zip.open(filename, 'r') as file:
             for line in file:
                 data = self._get_data(line)
                 try:
-                    return data.index(column)
-                except ValueError:
-                    msg = 'column name {} is not exist in file {}'.format(column, filename)
+                    for key in headers.keys():
+                        headers[key] = data.index(key)
+                    return headers
+                except ValueError as e:
+                    msg = 'Error in file {}, Error : {}'.format(filename, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
 
     def _parse_calendar(self, files_zip: ZipFile):
-        header_start = self.get_index(files_zip, self.calendar, 'start_date')
-        header_end = self.get_index(files_zip, self.calendar, 'end_date')
+        headers = self.get_headers(files_zip, self.calendar, ['start_date', 'end_date'])
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar, tmp_path)
             try:
-                start_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
-                                         delimiter=',',
-                                         skiprows=1,
-                                         usecols=[header_start],
-                                         dtype=np.datetime64)
-                end_dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
-                                       delimiter=',',
-                                       skiprows=1,
-                                       usecols=[header_end],
-                                       dtype=np.datetime64)
-                if not start_dates.size or not end_dates.size:
+                dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar),
+                                   delimiter=',', skiprows=1,
+                                   usecols=[headers.get('start_date'), headers.get('end_date')],
+                                   dtype=np.datetime64)
+                if not dates.size:
                     logging.getLogger(__name__).debug('Calendar is empty file')
                     return
             except ValueError as e:
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
-            self.start_date = self.datetime64_to_date(start_dates.min())
-            self.end_date = self.datetime64_to_date(end_dates.max())
+            if len(dates.shape) == 1:
+                self.start_date = self.datetime64_to_date(dates[0])
+                self.end_date = self.datetime64_to_date(dates[1])
+            else:
+                self.start_date = self.datetime64_to_date(dates.min(axis=0).min())
+                self.end_date = self.datetime64_to_date(dates.max(axis=1).max())
 
     def add_dates(self, dates: np.ndarray, exception_type: np.ndarray):
         add_dates_idx = np.argwhere(exception_type == 1).flatten()
@@ -151,19 +157,19 @@ class ValidityPeriodFinder(object):
                 break
 
     def _parse_calendar_dates(self, files_zip: ZipFile):
-        header_date = self.get_index(files_zip, self.calendar_dates, 'date')
-        header_exception_type = self.get_index(files_zip, self.calendar_dates, 'exception_type')
+        headers = self.get_headers(files_zip, self.calendar_dates, ['date', 'exception_type'])
         with tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(self.calendar_dates, tmp_path)
             try:
                 dates = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
-                                   delimiter=',', skiprows=1, usecols=[header_date], dtype=np.datetime64)
+                                   delimiter=',', skiprows=1, usecols=[headers.get('date')], dtype=np.datetime64)
 
                 if not dates.size:
                     logging.getLogger(__name__).debug('Calendar_dates is empty file')
                     return
                 exception_type = np.loadtxt('{}/{}'.format(tmp_path, self.calendar_dates),
-                                            delimiter=',', skiprows=1, usecols=[header_exception_type], dtype=np.int)
+                                            delimiter=',', skiprows=1,
+                                            usecols=[headers.get('exception_type')], dtype=np.int)
             except ValueError as e:
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar_dates, str(e))
                     logging.getLogger(__name__).error(msg)

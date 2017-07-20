@@ -66,7 +66,7 @@ def test_calendar_without_end_date_column():
     file = '{}/{}'.format(current_path, 'validity_period/calendar_without_end_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == "column name end_date is not exist in file calendar.txt".format(file)
+    assert str(excinfo.value) == "Error in file calendar.txt, Error : 'end_date' is not in list"
 
 
 def test_calendar_without_start_date_column():
@@ -74,7 +74,7 @@ def test_calendar_without_start_date_column():
     file = '{}/{}'.format(current_path, 'validity_period/calendar_without_start_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == "column name start_date is not exist in file calendar.txt".format(file)
+    assert str(excinfo.value) == "Error in file calendar.txt, Error : 'start_date' is not in list"
 
 
 def test_gtfs_without_calendar():
@@ -99,15 +99,15 @@ def test_calendar_dates_without_exception_type():
     file = '{}/{}'.format(current_path, 'validity_period/calendar_dates_without_exception_type.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == 'column name exception_type is not exist in file calendar_dates.txt'
+    assert str(excinfo.value) == "Error in file calendar_dates.txt, Error : 'exception_type' is not in list"
 
 
-def test_calendar_dates_without_exception_type():
+def test_calendar_dates_without_dates():
     finder = ValidityPeriodFinder()
     file = '{}/{}'.format(current_path, 'validity_period/calendar_dates_without_dates.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == 'column name date is not exist in file calendar_dates.txt'
+    assert str(excinfo.value) == "Error in file calendar_dates.txt, Error : 'date' is not in list"
 
 
 def test_add_dates():
