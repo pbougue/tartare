@@ -145,8 +145,7 @@ class TestFusioProcesses:
         get_export_url.return_value = 'abcd.zip'
         params={
             'url': 'http://fusio_host',
-            "export_type": 32,
-            "source_data": 4
+            "export_type": "Ntfs"
         }
         fusio_export = FusioExport(context=Context('coverage'), params=params)
         fusio_export.do()

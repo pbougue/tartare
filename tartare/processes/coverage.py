@@ -30,7 +30,7 @@ import logging
 
 from datetime import datetime, timedelta
 
-from tartare.exceptions import IntegrityException
+from tartare.exceptions import IntegrityException, FusioException
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
@@ -124,6 +124,20 @@ class FusioPreProd(AbstractProcess):
 
 class FusioExport(AbstractProcess):
 
+    def get_export_type(self) -> int:
+        export_type = self.params.get('export_type', "ntfs")
+        map_export_type = {
+            "ntfs": 32,
+            "gtfsv2": 36,
+            "googletransit": 37
+        }
+        lower_export_type = export_type.lower()
+        if lower_export_type in map_export_type:
+            return map_export_type.get(lower_export_type)
+        msg = 'export_type {} not found'.format(lower_export_type)
+        logging.getLogger(__name__).exception(msg)
+        raise FusioException(msg)
+
     def save_export(self, url: str) -> Context:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
@@ -136,8 +150,8 @@ class FusioExport(AbstractProcess):
         fusio = Fusio(self.params.get("url"))
         data = {
             'action': 'Export',
-            'ExportType': self.params.get('export_type', 32),
-            'Source': self.params.get('source_data', 4)}
+            'ExportType': self.get_export_type(),
+            'Source': 4}
         resp = fusio.call(requests.post, api='api', data=data)
         action_id = fusio.get_action_id(resp.content)
         fusio.wait_for_action_terminated(action_id)
