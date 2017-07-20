@@ -159,7 +159,8 @@ class GenericPreProcess(object):
         self.params = params if params else {}
         self.type = type
 
-    def save_data(self, class_name: Union['Contributor', 'Coverage'], mongo_schema: type, object_id: str):
+    def save_data(self, class_name: Union['Contributor', 'Coverage'],
+                  mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id: str):
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('Bad {} {}'.format(class_name.label, object_id))

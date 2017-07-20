@@ -35,6 +35,7 @@ from glob import glob
 from contextlib import contextmanager
 import os
 from mock import MagicMock
+from requests import Response
 
 
 def to_json(response):
@@ -93,7 +94,9 @@ def mock_requests_post(url, files, timeout):
     return get_response()
 
 
-def get_response(status_code=200):
+def get_response(status_code: int=200, content: str=None) -> Response:
     response = MagicMock()
     response.status_code = status_code
+    if content:
+        response.content = content
     return response

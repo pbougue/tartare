@@ -28,13 +28,15 @@
 # www.navitia.io
 
 import logging
+from datetime import date
 from retrying import retry
 import requests
+from types import MethodType
 from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
 from xml.etree.cElementTree import Element
 from tartare import app
-from typing import Optional, Callable
+from typing import Optional
 
 
 def is_running(status: str) -> bool:
@@ -47,7 +49,11 @@ def is_running(status: str) -> bool:
 
 
 class Fusio(object):
-    def __init__(self, url: str):
+    @staticmethod
+    def format_date(date: date, format='%d/%m/%Y') -> str:
+        return date.strftime(format)
+
+    def __init__(self, url: str) -> None:
         self.url = url
 
     @staticmethod
@@ -68,7 +74,7 @@ class Fusio(object):
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method: Callable, api: Optional[str]=None,
+    def call(self, method: MethodType, api: Optional[str]=None,
              data: Optional[dict]=None,
              files: Optional[dict]=None) -> requests.Response:
         try:

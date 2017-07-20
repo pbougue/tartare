@@ -26,26 +26,24 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
+
+from datetime import datetime, timedelta
+
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
 
 
 class FusioDataUpdate(AbstractProcess):
-
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
             "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
         }
-
-    @staticmethod
-    def _format_date(_date: date, format: str='%d/%m/%Y') -> str:
-        return _date.strftime(format)
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
         validity_period = contributor_export.validity_period
@@ -56,8 +54,8 @@ class FusioDataUpdate(AbstractProcess):
             'dutype': 'update',
             'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
             'libelle': 'unlibelle',
-            'DateDebut': self._format_date(validity_period.start_date),
-            'DateFin': self._format_date(validity_period.end_date),
+            'DateDebut': Fusio.format_date(validity_period.start_date),
+            'DateFin': Fusio.format_date(validity_period.end_date),
             'content-type': 'multipart/form-data',
         }
 
@@ -74,13 +72,35 @@ class FusioDataUpdate(AbstractProcess):
 
 
 class FusioImport(AbstractProcess):
+    def _get_period_bounds(self) -> tuple:
+        min_contributor = min(self.context.contributor_exports,
+                              key=lambda contrib: contrib.validity_period.start_date)
+
+        max_contributor = max(self.context.contributor_exports,
+                              key=lambda contrib: contrib.validity_period.end_date)
+        begin_date = min_contributor.validity_period.start_date
+        end_date = max_contributor.validity_period.end_date
+        if abs(begin_date - end_date).days > 365:
+            logging.getLogger(__name__).warning(
+                'period bounds for union of contributors validity periods exceed one year')
+            begin_date = max(begin_date, datetime.now().date())
+            end_date = min(begin_date + timedelta(days=364), end_date)
+        return begin_date, end_date
 
     def do(self):
+        fusio = Fusio(self.params.get("url"))
+        begin_date, end_date = self._get_period_bounds()
+        resp = fusio.call(requests.post, api='api',
+                          data={
+                              'DateDebut': Fusio.format_date(begin_date),
+                              'DateFin': Fusio.format_date(end_date),
+                              'action': 'regionalimport',
+                          })
+        fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
         return self.context
 
 
 class FusioPreProd(AbstractProcess):
-
     def do(self):
         fusio = Fusio(self.params.get("url"))
         resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
@@ -89,7 +109,5 @@ class FusioPreProd(AbstractProcess):
 
 
 class FusioExport(AbstractProcess):
-
     def do(self):
         return self.context
-
