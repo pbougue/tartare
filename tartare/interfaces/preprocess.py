@@ -36,8 +36,8 @@ from tartare.core import models
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
-from tartare.helper import validate_preprocesses_or_raise
 from tartare.decorators import json_data_validate
+from tartare.processes import processes
 
 
 class PreProcess(flask_restful.Resource):
@@ -47,7 +47,7 @@ class PreProcess(flask_restful.Resource):
         instance = 'contributor' if contributor_id else 'coverage'
         try:
             json_data = request.json
-            validate_preprocesses_or_raise([json_data], instance)
+            processes.PreProcess.check_preprocesses_for_instance([json_data], instance)
             preprocess = preprocess_schema.load(json_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
@@ -89,7 +89,7 @@ class PreProcess(flask_restful.Resource):
         try:
             p = request.json
             instance = 'contributor' if contributor_id else 'coverage'
-            validate_preprocesses_or_raise([p], instance)
+            processes.PreProcess.check_preprocesses_for_instance([p], instance)
             preprocesses = models.PreProcess.update(preprocess_id,
                                                     contributor_id=contributor_id,
                                                     coverage_id=coverage_id,

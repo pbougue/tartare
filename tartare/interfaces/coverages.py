@@ -38,7 +38,8 @@ from marshmallow import MarshalResult, ValidationError
 from flask import request
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.decorators import json_data_validate, validate_contributors, validate_patch_coverages
-from tartare.helper import validate_preprocesses_or_raise, setdefault_ids
+from tartare.helper import setdefault_ids
+from tartare.processes.processes import PreProcess
 
 
 class Coverage(flask_restful.Resource):
@@ -59,7 +60,7 @@ class Coverage(flask_restful.Resource):
 
         preprocesses = post_data.get('preprocesses', [])
 
-        validate_preprocesses_or_raise(preprocesses, 'coverage')
+        PreProcess.check_preprocesses_for_instance(preprocesses, 'coverage')
 
         setdefault_ids(preprocesses)
 

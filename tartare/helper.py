@@ -37,7 +37,6 @@ import requests
 from flask import Flask
 from requests import Response
 from gridfs.grid_file import GridOut
-from tartare.processes.processes import PreProcess
 import logging
 from hashlib import md5
 import uuid
@@ -105,11 +104,6 @@ def to_doted_notation(data: Mapping, prefix: Optional[Any]=None) -> Mapping:
         else:
             result[key] = v
     return result
-
-
-def validate_preprocesses_or_raise(preprocesses: dict, instance: str):
-    for p in preprocesses:
-        PreProcess.get_preprocess_class(p.get('type'), instance)
 
 
 def get_filename(url: str, data_source_id: str) -> str:
