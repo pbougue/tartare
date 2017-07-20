@@ -52,16 +52,21 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
 
 
 def save_export(contributor: Contributor, context: Context) -> Context:
+    data_sources = []
+    new_grid_fs_id = None
     for data_source_grid in context.data_sources_fetched:
         if not data_source_grid.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_grid.data_source_id))
             continue
         new_grid_fs_id = GridFsHandler().copy_file(data_source_grid.gridfs_id)
-        data_source = ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+        data_sources.append(
+            ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+        )
+    if data_sources:
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_grid_fs_id,
                                    validity_period=data_source_grid.validity_period,
-                                   data_sources=[data_source])
+                                   data_sources=data_sources)
         export.save()
         context.contributor_exports.append(export)
     return context
