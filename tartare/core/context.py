@@ -35,6 +35,7 @@ class Context:
     def __init__(self, instance: str = 'contributor', data_sources_fetched: List[DataSourceFetched]=None,
                  contributor_exports: List[ContributorExport]=None):
         self.instance = instance
+		self.gridfs_id = None
         self.data_sources_fetched = data_sources_fetched if data_sources_fetched else []
         self.contributor_exports = contributor_exports if contributor_exports else []
 

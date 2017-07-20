@@ -40,6 +40,9 @@ from gridfs.grid_file import GridOut
 import logging
 from hashlib import md5
 import uuid
+import urllib.request
+from urllib.error import ContentTooShortError, HTTPError, URLError
+import zipfile
 
 
 #monkey patching of gridfs file for exposing the size in a "standard" way
@@ -128,3 +131,20 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
 def setdefault_ids(collections: List[dict]):
     for c in collections:
         c.setdefault('id', str(uuid.uuid4()))
+
+
+def download_file(url_file: str, dest: str):
+    logger = logging.getLogger(__name__)
+    try:
+        urllib.request.urlretrieve(url_file, dest)
+    except HTTPError as e:
+        logger.error('error during download of file: {}'.format(str(e)))
+        raise
+    except ContentTooShortError:
+        logger.error('downloaded file size was shorter than exepected for url {}'.format(url_file))
+        raise
+    except URLError as e:
+        logger.error('error during download of file: {}'.format(str(e)))
+        raise
+    if not zipfile.is_zipfile(dest):
+        raise Exception('downloaded file from url {} is not a zip file'.format(url_file))

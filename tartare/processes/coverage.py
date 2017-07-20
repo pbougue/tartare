@@ -38,14 +38,21 @@ import requests
 from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
+from tartare.helper import download_file, get_filename
+import tempfile
 
 
 class FusioDataUpdate(AbstractProcess):
+
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
             "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
         }
+
+    @staticmethod
+    def _format_date(_date: date, format: str='%d/%m/%Y') -> str:
+        return _date.strftime(format)
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
         validity_period = contributor_export.validity_period
@@ -115,5 +122,22 @@ class FusioPreProd(AbstractProcess):
 
 
 class FusioExport(AbstractProcess):
-    def do(self) -> Context:
+
+    def save_export(self, url: str) -> Context:
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
+            download_file(url, file_name)
+            with open(file_name, 'rb') as file:
+                self.context.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context
+
+    def do(self) -> Context:
+        fusio = Fusio(self.params.get("url"))
+        data = {
+            'action': 'Export',
+            'ExportType': self.params.get('export_type', 32),
+            'Source': self.params.get('source_data', 4)}
+        resp = fusio.call(requests.post, api='api', data=data)
+        action_id = fusio.get_action_id(resp.content)
+        fusio.wait_for_action_terminated(action_id)
+        return self.save_export(fusio.get_export_url(action_id))

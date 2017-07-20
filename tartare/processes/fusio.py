@@ -69,7 +69,15 @@ class Fusio(object):
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text
 
-    def __get_status_by_action_id(self, action_id: str, raw_xml: bytes) -> Optional[str]:
+    def get_export_url(self, action_id):
+        response = self.call(requests.get, api='info')
+        if response.status_code != 200:
+            raise FusioException('fusio query failed: {}'.format(response))
+        root = self.__parse_xml(response.content)
+        return next((action.find('ActionProgression').get('Description') for action in root.iter('Action')
+                     if action.get('ActionId') == action_id), None)
+
+    def __get_status_by_action_id(self, action_id: str, raw_xml: bytes) -> str:
         root = self.__parse_xml(raw_xml)
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
