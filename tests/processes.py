@@ -33,7 +33,7 @@ from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
 from tartare.exceptions import IntegrityException
-from tartare.processes.coverage import FusioImport, FusioPreProd
+from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from datetime import date
 from tests.utils import get_response
 
@@ -128,3 +128,31 @@ class TestFusioProcesses:
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
+
+    @mock.patch('tartare.processes.coverage.FusioExport.save_export')
+    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_call_fusio_export(self, fusio_call, fusio_wait_for_action_terminated, get_export_url, save_export):
+        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                <serverfusio>
+                    <ActionId>1607281547155684</ActionId>
+                </serverfusio>"""
+        fusio_call.return_value = get_response(200, content)
+        get_export_url.return_value = 'abcd.zip'
+        params={
+            'url': 'http://fusio_host',
+            "export_type": 32,
+            "source_data": 4
+        }
+        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        fusio_export.do()
+        data = {
+            'action': 'Export',
+            "ExportType": 32,
+            "Source": 4
+        }
+        fusio_call.assert_called_with(requests.post, api='api', data=data)
+        fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
+        get_export_url.assert_called_with('1607281547155684')
+        save_export.assert_called_with('abcd.zip')
