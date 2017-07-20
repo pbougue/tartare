@@ -74,7 +74,8 @@ class TestFusioProcesses:
             ([(date(2018, 1, 1), date(2018, 7, 1)), (date(2019, 3, 1), date(2019, 9, 1))],
              {'DateDebut': '01/01/2018', 'DateFin': '31/12/2018', 'action': 'regionalimport'}),
             # 3 contrib
-            ([(date(2018, 1, 1), date(2018, 4, 1)), (date(2018, 10, 1), date(2018, 12, 11)), (date(2018, 8, 11), date(2018, 10, 13))],
+            ([(date(2018, 1, 1), date(2018, 4, 1)), (date(2018, 10, 1), date(2018, 12, 11)),
+              (date(2018, 8, 11), date(2018, 10, 13))],
              {'DateDebut': '01/01/2018', 'DateFin': '11/12/2018', 'action': 'regionalimport'}),
         ])
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
@@ -103,8 +104,10 @@ class TestFusioProcesses:
     @pytest.mark.parametrize(
         "contrib_begin_date,contrib_end_date,expected_message", [
             # one contributor
-            (date(2015, 1, 20), date(2015, 7, 14), "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
-            (date(2017, 1, 1), date(2017, 1, 14), "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
+            (date(2015, 1, 20), date(2015, 7, 14),
+             "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
+            (date(2017, 1, 1), date(2017, 1, 14),
+             "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
         ])
     def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
         with pytest.raises(IntegrityException) as excinfo:
