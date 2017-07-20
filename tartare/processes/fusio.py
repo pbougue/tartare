@@ -50,8 +50,8 @@ def is_running(status: str) -> bool:
 
 class Fusio(object):
     @staticmethod
-    def format_date(date: date, format: str='%d/%m/%Y') -> str:
-        return date.strftime(format)
+    def format_date(_date: date, format: str='%d/%m/%Y') -> str:
+        return _date.strftime(format)
 
     def __init__(self, url: str) -> None:
         self.url = url
@@ -69,7 +69,7 @@ class Fusio(object):
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text
 
-    def get_export_url(self, action_id):
+    def get_export_url(self, action_id: str) -> str:
         response = self.call(requests.get, api='info')
         if response.status_code != 200:
             raise FusioException('fusio query failed: {}'.format(response))

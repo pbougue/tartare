@@ -114,6 +114,7 @@ class FusioImport(AbstractProcess):
 
 
 class FusioPreProd(AbstractProcess):
+
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
