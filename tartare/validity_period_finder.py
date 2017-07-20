@@ -43,10 +43,10 @@ class ValidityPeriodFinder(object):
         self.end_date = date.min
         self.date_format = date_format
 
-    def start_date_valid(self) -> bool:
+    def is_start_date_valid(self) -> bool:
         return self.start_date != date.max
 
-    def end_date_valid(self) -> bool:
+    def is_end_date_valid(self) -> bool:
         return self.end_date != date.min
 
     @property
@@ -73,12 +73,6 @@ class ValidityPeriodFinder(object):
         return self._str_date(np.datetime_as_string(datetime64))
 
     def get_headers(self, files_zip: ZipFile, filename: str, columns: List[str]) -> dict:
-        """
-        :param files_zip:
-        :param filename:
-        :param columns: list of header name
-        :return: position headers in file {"c1": 1, "c2": 3, ...}
-        """
         headers = {}
         with files_zip.open(filename, 'r') as file:
             for line in file:
@@ -89,7 +83,7 @@ class ValidityPeriodFinder(object):
                         headers[key] = data.index(key)
                     break
                 except ValueError as e:
-                    msg = 'Error in file {}, Error : {}'.format(filename, str(e))
+                    msg = 'Header not found in file {}, Error : {}'.format(filename, str(e))
                     logging.getLogger(__name__).error(msg)
                     raise InvalidFile(msg)
         return headers
@@ -104,7 +98,7 @@ class ValidityPeriodFinder(object):
                                    usecols=[headers.get('start_date'), headers.get('end_date')],
                                    dtype=np.datetime64)
                 if not dates.size:
-                    logging.getLogger(__name__).debug('Calendar is empty file')
+                    logging.getLogger(__name__).debug('{} is empty file'.format(self.calendar))
                     return
             except ValueError as e:
                     msg = 'Impossible to parse file {}, {}'.format(self.calendar, str(e))
@@ -189,14 +183,14 @@ class ValidityPeriodFinder(object):
 
         with ZipFile(file, 'r') as files_zip:
             if self.calendar not in files_zip.namelist():
-                msg = 'file zip {} without calendar.txt'.format(file)
+                msg = 'file zip {} without {}'.format(file, self.calendar)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
 
             self._parse_calendar(files_zip)
             if self.calendar_dates in files_zip.namelist():
                 self._parse_calendar_dates(files_zip)
-        if not self.start_date_valid() or not self.end_date_valid():
+        if not self.is_start_date_valid() or not self.is_end_date_valid():
             msg = 'Impossible to find validity period'
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
