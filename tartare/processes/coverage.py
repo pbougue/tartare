@@ -30,17 +30,19 @@ import logging
 
 from datetime import datetime, timedelta
 
-from tartare.exceptions import IntegrityException
+from tartare.exceptions import IntegrityException, FusioException
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
+from tartare.helper import download_zip_file, get_filename
+import tempfile
 
 
 class FusioDataUpdate(AbstractProcess):
+
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
@@ -107,6 +109,7 @@ class FusioImport(AbstractProcess):
 
 
 class FusioPreProd(AbstractProcess):
+
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
@@ -115,5 +118,36 @@ class FusioPreProd(AbstractProcess):
 
 
 class FusioExport(AbstractProcess):
-    def do(self) -> Context:
+
+    def get_export_type(self) -> int:
+        export_type = self.params.get('export_type', "ntfs")
+        map_export_type = {
+            "ntfs": 32,
+            "gtfsv2": 36,
+            "googletransit": 37
+        }
+        lower_export_type = export_type.lower()
+        if lower_export_type not in map_export_type:
+            msg = 'export_type {} not found'.format(lower_export_type)
+            logging.getLogger(__name__).exception(msg)
+            raise FusioException(msg)
+        return map_export_type.get(lower_export_type)
+
+    def save_export(self, url: str) -> Context:
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
+            download_zip_file(url, file_name)
+            with open(file_name, 'rb') as file:
+                self.context.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context
+
+    def do(self) -> Context:
+        fusio = Fusio(self.params.get("url"))
+        data = {
+            'action': 'Export',
+            'ExportType': self.get_export_type(),
+            'Source': 4}
+        resp = fusio.call(requests.post, api='api', data=data)
+        action_id = fusio.get_action_id(resp.content)
+        fusio.wait_for_action_terminated(action_id)
+        return self.save_export(fusio.get_export_url(action_id))

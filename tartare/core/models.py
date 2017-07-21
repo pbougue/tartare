@@ -38,6 +38,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 import pymongo
 import uuid
 from datetime import datetime
+from datetime import date
 import logging
 from typing import Optional, List, Union
 
@@ -64,7 +65,7 @@ class Environment(object):
 
 
 class ValidityPeriod(object):
-    def __init__(self, start_date: datetime, end_date: datetime):
+    def __init__(self, start_date: date, end_date: date):
         self.start_date = start_date
         self.end_date = end_date
 
@@ -668,7 +669,8 @@ class ContributorExport(object):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[DataSource]=None, id: str=None,
+                 data_sources: List[ContributorExportDataSource]=None,
+                 id: str=None,
                  created_at=None):
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id

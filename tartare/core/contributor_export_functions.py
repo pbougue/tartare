@@ -30,15 +30,13 @@
 import logging
 import os
 import tempfile
-import urllib.request
-from urllib.error import ContentTooShortError, HTTPError, URLError
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor
 from tartare.validity_period_finder import ValidityPeriodFinder
-from tartare.helper import get_filename, get_md5_content_file
+from tartare.helper import get_filename, get_md5_content_file, download_zip_file
 from tartare.core import models
-import zipfile
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,16 +52,21 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
 
 
 def save_export(contributor: Contributor, context: Context) -> Context:
+    data_sources = []
+    new_grid_fs_id = None
     for data_source_grid in context.data_sources_fetched:
         if not data_source_grid.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_grid.data_source_id))
             continue
         new_grid_fs_id = GridFsHandler().copy_file(data_source_grid.gridfs_id)
-        data_source = ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+        data_sources.append(
+            ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+        )
+    if data_sources:
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_grid_fs_id,
                                    validity_period=data_source_grid.validity_period,
-                                   data_sources=[data_source])
+                                   data_sources=data_sources)
         export.save()
         context.contributor_exports.append(export)
     return context
@@ -77,19 +80,7 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
-                try:
-                    urllib.request.urlretrieve(url, tmp_file_name)
-                except HTTPError as e:
-                    logger.error('error during download of file: {}'.format(str(e)))
-                    raise
-                except ContentTooShortError:
-                    logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
-                    raise
-                except URLError as e:
-                    logger.error('error during download of file: {}'.format(str(e)))
-                    raise
-                if not zipfile.is_zipfile(tmp_file_name):
-                    raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                download_zip_file(url, tmp_file_name)
 
                 data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
                                                                         data_source_id=data_source.id)

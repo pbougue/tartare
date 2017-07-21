@@ -32,8 +32,8 @@ from freezegun import freeze_time
 from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
-from tartare.exceptions import IntegrityException
-from tartare.processes.coverage import FusioImport, FusioPreProd
+from tartare.exceptions import IntegrityException, FusioException
+from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from datetime import date
 from tests.utils import get_response
 
@@ -74,7 +74,8 @@ class TestFusioProcesses:
             ([(date(2018, 1, 1), date(2018, 7, 1)), (date(2019, 3, 1), date(2019, 9, 1))],
              {'DateDebut': '01/01/2018', 'DateFin': '31/12/2018', 'action': 'regionalimport'}),
             # 3 contrib
-            ([(date(2018, 1, 1), date(2018, 4, 1)), (date(2018, 10, 1), date(2018, 12, 11)), (date(2018, 8, 11), date(2018, 10, 13))],
+            ([(date(2018, 1, 1), date(2018, 4, 1)), (date(2018, 10, 1), date(2018, 12, 11)),
+              (date(2018, 8, 11), date(2018, 10, 13))],
              {'DateDebut': '01/01/2018', 'DateFin': '11/12/2018', 'action': 'regionalimport'}),
         ])
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
@@ -103,8 +104,10 @@ class TestFusioProcesses:
     @pytest.mark.parametrize(
         "contrib_begin_date,contrib_end_date,expected_message", [
             # one contributor
-            (date(2015, 1, 20), date(2015, 7, 14), "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
-            (date(2017, 1, 1), date(2017, 1, 14), "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
+            (date(2015, 1, 20), date(2015, 7, 14),
+             "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
+            (date(2017, 1, 1), date(2017, 1, 14),
+             "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
         ])
     def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
         with pytest.raises(IntegrityException) as excinfo:
@@ -128,3 +131,41 @@ class TestFusioProcesses:
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
+
+    @mock.patch('tartare.processes.coverage.FusioExport.save_export')
+    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_call_fusio_export(self, fusio_call, fusio_wait_for_action_terminated, get_export_url, save_export):
+        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                <serverfusio>
+                    <ActionId>1607281547155684</ActionId>
+                </serverfusio>"""
+        fusio_call.return_value = get_response(200, content)
+        get_export_url.return_value = 'abcd.zip'
+        params={
+            'url': 'http://fusio_host',
+            "export_type": "Ntfs"
+        }
+        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        fusio_export.do()
+        data = {
+            'action': 'Export',
+            "ExportType": 32,
+            "Source": 4
+        }
+        fusio_call.assert_called_with(requests.post, api='api', data=data)
+        fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
+        get_export_url.assert_called_with('1607281547155684')
+        save_export.assert_called_with('abcd.zip')
+
+    def test_call_fusio_export_unkown_export_type(self):
+        params = {
+            'url': 'http://fusio_host',
+            "export_type": "bob"
+        }
+        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        with pytest.raises(FusioException) as excinfo:
+                fusio_export.do()
+        assert str(excinfo.value) == "export_type bob not found"
+
