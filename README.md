@@ -12,13 +12,13 @@ The global architecture is available in the [architecture.md](documentation/arch
 ```
 cd path/to/tartare
 mkvirtualenv tartare -p python3.5
-workon tartare
 make build
 ```
 
 ## Run the application (for development)
 ```
 cd path/to/tartare
+workon tartare
 honcho start
 ```
 
@@ -50,6 +50,7 @@ The Rest Api is based on Flask. To run only the rest API:
 
 ``` bash
 cd path/to/tartare
+workon tartare
 honcho start web
 ```
 
@@ -63,7 +64,6 @@ Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ## Tests
 ```
 cd path/to/tartare
-mkvirtualenv tartare -p python3.5
 workon tartare
 make test
 ```
@@ -71,7 +71,6 @@ make test
 ### Type checking
 ```
 cd path/to/tartare
-mkvirtualenv tartare -p python3.5
 workon tartare
 make check
 ```
