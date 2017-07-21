@@ -43,7 +43,7 @@ from tartare.processes.processes import PreProcess
 
 class Contributor(flask_restful.Resource):
     @json_data_validate()
-    def post(self):
+    def post(self) -> Response:
         post_data = request.json
         if 'data_prefix' not in post_data:
             raise InvalidArguments('contributor data_prefix must be specified')
