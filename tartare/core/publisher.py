@@ -35,7 +35,7 @@ from tartare.exceptions import ProtocolException
 from zipfile import ZipFile, ZIP_DEFLATED
 import tempfile
 import os
-from typing import Union, List
+from typing import Union, List, BinaryIO
 from io import IOBase
 from gridfs.grid_file import GridOut
 from tartare.core.models import Coverage, CoverageExport
@@ -43,22 +43,22 @@ from tartare.core.models import Coverage, CoverageExport
 logger = logging.getLogger(__name__)
 
 
-
 class AbstractProtocol(metaclass=ABCMeta):
-    def __init__(self, url, options):
+    def __init__(self, url: str, options: dict) -> None:
         self.url = url
         self.options = options
 
     @abstractmethod
-    def publish(self, file: Union[str, bytes, IOBase, GridOut], filename: str):
+    def publish(self, file: BinaryIO, filename: str) -> None:
         pass
 
 
 class HttpProtocol(AbstractProtocol):
-    def publish(self, file, filename):
+    def publish(self, file: BinaryIO, filename: str) -> None:
         logger.info('publishing file {filename} on {url}...'.format(filename=filename, url=self.url))
         if self.options:
-            response = requests.post(self.url, auth=(self.options['authent']['username'], self['authent']['password']),
+            response = requests.post(self.url,
+                                     auth=(self.options['authent']['username'], self.options['authent']['password']),
                                      files={'file': file, 'filename': filename}, timeout=10)
         else:
             response = requests.post(self.url, files={'file': file, 'filename': filename},
@@ -71,7 +71,7 @@ class HttpProtocol(AbstractProtocol):
 
 
 class FtpProtocol(AbstractProtocol):
-    def publish(self, file, filename):
+    def publish(self, file: BinaryIO, filename: str) -> None:
         directory = None
         if 'directory' in self.options and self.options['directory']:
             directory = self.options['directory']
@@ -86,27 +86,29 @@ class FtpProtocol(AbstractProtocol):
             try:
                 session.cwd(directory)
             except ftplib.error_perm as message:
-                logger.error(message)
+                logger.error(str(message))
                 session.quit()
                 raise ProtocolException(message)
 
         full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)
         session.quit()
         if not full_code.startswith('226'):
-            message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url, full_code=full_code)
-            logger.error(message)
-            raise ProtocolException(message)
+            error_message = 'error during publishing on ftp://{url} => {full_code}'.format(url=self.url,
+                                                                                           full_code=full_code)
+            logger.error(error_message)
+            raise ProtocolException(error_message)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
-    def publish(self, protocol_uploader: AbstractProtocol, file: Union[str, bytes, IOBase, GridOut],
-                coverage: Coverage, coverage_export: CoverageExport):
+    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
+                coverage_export: CoverageExport) -> None:
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file, coverage, coverage_export):
+    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
+                coverage_export: CoverageExport) -> None:
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
 
@@ -117,7 +119,8 @@ class ODSPublisher(AbstractPublisher):
         return ['ID', 'Description', 'Format', 'Type file', 'Download', 'Validity start date', 'Validity end date',
                 'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
 
-    def publish(self, protocol_uploader, file, coverage, coverage_export):
+    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
+                coverage_export: CoverageExport) -> None:
         import datetime
         meta_data_dict = [
             {
@@ -145,7 +148,8 @@ class ODSPublisher(AbstractPublisher):
 
 
 class StopAreaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader, file, coverage, coverage_export):
+    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
+                coverage_export: CoverageExport) -> None:
         source_filename = 'stops.txt'
         dest_filename = "{coverage}_stops.txt".format(coverage=coverage.id)
 

@@ -34,7 +34,7 @@ from tartare.core.models import DataSource, PreProcess
 from tartare.interfaces import schema
 
 
-def upgrade_dict(source: Union[DataSource, PreProcess], request_data: dict, key: str):
+def upgrade_dict(source: Union[DataSource, PreProcess], request_data: dict, key: str) -> None:
     map_model = {
         "data_sources": schema.DataSourceSchema,
         "preprocesses": schema.PreProcessSchema
