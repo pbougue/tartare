@@ -54,7 +54,8 @@ List of preprocesses for coverages
       "export_type": "ntfs"
    },
    "type":"FusioExport",
-   "sequence":0
+   "sequence":3
 }
 ```
 values possibles for export_type: ntfs, gtfsv2 and googletransit
+
