@@ -34,7 +34,7 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor
 from tartare.validity_period_finder import ValidityPeriodFinder
-from tartare.helper import get_filename, get_md5_content_file, download_file
+from tartare.helper import get_filename, get_md5_content_file, download_zip_file
 from tartare.core import models
 
 
@@ -80,7 +80,7 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
-                download_file(url, tmp_file_name)
+                download_zip_file(url, tmp_file_name)
 
                 data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
                                                                         data_source_id=data_source.id)

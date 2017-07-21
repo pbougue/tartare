@@ -59,7 +59,7 @@ def initialize_context(coverage: Coverage, context: Context) -> Context:
 
 
 def save_export(coverage: Coverage, context: Context) -> Context:
-    contributors = []
+    contributor_exports = []
     new_grid_fs_id = None
 
     for ce in context.contributor_exports:
@@ -68,18 +68,18 @@ def save_export(coverage: Coverage, context: Context) -> Context:
             continue
         new_grid_fs_id = GridFsHandler().copy_file(ce.gridfs_id)
         validity_period = ce.validity_period
-        contributors.append(
+        contributor_exports.append(
             CoverageExportContributor(contributor_id=ce.contributor_id,
                                       validity_period=validity_period,
                                       data_sources=ce.data_sources)
         )
         ce.gridfs_id = new_grid_fs_id
-    if contributors:
+    if contributor_exports:
         if context.gridfs_id:
             new_grid_fs_id = context.gridfs_id
         export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,
                                 validity_period=validity_period,
-                                contributors=contributors)
+                                contributors=contributor_exports)
         export.save()
 
     return context

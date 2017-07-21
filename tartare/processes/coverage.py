@@ -35,10 +35,9 @@ from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from datetime import date
 from tartare.core.models import ContributorExport
 from tartare.core.context import Context
-from tartare.helper import download_file, get_filename
+from tartare.helper import download_zip_file, get_filename
 import tempfile
 
 
@@ -49,10 +48,6 @@ class FusioDataUpdate(AbstractProcess):
         return {
             "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
         }
-
-    @staticmethod
-    def _format_date(_date: date, format: str='%d/%m/%Y') -> str:
-        return _date.strftime(format)
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
         validity_period = contributor_export.validity_period
@@ -132,16 +127,16 @@ class FusioExport(AbstractProcess):
             "googletransit": 37
         }
         lower_export_type = export_type.lower()
-        if lower_export_type in map_export_type:
-            return map_export_type.get(lower_export_type)
-        msg = 'export_type {} not found'.format(lower_export_type)
-        logging.getLogger(__name__).exception(msg)
-        raise FusioException(msg)
+        if lower_export_type not in map_export_type:
+            msg = 'export_type {} not found'.format(lower_export_type)
+            logging.getLogger(__name__).exception(msg)
+            raise FusioException(msg)
+        return map_export_type.get(lower_export_type)
 
     def save_export(self, url: str) -> Context:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
-            download_file(url, file_name)
+            download_zip_file(url, file_name)
             with open(file_name, 'rb') as file:
                 self.context.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context

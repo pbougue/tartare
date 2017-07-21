@@ -32,7 +32,7 @@ from freezegun import freeze_time
 from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ContributorExport, ValidityPeriod
-from tartare.exceptions import IntegrityException
+from tartare.exceptions import IntegrityException, FusioException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from datetime import date
 from tests.utils import get_response
@@ -158,3 +158,19 @@ class TestFusioProcesses:
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
         get_export_url.assert_called_with('1607281547155684')
         save_export.assert_called_with('abcd.zip')
+
+
+    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_call_fusio_export_unkown_export_type(self, fusio_call, get_export_url):
+        fusio_call.return_value = get_response(200)
+        get_export_url.return_value = 'abcd.zip'
+        params = {
+            'url': 'http://fusio_host',
+            "export_type": "bob"
+        }
+        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        with pytest.raises(FusioException) as excinfo:
+                fusio_export.do()
+        assert str(excinfo.value) == "export_type bob not found"
+

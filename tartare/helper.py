@@ -133,7 +133,7 @@ def setdefault_ids(collections: List[dict]):
         c.setdefault('id', str(uuid.uuid4()))
 
 
-def download_file(url_file: str, dest: str):
+def download_zip_file(url_file: str, dest: str):
     logger = logging.getLogger(__name__)
     try:
         urllib.request.urlretrieve(url_file, dest)

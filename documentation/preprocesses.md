@@ -1,5 +1,13 @@
 # Preprocesses
 List of preprocesses
+## Contributor processes
+List of preprocesses for coverages
+### Ruspell
+...
+### ComputeDirections
+...
+### HeadsignShortName
+...
 ## Coverage processes
 List of preprocesses for coverages
 ### FusioDataUpdate
@@ -36,3 +44,17 @@ List of preprocesses for coverages
     "sequence": 2
  }
 ```
+
+### FusioExport
+```json
+{
+   "id":"fusio_export",
+   "params":{
+      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+      "export_type": "ntfs"
+   },
+   "type":"FusioExport",
+   "sequence":0
+}
+```
+values possibles for export_type: ntfs, gtfsv2 and googletransit
