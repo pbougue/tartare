@@ -28,33 +28,16 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from functools import wraps
-from flask_restful import unpack
-from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 
+from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema
 
 
-class serialize_with(object):
-    def __init__(self, serializer):
-        self.serializer = serializer
-
-    def __call__(self, f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            resp = f(*args, **kwargs)
-            if isinstance(resp, tuple):
-                data, code, headers = unpack(resp)
-                return self.serializer.dump(data), code, headers
-            return self.serializer.dump(resp)
-        return wrapper
-
-
 class NoUnknownFieldMixin(Schema):
     @validates_schema(pass_original=True)
-    def check_unknown_fields(self, data, original_data):
+    def check_unknown_fields(self, data: dict, original_data: dict) -> None:
         for key in original_data:
             if key not in self.fields:
                 raise ValidationError('Unknown field name {}'.format(key))
@@ -72,13 +55,13 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
 
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     id = fields.String(required=True)
-    #we have to override nested field to add validation on input
+    # we have to override nested field to add validation on input
     environments = fields.Nested(EnvironmentListSchema)
-    #read only
+    # read only
     grid_calendars_id = fields.String(dump_only=True)
 
     @post_load
-    def make_coverage(self, data):
+    def make_coverage(self, data: dict) -> Coverage:
         return Coverage(**data)
 
 
