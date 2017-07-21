@@ -1,2 +1,2 @@
-ID,Description,Format,Type file,Download,Validity start date,Validity end date,Script of Transformation,Licence,Source link,Publication update date
-fr-idf-test-GTFS,Global transport in fr-idf-test,GTFS,Global,gtfs.zip,20150325,20150826,,my license,http://license.org/mycompany,15/01/2017
+Description,Download,Format,ID,Licence,Publication update date,Script of Transformation,Source link,Type file,Validity end date,Validity start date
+Global transport in fr-idf-test,gtfs.zip,GTFS,fr-idf-test-GTFS,my license,15/01/2017,,http://license.org/mycompany,Global,20150826,20150325
