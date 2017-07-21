@@ -26,23 +26,23 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from tartare.core.context import Context
 from tartare.processes.processes import AbstractProcess
 
 
 class Ruspell(AbstractProcess):
 
-    def do(self):
+    def do(self) -> Context:
         return self.context
 
 
 class ComputeDirections(AbstractProcess):
 
-    def do(self):
+    def do(self) -> Context:
         return self.context
 
 
 class HeadsignShortName(AbstractProcess):
 
-    def do(self):
+    def do(self) -> Context:
         return self.context

@@ -93,7 +93,7 @@ class FusioImport(AbstractProcess):
             end_date = min(begin_date + timedelta(days=364), end_date)
         return begin_date, end_date
 
-    def do(self):
+    def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         begin_date, end_date = self._get_period_bounds()
         resp = fusio.call(requests.post, api='api',
@@ -107,7 +107,7 @@ class FusioImport(AbstractProcess):
 
 
 class FusioPreProd(AbstractProcess):
-    def do(self):
+    def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
         fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
@@ -115,5 +115,5 @@ class FusioPreProd(AbstractProcess):
 
 
 class FusioExport(AbstractProcess):
-    def do(self):
+    def do(self) -> Context:
         return self.context

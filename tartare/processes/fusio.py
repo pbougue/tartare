@@ -36,7 +36,7 @@ from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
 from xml.etree.cElementTree import Element
 from tartare import app
-from typing import Optional
+from typing import Optional, Any
 
 
 def is_running(status: str) -> bool:
@@ -50,7 +50,7 @@ def is_running(status: str) -> bool:
 
 class Fusio(object):
     @staticmethod
-    def format_date(date: date, format='%d/%m/%Y') -> str:
+    def format_date(date: date, format: str='%d/%m/%Y') -> str:
         return date.strftime(format)
 
     def __init__(self, url: str) -> None:
@@ -64,19 +64,19 @@ class Fusio(object):
             raise FusioException("invalid xml: {}".format(str(e)))
         return root
 
-    def get_action_id(self, raw_xml: bytes) -> str:
+    def get_action_id(self, raw_xml: bytes) -> Optional[str]:
         root = self.__parse_xml(raw_xml)
         action_id_element = root.find('ActionId')
         return None if action_id_element is None else action_id_element.text
 
-    def __get_status_by_action_id(self, action_id: str, raw_xml: bytes) -> str:
+    def __get_status_by_action_id(self, action_id: str, raw_xml: bytes) -> Optional[str]:
         root = self.__parse_xml(raw_xml)
         return next((action.find('ActionProgression').get('Status') for action in root.iter('Action')
                      if action.get('ActionId') == action_id), None)
 
-    def call(self, method: MethodType, api: Optional[str]=None,
-             data: Optional[dict]=None,
-             files: Optional[dict]=None) -> requests.Response:
+    def call(self, method: Any, api: str = 'api',
+             data: Optional[dict] = None,
+             files: Optional[dict] = None) -> requests.Response:
         try:
             response = method(self.url.rstrip('/') + '/' + api, data=data, files=files)
         except requests.exceptions.Timeout as e:
@@ -95,6 +95,6 @@ class Fusio(object):
     @retry(retry_on_result=is_running,
            stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
            wait_fixed=app.config['FUSIO_WAIT_FIXED'])
-    def wait_for_action_terminated(self, action_id: str) -> str:
+    def wait_for_action_terminated(self, action_id: str) -> Optional[str]:
         response = self.call(requests.get, api='info')
         return self.__get_status_by_action_id(action_id, response.content)
