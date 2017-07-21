@@ -55,11 +55,6 @@ import tartare
 logger = logging.getLogger(__name__)
 
 
-def create_dir(directory: str):
-    """create directory if needed"""
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
 
 def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
@@ -67,12 +62,6 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
         grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
         new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
         calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
-
-
-def _get_current_nfts_file(current_data_dir: str) -> str:
-    files = glob.glob(os.path.join(current_data_dir, "*"))
-
-    return next((f for f in files if os.path.isfile(f) and f.endswith('.zip') and is_ntfs_data(f)), None)
 
 
 class CallbackTask(tartare.celery.Task):
