@@ -159,12 +159,7 @@ class TestFusioProcesses:
         get_export_url.assert_called_with('1607281547155684')
         save_export.assert_called_with('abcd.zip')
 
-
-    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
-    @mock.patch('tartare.processes.fusio.Fusio.call')
-    def test_call_fusio_export_unkown_export_type(self, fusio_call, get_export_url):
-        fusio_call.return_value = get_response(200)
-        get_export_url.return_value = 'abcd.zip'
+    def test_call_fusio_export_unkown_export_type(self):
         params = {
             'url': 'http://fusio_host',
             "export_type": "bob"
