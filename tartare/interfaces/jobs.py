@@ -46,5 +46,5 @@ class Job(flask_restful.Resource):
             else:
                 raise ObjectNotFound('Job not found: {}'.format(job_id))
         else:
-            jobs = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id)
-        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200
+            matching_jobs = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id)
+            return {'jobs': JobSchema(many=True, strict=True).dump(matching_jobs).data}, 200

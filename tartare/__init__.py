@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Any
 
 from flask import Flask, jsonify, Response
 from werkzeug.exceptions import NotFound
@@ -52,7 +53,7 @@ def page_not_found(e: NotFound) -> Response:
     return jsonify(code=e.code, message=e.description), e.code
 
 @setup_logging.connect
-def celery_setup_logging(*args, **kwargs):
+def celery_setup_logging(*args: Any, **kwargs: Any) -> Any:
     # we don't want celery to mess with our logging configuration
     pass
 

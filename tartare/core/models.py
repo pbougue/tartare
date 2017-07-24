@@ -40,7 +40,7 @@ import uuid
 from datetime import datetime
 from datetime import date
 import logging
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 
 @app.before_first_request
@@ -101,7 +101,7 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str=None, data_source_id: str=None) -> 'DataSource':
+    def get(cls, contributor_id: str=None, data_source_id: str=None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
             contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
@@ -175,7 +175,7 @@ class GenericPreProcess(object):
     @classmethod
     def get_data(cls, class_name: Union['Contributor', 'Coverage'],
                  mongo_schema: Union['MongoContributorSchema', 'MongoCoverageSchema'], object_id,
-                 preprocess_id) -> 'PreProcess':
+                 preprocess_id) -> Optional[List['PreProcess']]:
         if object_id is not None:
             data = class_name.get(object_id)
             if data is None:
@@ -244,7 +244,7 @@ class PreProcess(GenericPreProcess):
 
     @classmethod
     def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
-            coverage_id: Optional[str]=None) -> GenericPreProcess:
+            coverage_id: Optional[str]=None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -739,8 +739,8 @@ class MongoCoverageExportContributorSchema(Schema):
 class CoverageExport(object):
     mongo_collection = 'coverage_exports'
 
-    def __init__(self, coverage_id: str, gridfs_id: str, validity_period: str, contributors: List[Contributor]=None,
-                 id: str=None, created_at: str=None):
+    def __init__(self, coverage_id: str, gridfs_id: str, validity_period: ValidityPeriod,
+                 contributors: List[CoverageExportContributor]=None, id: str=None, created_at: str=None):
         self.id = id if id else str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id

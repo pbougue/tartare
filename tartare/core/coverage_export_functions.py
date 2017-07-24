@@ -32,7 +32,6 @@ from tartare.core.context import Context
 from tartare.core.models import ContributorExport, CoverageExport, CoverageExportContributor, Coverage
 from tartare.core.gridfs_handler import GridFsHandler
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,22 +45,10 @@ def postprocess(coverage: Coverage, context: Context) -> Context:
     return context
 
 
-def initialize_context(coverage: Coverage, context: Context) -> Context:
-    logger.info('initialize context')
-    for contributor_id in coverage.contributors:
-        export = ContributorExport.get_last(contributor_id)
-        if not export:
-            logger.info("Contributor {} without export.".format(contributor_id), coverage.id)
-            continue
-        context.contributor_exports.append(export)
-
-    return context
-
-
 def save_export(coverage: Coverage, context: Context) -> Context:
     contributor_exports = []
     new_grid_fs_id = None
-
+    validity_period = None
     for ce in context.contributor_exports:
         if not ce.gridfs_id:
             logger.info("contributor export {} without gridfs id.".format(ce.contributor_id))
@@ -74,7 +61,7 @@ def save_export(coverage: Coverage, context: Context) -> Context:
                                       data_sources=ce.data_sources)
         )
         ce.gridfs_id = new_grid_fs_id
-    if contributor_exports:
+    if contributor_exports and validity_period:
         if context.gridfs_id:
             new_grid_fs_id = context.gridfs_id
         export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,

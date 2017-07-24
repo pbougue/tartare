@@ -43,7 +43,7 @@ class GridFsHandler(object):
             database = mongo.db
         self.gridfs = GridFS(database)
 
-    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, GridOut], **kwargs: dict) -> str:
+    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, GridOut], **kwargs: str) -> str:
         """
             :rtype: the id of the gridfs
         """
