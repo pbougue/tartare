@@ -27,19 +27,17 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import glob
 import logging
 import os
 import datetime
 from typing import Optional
-
 from zipfile import ZipFile
+from billiard.einfo import ExceptionInfo
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
-from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
 from tartare.core import contributor_export_functions
@@ -56,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 
-def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
+def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> None:
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
         grid_calendar_data = GridCalendarData()
         grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
@@ -65,13 +63,12 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
 
 
 class CallbackTask(tartare.celery.Task):
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-
+    def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
-    def send_mail(self, args):
+    def send_mail(self, args: list) -> None:
         from tartare import mailer
         mailer.build_msg_and_send_mail(self.get_job(args))
 
@@ -83,11 +80,11 @@ class CallbackTask(tartare.celery.Task):
                     return models.Job.get(job_id=arg.id)
         return None
 
-    def update_job(self, args, exc):
+    def update_job(self, args: list, exc: Exception) -> None:
         job = self.get_job(args)
         if job:
             with tartare.app.app_context():
-                models.Job.update(job_id=job.get('id'), state="failed", error_message=str(exc))
+                models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)

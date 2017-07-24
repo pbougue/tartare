@@ -591,7 +591,8 @@ class Job(object):
     mongo_collection = 'jobs'
 
     def __init__(self, action_type: str, contributor_id: str=None, coverage_id: str=None, state: str='pending',
-                 step: str=None, id: str=None, started_at: datetime=None):
+                 step: str=None, id: str=None, started_at: datetime=None, updated_at:Optional[datetime]=None,
+                 error_message: str=""):
         self.id = id if id else str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
@@ -599,9 +600,9 @@ class Job(object):
         self.step = step
         # 'pending', 'running', 'done', 'failed'
         self.state = state
-        self.error_message = ""
+        self.error_message = error_message
         self.started_at = started_at if started_at else datetime.utcnow()
-        self.updated_at = None
+        self.updated_at = updated_at if updated_at else self.started_at
 
     def save(self):
         raw = MongoJobSchema().dump(self).data
@@ -622,7 +623,9 @@ class Job(object):
         if job_id:
             find_filter.update({'_id': job_id})
             raw = mongo.db[cls.mongo_collection].find_one(find_filter)
-            return MongoJobSchema(strict=False).load(raw).data
+            if not raw:
+                return None
+            return MongoJobSchema(strict=True).load(raw).data
 
         return cls.find(filter=find_filter)
 
@@ -637,13 +640,13 @@ class Job(object):
             logger.error("Cannot find job to update %s", job_id)
             return None
         if state is not None:
-            job["state"] = state
+            job.state = state
         if step is not None:
-            job["step"] = step
+            job.step = step
         if error_message is not None:
-            job["error_message"] = error_message
+            job.error_message = error_message
 
-        job['updated_at'] = datetime.utcnow()
+        job.updated_at = datetime.utcnow()
 
         raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(job).data})
         if raw.matched_count == 0:
@@ -654,13 +657,17 @@ class Job(object):
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     action_type = fields.String(required=True)
-    contributor_id = fields.String(required=False)
-    coverage_id = fields.String(required=False)
+    contributor_id = fields.String(required=False, allow_none=True)
+    coverage_id = fields.String(required=False, allow_none=True)
     state = fields.String(required=True)
-    step = fields.String(required=False)
+    step = fields.String(required=False, allow_none=True)
     started_at = fields.DateTime(required=False)
     updated_at = fields.DateTime(required=False)
     error_message = fields.String(required=False)
+
+    @post_load
+    def make(self, data):
+        return Job(**data)
 
 
 class ContributorExport(object):
