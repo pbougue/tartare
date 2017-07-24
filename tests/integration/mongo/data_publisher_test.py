@@ -57,8 +57,10 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         {
+                            "sequence": 0,
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
@@ -88,8 +90,10 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         {
+                            "sequence": 0,
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
@@ -139,6 +143,7 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         publication_platform
                     ]
@@ -159,6 +164,7 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
+            "sequence": 0,
             "type": "navitia",
             "protocol": "http",
             "url": "http://bob/v0/jobs"
@@ -204,6 +210,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -244,6 +251,7 @@ class TestDataPublisher(TartareFixture):
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -278,6 +286,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=sample_data))
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -328,6 +337,7 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": "whatever.com",
@@ -353,6 +363,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         publication_platform = {
+            "sequence": 0,
             "type": "stop_area",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,

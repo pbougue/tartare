@@ -50,18 +50,21 @@ def init_mongo():
 
 
 class Platform(object):
-    def __init__(self, protocol: str, type: str, url: str, options: dict=None):
+    def __init__(self, protocol: str, type: str, url: str, options: dict=None, sequence: Optional[int]=0):
         self.type = type
         self.protocol = protocol
         self.url = url
         self.options = {} if options is None else options
+        self.sequence = sequence
 
 
 class Environment(object):
-    def __init__(self, name: str=None, current_ntfs_id: str=None, publication_platforms: List[Platform]=None):
+    def __init__(self, name: str=None, current_ntfs_id: str=None,
+                 publication_platforms: List[Platform]=None, sequence: Optional[int]=0):
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
+        self.sequence = sequence
 
 
 class ValidityPeriod(object):
@@ -449,6 +452,7 @@ class MongoContributorExportDataSourceSchema(Schema):
 class MongoPlatformSchema(Schema):
     type = fields.String(required=True)
     protocol = fields.String(required=True)
+    sequence = fields.Integer(required=True)
     url = fields.String(required=True)
     options = fields.Dict(required=False)
 
@@ -459,6 +463,7 @@ class MongoPlatformSchema(Schema):
 
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
+    sequence = fields.Integer(required=True)
     current_ntfs_id = fields.String(allow_none=True)
     publication_platforms = fields.Nested(MongoPlatformSchema, many=True)
 
