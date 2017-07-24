@@ -1,5 +1,3 @@
-# coding=utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,17 +26,23 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional
 
-import pytest
-import tartare
-import tartare.api
+import flask_restful
+from flask import Response
+
+from tartare.core import models
+from tartare.interfaces.schema import JobSchema
+from tartare.http_exceptions import ObjectNotFound
 
 
-@pytest.fixture(scope="module")
-def app():
-    return tartare.app.test_client()
-
-
-def test_post_grid_calendar_returns_success_status(app):
-    r = app.post('/grid_calendar')
-    assert '200 OK' in r.status
+class Job(flask_restful.Resource):
+    def get(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
+            job_id: Optional[str] = None) -> Response:
+        jobs = models.Job.get(contributor_id, coverage_id, job_id)
+        if job_id:
+            if jobs:
+                return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
+            else:
+                raise ObjectNotFound('Job not found: {}'.format(job_id))
+        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200

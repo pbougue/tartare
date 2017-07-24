@@ -1,4 +1,4 @@
-#coding: utf-8
+# coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -33,15 +33,36 @@ from flask import Flask
 
 from tartare.helper import configure_logger, make_celery
 from celery.signals import setup_logging
+from flask_pymongo import PyMongo
+from flask_script import Manager
+
 
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')
 app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
+app.config["ERROR_404_HELP"] = False  # Disable help message in 404 response
+manager = Manager(app)
 
 configure_logger(app.config)
-#we don't want celery to mess with our logging configuration
+
+mongo = PyMongo(app)
+
+
 @setup_logging.connect
 def celery_setup_logging(*args, **kwargs):
+    # we don't want celery to mess with our logging configuration
     pass
 
 celery = make_celery(app)
+
+
+from tartare import api
+
+from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPublisher
+
+navitia_publisher = NavitiaPublisher()
+ods_publisher = ODSPublisher()
+stop_area_publisher = StopAreaPublisher()
+
+from tartare.core.mailer import Mailer
+mailer = Mailer(app.config.get('MAILER'))

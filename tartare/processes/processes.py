@@ -1,0 +1,81 @@
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
+#
+# This file is part of Navitia,
+#     the software to build cool stuff with public transport.
+#
+# Hope you'll enjoy and contribute to this project,
+#     powered by Canal TP (www.canaltp.fr).
+# Help us simplify mobility and open public transport:
+#     a non ending quest to the responsive locomotion way of traveling!
+#
+# LICENCE: This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# Stay tuned using
+# twitter @navitia
+# IRC #navitia on freenode
+# https://groups.google.com/d/forum/navitia
+# www.navitia.io
+
+from importlib import import_module
+from abc import ABCMeta, abstractmethod
+import logging
+from tartare.core.context import Context
+from tartare.http_exceptions import InvalidArguments
+from typing import Optional, List, Dict
+
+
+class AbstractProcess(metaclass=ABCMeta):
+    def __init__(self, context: Context, params: Dict[str, str]) -> None:
+        self.context = context
+        self.params = params
+
+    @abstractmethod
+    def do(self) -> Context:
+        pass
+
+
+class PreProcess(object):
+    @classmethod
+    def get_preprocess_class(cls, preprocess_name: str, instance: str) -> type:
+        try:
+            module = import_module('tartare.processes.{}'.format(instance))
+            return getattr(module, preprocess_name)
+        except AttributeError as e:
+            msg = 'impossible to build preprocess {} : module tartare.processes.{} has no class {}'.format(
+                preprocess_name, instance, preprocess_name)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
+        except ImportError as e:
+            msg = 'cannot find class {} : {}'.format(preprocess_name, str(e))
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
+
+    @classmethod
+    def get_preprocess(cls, context: Context, preprocess_name: str, params: Optional[dict]=None) -> AbstractProcess:
+        """
+        :param preprocess_name: Ruspell, FusioImport, ....
+        :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
+        """
+        attr = cls.get_preprocess_class(preprocess_name, context.instance)
+        try:
+            return attr(context, params)  # call to the contructor, with all the args
+        except TypeError as e:
+            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess_name, str(e))
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
+
+    @classmethod
+    def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:
+        for preprocess in preprocesses:
+            PreProcess.get_preprocess_class(preprocess.get('type', ''), instance)

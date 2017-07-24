@@ -1,27 +1,24 @@
 # tartare
 data integration
+The global architecture is available in the [architecture.md](documentation/architecture.md) file.
 
 ## Requirements
-- python 3.4
+- python 3.5
 - [RabbitMQ](https://www.rabbitmq.com/)
+- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
 
 ## Installation
 
-You can use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) for creating virtual environments.
-
 ```
-mkvirtualenv tartare -p python3.4
-workon tartare
-```
-
-Installation of dependencies
-```
-pip install -r requirements_dev.txt
+cd path/to/tartare
+mkvirtualenv tartare -p python3.5
+make build
 ```
 
 ## Run the application (for development)
 ```
 cd path/to/tartare
+workon tartare
 honcho start
 ```
 
@@ -29,15 +26,13 @@ honcho start
 
 We use a docker image for deployment purpose.
 
+Note: we use the new interface version of docker-compose, so docker version needs to be >= 1.10,
+ docker-compose version needs to be >= 1.6
+
 ``` bash
 cd path/to/tartare
 docker-compose build
 docker-compose up -d
-```
-
-Affect rights to input/output folders
-```
-sudo chmod o+rwx -R /tmp/tartare/*
 ```
 
 To watch logs output:
@@ -45,9 +40,9 @@ To watch logs output:
  docker-compose logs -f
  ```
 
-## Rest Api
+## "Rest" Api
 
-Tartare provides an Api to POST Navitia data to update.
+Tartare provides an API to enable coverage declaration and configuration, and to POST data to update.
 
 ### Run the Rest Api
 
@@ -55,6 +50,7 @@ The Rest Api is based on Flask. To run only the rest API:
 
 ``` bash
 cd path/to/tartare
+workon tartare
 honcho start web
 ```
 
@@ -65,17 +61,16 @@ Serving Flask app "tartare.api"
 Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 ```
 
-
-### Use the Rest Api
-
-POST a file:
-
-``` bash
-curl -X POST -d @path/to/your-file.csv http://127.0.0.1:5000/grid_calendar
-```
-
 ## Tests
 ```
 cd path/to/tartare
-PYTHONPATH=. py.test tests
+workon tartare
+make test
+```
+
+### Type checking
+```
+cd path/to/tartare
+workon tartare
+make check
 ```
