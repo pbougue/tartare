@@ -1,5 +1,3 @@
-# coding=utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -29,40 +27,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
-import json
+from tests.integration.test_mechanism import TartareFixture
 
+class TestCoverageApi(TartareFixture):
+    def test_404_http_error(self):
+        raw = self.get('/not_found')
 
-class TartareFixture(object):
-    tester = app.test_client()
+        assert self.is_json(raw)
+        assert raw.status_code == 404
 
-    def post(self, url, params=None, headers={'Content-Type': 'application/json'}):
-        data = params if params else {}
-        return self.tester.post(url,
-                                headers=headers,
-                                data=data)
-
-    def get(self, url):
-        return self.tester.get(url)
-
-    def dict_to_json(self, dict):
-        return json.dumps(dict)
-
-    def to_json(self, response):
-        return json.loads(response.data.decode('utf-8'))
-
-    def patch(self, url, params=None, headers={'Content-Type': 'application/json'}):
-        data = params if params else {}
-        return self.tester.patch(url,
-                                 headers=headers,
-                                 data=data)
-
-    def delete(self, url):
-        return self.tester.delete(url)
-
-    def is_json(self, data):
-        try:
-            self.to_json(data)
-        except ValueError as e:
-            return False
-        return True

@@ -29,24 +29,27 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask import Flask
-
-from tartare.helper import configure_logger, make_celery
+from flask import Flask, jsonify, Response
+from werkzeug.exceptions import NotFound
 from celery.signals import setup_logging
 from flask_pymongo import PyMongo
 from flask_script import Manager
+from tartare.helper import configure_logger, make_celery
 
 
 app = Flask(__name__)
 app.config.from_object('tartare.default_settings')
 app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
-app.config["ERROR_404_HELP"] = False  # Disable help message in 404 response
 manager = Manager(app)
 
 configure_logger(app.config)
 
 mongo = PyMongo(app)
 
+
+@app.errorhandler(404)
+def page_not_found(e: NotFound) -> Response:
+    return jsonify(code=e.code, message=e.description), e.code
 
 @setup_logging.connect
 def celery_setup_logging(*args, **kwargs):
