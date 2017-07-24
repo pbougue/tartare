@@ -33,5 +33,6 @@ class TestCoverageApi(TartareFixture):
     def test_404_http_error(self):
         raw = self.get('/not_found')
 
+        assert self.is_json(raw)
         assert raw.status_code == 404
 

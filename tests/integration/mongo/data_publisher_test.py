@@ -46,7 +46,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage not found: default'
 
     def test_publish_unknwon_environment(self, contributor):
@@ -77,7 +77,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/bob/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Environment not found: bob'
 
     def test_publish_coverage_without_export(self, contributor):
@@ -108,7 +108,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage default without export.'
 
     def _create_contributor(self, id, url='bob'):

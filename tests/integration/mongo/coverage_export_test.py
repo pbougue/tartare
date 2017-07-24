@@ -96,7 +96,7 @@ class TestCoverageExport(TartareFixture):
         exports = self.get('/coverages/bob/exports')
         assert exports.status_code == 404
         r = self.to_json(exports)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/bob/exports] but did you mean /coverages/<string:coverage_id>/exports or /coverages/<string:coverage_id>/actions/export or /coverages/<string:coverage_id>/jobs ?'
         assert r['error'] == 'Coverage not found: bob'
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
