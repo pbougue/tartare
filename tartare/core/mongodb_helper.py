@@ -28,13 +28,13 @@
 # www.navitia.io
 
 import logging
-from typing import Union
+from typing import Union, List
 
 from tartare.core.models import DataSource, PreProcess
 from tartare.interfaces import schema
 
 
-def upgrade_dict(source: Union[DataSource, PreProcess], request_data: dict, key: str) -> None:
+def upgrade_dict(source: Union[List[DataSource], List[PreProcess]], request_data: dict, key: str) -> None:
     map_model = {
         "data_sources": schema.DataSourceSchema,
         "preprocesses": schema.PreProcessSchema

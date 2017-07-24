@@ -92,10 +92,10 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
                 ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
                 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-                data_source = models.DataSourceFetched(contributor_id=contributor.id,
+                data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
                                                        data_source_id=data_source.id,
                                                        validity_period=validity_period)
-                data_source.save_dataset(tmp_file_name, filename)
-                data_source.save()
-                context.data_sources_fetched.append(data_source)
+                data_source_fetched.save_dataset(tmp_file_name, filename)
+                data_source_fetched.save()
+                context.data_sources_fetched.append(data_source_fetched)
     return context

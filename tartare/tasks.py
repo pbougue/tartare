@@ -33,6 +33,8 @@ import datetime
 from typing import Optional
 from zipfile import ZipFile
 from billiard.einfo import ExceptionInfo
+from celery.task import Task
+
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
@@ -88,7 +90,7 @@ class CallbackTask(tartare.celery.Task):
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file_to_tyr_and_discard(self, coverage_id: str, environment_type: str, file_id: str):
+def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -136,7 +138,7 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
-def publish_data_on_platform(self, platform: Platform, coverage: Coverage, environment_id: str, job: Job):
+def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
@@ -154,11 +156,11 @@ def publish_data_on_platform(self, platform: Platform, coverage: Coverage, envir
         self.retry(exc=exc)
 
 @celery.task()
-def finish_job(job_id: str):
+def finish_job(job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_ntfs_to_tyr(self, coverage_id: str, environment_type: str):
+def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> None:
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -181,7 +183,7 @@ def send_ntfs_to_tyr(self, coverage_id: str, environment_type: str):
         raise self.retry()
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self, contributor: Contributor, job: Job):
+def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
@@ -213,7 +215,7 @@ def contributor_export(self, contributor: Contributor, job: Job):
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def coverage_export(self, coverage: Coverage, job: Job):
+def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
     logger.info('coverage_export')
     try:
         context = Context('coverage')
@@ -256,7 +258,7 @@ def launch(processes: list, context: Context) -> Context:
 
 
 @celery.task()
-def automatic_update():
+def automatic_update() -> None:
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
     for contributor in contributors:
