@@ -50,7 +50,7 @@ class TestMailer():
                       started_at=now)
             job.save()
             mailer = Mailer({})
-            t = mailer.get_message(Job.get(job_id=job.id))
+            t = mailer.get_message(Job.get_one(job.id))
             result = t.split('\n')
 
             excepted = [
@@ -58,7 +58,7 @@ class TestMailer():
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
-                'End execution : None',
+                'End execution : {}'.format(now.isoformat(sep=' ')),
                 'Action type: contributor_export',
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
                 'Step: None',
@@ -80,14 +80,14 @@ class TestMailer():
                       started_at=now)
             job.save()
             mailer = Mailer({})
-            t = mailer.get_message(Job.get(job_id=job.id))
+            t = mailer.get_message(Job.get_one(job.id))
             result = t.split('\n')
             excepted = [
                 'Problem Tartare',
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
-                'End execution : None',
+                'End execution : {}'.format(now.isoformat(sep=' ')),
                 'Action type: coverage_export',
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
                 'Step: None',
@@ -109,14 +109,14 @@ class TestMailer():
                       started_at=now)
             job.save()
             mailer = Mailer({})
-            t = mailer.get_message(Job.get(job_id=job.id))
+            t = mailer.get_message(Job.get_one(job.id))
             result = t.split('\n')
             excepted = [
                 'Problem Tartare',
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
-                'End execution : None',
+                'End execution : {}'.format(now.isoformat(sep=' ')),
                 'Action type: automatic_update',
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
                 'Step: None',

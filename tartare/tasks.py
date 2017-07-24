@@ -77,7 +77,7 @@ class CallbackTask(tartare.celery.Task):
         for arg in args:
             if isinstance(arg, models.Job):
                 with tartare.app.app_context():
-                    return models.Job.get(job_id=arg.id)
+                    return models.Job.get_one(arg.id)
         return None
 
     def update_job(self, args: list, exc: Exception) -> None:

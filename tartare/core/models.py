@@ -604,38 +604,38 @@ class Job(object):
         self.started_at = started_at if started_at else datetime.utcnow()
         self.updated_at = updated_at if updated_at else self.started_at
 
-    def save(self):
+    def save(self) -> None:
         raw = MongoJobSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def find(cls, filter) -> Union[dict, List[dict]]:
+    def find(cls, filter) -> Union['Job', List['Job']]:
         raw = mongo.db[cls.mongo_collection].find(filter)
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get(cls, contributor_id: str=None, coverage_id: str=None, job_id: str=None) -> Union[dict, List[dict]]:
+    def get_some(cls, contributor_id: str=None, coverage_id: str=None) -> List['Job']:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
         if coverage_id:
             find_filter.update({'coverage_id': coverage_id})
-        if job_id:
-            find_filter.update({'_id': job_id})
-            raw = mongo.db[cls.mongo_collection].find_one(find_filter)
-            if not raw:
-                return None
-            return MongoJobSchema(strict=True).load(raw).data
-
         return cls.find(filter=find_filter)
 
     @classmethod
-    def update(cls, job_id: str, state: str=None, step: str=None, error_message: str=None) -> Optional[dict]:
+    def get_one(cls, job_id: str) -> Optional['Job']:
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': job_id})
+        if not raw:
+            return None
+        return MongoJobSchema(strict=True).load(raw).data
+
+    @classmethod
+    def update(cls, job_id: str, state: str=None, step: str=None, error_message: str=None) -> Optional['Job']:
         logger = logging.getLogger(__name__)
         if not job_id:
             logger.error('job_id cannot be empty')
             return None
-        job = cls.get(job_id=job_id)
+        job = cls.get_one(job_id)
         if not job:
             logger.error("Cannot find job to update %s", job_id)
             return None

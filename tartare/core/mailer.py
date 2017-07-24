@@ -36,6 +36,8 @@ import socket
 import logging
 from typing import List
 
+from tartare.core.models import Job
+
 
 class Mailer(object):
     def __init__(self, config: dict) -> None:
@@ -46,20 +48,20 @@ class Mailer(object):
         self.port = config.get('smtp', {}).get("port", 25)
         self.timeout = config.get('smtp', {}).get("timeout", 1)
 
-    def get_message(self, job: dict) -> str:
+    def get_message(self, job: Job) -> str:
         message = ["Problem Tartare",
                    "",
                    "",
-                   "Start execution : {}".format(job.get('started_at')),
-                   "End execution : {}".format(job.get('updated_at')),
-                   "Action type: {}".format(job.get('action_type')),
-                   "Job: {}".format(job.get('id')),
-                   "Step: {}".format(job.get('step'))]
-        if job.get('contributor_id'):
-            message.append("Contributor: {}".format(job.get('contributor_id')))
-        if job.get('coverage_id'):
-            message.append("Coverage: {}".format(job.get('coverage_id')))
-        message = message + ["Error Message : {}".format(job.get('error_message')),
+                   "Start execution : {}".format(job.started_at),
+                   "End execution : {}".format(job.updated_at),
+                   "Action type: {}".format(job.action_type),
+                   "Job: {}".format(job.id),
+                   "Step: {}".format(job.step)]
+        if job.contributor_id:
+            message.append("Contributor: {}".format(job.contributor_id))
+        if job.coverage_id:
+            message.append("Coverage: {}".format(job.coverage_id))
+        message = message + ["Error Message : {}".format(job.error_message),
                              "",
                              "",
                              "=" * 75,
@@ -68,7 +70,7 @@ class Mailer(object):
         str_message = "\n".join(message)
         return str_message.format(job=job)
 
-    def format_mail(self, job: dict) -> MIMEMultipart:
+    def format_mail(self, job: Job) -> MIMEMultipart:
         attachment = MIMEBase('application', "text/html")
 
         mail = MIMEMultipart("alternative")
@@ -100,7 +102,7 @@ class Mailer(object):
         finally:
             server.quit()
 
-    def build_msg_and_send_mail(self, job: dict) -> None:
+    def build_msg_and_send_mail(self, job: Job) -> None:
         if job:
             mail = self.format_mail(job)
             self.send(mail)
