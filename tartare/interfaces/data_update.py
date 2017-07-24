@@ -99,7 +99,7 @@ class CoverageData(Resource):
             raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
         if environment_type not in coverage.environments:
             raise ObjectNotFound("Environment{}' not found.".format(environment_type))
-        ntfs_file_id = coverage.environments.get(environment_type).current_ntfs_id
+        ntfs_file_id = coverage.environments[environment_type].current_ntfs_id
         grifs_handler = GridFsHandler()
         ntfs_file = grifs_handler.get_file_from_gridfs(ntfs_file_id)
         return flask.send_file(ntfs_file, mimetype='application/zip')

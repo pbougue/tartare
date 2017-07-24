@@ -336,8 +336,8 @@ class Coverage(object):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
-    def __init__(self, id: str, name: str, environments: List[Environment]=None, grid_calendars_id: str=None,
-                 contributors: List[Contributor]=None, license: License=None,
+    def __init__(self, id: str, name: str, environments: Dict[str, Environment]=None, grid_calendars_id: str=None,
+                 contributors: List[str]=None, license: License=None,
                  preprocesses: List[PreProcess]=None):
         self.id = id
         self.name = name
@@ -753,14 +753,14 @@ class CoverageExport(object):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str) -> Optional['ContributorExport']:
+    def get(cls, coverage_id: str) -> Optional['CoverageExport']:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)
         return MongoCoverageExportSchema(many=True).load(raw).data
 
     @classmethod
-    def get_last(cls, coverage_id: str) -> Optional['ContributorExport']:
+    def get_last(cls, coverage_id: str) -> Optional['CoverageExport']:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)

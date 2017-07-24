@@ -35,7 +35,7 @@ from tartare.exceptions import ProtocolException
 from zipfile import ZipFile, ZIP_DEFLATED
 import tempfile
 import os
-from typing import Union, List, BinaryIO
+from typing import Union, List, BinaryIO, Optional
 from io import IOBase
 from gridfs.grid_file import GridOut
 from tartare.core.models import Coverage, CoverageExport
@@ -48,7 +48,6 @@ class AbstractProtocol(metaclass=ABCMeta):
         self.url = url
         self.options = options
 
-    @abstractmethod
     def publish(self, file: BinaryIO, filename: str) -> None:
         pass
 
@@ -102,7 +101,7 @@ class FtpProtocol(AbstractProtocol):
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: Optional[CoverageExport]) -> None:
         pass
 
 
