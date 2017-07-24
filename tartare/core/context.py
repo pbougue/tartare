@@ -33,13 +33,13 @@ from typing import List
 
 class Context:
     def __init__(self, instance: str='contributor', data_sources_fetched: List[DataSourceFetched]=None,
-                 contributor_exports: List[ContributorExport]=None):
+                 contributor_exports: List[ContributorExport]=None) -> None:
         self.instance = instance
         self.gridfs_id = None
         self.data_sources_fetched = data_sources_fetched if data_sources_fetched else []
         self.contributor_exports = contributor_exports if contributor_exports else []
 
-    def fill_contributor_exports(self, contributors: List[str]):
+    def fill_contributor_exports(self, contributors: List[str]) -> None:
         logging.getLogger(__name__).info('initialize context')
         for contributor_id in contributors:
             export = ContributorExport.get_last(contributor_id)
@@ -48,7 +48,7 @@ class Context:
                 continue
             self.contributor_exports.append(export)
 
-    def fill_data_sources_fetched(self, contributor_id: str, data_sources: List[DataSource]):
+    def fill_data_sources_fetched(self, contributor_id: str, data_sources: List[DataSource]) -> None:
         logging.getLogger(__name__).info('initialize context')
         for data_source in data_sources:
             export = DataSourceFetched.get_last(contributor_id, data_source.id)

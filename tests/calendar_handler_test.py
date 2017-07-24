@@ -26,31 +26,30 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-import logging
-from typing import Union
-
-from tartare.core.models import DataSource, PreProcess
-from tartare.interfaces import schema
+from collections import Counter
+from io import StringIO
+from mock import mock, ANY
+from tartare.core.calendar_handler import dic_to_memory_csv
 
 
-def upgrade_dict(source: Union[DataSource, PreProcess], request_data: dict, key: str) -> None:
-    map_model = {
-        "data_sources": schema.DataSourceSchema,
-        "preprocesses": schema.PreProcessSchema
-    }
-    existing_id = [d.id for d in source]
-    logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
-    # constructing PATCH data
-    patched_data = None
-    if key in request_data:
-        patched_data = map_model.get(key)(many=True).dump(source).data
-        for item in request_data[key]:
-            if item['id'] in existing_id:
-                item2update = next((p for p in patched_data if p['id'] == item['id']), None)
-                if item2update:
-                    item2update.update(item)
-            else:
-                patched_data.append(item)
-    if patched_data:
-        request_data[key] = patched_data
+class TestCalendarHandler:
+    def test_dic_to_memory_csv_none(self):
+        assert None == dic_to_memory_csv([])
+
+    @mock.patch('csv.DictWriter')
+    def test_dic_to_memory_csv_argument_keys(self, dict_writer):
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+        dict_writer.assert_called_with(ANY, ['att1', 'att2'])
+        assert isinstance(csv, StringIO)
+
+    @mock.patch('csv.DictWriter')
+    def test_dic_to_memory_csv_keys(self, dict_writer):
+        expected_keys = ['att_1', 'att_b', 'att_bob']
+        dic_to_memory_csv([{"att_1": "val1", "att_b": "val2", "att_bob": "val2"}])
+        dict_writer.assert_called_with(ANY, expected_keys)
+
+    def test_dic_to_memory_csv_return_type(self):
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}])
+        assert isinstance(csv, StringIO)
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+        assert isinstance(csv, StringIO)

@@ -29,6 +29,8 @@
 
 from gridfs import GridFS
 from bson.objectid import ObjectId
+from pymongo.database import Database
+
 from tartare import mongo
 from typing import Union
 from io import IOBase
@@ -36,12 +38,12 @@ from gridfs.grid_file import GridOut
 
 
 class GridFsHandler(object):
-    def __init__(self, database=None):
+    def __init__(self, database: Database=None) -> None:
         if database is None:
             database = mongo.db
         self.gridfs = GridFS(database)
 
-    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, GridOut], **kwargs) -> str:
+    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, GridOut], **kwargs: dict) -> str:
         """
             :rtype: the id of the gridfs
         """
@@ -50,7 +52,7 @@ class GridFsHandler(object):
     def get_file_from_gridfs(self, id: str) -> GridOut:
         return self.gridfs.get(ObjectId(id))
 
-    def delete_file_from_gridfs(self, id: str):
+    def delete_file_from_gridfs(self, id: str) -> None:
         self.gridfs.delete(ObjectId(id))
 
     def copy_file(self, id: str) -> str:
