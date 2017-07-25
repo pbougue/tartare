@@ -8,6 +8,26 @@ List of preprocesses for coverages
 ...
 ### HeadsignShortName
 ...
+
+### GtfsAgencyFile
+```json
+{
+  "type": "GtfsAdencyFile",
+  "sequence": 1,
+  "params": {
+    "data_source_ids": [
+      "id1",
+      "id2"
+    ],
+    "data": {
+      "agency_id": "112",
+      "agency_name": "stif",
+      "agency_url": "http://stif.com"
+    }
+  }
+}
+```
+
 ## Coverage processes
 List of preprocesses for coverages
 ### FusioDataUpdate
