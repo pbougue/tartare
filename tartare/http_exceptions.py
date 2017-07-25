@@ -35,11 +35,10 @@ class TartareException(HTTPException):
     """
     All tartare exceptions must inherit from this one and define a code and a short message
     """
-    def __init__(self, detailed_message: Optional[str]=None) -> None:
+
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
         super(TartareException, self).__init__()
-        self.data = {
-            'message': self.message,
-        }
+        self.data = {}  # type: dict
         if detailed_message:
             self.data['error'] = detailed_message
 
@@ -48,22 +47,42 @@ class InvalidArguments(TartareException):
     code = 400
     message = 'Invalid arguments'
 
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
+        super(InvalidArguments, self).__init__(detailed_message)
+        self.data['message'] = self.message
+
 
 class DuplicateEntry(TartareException):
     code = 409
     message = 'Duplicate entry'
+
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
+        super(DuplicateEntry, self).__init__(detailed_message)
+        self.data['message'] = self.message
 
 
 class InternalServerError(TartareException):
     code = 500
     message = 'Internal Server Error'
 
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
+        super(InternalServerError, self).__init__(detailed_message)
+        self.data['message'] = self.message
+
 
 class ObjectNotFound(TartareException):
     code = 404
     message = 'Object Not Found'
 
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
+        super(ObjectNotFound, self).__init__(detailed_message)
+        self.data['message'] = self.message
+
 
 class UnsupportedMediaType(TartareException):
     code = 415
     message = 'Unsupported Media Type'
+
+    def __init__(self, detailed_message: Optional[str] = None) -> None:
+        super(UnsupportedMediaType, self).__init__(detailed_message)
+        self.data['message'] = self.message

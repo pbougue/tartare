@@ -37,8 +37,7 @@ from flask_pymongo import PyMongo
 from flask_script import Manager
 from tartare.helper import configure_logger, make_celery
 
-
-app = Flask(__name__)
+app = Flask(__name__)  # type: Flask
 app.config.from_object('tartare.default_settings')
 app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
 manager = Manager(app)
@@ -52,13 +51,14 @@ mongo = PyMongo(app)
 def page_not_found(e: NotFound) -> Response:
     return jsonify(code=e.code, message=e.description), e.code
 
+
 @setup_logging.connect
 def celery_setup_logging(*args: Any, **kwargs: Any) -> Any:
     # we don't want celery to mess with our logging configuration
     pass
 
-celery = make_celery(app)
 
+celery = make_celery(app)
 
 from tartare import api
 
@@ -69,4 +69,5 @@ ods_publisher = ODSPublisher()
 stop_area_publisher = StopAreaPublisher()
 
 from tartare.core.mailer import Mailer
+
 mailer = Mailer(app.config.get('MAILER'))
