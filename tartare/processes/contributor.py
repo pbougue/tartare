@@ -46,3 +46,9 @@ class HeadsignShortName(AbstractProcess):
 
     def do(self) -> Context:
         return self.context
+
+
+class GtfsAgencyFile(AbstractProcess):
+    def do(self) -> Context:
+
+        return self.context
