@@ -1211,12 +1211,16 @@ definitions:
   environment_type:
     type: object
     required: [
-      name
+      name,
+      sequence
     ]
     properties:
       name:
         type: string
         example: integration
+      sequence:
+        type: integer
+        example: 0
       current_ntfs_id:
         type: string
         example: 5810cb2d3c96b7000108d074
@@ -1231,7 +1235,8 @@ definitions:
     required: [
       type,
       protocol,
-      url
+      url,
+      sequence
     ]
     properties:
       type:
@@ -1243,6 +1248,9 @@ definitions:
       url:
         type: string
         example: ods.fr
+      sequence:
+        type: integer
+        example: 0
       options:
         type: object
         example: {"authent": {"password": "XXXX", "username": "ftp_user"}, "directory": "/path/" }
