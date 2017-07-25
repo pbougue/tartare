@@ -234,11 +234,11 @@ def coverage_export(self, coverage: Coverage, job: Job):
         coverage_export_functions.save_export(coverage, context)
         actions = []
         # launch publish for all environment
-        tmp_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
-        for env in tmp_environments:
+        sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
+        for env in sorted_environments:
             environment = coverage.get_environment(env)
-            tmp_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
-            for platform in tmp_publication_platforms:
+            sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
+            for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
         if actions:
             chain(*actions).delay()
