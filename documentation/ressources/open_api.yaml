@@ -1211,7 +1211,8 @@ definitions:
   environment_type:
     type: object
     required: [
-      name
+      name,
+      sequence
     ]
     properties:
       name:
@@ -1234,7 +1235,8 @@ definitions:
     required: [
       type,
       protocol,
-      url
+      url,
+      sequence
     ]
     properties:
       type:
