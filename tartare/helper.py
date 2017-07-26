@@ -56,7 +56,7 @@ def upload_file(url: str, filename: str, file: Union[str, bytes, IOBase, GridOut
     # TODO: fix interaction between toolbets and gridfs file
 
 
-def configure_logger(app_config: dict):
+def configure_logger(app_config: dict) -> None:
     """
     initialize logging
     """
