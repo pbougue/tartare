@@ -53,7 +53,7 @@ class FusioDataUpdate(AbstractProcess):
         validity_period = contributor_export.validity_period
         return {
             'action': 'dataupdate',
-            'contributorexternalcode': contributor_export.contributor_id,
+            'contributorexternalcode': contributor_export.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
             'serviceexternalcode': contributor_export.data_sources[0].data_source_id,

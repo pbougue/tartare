@@ -695,8 +695,10 @@ class ContributorExport(object):
                  validity_period: ValidityPeriod,
                  data_sources: List[ContributorExportDataSource] = None,
                  id: str = None,
+                 data_prefix: str = None,
                  created_at: datetime = None) -> None:
         self.id = id if id else str(uuid.uuid4())
+        self.data_prefix = data_prefix
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
@@ -726,6 +728,7 @@ class ContributorExport(object):
 class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     contributor_id = fields.String(required=True)
+    data_prefix = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False)
