@@ -3,10 +3,7 @@ FROM python:3.5-alpine
 RUN addgroup -g 8110 tartare
 RUN adduser -H -D -u 8110 -G tartare tartare
 
-RUN mkdir -p /var/tartare/
-RUN chown -R tartare:tartare /var/tartare/
-
-COPY ./tartare /usr/src/app/tartare
+RUN mkdir /usr/src/app
 COPY requirements.txt /usr/src/app
 WORKDIR /usr/src/app
 
@@ -43,5 +40,7 @@ USER tartare
 ARG TARTARE_VERSION
 ENV TARTARE_VERSION ${TARTARE_VERSION:-unknown_version}
 EXPOSE 5000
+
+COPY ./tartare /usr/src/app/tartare
 
 CMD ["celery", "-A", "tartare.tasks.celery", "worker"]
