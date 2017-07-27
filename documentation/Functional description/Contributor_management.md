@@ -1,11 +1,11 @@
 ## Contributor properties
-**Name** : Required, not unique.  
-**Data_prefix** : Required, unique. Needed to generate unique IDs when data are merged in one coverage from several contributors.  
-**ID** : Not required. If not provided, Tartare will generate one. Unique.  
+**Name**: Required, not unique.  
+**Data_prefix**: Required, unique. Needed to generate unique IDs when data are merged in one coverage from several contributors.  
+**ID**: Not required. If not provided, Tartare will generate one. Unique.  
 
-**List of dataSources** : Describe data produced by the contributor. Each datasource has its own properties.
+**List of dataSources**: Describe data produced by the contributor. Each datasource has its own properties.
 
-**List of treatments (Pre-processes)** : Preprocesses applied to the contributor's data. Each treatment has its own properties.
+**List of treatments (Pre-processes)**: Preprocesses applied to the contributor's data. Each treatment has its own properties.
 
 Contributors can be created, edited, deleted or retrieved, as their datasources and preprocesses.
 
