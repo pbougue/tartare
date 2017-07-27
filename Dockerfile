@@ -36,5 +36,6 @@ ENV TARTARE_VERSION ${TARTARE_VERSION:-unknown_version}
 EXPOSE 5000
 
 COPY ./tartare /usr/src/app/tartare
+COPY ./migrations /usr/src/app/migrations
 
 CMD ["celery", "-A", "tartare.tasks.celery", "worker"]
