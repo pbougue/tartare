@@ -51,13 +51,12 @@ class FusioDataUpdate(AbstractProcess):
 
     def _get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
         validity_period = data_source_context.validity_period
-		c = Contributor.get(contributor_export.contributor_id)        
-		return {
+        return {
             'action': 'dataupdate',
-            'contributorexternalcode': c.data_prefix,
+            'contributorexternalcode': contributor.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
+            'serviceexternalcode': data_source_context.data_source_id,
             'libelle': 'unlibelle',
             'DateDebut': Fusio.format_date(validity_period.start_date),
             'DateFin': Fusio.format_date(validity_period.end_date),
