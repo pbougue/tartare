@@ -82,11 +82,10 @@ class ValidityPeriod(object):
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str = None, gridfs_id=None, validity_period: ValidityPeriod = None) -> None:
+    def __init__(self, data_source_id: str=None, gridfs_id=None, validity_period: ValidityPeriod=None) -> None:
         self.data_source_id = data_source_id
         self.validity_period = validity_period
         self.gridfs_id = gridfs_id
-
 
 
 class License(object):
@@ -256,8 +255,8 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id)
 
     @classmethod
-    def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
-            coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
+    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+            coverage_id: Optional[str]=None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -266,7 +265,7 @@ class PreProcess(GenericPreProcess):
             return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> int:
         if preprocess_id is None:
             raise ValueError('A preprocess id is required')
         if not any([coverage_id, contributor_id]):
@@ -277,8 +276,8 @@ class PreProcess(GenericPreProcess):
             return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
-               preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
+    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+               preprocess: Optional[dict]=None) -> Optional[List['PreProcess']]:
         if preprocess_id is None:
             raise ValueError('A PreProcess id is required')
 

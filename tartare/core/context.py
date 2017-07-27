@@ -42,7 +42,8 @@ class DataSourceContext():
 
 class ContributorContext():
     def __init__(self, contributor: Contributor,
-                 data_sources_context: Optional[List[DataSourceContext]]=None, validity_period: ValidityPeriod=None):
+                 data_sources_context: Optional[List[DataSourceContext]]=None,
+                 validity_period: ValidityPeriod=None) -> None:
         self.contributor = contributor
         self.data_sources_context = data_sources_context if data_sources_context else []
         self.validity_period = validity_period
@@ -50,15 +51,15 @@ class ContributorContext():
 
 class Context():
     def __init__(self, instance: str='contributor', coverage: Coverage=None,
-                 validity_period: ValidityPeriod=None, contributors_context: List[ContributorContext]=None):
+                 validity_period: ValidityPeriod=None, contributors_context: List[ContributorContext]=None) -> None:
         self.instance = instance
         self.coverage = coverage
         self.contributors_context = contributors_context if contributors_context else []
         self.validity_period = validity_period
-        self.global_gridfs_id = None
+        self.global_gridfs_id = ''
 
     def has_datasources(self, contributor_id: str) -> bool:
-        return len(self.get_data_sources_context(contributor_id=contributor_id))
+        return len(self.get_data_sources_context(contributor_id=contributor_id)) > 0
 
     def add_contributor_context(self, contributor: Contributor) -> None:
         self.contributors_context.append(ContributorContext(contributor))

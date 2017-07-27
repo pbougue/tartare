@@ -45,7 +45,7 @@ def postprocess(coverage: Coverage, context: Context) -> Context:
     for contributor_context in context.contributors_context:
         if not context.validity_period:
             context.validity_period = contributor_context.validity_period
-        if not context.global_gridfs_id:
+        if not context.global_gridfs_id and contributor_context.data_sources_context[0].gridfs_id:
             context.global_gridfs_id = contributor_context.data_sources_context[0].gridfs_id
         break
     return context
