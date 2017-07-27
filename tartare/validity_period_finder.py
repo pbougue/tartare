@@ -38,6 +38,10 @@ import numpy as np
 
 
 class ValidityPeriodFinder(object):
+    feed_info_filename = 'feed_info.txt'
+    calendar_filename = 'calendar.txt'
+    calendar_dates_filename = 'calendar_dates.txt'
+
     # TODO Management of case where the period exceeds one year
     def __init__(self, date_format: str = '%Y%m%d') -> None:
         self.start_date = date.max
@@ -49,18 +53,6 @@ class ValidityPeriodFinder(object):
 
     def is_end_date_valid(self) -> bool:
         return self.end_date != date.min
-
-    @property
-    def feed_info_filename(self) -> str:
-        return 'feed_info.txt'
-
-    @property
-    def calendar_filename(self) -> str:
-        return 'calendar.txt'
-
-    @property
-    def calendar_dates_filename(self) -> str:
-        return 'calendar_dates.txt'
 
     @staticmethod
     def _get_data(line: bytes) -> List[str]:
@@ -210,12 +202,12 @@ class ValidityPeriodFinder(object):
         return self.start_date, self.end_date
 
     def _parse_feed_info(self, files_zip: ZipFile) -> None:
-        feed_info_file = files_zip.open('feed_info.txt', 'rU')
-        feed_wrapper = io.TextIOWrapper(feed_info_file)
-        feed_info_dict = next(csv.DictReader(feed_wrapper))
-        if 'feed_start_date' not in feed_info_dict or 'feed_end_date' not in feed_info_dict:
-            msg = 'impossible to get feed_start_date and feed_end_date in file {}'.format(self.feed_info_filename)
-            logging.getLogger(__name__).debug(msg)
-            raise ValueError(msg)
-        self.start_date = datetime.strptime(feed_info_dict['feed_start_date'], "%Y%m%d").date()
-        self.end_date = datetime.strptime(feed_info_dict['feed_end_date'], "%Y%m%d").date()
+        with files_zip.open('feed_info.txt', 'rU') as feed_info_file:
+            feed_wrapper = io.TextIOWrapper(feed_info_file)
+            feed_info_dict = next(csv.DictReader(feed_wrapper))
+            if 'feed_start_date' not in feed_info_dict or 'feed_end_date' not in feed_info_dict:
+                msg = 'impossible to get feed_start_date and feed_end_date in file {}'.format(self.feed_info_filename)
+                logging.getLogger(__name__).debug(msg)
+                raise ValueError(msg)
+            self.start_date = datetime.strptime(feed_info_dict['feed_start_date'], "%Y%m%d").date()
+            self.end_date = datetime.strptime(feed_info_dict['feed_end_date'], "%Y%m%d").date()
