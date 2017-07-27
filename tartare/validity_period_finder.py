@@ -207,19 +207,15 @@ class ValidityPeriodFinder(object):
             msg = 'Impossible to find validity period'
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
-        logging.getLogger(__name__).info(self.start_date)
-        logging.getLogger(__name__).info(self.end_date)
         return self.start_date, self.end_date
 
     def _parse_feed_info(self, files_zip: ZipFile) -> None:
-        logging.getLogger(__name__).info('_parse_feed_info')
         feed_info_file = files_zip.open('feed_info.txt', 'rU')
         feed_wrapper = io.TextIOWrapper(feed_info_file)
         feed_info_dict = next(csv.DictReader(feed_wrapper))
         if 'feed_start_date' not in feed_info_dict or 'feed_end_date' not in feed_info_dict:
-            msg = 'impossible to get feed_start_date and feed_end_date of file {}'.format(self.feed_info_filename)
+            msg = 'impossible to get feed_start_date and feed_end_date in file {}'.format(self.feed_info_filename)
             logging.getLogger(__name__).debug(msg)
             raise ValueError(msg)
-        logging.getLogger(__name__).info(feed_info_dict)
-        self.start_date = feed_info_dict['feed_start_date']
-        self.end_date = feed_info_dict['feed_end_date']
+        self.start_date = datetime.strptime(feed_info_dict['feed_start_date'], "%Y%m%d").date()
+        self.end_date = datetime.strptime(feed_info_dict['feed_end_date'], "%Y%m%d").date()
