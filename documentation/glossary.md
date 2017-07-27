@@ -2,7 +2,7 @@ https://confluence.canaltp.fr/pages/viewpage.action?pageId=14292189
 
 
 ## Coverage
-A coverage is:
+A coverage has:
   * A list of datasources
   * A list of process to execute (fusion,etc)
   * A list of output format (GTFS/NTFS + geopal/OSM + poi + synonyms)
@@ -13,16 +13,17 @@ A coverage may be:
 
 ## Export (Coverage)
 At any time, the coverage can be exported (Hence "Coverage export") to applications that will use it or share it.
-This export will contain PT datas from chosen dataset versions (which may have been agregated through a FUSIO process) but also POI, OSM data, synonyms, and so forth.
+This export will contain PT data from chosen dataset versions (which may have been agregated through a FUSIO process) but also POI, OSM data, synonyms, and so forth.
 
 
 ## DataSource
 As said on the thin this is a data source, defined as:
   * A format
   * A license
-  * the url and protocol required to get it.
+  * The url and protocol required to get it.
   * An update frequency
   * A name
+  * Credentials
 A data source comes from a Contributor.
 
 
