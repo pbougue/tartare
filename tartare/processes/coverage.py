@@ -35,7 +35,7 @@ from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from tartare.core.models import ContributorExport
+from tartare.core.models import ContributorExport, Contributor
 from tartare.core.context import Context
 from tartare.helper import download_zip_file, get_filename
 import tempfile
@@ -51,9 +51,10 @@ class FusioDataUpdate(AbstractProcess):
 
     def _get_data(self, contributor_export: ContributorExport) -> dict:
         validity_period = contributor_export.validity_period
+        c = Contributor.get(contributor_export.contributor_id)
         return {
             'action': 'dataupdate',
-            'contributorexternalcode': contributor_export.contributor_id,
+            'contributorexternalcode': c.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
             'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
