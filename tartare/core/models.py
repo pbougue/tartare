@@ -82,7 +82,7 @@ class ValidityPeriod(object):
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str=None, gridfs_id=None, validity_period: ValidityPeriod=None) -> None:
+    def __init__(self, data_source_id: str=None, gridfs_id: str=None, validity_period: ValidityPeriod=None) -> None:
         self.data_source_id = data_source_id
         self.validity_period = validity_period
         self.gridfs_id = gridfs_id

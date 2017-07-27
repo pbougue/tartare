@@ -30,7 +30,7 @@ pyenv activate tartare
 make build
 ```
 
-## Migration database
+## Database migration
 ```
 mongodb-migrate --host [your_mongo_host] --database tartare
 ```
