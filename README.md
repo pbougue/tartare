@@ -5,7 +5,7 @@ The global architecture is available in the [architecture.md](documentation/arch
 ## Requirements
 - python 3.6.2 (or use [pyenv](https://github.com/pyenv/pyenv)
 - [RabbitMQ](https://www.rabbitmq.com/)
-- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) or use [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
 
 ## Installation
 
@@ -28,6 +28,11 @@ pyenv local 3.6.2
 pyenv virtualenv 3.6.2 tartare
 pyenv activate tartare
 make build
+```
+
+## Migration database
+```
+mongodb-migrate --host [your_mongo_host] --database tartare
 ```
 
 For __workon__ occurrences within this documentation, replace it with __pyenv activate__ if you want to use pyenv instead
