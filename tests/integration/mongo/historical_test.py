@@ -39,6 +39,7 @@ validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date
 
 
 def test_data_source_fetched_historical():
+    list_ids = []
     with app.app_context():
         for i in range(1, 6):
             data_source_fetched = models.DataSourceFetched(contributor_id='contrib_id',
@@ -46,6 +47,7 @@ def test_data_source_fetched_historical():
                                                            validity_period=validity_period)
             data_source_fetched.save_dataset(fixtures_path, 'gtfs.zip')
             data_source_fetched.save()
+            list_ids.append(data_source_fetched.id)
 
         # test that there are only 3 data sources
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
@@ -53,6 +55,8 @@ def test_data_source_fetched_historical():
             'data_source_id': 'data_source_id'
         })
         assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
         # test that there are only 3 gridfs
         raw = mongo.db['fs.files'].find({})
@@ -60,6 +64,7 @@ def test_data_source_fetched_historical():
 
 
 def test_data_contrib_export_historical():
+    list_ids = []
     with app.app_context():
         for i in range(1, 6):
             with open(fixtures_path, 'rb') as file:
@@ -70,12 +75,15 @@ def test_data_contrib_export_historical():
                                                       validity_period=validity_period,
                                                       data_sources=[])
             contrib_export.save()
+            list_ids.append(contrib_export.id)
 
         # test that there are only 3 contributor exports
         raw = mongo.db[models.ContributorExport.mongo_collection].find({
             'contributor_id': 'contrib_id',
         })
         assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
         # test that there are only 3 gridfs
         raw = mongo.db['fs.files'].find({})
@@ -83,6 +91,7 @@ def test_data_contrib_export_historical():
 
 
 def test_data_coverage_export_historical():
+    list_ids = []
     with app.app_context():
         for i in range(1, 6):
             with open(fixtures_path, 'rb') as file:
@@ -92,12 +101,15 @@ def test_data_coverage_export_historical():
                                                     validity_period=validity_period,
                                                     contributors=[])
             coverage_export.save()
+            list_ids.append(coverage_export.id)
 
         # test that there are only 3 coverage exports
         raw = mongo.db[models.CoverageExport.mongo_collection].find({
             'coverage_id': 'id_test',
         })
         assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
         # test that there are only 3 gridfs
         raw = mongo.db['fs.files'].find({})
