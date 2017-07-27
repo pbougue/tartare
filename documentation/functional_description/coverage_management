@@ -1,9 +1,17 @@
 ## Coverage properties
 **ID** : Unique.  
-**Name**
+**Name**  
 **grid_calendars_id** : Not required. A link to the data validity calendar.  
 **List of contributors** : The coverage is a subscriber of all these contributors.  
-**List of environments** : Where we will publish the data.  
+**List of environments** : Where we will publish the data.    
+
+## Environments
+There are three environments available : integration, preproduction and production.  
+Each environment contains :  
+**Name** : Usualy "integration", "preproduction" or "production".  
+**current_ntfs_id** : The id of the data to send.  
+**publication_platforms** : Technical informations (Type of data, protocol used, where to push the data and password / username if ftp).  
+
 
 ## Doable actions on a coverage
 A coverage export will do the following tasks, in the following order:
