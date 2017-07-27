@@ -19,4 +19,4 @@ A coverage export will do the following tasks, in the following order:
 2. Transformation from GTFS to NTFS.
 3. Exports are saved.
 
-The export progress can be supervised through the /jobs resource or /coverages/[coverage_id}/jobs sub-resource
+The export progress can be supervised through the /jobs resource or /coverages/{coverage_id}/jobs sub-resource
