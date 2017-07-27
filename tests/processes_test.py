@@ -30,7 +30,7 @@ import pytest
 import requests
 from freezegun import freeze_time
 from mock import mock
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorContext
 from tartare.core.models import ContributorExport, ValidityPeriod
 from tartare.exceptions import IntegrityException, FusioException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
@@ -80,12 +80,15 @@ class TestFusioProcesses:
         ])
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
                                       contributor_validity_period_dates, expected_data):
-        contributors = []
+        contributors_context = []
         for contrib_begin_date, contrib_end_date in contributor_validity_period_dates:
-            contrib_export = ContributorExport('', '',
-                                               validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date))
-            contributors.append(contrib_export)
-        context = Context(contributor_exports=contributors)
+            contributors_context.append(
+                ContributorContext(contributor=None,
+                                   validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
+                                   data_sources_context=None)
+            )
+
+        context = Context(contributors_context=contributors_context)
 
         keep_response_content = 'fusio_response'
         action_id = 42
@@ -111,9 +114,10 @@ class TestFusioProcesses:
         ])
     def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
         with pytest.raises(IntegrityException) as excinfo:
-            contrib_export = ContributorExport('', '',
-                                               validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date))
-            context = Context(contributor_exports=[contrib_export])
+            contributor_context = ContributorContext(contributor=None,
+                                                     validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
+                                                     data_sources_context=None)
+            context = Context(contributors_context=[contributor_context])
             fusio_import = FusioImport(context, {"url": "whatever"})
             fusio_import.do()
         assert str(excinfo.value) == expected_message

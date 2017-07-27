@@ -82,9 +82,11 @@ class ValidityPeriod(object):
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str = None, validity_period: ValidityPeriod = None) -> None:
+    def __init__(self, data_source_id: str = None, gridfs_id=None, validity_period: ValidityPeriod = None) -> None:
         self.data_source_id = data_source_id
         self.validity_period = validity_period
+        self.gridfs_id = gridfs_id
+
 
 
 class License(object):
@@ -450,6 +452,7 @@ class MongoValidityPeriodSchema(Schema):
 
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
+    gridfs_id = fields.String(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema)
 
     @post_load
@@ -736,9 +739,9 @@ class ContributorExport(Historisable):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource] = None,
-                 id: str = None,
-                 created_at: datetime = None) -> None:
+                 data_sources: List[ContributorExportDataSource]=None,
+                 id: str=None,
+                 created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id

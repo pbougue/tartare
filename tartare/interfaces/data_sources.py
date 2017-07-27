@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Tuple, Optional
+from typing import Optional
 
 from flask_restful import abort, request
 import flask_restful

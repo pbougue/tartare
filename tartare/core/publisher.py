@@ -35,9 +35,7 @@ from tartare.exceptions import ProtocolException
 from zipfile import ZipFile, ZIP_DEFLATED
 import tempfile
 import os
-from typing import Union, List, BinaryIO, Optional
-from io import IOBase
-from gridfs.grid_file import GridOut
+from typing import List, BinaryIO, Optional
 from tartare.core.models import Coverage, CoverageExport
 
 logger = logging.getLogger(__name__)
