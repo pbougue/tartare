@@ -1,6 +1,17 @@
 from mongodb_migrations.base import BaseMigration
 
 
+########################################################################################################################
+#
+# The sequences are required and have been added to:
+# - contributors.preprocesses
+# - coverages.preprocesses
+# - coverages.environments
+# - coverages.environments.publication_platforms
+# This migration allows old invalid data to be managed
+#
+########################################################################################################################
+
 class Migration(BaseMigration):
     def _fix_preprocess_missing_sequence(self, preprocesses):
         preprocess_without_sequence = [p for p in preprocesses if not p.get('sequence')]
