@@ -17,4 +17,4 @@ A contributor export will do the following tasks, in the following order:
 3. Each upgraded data retrieved will be retreated according to the contributor's preprocesses.
 4. Export the contributor's data and save them.
 
-The export progress can be supervised through the /job resource or /contributors/[contrib_id}/jobs sub-resource.
+The export progress can be supervised through the /jobs resource or /contributors/[contrib_id}/jobs sub-resource.
