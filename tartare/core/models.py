@@ -320,7 +320,7 @@ class Contributor(PreprocessManager):
     @classmethod
     def find(cls, filter: dict) -> List['Contributor']:
         raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoContributorSchema(many=True).load(raw).data
+        return MongoContributorSchema(many=True, strict=True).load(raw).data
 
     @classmethod
     def all(cls) -> List['Contributor']:
@@ -379,7 +379,7 @@ class Coverage(PreprocessManager):
         return gridfs_handler.get_file_from_gridfs(self.grid_calendars_id)
 
     def save(self) -> None:
-        raw = MongoCoverageSchema().dump(self).data
+        raw = MongoCoverageSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
@@ -398,7 +398,7 @@ class Coverage(PreprocessManager):
     @classmethod
     def find(cls, filter: dict) -> List['Coverage']:
         raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoCoverageSchema(many=True).load(raw).data
+        return MongoCoverageSchema(many=True, strict=True).load(raw).data
 
     @classmethod
     def all(cls) -> List['Coverage']:
