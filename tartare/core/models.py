@@ -491,11 +491,50 @@ class MongoEnvironmentListSchema(Schema):
         return {key: value for key, value in data.items() if value is not None}
 
 
-class DataSourceFetched(object):
+class Historisable(object):
+    mongo_collection = ''
+
+    def get_all_before_n_last(self, n: int, filter: dict) -> List[dict]:
+        cursor = mongo.db[self.mongo_collection] \
+            .find(filter) \
+            .sort("created_at", -1) \
+            .skip(n)
+
+        return list(cursor)
+
+    @classmethod
+    def delete_many(cls, ids: List[str]) -> int:
+        delete_result = mongo.db[cls.mongo_collection].delete_many({
+            '_id': {
+                '$in': ids
+            }
+        })
+
+        return delete_result.deleted_count
+
+    def keep_historical(self, num: int, filter: dict) -> None:
+        """Keep only `num` data sources fetched and GridFS for the contributor
+
+        Args:
+            num (int): The number of data sources fetched you want to keep
+        """
+        old_rows = self.get_all_before_n_last(num, filter)
+
+        if old_rows:
+            # Delete old data_sources_fetched
+            num_deleted = self.delete_many([row.get('_id') for row in old_rows])
+            if num_deleted:
+                # Delete all associated gridFS
+                for row in old_rows:
+                    GridFsHandler().delete_file_from_gridfs(row.get('gridfs_id'))
+
+
+class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str = None,
-                 created_at: datetime = None) -> None:
+    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str=None,
+                 created_at: datetime=None, id: str=None) -> None:
+        self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
@@ -505,6 +544,8 @@ class DataSourceFetched(object):
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
+
+        self.keep_historical(3, {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod
     def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
@@ -530,6 +571,7 @@ class DataSourceFetched(object):
                                                                  contributor_id=self.contributor_id)
 
 
+
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
     url = fields.String(required=False)
@@ -540,6 +582,7 @@ class MongoDataSourceLicenseSchema(Schema):
 
 
 class MongoDataSourceFetchedSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
@@ -687,7 +730,7 @@ class MongoJobSchema(Schema):
         return Job(**data)
 
 
-class ContributorExport(object):
+class ContributorExport(Historisable):
     mongo_collection = 'contributor_exports'
 
     def __init__(self, contributor_id: str,
@@ -706,6 +749,8 @@ class ContributorExport(object):
     def save(self) -> None:
         raw = MongoContributorExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
+
+        self.keep_historical(3, {'contributor_id': self.contributor_id})
 
     @classmethod
     def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
@@ -754,7 +799,7 @@ class MongoCoverageExportContributorSchema(Schema):
         return CoverageExportContributor(**data)
 
 
-class CoverageExport(object):
+class CoverageExport(Historisable):
     mongo_collection = 'coverage_exports'
 
     def __init__(self, coverage_id: str, gridfs_id: str, validity_period: ValidityPeriod,
@@ -769,6 +814,8 @@ class CoverageExport(object):
     def save(self) -> None:
         raw = MongoCoverageExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
+
+        self.keep_historical(3, {'coverage_id': self.coverage_id})
 
     @classmethod
     def get(cls, coverage_id: str) -> Optional['CoverageExport']:
