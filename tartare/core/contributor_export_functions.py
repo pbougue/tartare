@@ -66,8 +66,7 @@ def save_export(contributor: Contributor, context: Context) -> Context:
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_grid_fs_id,
                                    validity_period=data_source_grid.validity_period,
-                                   data_sources=data_sources,
-                                   data_prefix=contributor.data_prefix)
+                                   data_sources=data_sources)
         export.save()
         context.contributor_exports.append(export)
     return context
