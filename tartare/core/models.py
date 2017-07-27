@@ -494,8 +494,9 @@ class MongoEnvironmentListSchema(Schema):
 class DataSourceFetched(object):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str = None,
-                 created_at: datetime = None) -> None:
+    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str=None,
+                 created_at: datetime=None, id: str=None) -> None:
+        self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
@@ -505,6 +506,8 @@ class DataSourceFetched(object):
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
+
+        self.keep_historical(3)
 
     @classmethod
     def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
@@ -529,6 +532,40 @@ class DataSourceFetched(object):
             self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
                                                                  contributor_id=self.contributor_id)
 
+    def get_all_before_n_last(self, n: int) -> Optional[List['DataSourceFetched']]:
+        cursor = mongo.db[self.mongo_collection] \
+            .find({'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id}) \
+            .sort("created_at", -1) \
+            .skip(n)
+
+        return MongoDataSourceFetchedSchema(many=True).load(cursor).data
+
+    @classmethod
+    def delete_many(cls, data_sources_fetched: List['DataSourceFetched']) -> int:
+        delete_result = mongo.db[cls.mongo_collection].delete_many({
+            '_id': {
+                '$in': [dsf.id for dsf in data_sources_fetched]
+            }
+        })
+
+        return delete_result.deleted_count
+
+    def keep_historical(self, num: int) -> None:
+        """Keep only `num` data sources fetched and GridFS for the contributor
+
+        Args:
+            num (int): The number of data sources fetched you want to keep
+        """
+        old_data_sources_fetched = self.get_all_before_n_last(num)
+
+        if old_data_sources_fetched:
+            # Delete old data_sources_fetched
+            num_deleted = self.delete_many(old_data_sources_fetched)
+            if num_deleted:
+                # Delete all associated gridFS
+                for data_source_fetched in old_data_sources_fetched:
+                    GridFsHandler().delete_file_from_gridfs(data_source_fetched.gridfs_id)
+
 
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
@@ -540,6 +577,7 @@ class MongoDataSourceLicenseSchema(Schema):
 
 
 class MongoDataSourceFetchedSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
@@ -707,6 +745,8 @@ class ContributorExport(object):
         raw = MongoContributorExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
+        self.keep_historical(3)
+
     @classmethod
     def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
         if not contributor_id:
@@ -721,6 +761,41 @@ class ContributorExport(object):
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
         lasts = MongoContributorExportSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
+
+    def get_all_before_n_last(self, n: int) -> Optional[List['ContributorExport']]:
+        cursor = mongo.db[self.mongo_collection] \
+            .find({'contributor_id': self.contributor_id}) \
+            .sort("created_at", -1) \
+            .skip(n)
+
+        return MongoContributorExportSchema(many=True).load(cursor).data
+
+    @classmethod
+    def delete_many(cls, contributor_exports: List['ContributorExport']) -> int:
+        delete_result = mongo.db[cls.mongo_collection].delete_many({
+            '_id': {
+                '$in': [ce.id for ce in contributor_exports]
+            }
+        })
+
+        return delete_result.deleted_count
+
+    def keep_historical(self, num: int) -> None:
+
+        """Keep only `num` contributor exports and GridFS for the contributor
+
+        Args:
+            num (int): The number of contributor export you want to keep
+        """
+        old_contributor_exports = self.get_all_before_n_last(num)
+
+        if old_contributor_exports:
+            # Delete old data_sources_fetched
+            num_deleted = self.delete_many(old_contributor_exports)
+            if num_deleted:
+                # Delete all associated gridFS
+                for data_source_fetched in old_contributor_exports:
+                    GridFsHandler().delete_file_from_gridfs(data_source_fetched.gridfs_id)
 
 
 class MongoContributorExportSchema(Schema):
@@ -770,6 +845,8 @@ class CoverageExport(object):
         raw = MongoCoverageExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
+        self.keep_historical(3)
+
     @classmethod
     def get(cls, coverage_id: str) -> Optional['CoverageExport']:
         if not coverage_id:
@@ -784,6 +861,40 @@ class CoverageExport(object):
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
         lasts = MongoCoverageExportSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
+
+    def get_all_before_n_last(self, n: int) -> Optional[List['CoverageExport']]:
+        cursor = mongo.db[self.mongo_collection] \
+            .find({'coverage_id': self.coverage_id}) \
+            .sort("created_at", -1) \
+            .skip(n)
+
+        return MongoCoverageExportSchema(many=True).load(cursor).data
+
+    @classmethod
+    def delete_many(cls, coverage_exports: List['CoverageExport']) -> int:
+        delete_result = mongo.db[cls.mongo_collection].delete_many({
+            '_id': {
+                '$in': [dsf.id for dsf in coverage_exports]
+            }
+        })
+
+        return delete_result.deleted_count
+
+    def keep_historical(self, num: int) -> None:
+        """Keep only `num` coverage exports and GridFS for the contributor
+
+        Args:
+            num (int): The number of coverage exports you want to keep
+        """
+        old_coverage_exports = self.get_all_before_n_last(num)
+
+        if old_coverage_exports:
+            # Delete old coverage exports
+            num_deleted = self.delete_many(old_coverage_exports)
+            if num_deleted:
+                # Delete all associated gridFS
+                for data_source_fetched in old_coverage_exports:
+                    GridFsHandler().delete_file_from_gridfs(data_source_fetched.gridfs_id)
 
 
 class MongoCoverageExportSchema(Schema):
