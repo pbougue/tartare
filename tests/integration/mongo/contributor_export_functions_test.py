@@ -30,7 +30,7 @@
 # www.navitia.io
 
 from tartare.core.contributor_export_functions import fetch_datasets
-from tartare.core.models import DataSource, Contributor, DataSourceFetched
+from tartare.core.models import DataSource, Contributor
 import mock
 from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app

@@ -105,3 +105,5 @@ class Context():
         for contributor_context in self.contributors_context:
             for data_source_context in contributor_context.data_sources_context:
                 GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
+        if self.global_gridfs_id:
+            GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)

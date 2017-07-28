@@ -32,6 +32,8 @@ from tartare.core import models
 from datetime import date
 from tartare import app, mongo
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.context import Context
+from tartare.core import contributor_export_functions, coverage_export_functions
 
 fixtures_path = os.path.realpath('tests/fixtures/gtfs/some_archive.zip')
 start_date, end_date = (date(2017, 1, 1), date(2018, 12, 31))
@@ -114,3 +116,116 @@ def test_data_coverage_export_historical():
         # test that there are only 3 gridfs
         raw = mongo.db['fs.files'].find({})
         assert raw.count() == 3
+
+def populate_data_fetched(context, contributor):
+    context.add_contributor_context(contributor)
+    contributor_export_functions.save_data_fetched_and_get_context(context=context,
+                                                                   file=fixtures_path,
+                                                                   filename='gtfs.zip',
+                                                                   contributor_id='contrib_id',
+                                                                   data_source_id='data_source_id',
+                                                                   validity_period=validity_period)
+    return context
+
+
+def populate_data_fetched_and_save_export(contributor):
+    context = Context()
+    context = populate_data_fetched(context, contributor)
+    contributor_export_functions.save_export(contributor, context)
+
+
+def test_data_source_fetched_historical_use_context():
+    list_ids = []
+    with app.app_context():
+        for i in range(1, 6):
+            populate_data_fetched(Context(), models.Contributor('contrib_id', 'contrib_id', 'bob'))
+        # test that there are only 3 data sources
+        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
+            'contributor_id': 'contrib_id',
+            'data_source_id': 'data_source_id'
+        })
+
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+        # test that there are only 3 gridfs
+        raw = mongo.db['fs.files'].find({})
+        assert raw.count() == 3
+
+
+def couverage_save_export(coverage):
+    context = Context('coverage', coverage)
+    context.fill_contributors_context(coverage)
+    coverage_export_functions.postprocess(coverage,context)
+    coverage_export_functions.save_export(coverage, context)
+
+
+def test_data_source_fetched_historical_and_save_export_use_context():
+    list_ids = []
+    with app.app_context():
+        for i in range(1, 6):
+            populate_data_fetched_and_save_export(models.Contributor('contrib_id', 'contrib_id', 'bob'))
+        # test that there are only 3 data sources
+        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
+            'contributor_id': 'contrib_id',
+            'data_source_id': 'data_source_id'
+        })
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+        raw = mongo.db[models.ContributorExport.mongo_collection].find({
+            'contributor_id': 'contrib_id'
+        })
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+        # test that there are only 6 gridfs :
+        # 3 in DataSourceFetched
+        # 3 in ContributorExport
+        raw = mongo.db['fs.files'].find({})
+        assert raw.count() == 6
+
+
+def test_data_source_fetched_historical_and_save_export_save_coverage_export_use_context():
+    list_ids = []
+    with app.app_context():
+        contributor = models.Contributor('contrib_id', 'contrib_id', 'bob')
+        contributor.save()
+        coverage = models.Coverage('c1', 'c1', contributors=[contributor.id])
+        coverage.save()
+        for i in range(1, 6):
+            populate_data_fetched_and_save_export(contributor)
+            couverage_save_export(coverage)
+        # test that there are only 3 data sources
+        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
+            'contributor_id': 'contrib_id',
+            'data_source_id': 'data_source_id'
+        })
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+        raw = mongo.db[models.ContributorExport.mongo_collection].find({
+            'contributor_id': 'contrib_id'
+        })
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+
+        raw = mongo.db[models.CoverageExport.mongo_collection].find({
+            'coverage_id': 'c1'
+        })
+        assert raw.count() == 3
+        # Test the 3 last objects saved are not deleted
+        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+
+        # test that there are only 6 gridfs :
+        # 3 in DataSourceFetched
+        # 3 in ContributorExport
+        # 6 in CoverageExport
+        raw = mongo.db['fs.files'].find({})
+        assert raw.count() == 12

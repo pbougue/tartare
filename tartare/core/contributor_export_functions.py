@@ -71,6 +71,21 @@ def save_export(contributor: Contributor, context: Context) -> Context:
     return context
 
 
+def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
+                                        contributor_id: str, data_source_id: str,
+                                        validity_period: models.ValidityPeriod):
+    data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
+                                                   data_source_id=data_source_id,
+                                                   validity_period=validity_period)
+    data_source_fetched.save_dataset(file, filename)
+    data_source_fetched.save()
+    context.add_data_source_context(contributor_id=contributor_id,
+                                    data_source_id=data_source_id,
+                                    validity_period=validity_period,
+                                    gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
+    return context
+
+
 def fetch_datasets(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
@@ -92,13 +107,10 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
                 ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
                 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-                data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
-                                                               data_source_id=data_source.id,
-                                                               validity_period=validity_period)
-                data_source_fetched.save_dataset(tmp_file_name, filename)
-                data_source_fetched.save()
-                context.add_data_source_context(contributor_id=contributor.id,
-                                                data_source_id=data_source.id,
-                                                validity_period=validity_period,
-                                                gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
+                context = save_data_fetched_and_get_context(context=context,
+                                                            file=tmp_file_name,
+                                                            filename=filename,
+                                                            contributor_id=contributor.id,
+                                                            data_source_id=data_source.id,
+                                                            validity_period=validity_period)
     return context

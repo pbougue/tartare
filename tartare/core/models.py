@@ -32,7 +32,7 @@ from gridfs import GridOut
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
-from tartare.helper import to_doted_notation
+from tartare.helper import to_doted_notation, get_values_by_key
 from tartare.core.gridfs_handler import GridFsHandler
 import pymongo
 import uuid
@@ -527,8 +527,10 @@ class Historisable(object):
             num_deleted = self.delete_many([row.get('_id') for row in old_rows])
             if num_deleted:
                 # Delete all associated gridFS
-                for row in old_rows:
-                    GridFsHandler().delete_file_from_gridfs(row.get('gridfs_id'))
+                gridfs_ids = []
+                get_values_by_key(old_rows, gridfs_ids)
+                for gridf_ids in gridfs_ids:
+                    GridFsHandler().delete_file_from_gridfs(gridf_ids)
 
 
 class DataSourceFetched(Historisable):
