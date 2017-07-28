@@ -53,7 +53,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
 
 def save_export(contributor: Contributor, context: Context) -> Context:
     data_sources = []
-    for data_source_context in context.get_data_sources_context(contributor.id):
+    for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
         if not data_source_context.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_context.data_source_id))
             continue
@@ -79,7 +79,7 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
                                                    validity_period=validity_period)
     data_source_fetched.save_dataset(file, filename)
     data_source_fetched.save()
-    context.add_data_source_context(contributor_id=contributor_id,
+    context.add_contributor_data_source_context(contributor_id=contributor_id,
                                     data_source_id=data_source_id,
                                     validity_period=validity_period,
                                     gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))

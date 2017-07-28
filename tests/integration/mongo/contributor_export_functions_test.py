@@ -67,12 +67,12 @@ class TestFetcher():
             fetch_datasets(contrib, context)
             assert context
             assert len(context.contributors_context) == 1
-            data_sources_context = context.contributors_context[0].data_sources_context
-            assert len(data_sources_context) == 1
-            assert data_sources_context[0].data_source_id == 666
-            assert data_sources_context[0].gridfs_id
-            assert data_sources_context[0].validity_period.end_date == date(2015, 8, 26)
-            assert data_sources_context[0].validity_period.start_date == date(2015, 3, 25)
+            data_source_contexts = context.contributors_context[0].data_source_contexts
+            assert len(data_source_contexts) == 1
+            assert data_source_contexts[0].data_source_id == 666
+            assert data_source_contexts[0].gridfs_id
+            assert data_source_contexts[0].validity_period.end_date == date(2015, 8, 26)
+            assert data_source_contexts[0].validity_period.start_date == date(2015, 3, 25)
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):

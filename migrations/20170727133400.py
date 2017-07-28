@@ -20,7 +20,7 @@ class Migration(BaseMigration):
         for coverage_export in coverage_exports:
             for contributor_export in coverage_export.get('contributors', []):
                 self._update_data_sources(contributor_export.get('data_sources', []), coverage_export.get('gridfs_id'))
-        self.db['coverage_exports'].save(coverage_export)
+            self.db['coverage_exports'].save(coverage_export)
 
     def _contributor_exports(self):
         contributor_exports = self.db['contributor_exports'].find()

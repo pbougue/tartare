@@ -85,7 +85,7 @@ class TestFusioProcesses:
             contributors_context.append(
                 ContributorContext(contributor=None,
                                    validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
-                                   data_sources_context=None)
+                                   data_source_contexts=None)
             )
 
         context = Context(contributors_context=contributors_context)
@@ -116,7 +116,7 @@ class TestFusioProcesses:
         with pytest.raises(IntegrityException) as excinfo:
             contributor_context = ContributorContext(contributor=None,
                                                      validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
-                                                     data_sources_context=None)
+                                                     data_source_contexts=None)
             context = Context(contributors_context=[contributor_context])
             fusio_import = FusioImport(context, {"url": "whatever"})
             fusio_import.do()

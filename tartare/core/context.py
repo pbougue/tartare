@@ -42,10 +42,10 @@ class DataSourceContext():
 
 class ContributorContext():
     def __init__(self, contributor: Contributor,
-                 data_sources_context: Optional[List[DataSourceContext]]=None,
+                 data_source_contexts: Optional[List[DataSourceContext]]=None,
                  validity_period: ValidityPeriod=None) -> None:
         self.contributor = contributor
-        self.data_sources_context = data_sources_context if data_sources_context else []
+        self.data_source_contexts = data_source_contexts if data_source_contexts else []
         self.validity_period = validity_period
 
 
@@ -59,26 +59,26 @@ class Context():
         self.global_gridfs_id = ''
 
     def contributor_has_datasources(self, contributor_id: str) -> bool:
-        return len(self.get_data_sources_context(contributor_id=contributor_id)) > 0
+        return len(self.get_contributor_data_source_contexts(contributor_id=contributor_id)) > 0
 
     def add_contributor_context(self, contributor: Contributor) -> None:
         self.contributors_context.append(ContributorContext(contributor))
 
-    def get_data_sources(self, contributor_id: str) -> Optional[List[DataSource]]:
+    def get_contributor_data_sources(self, contributor_id: str) -> Optional[List[DataSource]]:
         return next((contributor_context.contributor.data_sources for contributor_context in self.contributors_context
                      if contributor_context.contributor.id == contributor_id), None)
 
-    def get_data_sources_context(self, contributor_id: str) -> Optional[List[DataSourceContext]]:
-        return next((contributor_context.data_sources_context
+    def get_contributor_data_source_contexts(self, contributor_id: str) -> Optional[List[DataSourceContext]]:
+        return next((contributor_context.data_source_contexts
                      for contributor_context in self.contributors_context
                      if contributor_context.contributor.id == contributor_id), None)
 
-    def add_data_source_context(self, contributor_id: str, data_source_id: str,
-                                validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
+    def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
+                                            validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
         contributor_context = next((contributor_context for contributor_context in self.contributors_context
                                     if contributor_context.contributor.id == contributor_id), None)
         if contributor_context:
-            contributor_context.data_sources_context.append(DataSourceContext(data_source_id=data_source_id,
+            contributor_context.data_source_contexts.append(DataSourceContext(data_source_id=data_source_id,
                                                                               gridfs_id=gridfs_id,
                                                                               validity_period=validity_period))
 
@@ -86,24 +86,24 @@ class Context():
         for contributor_id in coverage.contributors:
             contributor_export = ContributorExport.get_last(contributor_id)
             if contributor_export:
-                data_sources_context = []
+                data_source_contexts = []
                 for data_source in contributor_export.data_sources:
-                    data_sources_context.append(
+                    data_source_contexts.append(
                         DataSourceContext(data_source_id=data_source.data_source_id,
                                           gridfs_id=GridFsHandler().copy_file(data_source.gridfs_id),
                                           validity_period=data_source.validity_period)
                     )
-                if data_sources_context:
+                if data_source_contexts:
                     self.contributors_context.append(
                         ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
                                            validity_period=contributor_export.validity_period,
-                                           data_sources_context=data_sources_context))
+                                           data_source_contexts=data_source_contexts))
         self.coverage = coverage
 
     def __del__(self) -> None:
         logging.getLogger(__name__).debug('Delete files context')
         for contributor_context in self.contributors_context:
-            for data_source_context in contributor_context.data_sources_context:
+            for data_source_context in contributor_context.data_source_contexts:
                 GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
         if self.global_gridfs_id:
             GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)

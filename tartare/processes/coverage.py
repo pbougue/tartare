@@ -66,7 +66,7 @@ class FusioDataUpdate(AbstractProcess):
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
         for contributor_context in self.context.contributors_context:
-            for data_source_context in contributor_context.data_sources_context:
+            for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
                 resp = fusio.call(requests.post, api='api',

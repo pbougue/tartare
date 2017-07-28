@@ -45,8 +45,8 @@ def postprocess(coverage: Coverage, context: Context) -> Context:
     for contributor_context in context.contributors_context:
         if not context.validity_period:
             context.validity_period = contributor_context.validity_period
-        if not context.global_gridfs_id and contributor_context.data_sources_context[0].gridfs_id:
-            context.global_gridfs_id = contributor_context.data_sources_context[0].gridfs_id
+        if not context.global_gridfs_id and contributor_context.data_source_contexts[0].gridfs_id:
+            context.global_gridfs_id = contributor_context.data_source_contexts[0].gridfs_id
         break
     return context
 
@@ -55,7 +55,7 @@ def save_export(coverage: Coverage, context: Context) -> Context:
     contributor_exports = []
     for contributor_context in context.contributors_context:
         data_sources = []
-        for data_source_context in contributor_context.data_sources_context:
+        for data_source_context in contributor_context.data_source_contexts:
             data_sources.append(
                 ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
                                             gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
