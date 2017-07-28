@@ -73,7 +73,7 @@ def save_export(contributor: Contributor, context: Context) -> Context:
 
 def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
                                         contributor_id: str, data_source_id: str,
-                                        validity_period: models.ValidityPeriod):
+                                        validity_period: models.ValidityPeriod) -> Context:
     data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
                                                    data_source_id=data_source_id,
                                                    validity_period=validity_period)

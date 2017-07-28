@@ -58,7 +58,7 @@ class Context():
         self.validity_period = validity_period
         self.global_gridfs_id = ''
 
-    def has_datasources(self, contributor_id: str) -> bool:
+    def contributor_has_datasources(self, contributor_id: str) -> bool:
         return len(self.get_data_sources_context(contributor_id=contributor_id)) > 0
 
     def add_contributor_context(self, contributor: Contributor) -> None:

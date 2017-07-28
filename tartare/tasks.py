@@ -189,7 +189,7 @@ def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         # Launch fetch all dataset for contributor
         context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.has_datasources(contributor.id):
+        if context.contributor_has_datasources(contributor.id):
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch([], context)
 

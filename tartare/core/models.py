@@ -525,9 +525,9 @@ class Historisable(object):
         if old_rows:
             # Delete old data_sources_fetched
             num_deleted = self.delete_many([row.get('_id') for row in old_rows])
+            # Delete all associated gridFS
             if num_deleted:
-                # Delete all associated gridFS
-                gridfs_ids = []
+                gridfs_ids = [] # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
                 for gridf_ids in gridfs_ids:
                     GridFsHandler().delete_file_from_gridfs(gridf_ids)
