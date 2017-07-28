@@ -202,7 +202,7 @@ class ValidityPeriodFinder(object):
         return self.start_date, self.end_date
 
     def _parse_feed_info(self, files_zip: ZipFile) -> None:
-        with files_zip.open('feed_info.txt', 'rU') as feed_info_file:
+        with files_zip.open('feed_info.txt', 'r') as feed_info_file:
             feed_wrapper = io.TextIOWrapper(feed_info_file)
             feed_info_dict = next(csv.DictReader(feed_wrapper))
             if 'feed_start_date' not in feed_info_dict or 'feed_end_date' not in feed_info_dict:
