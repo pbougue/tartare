@@ -1,4 +1,4 @@
-FROM python:3.5-alpine
+FROM python:3.6.2-alpine
 
 WORKDIR /usr/src/app
 COPY requirements.txt /usr/src/app
