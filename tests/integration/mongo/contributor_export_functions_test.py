@@ -66,8 +66,8 @@ class TestFetcher():
         with app.app_context():
             fetch_datasets(contrib, context)
             assert context
-            assert len(context.contributors_context) == 1
-            data_source_contexts = context.contributors_context[0].data_source_contexts
+            assert len(context.contributor_contexts) == 1
+            data_source_contexts = context.contributor_contexts[0].data_source_contexts
             assert len(data_source_contexts) == 1
             assert data_source_contexts[0].data_source_id == 666
             assert data_source_contexts[0].gridfs_id

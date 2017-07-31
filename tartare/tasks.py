@@ -222,7 +222,7 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
     try:
         context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context.fill_contributors_context(coverage)
+        context.fill_contributor_contexts(coverage)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch(coverage.preprocesses, context)

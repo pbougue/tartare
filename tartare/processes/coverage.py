@@ -65,7 +65,7 @@ class FusioDataUpdate(AbstractProcess):
 
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
-        for contributor_context in self.context.contributors_context:
+        for contributor_context in self.context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
@@ -78,10 +78,10 @@ class FusioDataUpdate(AbstractProcess):
 
 class FusioImport(AbstractProcess):
     def _get_period_bounds(self) -> tuple:
-        min_contributor = min(self.context.contributors_context,
+        min_contributor = min(self.context.contributor_contexts,
                               key=lambda contrib: contrib.validity_period.start_date)
 
-        max_contributor = max(self.context.contributors_context,
+        max_contributor = max(self.context.contributor_contexts,
                               key=lambda contrib: contrib.validity_period.end_date)
         begin_date = min_contributor.validity_period.start_date
         end_date = max_contributor.validity_period.end_date

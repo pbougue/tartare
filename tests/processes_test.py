@@ -80,15 +80,15 @@ class TestFusioProcesses:
         ])
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
                                       contributor_validity_period_dates, expected_data):
-        contributors_context = []
+        contributor_contexts = []
         for contrib_begin_date, contrib_end_date in contributor_validity_period_dates:
-            contributors_context.append(
+            contributor_contexts.append(
                 ContributorContext(contributor=None,
                                    validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
                                    data_source_contexts=None)
             )
 
-        context = Context(contributors_context=contributors_context)
+        context = Context(contributor_contexts=contributor_contexts)
 
         keep_response_content = 'fusio_response'
         action_id = 42
@@ -117,7 +117,7 @@ class TestFusioProcesses:
             contributor_context = ContributorContext(contributor=None,
                                                      validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
                                                      data_source_contexts=None)
-            context = Context(contributors_context=[contributor_context])
+            context = Context(contributor_contexts=[contributor_context])
             fusio_import = FusioImport(context, {"url": "whatever"})
             fusio_import.do()
         assert str(excinfo.value) == expected_message

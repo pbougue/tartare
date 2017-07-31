@@ -113,6 +113,7 @@ def test_get_values_by_key_dict():
     out = []
     get_values_by_key(t, out)
     assert len(out) == 2
+    assert out.sort() == [1, 2].sort()
 
 
 def test_get_values_by_key_list_doublon():

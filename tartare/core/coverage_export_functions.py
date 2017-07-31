@@ -42,7 +42,7 @@ def merge(coverage: Coverage, context: Context) -> Context:
 
 def postprocess(coverage: Coverage, context: Context) -> Context:
     logger.info("coverage_id : %s", coverage.id)
-    for contributor_context in context.contributors_context:
+    for contributor_context in context.contributor_contexts:
         if not context.validity_period:
             context.validity_period = contributor_context.validity_period
         if not context.global_gridfs_id and contributor_context.data_source_contexts[0].gridfs_id:
@@ -53,7 +53,7 @@ def postprocess(coverage: Coverage, context: Context) -> Context:
 
 def save_export(coverage: Coverage, context: Context) -> Context:
     contributor_exports = []
-    for contributor_context in context.contributors_context:
+    for contributor_context in context.contributor_contexts:
         data_sources = []
         for data_source_context in contributor_context.data_source_contexts:
             data_sources.append(

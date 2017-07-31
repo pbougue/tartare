@@ -156,7 +156,7 @@ def test_data_source_fetched_historical_use_context():
 
 def couverage_save_export(coverage):
     context = Context('coverage', coverage)
-    context.fill_contributors_context(coverage)
+    context.fill_contributor_contexts(coverage)
     coverage_export_functions.postprocess(coverage,context)
     coverage_export_functions.save_export(coverage, context)
 
