@@ -54,7 +54,7 @@ class TestMailer():
             result = t.split('\n')
 
             excepted = [
-                'Problem Tartare',
+                'Problem Tartare, Platform Unknown',
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
@@ -83,7 +83,7 @@ class TestMailer():
             t = mailer.get_message(Job.get_one(job.id))
             result = t.split('\n')
             excepted = [
-                'Problem Tartare',
+                'Problem Tartare, Platform Unknown',
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
@@ -112,7 +112,7 @@ class TestMailer():
             t = mailer.get_message(Job.get_one(job.id))
             result = t.split('\n')
             excepted = [
-                'Problem Tartare',
+                'Problem Tartare, Platform Unknown',
                 '',
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),

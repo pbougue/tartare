@@ -40,16 +40,17 @@ from tartare.core.models import Job
 
 
 class Mailer(object):
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, platform: str='Unknown') -> None:
         self.from_ = config.get("from", 'tartare@canaltp.fr')
         self.to = config.get("to")
         self.cc = config.get("cc")
         self.host = config.get('smtp', {}).get("host", 'localhost')
         self.port = config.get('smtp', {}).get("port", 25)
         self.timeout = config.get('smtp', {}).get("timeout", 1)
+        self.platform = platform
 
     def get_message(self, job: Job) -> str:
-        message = ["Problem Tartare",
+        message = ["Problem Tartare, Platform {}".format(self.platform),
                    "",
                    "",
                    "Start execution : {}".format(job.started_at),

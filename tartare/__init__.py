@@ -70,4 +70,4 @@ stop_area_publisher = StopAreaPublisher()
 
 from tartare.core.mailer import Mailer
 
-mailer = Mailer(app.config.get('MAILER'))
+mailer = Mailer(app.config.get('MAILER'), app.config.get('PLATFORM'))
