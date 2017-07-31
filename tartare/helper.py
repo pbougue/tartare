@@ -148,3 +148,13 @@ def download_zip_file(url_file: str, dest: str) -> None:
         raise
     if not zipfile.is_zipfile(dest):
         raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
+
+
+def get_values_by_key(values: Union[List, dict], out: List[str], key: str='gridfs_id') -> None:
+    my_list = values.items() if isinstance(values, dict) else enumerate(values)
+    for k, v in my_list:
+        if isinstance(v, dict) or isinstance(v, list):
+            get_values_by_key(v, out, key)
+        else:
+            if k == key and v not in out:
+                out.append(v)

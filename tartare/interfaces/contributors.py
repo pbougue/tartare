@@ -26,8 +26,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Optional
 
+from typing import Optional
 import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError, DuplicateKeyError
@@ -40,6 +40,7 @@ from tartare.helper import setdefault_ids
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import json_data_validate
 from tartare.processes.processes import PreProcess
+
 
 class Contributor(flask_restful.Resource):
     @json_data_validate()

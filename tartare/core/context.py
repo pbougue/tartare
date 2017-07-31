@@ -26,34 +26,84 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.models import ContributorExport, DataSourceFetched, DataSource
+
+from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource
 import logging
-from typing import List
+from typing import List, Optional
+from tartare.core.gridfs_handler import GridFsHandler
 
 
-class Context:
-    def __init__(self, instance: str = 'contributor', data_sources_fetched: List[DataSourceFetched] = None,
-                 contributor_exports: List[ContributorExport] = None) -> None:
+class DataSourceContext():
+    def __init__(self, data_source_id: str, gridfs_id: str, validity_period: ValidityPeriod) -> None:
+        self.data_source_id = data_source_id
+        self.gridfs_id = gridfs_id
+        self.validity_period = validity_period
+
+
+class ContributorContext():
+    def __init__(self, contributor: Contributor,
+                 data_source_contexts: Optional[List[DataSourceContext]]=None,
+                 validity_period: ValidityPeriod=None) -> None:
+        self.contributor = contributor
+        self.data_source_contexts = data_source_contexts if data_source_contexts else []
+        self.validity_period = validity_period
+
+
+class Context():
+    def __init__(self, instance: str='contributor', coverage: Coverage=None,
+                 validity_period: ValidityPeriod=None, contributor_contexts: List[ContributorContext]=None) -> None:
         self.instance = instance
-        self.gridfs_id = None  # type: str
-        self.data_sources_fetched = data_sources_fetched if data_sources_fetched else []
-        self.contributor_exports = contributor_exports if contributor_exports else []
+        self.coverage = coverage
+        self.contributor_contexts = contributor_contexts if contributor_contexts else []
+        self.validity_period = validity_period
+        self.global_gridfs_id = ''
 
-    def fill_contributor_exports(self, contributors: List[str]) -> None:
-        logging.getLogger(__name__).info('initialize context')
-        for contributor_id in contributors:
-            export = ContributorExport.get_last(contributor_id)
-            if not export:
-                logging.getLogger(__name__).info("Contributor {} without export.".format(contributor_id))
-                continue
-            self.contributor_exports.append(export)
+    def contributor_has_datasources(self, contributor_id: str) -> bool:
+        return len(self.get_contributor_data_source_contexts(contributor_id=contributor_id)) > 0
 
-    def fill_data_sources_fetched(self, contributor_id: str, data_sources: List[DataSource]) -> None:
-        logging.getLogger(__name__).info('initialize context')
-        for data_source in data_sources:
-            export = DataSourceFetched.get_last(contributor_id, data_source.id)
-            if not export:
-                logging.getLogger(__name__).info("Data source {} for contributor {} without data source fetched.".
-                                                 format(data_source.id, contributor_id))
-                continue
-            self.data_sources_fetched.append(export)
+    def add_contributor_context(self, contributor: Contributor) -> None:
+        self.contributor_contexts.append(ContributorContext(contributor))
+
+    def get_contributor_data_sources(self, contributor_id: str) -> Optional[List[DataSource]]:
+        return next((contributor_context.contributor.data_sources for contributor_context in self.contributor_contexts
+                     if contributor_context.contributor.id == contributor_id), None)
+
+    def get_contributor_data_source_contexts(self, contributor_id: str) -> Optional[List[DataSourceContext]]:
+        return next((contributor_context.data_source_contexts
+                     for contributor_context in self.contributor_contexts
+                     if contributor_context.contributor.id == contributor_id), None)
+
+    def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
+                                            validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
+        contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
+                                    if contributor_context.contributor.id == contributor_id), None)
+        if contributor_context:
+            contributor_context.data_source_contexts.append(DataSourceContext(data_source_id=data_source_id,
+                                                                              gridfs_id=gridfs_id,
+                                                                              validity_period=validity_period))
+
+    def fill_contributor_contexts(self, coverage: Coverage) -> None:
+        for contributor_id in coverage.contributors:
+            contributor_export = ContributorExport.get_last(contributor_id)
+            if contributor_export:
+                data_source_contexts = []
+                for data_source in contributor_export.data_sources:
+                    data_source_contexts.append(
+                        DataSourceContext(data_source_id=data_source.data_source_id,
+                                          gridfs_id=GridFsHandler().copy_file(data_source.gridfs_id),
+                                          validity_period=data_source.validity_period)
+                    )
+                if data_source_contexts:
+                    self.contributor_contexts.append(
+                        ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
+                                           validity_period=contributor_export.validity_period,
+                                           data_source_contexts=data_source_contexts))
+        self.coverage = coverage
+
+    def __del__(self) -> None:
+        logging.getLogger(__name__).debug('Delete files context')
+        for contributor_context in self.contributor_contexts:
+            for data_source_context in contributor_context.data_source_contexts:
+                GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
+        if self.global_gridfs_id:
+            GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)

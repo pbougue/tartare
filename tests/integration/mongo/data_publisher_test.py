@@ -172,7 +172,6 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             resp = self.post("/contributors/{}/actions/export".format(contributor_id))

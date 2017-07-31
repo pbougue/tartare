@@ -53,26 +53,41 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
 
 def save_export(contributor: Contributor, context: Context) -> Context:
     data_sources = []
-    new_grid_fs_id = None
-    for data_source_grid in context.data_sources_fetched:
-        if not data_source_grid.gridfs_id:
-            logger.info("data source {} without gridfs id.".format(data_source_grid.data_source_id))
+    for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
+        if not data_source_context.gridfs_id:
+            logger.info("data source {} without gridfs id.".format(data_source_context.data_source_id))
             continue
-        new_grid_fs_id = GridFsHandler().copy_file(data_source_grid.gridfs_id)
         data_sources.append(
-            ContributorExportDataSource(data_source_grid.data_source_id, data_source_grid.validity_period)
+            ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
+                                        gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
+                                        validity_period=data_source_context.validity_period)
         )
     if data_sources:
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=new_grid_fs_id,
-                                   validity_period=data_source_grid.validity_period,
+                                   gridfs_id=data_sources[0].gridfs_id,
+                                   validity_period=data_source_context.validity_period,
                                    data_sources=data_sources)
         export.save()
-        context.contributor_exports.append(export)
+    return context
+
+
+def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
+                                        contributor_id: str, data_source_id: str,
+                                        validity_period: models.ValidityPeriod) -> Context:
+    data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
+                                                   data_source_id=data_source_id,
+                                                   validity_period=validity_period)
+    data_source_fetched.save_dataset(file, filename)
+    data_source_fetched.save()
+    context.add_contributor_data_source_context(contributor_id=contributor_id,
+                                                data_source_id=data_source_id,
+                                                validity_period=validity_period,
+                                                gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
     return context
 
 
 def fetch_datasets(contributor: Contributor, context: Context) -> Context:
+    context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
         if data_source.input:
             url = data_source.input.get('url')
@@ -92,10 +107,10 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
                 ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
                 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-                data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
-                                                               data_source_id=data_source.id,
-                                                               validity_period=validity_period)
-                data_source_fetched.save_dataset(tmp_file_name, filename)
-                data_source_fetched.save()
-                context.data_sources_fetched.append(data_source_fetched)
+                context = save_data_fetched_and_get_context(context=context,
+                                                            file=tmp_file_name,
+                                                            filename=filename,
+                                                            contributor_id=contributor.id,
+                                                            data_source_id=data_source.id,
+                                                            validity_period=validity_period)
     return context

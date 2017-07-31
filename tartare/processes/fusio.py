@@ -31,7 +31,6 @@ import logging
 from datetime import date
 from retrying import retry
 import requests
-from types import MethodType
 from tartare.exceptions import FusioException
 import xml.etree.cElementTree as ElementTree
 from xml.etree.cElementTree import Element

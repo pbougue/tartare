@@ -32,7 +32,7 @@ from gridfs import GridOut
 from tartare import mongo
 from marshmallow import Schema, fields, post_load
 from tartare import app
-from tartare.helper import to_doted_notation
+from tartare.helper import to_doted_notation, get_values_by_key
 from tartare.core.gridfs_handler import GridFsHandler
 import pymongo
 import uuid
@@ -82,9 +82,10 @@ class ValidityPeriod(object):
 
 
 class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str = None, validity_period: ValidityPeriod = None) -> None:
+    def __init__(self, data_source_id: str=None, gridfs_id: str=None, validity_period: ValidityPeriod=None) -> None:
         self.data_source_id = data_source_id
         self.validity_period = validity_period
+        self.gridfs_id = gridfs_id
 
 
 class License(object):
@@ -254,8 +255,8 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id)
 
     @classmethod
-    def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
-            coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
+    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
+            coverage_id: Optional[str]=None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -264,7 +265,7 @@ class PreProcess(GenericPreProcess):
             return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> int:
         if preprocess_id is None:
             raise ValueError('A preprocess id is required')
         if not any([coverage_id, contributor_id]):
@@ -275,8 +276,8 @@ class PreProcess(GenericPreProcess):
             return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
-               preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
+    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
+               preprocess: Optional[dict]=None) -> Optional[List['PreProcess']]:
         if preprocess_id is None:
             raise ValueError('A PreProcess id is required')
 
@@ -450,6 +451,7 @@ class MongoValidityPeriodSchema(Schema):
 
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
+    gridfs_id = fields.String(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema)
 
     @post_load
@@ -523,10 +525,12 @@ class Historisable(object):
         if old_rows:
             # Delete old data_sources_fetched
             num_deleted = self.delete_many([row.get('_id') for row in old_rows])
+            # Delete all associated gridFS
             if num_deleted:
-                # Delete all associated gridFS
-                for row in old_rows:
-                    GridFsHandler().delete_file_from_gridfs(row.get('gridfs_id'))
+                gridfs_ids = [] # type: List[str]
+                get_values_by_key(old_rows, gridfs_ids)
+                for gridf_ids in gridfs_ids:
+                    GridFsHandler().delete_file_from_gridfs(gridf_ids)
 
 
 class DataSourceFetched(Historisable):
@@ -736,9 +740,9 @@ class ContributorExport(Historisable):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource] = None,
-                 id: str = None,
-                 created_at: datetime = None) -> None:
+                 data_sources: List[ContributorExportDataSource]=None,
+                 id: str=None,
+                 created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id

@@ -55,7 +55,6 @@ import tartare
 logger = logging.getLogger(__name__)
 
 
-
 def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> None:
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
         grid_calendar_data = GridCalendarData()
@@ -155,9 +154,11 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         logger.error(msg)
         self.retry(exc=exc)
 
+
 @celery.task()
 def finish_job(job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
+
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> None:
@@ -182,6 +183,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
     if response.status_code != 200:
         raise self.retry()
 
+
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
 def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
     try:
@@ -189,7 +191,7 @@ def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         # Launch fetch all dataset for contributor
         context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.data_sources_fetched:
+        if context.contributor_has_datasources(contributor.id):
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch([], context)
 
@@ -220,7 +222,7 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
     try:
         context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context.fill_contributor_exports(contributors=coverage.contributors)
+        context.fill_contributor_contexts(coverage)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch(coverage.preprocesses, context)

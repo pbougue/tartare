@@ -36,6 +36,7 @@ from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
 
+
 class ContributorExportResource(flask_restful.Resource):
 
     @staticmethod

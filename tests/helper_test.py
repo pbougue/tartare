@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename, get_values_by_key
 import requests_mock
 from io import StringIO
 
@@ -96,3 +96,38 @@ def test_get_filename_url_ok():
 
 def test_get_filename_ok():
     assert get_filename('filename.zip', "1234") == "filename.zip"
+
+
+def test_get_values_by_key_list():
+    t = [{"gridfs_id": 1}, {"a": {"gridfs_id": 2}}]
+    out = []
+    get_values_by_key(t, out)
+    assert len(out) == 2
+
+
+def test_get_values_by_key_dict():
+    t = {"a": {"gridfs_id": 1},
+         "b": {
+             "c": {"gridfs_id": 2}
+         }}
+    out = []
+    get_values_by_key(t, out)
+    assert len(out) == 2
+    assert out.sort() == [1, 2].sort()
+
+
+def test_get_values_by_key_list_doublon():
+    t = [{"gridfs_id": 1}, {"a": {"gridfs_id": 1}}]
+    out = []
+    get_values_by_key(t, out)
+    assert len(out) == 1
+
+
+def test_get_values_by_key_dict_doublon():
+    t = {"a": {"gridfs_id": 1},
+         "b": {
+             "c": {"gridfs_id": 1}
+         }}
+    out = []
+    get_values_by_key(t, out)
+    assert len(out) == 1

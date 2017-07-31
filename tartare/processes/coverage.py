@@ -35,8 +35,8 @@ from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from tartare.core.models import ContributorExport, Contributor
-from tartare.core.context import Context
+from tartare.core.models import Contributor
+from tartare.core.context import Context, DataSourceContext
 from tartare.helper import download_zip_file, get_filename
 import tempfile
 
@@ -49,15 +49,14 @@ class FusioDataUpdate(AbstractProcess):
             "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
         }
 
-    def _get_data(self, contributor_export: ContributorExport) -> dict:
-        validity_period = contributor_export.validity_period
-        c = Contributor.get(contributor_export.contributor_id)
+    def _get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
+        validity_period = data_source_context.validity_period
         return {
             'action': 'dataupdate',
-            'contributorexternalcode': c.data_prefix,
+            'contributorexternalcode': contributor.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': contributor_export.data_sources[0].data_source_id,
+            'serviceexternalcode': data_source_context.data_source_id,
             'libelle': 'unlibelle',
             'DateDebut': Fusio.format_date(validity_period.start_date),
             'DateFin': Fusio.format_date(validity_period.end_date),
@@ -66,22 +65,23 @@ class FusioDataUpdate(AbstractProcess):
 
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
-        for contributor_export in self.context.contributor_exports:
-            if not contributor_export.gridfs_id:
-                continue
-            resp = fusio.call(requests.post, api='api',
-                              data=self._get_data(contributor_export),
-                              files=self._get_files(contributor_export.gridfs_id))
-            fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
+        for contributor_context in self.context.contributor_contexts:
+            for data_source_context in contributor_context.data_source_contexts:
+                if not data_source_context.gridfs_id:
+                    continue
+                resp = fusio.call(requests.post, api='api',
+                                  data=self._get_data(contributor_context.contributor, data_source_context),
+                                  files=self._get_files(data_source_context.gridfs_id))
+                fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
         return self.context
 
 
 class FusioImport(AbstractProcess):
     def _get_period_bounds(self) -> tuple:
-        min_contributor = min(self.context.contributor_exports,
+        min_contributor = min(self.context.contributor_contexts,
                               key=lambda contrib: contrib.validity_period.start_date)
 
-        max_contributor = max(self.context.contributor_exports,
+        max_contributor = max(self.context.contributor_contexts,
                               key=lambda contrib: contrib.validity_period.end_date)
         begin_date = min_contributor.validity_period.start_date
         end_date = max_contributor.validity_period.end_date
@@ -139,7 +139,7 @@ class FusioExport(AbstractProcess):
             file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
             download_zip_file(url, file_name)
             with open(file_name, 'rb') as file:
-                self.context.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
+                self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context
 
     def do(self) -> Context:

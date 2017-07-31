@@ -30,6 +30,11 @@ pyenv activate tartare
 make build
 ```
 
+## Database migration
+```
+mongodb-migrate --host [your_mongo_host] --database tartare
+```
+
 For __workon__ occurrences within this documentation, replace it with __pyenv activate__ if you want to use pyenv instead
 
 ## Run the application (for development)
