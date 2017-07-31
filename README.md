@@ -5,7 +5,7 @@ The global architecture is available in the [architecture.md](documentation/arch
 ## Requirements
 - python 3.6.2 (or use [pyenv](https://github.com/pyenv/pyenv)
 - [RabbitMQ](https://www.rabbitmq.com/)
-- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
+- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) or use [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
 
 ## Installation
 
