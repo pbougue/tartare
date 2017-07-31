@@ -1,5 +1,5 @@
 # encoding: utf-8
-import logging
+
 import os
 from datetime import timedelta
 from kombu import Exchange, Queue

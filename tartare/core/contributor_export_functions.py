@@ -80,9 +80,9 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
     data_source_fetched.save_dataset(file, filename)
     data_source_fetched.save()
     context.add_contributor_data_source_context(contributor_id=contributor_id,
-                                    data_source_id=data_source_id,
-                                    validity_period=validity_period,
-                                    gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
+                                                data_source_id=data_source_id,
+                                                validity_period=validity_period,
+                                                gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
     return context
 
 

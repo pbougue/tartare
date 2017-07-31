@@ -55,7 +55,6 @@ import tartare
 logger = logging.getLogger(__name__)
 
 
-
 def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> None:
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
         grid_calendar_data = GridCalendarData()
@@ -155,9 +154,11 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         logger.error(msg)
         self.retry(exc=exc)
 
+
 @celery.task()
 def finish_job(job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
+
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> None:
@@ -181,6 +182,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
     if response.status_code != 200:
         raise self.retry()
+
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
 def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
