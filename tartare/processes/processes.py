@@ -36,9 +36,9 @@ from typing import Optional, List, Dict
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: Dict[str, str]) -> None:
+    def __init__(self, context: Context, preprocess: dict) -> None:
         self.context = context
-        self.params = preprocess.get('params', {}) if preprocess else {}
+        self.params = preprocess.get('params', {}) if preprocess else {} # type: dict
         self.data_source_ids = preprocess.get('data_source_ids', []) if preprocess else []
 
     @abstractmethod
