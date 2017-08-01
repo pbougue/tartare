@@ -165,10 +165,11 @@ class DataSource(object):
 
 
 class GenericPreProcess(object):
-    def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
-                 sequence: Optional[int] = 0) -> None:
+    def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
+                 sequence: Optional[int]=0, data_source_ids: Optional[List[str]]=None) -> None:
         self.id = str(uuid.uuid4()) if not id else id
         self.sequence = sequence
+        self.data_source_ids = data_source_ids if data_source_ids else []
         self.params = params if params else {}
         self.type = type
 
@@ -246,7 +247,7 @@ class GenericPreProcess(object):
 
 
 class PreProcess(GenericPreProcess):
-    def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
+    def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> None:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -294,8 +295,8 @@ class Contributor(PreprocessManager):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
-    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
-                 preprocesses: List[PreProcess] = None) -> None:
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
+                 preprocesses: List[PreProcess]=None) -> None:
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
@@ -615,6 +616,7 @@ class MongoPreProcessSchema(Schema):
     sequence = fields.Integer(required=True)
     type = fields.String(required=True)
     params = fields.Dict(required=False)
+    data_source_ids = fields.List(fields.String(), required=False)
 
     @post_load
     def build_data_source(self, data: dict) -> PreProcess:
@@ -632,7 +634,7 @@ class MongoCoverageSchema(MongoPreprocessManagerSchema):
     grid_calendars_id = fields.String(allow_none=True)
     contributors = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
-    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
+    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:
