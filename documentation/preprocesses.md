@@ -14,11 +14,11 @@ List of preprocesses for coverages
 {
   "type": "GtfsAdencyFile",
   "sequence": 1,
+  "data_source_ids": [
+    "id1",
+    "id2"
+  ],
   "params": {
-    "data_source_ids": [
-      "id1",
-      "id2"
-    ],
     "data": {
       "agency_id": "112",
       "agency_name": "stif",
