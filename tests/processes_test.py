@@ -130,7 +130,7 @@ class TestFusioProcesses:
                     <ActionId>1607281547155684</ActionId>
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
-        fusio_preprod = FusioPreProd(context=Context('coverage'), params={'url': 'http://fusio_host'})
+        fusio_preprod = FusioPreProd(context=Context('coverage'), preprocess={'params': {'url': 'http://fusio_host'}})
         fusio_preprod.do()
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
@@ -147,11 +147,13 @@ class TestFusioProcesses:
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
         get_export_url.return_value = 'abcd.zip'
-        params={
-            'url': 'http://fusio_host',
-            "export_type": "Ntfs"
+        preprocess = {
+            'params': {
+                'url': 'http://fusio_host',
+                "export_type": "Ntfs"
+            }
         }
-        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        fusio_export = FusioExport(context=Context('coverage'), preprocess=preprocess)
         fusio_export.do()
         data = {
             'action': 'Export',
@@ -164,11 +166,13 @@ class TestFusioProcesses:
         save_export.assert_called_with('abcd.zip')
 
     def test_call_fusio_export_unkown_export_type(self):
-        params = {
-            'url': 'http://fusio_host',
-            "export_type": "bob"
+        preprocess = {
+            "params": {
+                'url': 'http://fusio_host',
+                "export_type": "bob"
+            }
         }
-        fusio_export = FusioExport(context=Context('coverage'), params=params)
+        fusio_export = FusioExport(context=Context('coverage'), preprocess=preprocess)
         with pytest.raises(FusioException) as excinfo:
                 fusio_export.do()
         assert str(excinfo.value) == "export_type bob not found"
