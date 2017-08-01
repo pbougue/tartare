@@ -40,9 +40,10 @@ class TestContributorPreProcesses(TartareFixture):
         post_ps = {
             "type": "Ruspell",
             "sequence": 1,
+            "data_source_ids": ["datasource_stif"],
             "params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                "bano_data_ids": ["bano_75", "bano_91"],
+                "config_file": "conf_yml"
             }
         }
 
@@ -58,6 +59,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
+        assert r["preprocesses"][0]["data_source_ids"].sort() == post_ps["data_source_ids"].sort()
         assert r["preprocesses"][0]["params"] == post_ps["params"]
 
         preprocess_id = r["preprocesses"][0]["id"]
@@ -67,6 +69,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
+        assert r["preprocesses"][0]["data_source_ids"].sort() == post_ps["data_source_ids"].sort()
         assert r["preprocesses"][0]["params"] == post_ps["params"]
 
     def test_preprocess_not_found(self):
@@ -88,9 +91,10 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
+            "data_source_ids": ["datasource_stif"],
             "params": {
-                "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+                "bano_data_ids": ["bano_75", "bano_91"],
+                "config_file": "conf_yml"
             }
         }]
         raw = self.post('/contributors', json.dumps(post_data))
@@ -110,9 +114,10 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
+            "data_source_ids": ["datasource_stif"],
             "params": {
-                "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+                "bano_data_ids": ["bano_75", "bano_91"],
+                "config_file": "conf_yml"
             }
         }]
         raw = self.post('/contributors', json.dumps(post_data))
@@ -146,9 +151,10 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
+            "data_source_ids": ["datasource_stif"],
             "params": {
-                "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+                "bano_data_ids": ["bano_75", "bano_91"],
+                "config_file": "conf_yml"
             }
         }]
         raw = self.post('/contributors', json.dumps(post_data))
@@ -195,9 +201,10 @@ class TestContributorPreProcesses(TartareFixture):
             "id": "toto",
             "type": "Ruspell",
             "sequence": 1,
+            "data_source_ids": ["datasource_stif"],
             "params": {
-                "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+                "bano_data_ids": ["bano_75", "bano_91"],
+                "config_file": "conf_yml"
             }
         }]
         raw = self.post('/contributors', json.dumps(post_data))
@@ -208,9 +215,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "bob",
             "sequence": 1,
-            "params": {
-                "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
-            }
+            "data_source_ids": ["gtfs"]
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
@@ -230,18 +235,17 @@ class TestContributorPreProcesses(TartareFixture):
                 "id": "toto",
                 "type": "Ruspell",
                 "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources_id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources_id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             },
             {
                 "id": "titi",
                 "type": "ComputeDirections",
                 "sequence": 2,
-                "params": {
-                    "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
-                }
+                "data_source_ids": ["gtfs"]
             }
         ]
 
@@ -254,9 +258,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "HeadsignShortName",
             "sequence": 3,
-            "params": {
-                "tc_data": {"key": "data_sources.data_format", "value": "ffff"}
-            }
+            "data_source_ids": ["ffff"]
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/titi', json.dumps(new_preprocess))

@@ -415,9 +415,10 @@ class TestContributors(TartareFixture):
             {
                 "type": "Ruspell",
                 "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             },
             {
@@ -450,9 +451,10 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "type": "Ruspell",
                 "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             }
         ]
@@ -477,9 +479,10 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "sequence": 1,
                 "type": "BOB",
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             }
         ]
