@@ -100,3 +100,17 @@ def get_response(status_code: int=200, content: str=None) -> Response:
     if content:
         response.content = content
     return response
+
+
+def _get_file_fixture_full_path(rel_path):
+    return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'tests/fixtures'), rel_path)
+
+
+def assert_files_equals(result_file_name, expected_file_name):
+    with open(result_file_name, 'r') as result, open(expected_file_name, 'r') as expected:
+        result_content = result.read()
+        expected_content = expected.read()
+        assert result_content == expected_content, print(
+            "{res_content}\n(len={res_len})<========>\n{exp_content}\n(len={exp_len})".format(
+                res_content=result_content, res_len=len(result_content), exp_content=expected_content,
+                exp_len=len(expected_content)))

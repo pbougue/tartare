@@ -26,16 +26,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
 from tartare.validity_period_finder import ValidityPeriodFinder
-import os
 from datetime import date
 import pytest
 from tartare.exceptions import InvalidFile
-
-
-def _get_file_fixture_full_path(rel_path):
-    return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'tests/fixtures'), rel_path)
+from tests.utils import _get_file_fixture_full_path
 
 
 def test_zip_file_only_calendar():

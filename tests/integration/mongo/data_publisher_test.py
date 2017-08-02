@@ -36,7 +36,7 @@ import mock
 import pytest
 import ftplib
 from freezegun import freeze_time
-from tests.utils import mock_urlretrieve, mock_requests_post
+from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals
 from tests.integration.test_mechanism import TartareFixture
 import json
 
@@ -324,11 +324,7 @@ class TestDataPublisher(TartareFixture):
                 ods_zip.extract(metadata_file_name, tmp_dirname)
                 fixture = os.path.join(fixture_dir, 'metadata', metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
-                with open(metadata, 'r') as debug_metadata, open(fixture, 'r') as debug_fixture:
-                    uploaded_metadata = debug_metadata.read()
-                    expected_metadata = debug_fixture.read()
-                    assert uploaded_metadata == expected_metadata, print(
-                        "<========>\n".join([uploaded_metadata, expected_metadata]))
+                assert_files_equals(metadata, fixture)
         session.quit()
 
     def test_config_user_password(self, contributor):
