@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.context import Context
+from tartare.core.context import Context, DataSourceContext
 from tartare.processes.processes import AbstractProcess
 import logging
 from tartare.core.gridfs_handler import GridFsHandler
@@ -35,6 +35,8 @@ import csv
 from tartare.core.calendar_handler import get_dict_from_zip
 import tempfile
 import shutil
+from typing import List
+from gridfs.grid_file import GridOut
 
 
 class Ruspell(AbstractProcess):
@@ -58,7 +60,7 @@ class HeadsignShortName(AbstractProcess):
 class GtfsAgencyFile(AbstractProcess):
 
     @staticmethod
-    def get_content_agency(gtfs_zip):
+    def get_content_agency(gtfs_zip: GridOut) -> List[dict]:
         with ZipFile(gtfs_zip, 'r') as gtfs_zip:
             try:
                 return get_dict_from_zip(gtfs_zip, 'agency.txt')
@@ -66,12 +68,12 @@ class GtfsAgencyFile(AbstractProcess):
                 pass
             return []
     @staticmethod
-    def is_valid(data):
+    def is_valid(data: List[dict]) -> bool:
         if not data:
             return False
         return any([(v in data[0].keys()) for v in ['agency_name', 'agency_url', 'agency_timezone']])
 
-    def get_data(self):
+    def get_data(self) -> dict:
         # for more informations, see : https://developers.google.com/transit/gtfs/reference/agency-file
         agency_data = {
             "agency_id": 42,
@@ -86,7 +88,7 @@ class GtfsAgencyFile(AbstractProcess):
         agency_data.update(self.params.get("data", {}))
         return agency_data
 
-    def create_new_zip(self, files_zip, tmp_dir_name, filename):
+    def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str) -> str:
         new_data = self.get_data()
         files_zip.extractall(tmp_dir_name)
         with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'a') as agency:
@@ -97,7 +99,7 @@ class GtfsAgencyFile(AbstractProcess):
         shutil.make_archive(new_zip, 'zip', tmp_dir_name)
         return new_zip
 
-    def manage_agency_file(self, data_source_context):
+    def manage_agency_file(self, data_source_context: DataSourceContext) -> None:
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         filename = grid_out.filename
         data = self.get_content_agency(grid_out)
