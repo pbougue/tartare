@@ -56,6 +56,9 @@ class Ruspell(AbstractProcess):
 
 
 class ComputeDirections(AbstractProcess):
+
+    valid_column_names = ['route_id', 'service_id', 'trip_id', 'trip_headsign', 'direction_id', 'block_id']
+
     def __init__(self, context: Context, preprocess: dict) -> None:
         super().__init__(context, preprocess)
         self.gfs = GridFsHandler()
@@ -127,7 +130,7 @@ class ComputeDirections(AbstractProcess):
         with open(trips_file_name, 'w') as trips_file_write:
             trips_file_read.seek(0)
             reader = csv.DictReader(trips_file_read)
-            writer = csv.DictWriter(trips_file_write, fieldnames=reader.fieldnames, delimiter=',',
+            writer = csv.DictWriter(trips_file_write, fieldnames=self.valid_column_names, delimiter=',',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
             for row in reader:

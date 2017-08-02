@@ -262,8 +262,13 @@ class TestComputeDirectionsProcess():
                     excinfo.value) == 'data_source_id to preprocess "{data_source_id_to_process}" does not belong to contributor'.format(
                     data_source_id_to_process=data_source_to_process)
 
-    def test_compute_directions(self):
-        compute_directions_file_name = _get_file_fixture_full_path('compute_directions.zip')
+    @pytest.mark.parametrize(
+        "data_set_filename", [
+            ('compute_directions.zip'),
+            ('compute_directions_missing_column.zip'),
+        ])
+    def test_compute_directions(self, data_set_filename):
+        compute_directions_file_name = _get_file_fixture_full_path(data_set_filename)
         compute_directions_config_file_name = _get_file_fixture_full_path('compute_directions_config.json')
         contrib_id = 'fr-idf'
         data_source_config_id = 'ds-conf-id'
