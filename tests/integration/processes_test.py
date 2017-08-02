@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from tartare import app
 from tartare.processes.processes import PreProcessManager
 from tartare.processes.contributor import *
 from tartare.processes.coverage import *
@@ -38,7 +38,6 @@ from tartare.core.context import Context
 def test_contributor_preprocess():
     map_test = {
         "Ruspell": Ruspell,
-        "ComputeDirections": ComputeDirections,
         "HeadsignShortName": HeadsignShortName,
         "GtfsAgencyFile": GtfsAgencyFile
     }
@@ -52,6 +51,9 @@ def test_contributor_preprocess():
             PreProcessManager.get_preprocess(Context('coverage'), key)
         assert str(excinfo.typename) == "InvalidArguments"
 
+def test_compute_directions_preprocess():
+    with app.app_context():
+        assert isinstance(PreProcessManager.get_preprocess(Context('contributor'), 'ComputeDirections'), ComputeDirections)
 
 def test_coverage_preprocess():
     map_test = {
