@@ -58,8 +58,7 @@ excepted_headers.sort()
 class TestContributorProcesses:
 
     def get_gridfs_id(self, filename, contributor_id='contrib_id'):
-        #fixtures_path = os.path.realpath('tests/fixtures/gtfs/{filename}')
-        fixtures_path = os.getcwd() + '/Navitia/tartare/tests/fixtures/gtfs/{filename}'
+        fixtures_path = os.path.realpath('tests/fixtures/gtfs/{filename}')
         with open(fixtures_path.format(filename=filename), 'rb') as file:
             return GridFsHandler().save_file_in_gridfs(file, filename=filename, contributor_id=contributor_id)
 
