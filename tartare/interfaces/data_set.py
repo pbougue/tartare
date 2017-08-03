@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
@@ -28,46 +29,22 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Any
 
-from flask import Flask, jsonify, Response
-from werkzeug.exceptions import NotFound
-from celery.signals import setup_logging
-from flask_pymongo import PyMongo
-from flask_script import Manager
-from tartare.helper import configure_logger, make_celery
-
-app = Flask(__name__)  # type: Flask
-app.config.from_object('tartare.default_settings')
-app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
-manager = Manager(app)
-
-configure_logger(app.config)
-
-mongo = PyMongo(app)
+import os
+from flask import Response
+from flask.globals import request
+from flask_restful import Resource
+from tartare.core import models
+from tartare.decorators import validate_post_data_set
 
 
-@app.errorhandler(404)
-def page_not_found(e: NotFound) -> Response:
-    return jsonify(code=e.code, message=e.description), e.code
+class DataSet(Resource):
+    @validate_post_data_set
+    def post(self, contributor_id: str, data_source_id: str) -> Response:
+        file = request.files['file']
+        data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
+                                                       data_source_id=data_source_id)
+        data_source_fetched.save_dataset(file.filename, os.path.basename(file.filename))
+        data_source_fetched.save()
 
-
-@setup_logging.connect
-def celery_setup_logging(*args: Any, **kwargs: Any) -> Any:
-    # we don't want celery to mess with our logging configuration
-    pass
-
-
-celery = make_celery(app)
-
-from tartare import api
-
-from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPublisher
-
-navitia_publisher = NavitiaPublisher()
-ods_publisher = ODSPublisher()
-stop_area_publisher = StopAreaPublisher()
-
-from tartare.core.mailer import Mailer
-
-mailer = Mailer(app.config.get('MAILER'), app.config.get('PLATFORM'))
+        return {'data_sets': [models.MongoDataSourceFetchedSchema().dump(data_source_fetched).data]}, 201

@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,46 +26,30 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Any
-
-from flask import Flask, jsonify, Response
-from werkzeug.exceptions import NotFound
-from celery.signals import setup_logging
-from flask_pymongo import PyMongo
-from flask_script import Manager
-from tartare.helper import configure_logger, make_celery
-
-app = Flask(__name__)  # type: Flask
-app.config.from_object('tartare.default_settings')
-app.config.from_envvar('TARTARE_CONFIG_FILE', silent=True)
-manager = Manager(app)
-
-configure_logger(app.config)
-
-mongo = PyMongo(app)
+from collections import Counter
+from io import StringIO
+from mock import mock, ANY
+from tartare.core.calendar_handler import dic_to_memory_csv
 
 
-@app.errorhandler(404)
-def page_not_found(e: NotFound) -> Response:
-    return jsonify(code=e.code, message=e.description), e.code
+class TestCalendarHandler:
+    def test_dic_to_memory_csv_none(self):
+        assert None == dic_to_memory_csv([])
 
+    @mock.patch('csv.DictWriter')
+    def test_dic_to_memory_csv_argument_keys(self, dict_writer):
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+        dict_writer.assert_called_with(ANY, ['att1', 'att2'])
+        assert isinstance(csv, StringIO)
 
-@setup_logging.connect
-def celery_setup_logging(*args: Any, **kwargs: Any) -> Any:
-    # we don't want celery to mess with our logging configuration
-    pass
+    @mock.patch('csv.DictWriter')
+    def test_dic_to_memory_csv_keys(self, dict_writer):
+        expected_keys = ['att_1', 'att_b', 'att_bob']
+        dic_to_memory_csv([{"att_1": "val1", "att_b": "val2", "att_bob": "val2"}])
+        dict_writer.assert_called_with(ANY, expected_keys)
 
-
-celery = make_celery(app)
-
-from tartare import api
-
-from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPublisher
-
-navitia_publisher = NavitiaPublisher()
-ods_publisher = ODSPublisher()
-stop_area_publisher = StopAreaPublisher()
-
-from tartare.core.mailer import Mailer
-
-mailer = Mailer(app.config.get('MAILER'), app.config.get('PLATFORM'))
+    def test_dic_to_memory_csv_return_type(self):
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}])
+        assert isinstance(csv, StringIO)
+        csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+        assert isinstance(csv, StringIO)

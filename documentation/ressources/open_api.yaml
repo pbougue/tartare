@@ -754,7 +754,7 @@ paths:
         200:
           description: Requested contributor preprocesses
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/contributor_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -773,7 +773,7 @@ paths:
           description: Preprocess object that needs to be added to given contributor
           required: true
           schema:
-            $ref: "#/definitions/preprocess"
+            $ref: "#/definitions/contributor_preprocess"
       produces:
         - application/json
       consumes:
@@ -782,7 +782,7 @@ paths:
         201:
           description: Preprocess created
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/contributor_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -817,12 +817,12 @@ paths:
           description: Attributes of the contributor's preprocess that needs to be modified
           required: true
           schema:
-            $ref: "#/definitions/preprocess"
+            $ref: "#/definitions/contributor_preprocess"
       responses:
         200:
           description: Preprocess modified
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/contributor_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -877,7 +877,7 @@ paths:
         200:
           description: Requested coverage preprocesses
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/coverage_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -896,7 +896,7 @@ paths:
           description: Preprocess object that needs to be added to given coverage
           required: true
           schema:
-            $ref: "#/definitions/preprocess"
+            $ref: "#/definitions/coverage_preprocess"
       produces:
         - application/json
       consumes:
@@ -905,7 +905,7 @@ paths:
         201:
           description: Preprocess created
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/coverage_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -940,12 +940,12 @@ paths:
           description: Attributes of the coverage's preprocess that needs to be modified
           required: true
           schema:
-            $ref: "#/definitions/preprocess"
+            $ref: "#/definitions/coverage_preprocess"
       responses:
         200:
           description: Preprocess modified
           schema:
-            $ref: '#/definitions/preprocess_list'
+            $ref: '#/definitions/coverage_preprocess_list'
         400:
           description: Invalid arguments
           schema :
@@ -1151,7 +1151,7 @@ definitions:
       preprocesses:
         type: array
         items:
-          $ref: "#/definitions/preprocess"
+          $ref: "#/definitions/contributor_preprocess"
         example:
           - {
             id: "fusio",
@@ -1211,12 +1211,16 @@ definitions:
   environment_type:
     type: object
     required: [
-      name
+      name,
+      sequence
     ]
     properties:
       name:
         type: string
         example: integration
+      sequence:
+        type: integer
+        example: 0
       current_ntfs_id:
         type: string
         example: 5810cb2d3c96b7000108d074
@@ -1231,7 +1235,8 @@ definitions:
     required: [
       type,
       protocol,
-      url
+      url,
+      sequence
     ]
     properties:
       type:
@@ -1243,6 +1248,9 @@ definitions:
       url:
         type: string
         example: ods.fr
+      sequence:
+        type: integer
+        example: 0
       options:
         type: object
         example: {"authent": {"password": "XXXX", "username": "ftp_user"}, "directory": "/path/" }
@@ -1274,21 +1282,22 @@ definitions:
       preprocesses:
         type: array
         items:
-          $ref: "#/definitions/preprocess"
+          $ref: "#/definitions/contributor_preprocess"
 
-  preprocess_list:
+  contributor_preprocess_list:
     type: object
     properties:
       preprocesses:
         type: array
         items:
-          $ref: "#/definitions/preprocess"
+          $ref: "#/definitions/contributor_preprocess"
 
-  preprocess:
+  contributor_preprocess:
     type: object
     required: [
       id,
-      type
+      type,
+      sequence
     ]
     properties:
       id:
@@ -1297,9 +1306,45 @@ definitions:
       type:
         type: string
         example: Ruspell
+      data_source_ids:
+        type: array
+        example: [datasource_stif]
+      sequence:
+        type: integer
+        example: 1
       params:
         type: object
-        example: {bano_data: {key: data_sources_id, value: bano_75}}
+        example: {config_file: conf_yml, bano_data_ids: [bano_75, bano_91]}
+        
+
+  coverage_preprocess_list:
+    type: object
+    properties:
+      preprocesses:
+        type: array
+        items:
+          $ref: "#/definitions/coverage_preprocess"
+
+  coverage_preprocess:
+    type: object
+    required: [
+      id,
+      type,
+      sequence
+    ]
+    properties:
+      id:
+        type: string
+        example: preprocess_id
+      type:
+        type: string
+        example: FusioImport
+      sequence:
+        type: integer
+        example: 1
+      params:
+        type: object
+        example: {url: "http://fusio_host/cgi-bin/fusio.dll/"}
 
   coverage_export_list:
     type: object

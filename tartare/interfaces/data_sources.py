@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Tuple, Optional
+from typing import Optional
 
 from flask_restful import abort, request
 import flask_restful
@@ -92,10 +92,10 @@ class DataSource(flask_restful.Resource):
             raise InvalidArguments('The modification of the id is not possible')
 
         try:
-            data_sources = models.DataSource.update(contributor_id, data_source_id, request.json)
+            data_source = models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
             raise InvalidArguments(str(e))
         except PyMongoError as e:
             raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 200

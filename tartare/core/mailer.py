@@ -34,31 +34,35 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 import socket
 import logging
+from typing import List
+
+from tartare.core.models import Job
 
 
 class Mailer(object):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, platform: str='Unknown') -> None:
         self.from_ = config.get("from", 'tartare@canaltp.fr')
         self.to = config.get("to")
         self.cc = config.get("cc")
         self.host = config.get('smtp', {}).get("host", 'localhost')
         self.port = config.get('smtp', {}).get("port", 25)
         self.timeout = config.get('smtp', {}).get("timeout", 1)
+        self.platform = platform
 
-    def get_message(self, job: dict) -> str:
-        message = ["Problem Tartare",
+    def get_message(self, job: Job) -> str:
+        message = ["Problem Tartare, Platform {}".format(self.platform),
                    "",
                    "",
-                   "Start execution : {}".format(job.get('started_at')),
-                   "End execution : {}".format(job.get('updated_at')),
-                   "Action type: {}".format(job.get('action_type')),
-                   "Job: {}".format(job.get('id')),
-                   "Step: {}".format(job.get('step'))]
-        if job.get('contributor_id'):
-            message.append("Contributor: {}".format(job.get('contributor_id')))
-        if job.get('coverage_id'):
-            message.append("Coverage: {}".format(job.get('coverage_id')))
-        message = message + ["Error Message : {}".format(job.get('error_message')),
+                   "Start execution : {}".format(job.started_at),
+                   "End execution : {}".format(job.updated_at),
+                   "Action type: {}".format(job.action_type),
+                   "Job: {}".format(job.id),
+                   "Step: {}".format(job.step)]
+        if job.contributor_id:
+            message.append("Contributor: {}".format(job.contributor_id))
+        if job.coverage_id:
+            message.append("Coverage: {}".format(job.coverage_id))
+        message = message + ["Error Message : {}".format(job.error_message),
                              "",
                              "",
                              "=" * 75,
@@ -67,7 +71,7 @@ class Mailer(object):
         str_message = "\n".join(message)
         return str_message.format(job=job)
 
-    def format_mail(self, job: dict) -> MIMEMultipart:
+    def format_mail(self, job: Job) -> MIMEMultipart:
         attachment = MIMEBase('application', "text/html")
 
         mail = MIMEMultipart("alternative")
@@ -80,10 +84,10 @@ class Mailer(object):
         mail.attach(attachment)
         return mail
 
-    def get_to_addrs(self):
+    def get_to_addrs(self) -> List[str]:
         return [self.to] + self.cc.split(',') if self.cc else self.to
 
-    def send(self, mail: MIMEMultipart):
+    def send(self, mail: MIMEMultipart) -> None:
         server = smtplib.SMTP()
         server.timeout = self.timeout
         try:
@@ -91,15 +95,15 @@ class Mailer(object):
             server.sendmail(self.from_, self.get_to_addrs(), mail.as_string())
             logging.getLogger(__name__).debug("Mail sent to %s" % self.get_to_addrs())
         except smtplib.SMTPException as exception:
-            logging.getLogger(__name__).fatal("Sendmail error [from = %s, to = %s], error message :%s" %
+            logging.getLogger(__name__).critical("Sendmail error [from = %s, to = %s], error message :%s" %
                                               (self.from_, self.to, str(exception)))
         except (socket.gaierror, Exception) as e:
-            logging.getLogger(__name__).fatal("Connection error [host = %s], error message :%s" %
+            logging.getLogger(__name__).critical("Connection error [host = %s], error message :%s" %
                                               (self.host, str(e)))
         finally:
             server.quit()
 
-    def build_msg_and_send_mail(self, job: dict):
+    def build_msg_and_send_mail(self, job: Job) -> None:
         if job:
             mail = self.format_mail(job)
             self.send(mail)

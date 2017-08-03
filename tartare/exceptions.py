@@ -30,17 +30,17 @@ from typing import Optional
 
 
 class ColumnNotFound(Exception):
-    def __init__(self, message: Optional[str]=''):
+    def __init__(self, message: Optional[str]='') -> None:
         self.message = message
 
 
 class FileNotFound(Exception):
-    def __init__(self, message: Optional[str]=''):
+    def __init__(self, message: Optional[str]='') -> None:
         self.message = message
 
 
 class InvalidFile(Exception):
-    def __init__(self, message: Optional[str]=''):
+    def __init__(self, message: Optional[str]='') -> None:
         self.message = message
 
 
@@ -53,4 +53,8 @@ class FusioException(Exception):
 
 
 class IntegrityException(Exception):
+    pass
+
+
+class ParameterException(Exception):
     pass

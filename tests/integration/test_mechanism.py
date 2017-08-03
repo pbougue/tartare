@@ -59,3 +59,10 @@ class TartareFixture(object):
 
     def delete(self, url):
         return self.tester.delete(url)
+
+    def is_json(self, data):
+        try:
+            self.to_json(data)
+        except ValueError as e:
+            return False
+        return True

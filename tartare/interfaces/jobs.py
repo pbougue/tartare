@@ -39,10 +39,12 @@ from tartare.http_exceptions import ObjectNotFound
 class Job(flask_restful.Resource):
     def get(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
             job_id: Optional[str] = None) -> Response:
-        jobs = models.Job.get(contributor_id, coverage_id, job_id)
         if job_id:
+            jobs = models.Job.get_one(job_id)
             if jobs:
                 return {'jobs': [JobSchema(many=False, strict=True).dump(jobs).data]}, 200
             else:
                 raise ObjectNotFound('Job not found: {}'.format(job_id))
-        return {'jobs': JobSchema(many=True, strict=True).dump(jobs).data}, 200
+        else:
+            matching_jobs = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id)
+            return {'jobs': JobSchema(many=True, strict=True).dump(matching_jobs).data}, 200

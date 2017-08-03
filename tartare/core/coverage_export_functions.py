@@ -29,9 +29,8 @@
 
 import logging
 from tartare.core.context import Context
-from tartare.core.models import ContributorExport, CoverageExport, CoverageExportContributor, Coverage
+from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource
 from tartare.core.gridfs_handler import GridFsHandler
-
 
 logger = logging.getLogger(__name__)
 
@@ -43,42 +42,36 @@ def merge(coverage: Coverage, context: Context) -> Context:
 
 def postprocess(coverage: Coverage, context: Context) -> Context:
     logger.info("coverage_id : %s", coverage.id)
-    return context
-
-
-def initialize_context(coverage: Coverage, context: Context) -> Context:
-    logger.info('initialize context')
-    for contributor_id in coverage.contributors:
-        export = ContributorExport.get_last(contributor_id)
-        if not export:
-            logger.info("Contributor {} without export.".format(contributor_id), coverage.id)
-            continue
-        context.contributor_exports.append(export)
-
+    for contributor_context in context.contributor_contexts:
+        if not context.validity_period:
+            context.validity_period = contributor_context.validity_period
+        if not context.global_gridfs_id and contributor_context.data_source_contexts[0].gridfs_id:
+            context.global_gridfs_id = contributor_context.data_source_contexts[0].gridfs_id
+        break
     return context
 
 
 def save_export(coverage: Coverage, context: Context) -> Context:
     contributor_exports = []
-    new_grid_fs_id = None
+    for contributor_context in context.contributor_contexts:
+        data_sources = []
+        for data_source_context in contributor_context.data_source_contexts:
+            data_sources.append(
+                ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
+                                            gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
+                                            validity_period=data_source_context.validity_period)
+            )
 
-    for ce in context.contributor_exports:
-        if not ce.gridfs_id:
-            logger.info("contributor export {} without gridfs id.".format(ce.contributor_id))
-            continue
-        new_grid_fs_id = GridFsHandler().copy_file(ce.gridfs_id)
-        validity_period = ce.validity_period
-        contributor_exports.append(
-            CoverageExportContributor(contributor_id=ce.contributor_id,
-                                      validity_period=validity_period,
-                                      data_sources=ce.data_sources)
-        )
-        ce.gridfs_id = new_grid_fs_id
+        if data_sources:
+            contributor_exports.append(
+                CoverageExportContributor(contributor_id=contributor_context.contributor.id,
+                                          validity_period=contributor_context.validity_period,
+                                          data_sources=data_sources))
+
     if contributor_exports:
-        if context.gridfs_id:
-            new_grid_fs_id = context.gridfs_id
-        export = CoverageExport(coverage_id=coverage.id, gridfs_id=new_grid_fs_id,
-                                validity_period=validity_period,
+        export = CoverageExport(coverage_id=coverage.id,
+                                gridfs_id=GridFsHandler().copy_file(context.global_gridfs_id),
+                                validity_period=context.validity_period,
                                 contributors=contributor_exports)
         export.save()
 

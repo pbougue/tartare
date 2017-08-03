@@ -36,9 +36,10 @@ from typing import Optional, List, Dict
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, params: Dict[str, str]) -> None:
+    def __init__(self, context: Context, preprocess: dict) -> None:
         self.context = context
-        self.params = params
+        self.params = preprocess.get('params', {}) if preprocess else {} # type: dict
+        self.data_source_ids = preprocess.get('data_source_ids', []) if preprocess else []
 
     @abstractmethod
     def do(self) -> Context:
@@ -62,14 +63,14 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: Context, preprocess_name: str, params: Optional[dict]=None) -> AbstractProcess:
+    def get_preprocess(cls, context: Context, preprocess_name: str, preprocess: Optional[dict]=None) -> AbstractProcess:
         """
         :param preprocess_name: Ruspell, FusioImport, ....
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
         attr = cls.get_preprocess_class(preprocess_name, context.instance)
         try:
-            return attr(context, params)  # call to the contructor, with all the args
+            return attr(context, preprocess)  # call to the contructor, with all the args
         except TypeError as e:
             msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)

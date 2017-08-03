@@ -91,7 +91,7 @@ class TestCoverageApi(TartareFixture):
     def test_add_coverage_with_pre_env(self):
         raw = self.post('/coverages',
                    '''{"id": "id_test", "name": "name of the coverage",
-                   "environments" : {"preproduction": {"name": "pre"}}}''')
+                   "environments" : {"preproduction": {"name": "pre", "sequence": 0}}}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
         r = self.to_json(raw)
@@ -104,6 +104,7 @@ class TestCoverageApi(TartareFixture):
         assert 'production' not in coverage['environments']
         assert 'preproduction' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
+        assert coverage['environments']['preproduction']['sequence'] == 0
 
     def test_add_coverage_with_no_env(self):
         raw = self.post('/coverages',
@@ -119,9 +120,9 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages',
                         '''{"id": "id_test", "name": "name of the coverage",
                         "environments" : {
-                        "preproduction": {"name": "pre"},
-                        "production": {"name": "prod"},
-                        "integration": {"name": "sim"}
+                        "preproduction": {"name": "pre", "sequence": 1},
+                        "production": {"name": "prod", "sequence": 2},
+                        "integration": {"name": "sim", "sequence": 0}
                         }}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
@@ -136,8 +137,11 @@ class TestCoverageApi(TartareFixture):
         assert 'preproduction' in coverage['environments']
         assert 'integration' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
+        assert coverage['environments']['preproduction']['sequence'] == 1
         assert coverage['environments']['production']['name'] == 'prod'
+        assert coverage['environments']['production']['sequence'] == 2
         assert coverage['environments']['integration']['name'] == 'sim'
+        assert coverage['environments']['integration']['sequence'] == 0
 
     def test_patch_simple_coverage(self):
         raw = self.post('/coverages',
@@ -214,7 +218,7 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 201
 
         raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "environments": '
-                                               '{"integration": {"name": "bar"}}}')
+                                               '{"integration": {"name": "bar", "sequence": 0}}}')
         assert raw.status_code == 200
 
         raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "environments": {"bar": {"name": "bar"}}}')
@@ -228,7 +232,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.patch('/coverages/id_test',
                          '''{"environments" : {
-                         "preproduction": {"name": "pre"},
+                         "preproduction": {"name": "pre", "sequence": 0},
                          "production": null
                         }}''')
 
@@ -244,6 +248,7 @@ class TestCoverageApi(TartareFixture):
         assert 'production' not in coverage['environments']
         assert 'preproduction' in coverage['environments']
         assert coverage['environments']['preproduction']['name'] == 'pre'
+        assert coverage['environments']['preproduction']['sequence'] == 0
 
     def test_update_coverage_environment_with_validation(self):
         raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
@@ -251,7 +256,8 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.patch('/coverages/id_test',
                          '''{"environments" : {
-                         "preproduction": {"publication_platform":  [ { "options": { "authent": { "username": "test" }, "directory": "/" }}]},
+                         "preproduction": {"publication_platform":  [ { "options": { "authent": { "username": "test" },
+                          "directory": "/" }}]},
                          "production": null
                         }}''')
         assert raw.status_code == 400

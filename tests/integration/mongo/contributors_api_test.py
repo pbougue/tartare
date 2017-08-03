@@ -415,9 +415,10 @@ class TestContributors(TartareFixture):
             {
                 "type": "Ruspell",
                 "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             },
             {
@@ -450,9 +451,10 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "type": "Ruspell",
                 "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             }
         ]
@@ -477,9 +479,10 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "sequence": 1,
                 "type": "BOB",
+                "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                    "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
                 }
             }
         ]
@@ -498,3 +501,37 @@ class TestContributors(TartareFixture):
         assert r['error'] == "impossible to build preprocess BOB : " \
                              "module tartare.processes.contributor has no class BOB"
 
+    def test_patch_contrib_preprocesses_gtfs_agency_file(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        preprocesses = [
+            {
+                "id": "gtfs_agency_file",
+                "sequence": 1,
+                "type": "GtfsAgencyFile",
+                "params": {
+                   "data_source_ids": ["tc-stif"],
+                    "data": {
+                      "agency_id": "112",
+                      "agency_name": "stif",
+                      "agency_url": "http://stif.com"
+                    }
+                }
+            }
+        ]
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        assert len(r['contributors']) == 1
+        r["contributors"][0]["preprocesses"] = preprocesses
+        raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
+        r = self.to_json(raw)
+        assert len(r["contributors"][0]["preprocesses"]) == 1
+        assert r["contributors"][0]["preprocesses"][0]["id"] == preprocesses[0]["id"]
+        assert r["contributors"][0]["preprocesses"][0]["sequence"] == preprocesses[0]["sequence"]
+        assert r["contributors"][0]["preprocesses"][0]["type"] == preprocesses[0]["type"]
+        assert r["contributors"][0]["preprocesses"][0]["params"]["data"]["agency_id"] == \
+               preprocesses[0]["params"]["data"]["agency_id"]
+        assert r["contributors"][0]["preprocesses"][0]["params"]["data"]["agency_name"] == \
+               preprocesses[0]["params"]["data"]["agency_name"]

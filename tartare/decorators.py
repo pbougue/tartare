@@ -26,6 +26,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
+from typing import Any, Callable
 from tartare.core.models import Coverage, CoverageExport
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 import logging
@@ -35,9 +37,9 @@ from tartare.core import models
 
 
 class publish_params_validate(object):
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Any:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: list, **kwargs: str) -> Any:
             # Test coverage
             coverage = Coverage.get(kwargs.get("coverage_id"))
             if not coverage:
@@ -61,9 +63,9 @@ class publish_params_validate(object):
 
 
 class json_data_validate(object):
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Any:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
             if post_data is None:
                 msg = 'request without data.'
@@ -74,9 +76,9 @@ class json_data_validate(object):
 
 
 class validate_contributors(object):
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Any:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
             if "contributors" in post_data:
                 for contributor_id in post_data.get("contributors"):
@@ -90,9 +92,9 @@ class validate_contributors(object):
 
 
 class validate_patch_coverages(object):
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Any:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
             if "environments" in post_data:
                 for environment_name in post_data.get("environments"):
@@ -103,3 +105,27 @@ class validate_patch_coverages(object):
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)
         return wrapper
+
+
+def validate_post_data_set(func: Callable) -> Any:
+    @wraps(func)
+    def wrapper(*args: list, **kwargs: str) -> Any:
+        contributor_id = kwargs['contributor_id']
+        data_source_id = kwargs['data_source_id']
+
+        try:
+            data_source = models.DataSource.get(contributor_id=contributor_id, data_source_id=data_source_id)
+        except ValueError as e:
+            raise ObjectNotFound(str(e))
+
+        if data_source is None:
+            raise ObjectNotFound("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+
+        if not request.files:
+            raise InvalidArguments('No file provided.')
+
+        if 'file' not in request.files:
+            raise InvalidArguments('File provided with bad param ("file" param expected).')
+
+        return func(*args, **kwargs)
+    return wrapper

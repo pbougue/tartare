@@ -27,19 +27,19 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import glob
 import logging
 import os
 import datetime
 from typing import Optional
-
 from zipfile import ZipFile
+from billiard.einfo import ExceptionInfo
+from celery.task import Task
+
 from tartare import celery
 from tartare.core import calendar_handler, models
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
-from tartare.core.data_handler import is_ntfs_data
 from tartare.helper import upload_file
 import tempfile
 from tartare.core import contributor_export_functions
@@ -55,8 +55,7 @@ import tartare
 logger = logging.getLogger(__name__)
 
 
-
-def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
+def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> None:
     with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
         grid_calendar_data = GridCalendarData()
         grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
@@ -65,13 +64,12 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str):
 
 
 class CallbackTask(tartare.celery.Task):
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-
+    def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
-    def send_mail(self, args):
+    def send_mail(self, args: list) -> None:
         from tartare import mailer
         mailer.build_msg_and_send_mail(self.get_job(args))
 
@@ -80,18 +78,18 @@ class CallbackTask(tartare.celery.Task):
         for arg in args:
             if isinstance(arg, models.Job):
                 with tartare.app.app_context():
-                    return models.Job.get(job_id=arg.id)
+                    return models.Job.get_one(arg.id)
         return None
 
-    def update_job(self, args, exc):
+    def update_job(self, args: list, exc: Exception) -> None:
         job = self.get_job(args)
         if job:
             with tartare.app.app_context():
-                models.Job.update(job_id=job.get('id'), state="failed", error_message=str(exc))
+                models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file_to_tyr_and_discard(self, coverage_id: str, environment_type: str, file_id: str):
+def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -139,7 +137,7 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
-def publish_data_on_platform(self, platform: Platform, coverage: Coverage, environment_id: str, job: Job):
+def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
@@ -156,12 +154,14 @@ def publish_data_on_platform(self, platform: Platform, coverage: Coverage, envir
         logger.error(msg)
         self.retry(exc=exc)
 
+
 @celery.task()
-def finish_job(job_id: str):
+def finish_job(job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
 
+
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_ntfs_to_tyr(self, coverage_id: str, environment_type: str):
+def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> None:
     coverage = models.Coverage.get(coverage_id)
     url = coverage.environments[environment_type].publication_platforms[0].url
     grifs_handler = GridFsHandler()
@@ -183,16 +183,17 @@ def send_ntfs_to_tyr(self, coverage_id: str, environment_type: str):
     if response.status_code != 200:
         raise self.retry()
 
+
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self, contributor: Contributor, job: Job):
+def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         # Launch fetch all dataset for contributor
         context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.data_sources_fetched:
+        if context.contributor_has_datasources(contributor.id):
             models.Job.update(job_id=job.id, state="running", step="preprocess")
-            context = launch([], context)
+            context = launch(contributor.preprocesses, context)
 
             models.Job.update(job_id=job.id, state="running", step="merge")
             context = contributor_export_functions.merge(contributor, context)
@@ -216,12 +217,12 @@ def contributor_export(self, contributor: Contributor, job: Job):
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def coverage_export(self, coverage: Coverage, job: Job):
+def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
     logger.info('coverage_export')
     try:
         context = Context('coverage')
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        context.fill_contributor_exports(contributors=coverage.contributors)
+        context.fill_contributor_contexts(coverage)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
         context = launch(coverage.preprocesses, context)
@@ -237,9 +238,11 @@ def coverage_export(self, coverage: Coverage, job: Job):
         coverage_export_functions.save_export(coverage, context)
         actions = []
         # launch publish for all environment
-        for env in coverage.environments:
+        sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
+        for env in sorted_environments:
             environment = coverage.get_environment(env)
-            for platform in environment.publication_platforms:
+            sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
+            for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
         if actions:
             chain(*actions).delay()
@@ -254,12 +257,12 @@ def launch(processes: list, context: Context) -> Context:
         return context
     tmp_processes = sorted(processes, key=lambda x: ['sequence'])
     for p in tmp_processes:
-        context = PreProcess.get_preprocess(context, preprocess_name=p.type, params=p.params).do()
+        context = PreProcess.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
     return context
 
 
 @celery.task()
-def automatic_update():
+def automatic_update() -> None:
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
     for contributor in contributors:

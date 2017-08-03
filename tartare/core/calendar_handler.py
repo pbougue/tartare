@@ -29,10 +29,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from io import StringIO, BytesIO, TextIOWrapper
+from io import StringIO, BytesIO
 import csv
 from zipfile import ZipFile, ZIP_DEFLATED
-from typing import List, Optional
+from typing import List, Optional, Dict, Iterable
+from tartare.helper import get_dict_from_zip
 
 GRID_CALENDARS = "grid_calendars.txt"
 GRID_PERIODS = "grid_periods.txt"
@@ -41,12 +42,12 @@ GRID_CALENDAR_REL_LINE = "grid_rel_calendar_line.txt"
 
 
 class GridCalendarData(object):
-    def __init__(self):
-        self.grid_calendars = []
-        self.grid_periods = []
-        self.grid_rel_calendar_line = []
+    def __init__(self) -> None:
+        self.grid_calendars = []  # type: List[dict]
+        self.grid_periods = []  # type: List[dict]
+        self.grid_rel_calendar_line = []  # type: List[dict]
 
-    def load_zips(self, calendar_zip: ZipFile, ntfs_zip: ZipFile):
+    def load_zips(self, calendar_zip: ZipFile, ntfs_zip: ZipFile) -> None:
         file_list = calendar_zip.namelist()
         if GRID_CALENDARS not in file_list \
                 and GRID_PERIODS not in file_list \
@@ -64,15 +65,15 @@ class GridCalendarData(object):
             self.grid_rel_calendar_line = get_dict_from_zip(calendar_zip, GRID_CALENDAR_REL_LINE)
 
 
-def dic_to_memory_csv(dic: List[dict], keys: Optional[list] = None) -> StringIO:
-    if len(dic) == 0:
+def dic_to_memory_csv(list_of_dict: List[Dict[str, str]], keys: Optional[Iterable[str]] = None) -> Optional[StringIO]:
+    if len(list_of_dict) == 0:
         return None
     if not keys:
-        keys = dic[0].keys()
+        keys = sorted(list_of_dict[0].keys())
     f = StringIO()
-    w = csv.DictWriter(f, keys)
+    w = csv.DictWriter(f, sorted(keys))
     w.writeheader()
-    w.writerows(dic)
+    w.writerows(list_of_dict)
     return f
 
 
@@ -112,14 +113,9 @@ def merge_calendars_ntfs(grid_calendar_data: GridCalendarData, ntfs_zip: ZipFile
     return zip_out
 
 
-def save_zip_as_file(zip: ZipFile, filepath: str):
+def save_zip_as_file(zip: ZipFile, filepath: str) -> None:
     file_list = [(s, zip.read(s)) for s in zip.namelist()]
     zip_out = ZipFile(filepath, 'w', ZIP_DEFLATED, False)
     for file_name, content in file_list:
         zip_out.writestr(file_name, content)
     zip_out.close()
-
-
-def get_dict_from_zip(zip: ZipFile, file_name: str) -> List[dict]:
-    with zip.open(file_name) as file:
-        return [l for l in csv.DictReader(TextIOWrapper(file, 'utf8'))]

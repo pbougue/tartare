@@ -8,6 +8,27 @@ List of preprocesses for coverages
 ...
 ### HeadsignShortName
 ...
+
+### GtfsAgencyFile
+This preprocess allows to add "agency.txt" file if it does not exist.
+If "agency.txt" exists but is empty, default values are filled (agency_id = 42 and all others values empty) 
+otherwise values in the preprocess params are filled
+
+```json
+{
+    "type": "GtfsAdencyFile",
+    "sequence": 1,
+    "data_source_ids": ["id1", "id2"],
+    "params": {
+        "data": {
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_url": "http://stif.com"
+        }
+    }
+}
+```
+
 ## Coverage processes
 List of preprocesses for coverages
 ### FusioDataUpdate

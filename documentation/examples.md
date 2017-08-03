@@ -8,12 +8,12 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
   "data_prefix": "AMI",
   "data_sources": [
     {
-    	"id": "data_source_id_ami",
-    	"name": "data_source_name_ami",
-    	"input": {
-    		"type": "gtfs",
-    		"url": "http://data.localhost/AMI_gtfs.zip"
-    	}
+      "id": "data_source_id_ami",
+      "name": "data_source_name_ami",
+      "input": {
+        "type": "gtfs",
+        "url": "http://data.localhost/AMI_gtfs.zip"
+      }
     }
   ]
 }'

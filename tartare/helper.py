@@ -43,9 +43,11 @@ import uuid
 import urllib.request
 from urllib.error import ContentTooShortError, HTTPError, URLError
 import zipfile
+import csv
+from io import TextIOWrapper
 
 
-#monkey patching of gridfs file for exposing the size in a "standard" way
+# monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self: GridOut) -> int:
     return self.length
 GridOut.__len__ = grid_out_len
@@ -53,10 +55,10 @@ GridOut.__len__ = grid_out_len
 
 def upload_file(url: str, filename: str, file: Union[str, bytes, IOBase, GridOut]) -> Response:
     return requests.post(url, files={'file': file, 'filename': filename}, timeout=120)
-    #TODO: fix interaction between toolbets and gridfs file
+    # TODO: fix interaction between toolbets and gridfs file
 
 
-def configure_logger(app_config: dict):
+def configure_logger(app_config: dict) -> None:
     """
     initialize logging
     """
@@ -75,10 +77,10 @@ def make_celery(app: Flask) -> Celery:
     class ContextTask(TaskBase):
         abstract = True
 
-        def __init__(self):
+        def __init__(self) -> None:
             pass
 
-        def __call__(self, *args, **kwargs):
+        def __call__(self, *args: list, **kwargs: dict) -> Any:
             with app.app_context():
                 return TaskBase.__call__(self, *args, **kwargs)
 
@@ -86,12 +88,12 @@ def make_celery(app: Flask) -> Celery:
     return celery_app
 
 
-def _make_doted_key(*args: Mapping) -> Mapping:
+def _make_doted_key(*args: Optional[str]) -> str:
     return '.'.join([e for e in args if e])
 
 
-def to_doted_notation(data: Mapping, prefix: Optional[Any]=None) -> Mapping:
-    result = {}
+def to_doted_notation(data: Mapping, prefix: Optional[Any] = None) -> Mapping:
+    result = {}  # type: dict
     for k, v in data.items():
         key = _make_doted_key(prefix, k)
         if isinstance(v, Mapping):
@@ -120,7 +122,7 @@ def get_filename(url: str, data_source_id: str) -> str:
     return filename
 
 
-def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
+def get_md5_content_file(file: Union[str, bytes, int]) -> str:
     hasher = md5()
     with open(file, "rb") as f:
         data = f.read()
@@ -128,12 +130,12 @@ def get_md5_content_file(file: Union[str, bytes, IOBase, GridOut]) -> str:
         return hasher.hexdigest()
 
 
-def setdefault_ids(collections: List[dict]):
+def setdefault_ids(collections: List[dict]) -> None:
     for c in collections:
         c.setdefault('id', str(uuid.uuid4()))
 
 
-def download_zip_file(url_file: str, dest: str):
+def download_zip_file(url_file: str, dest: str) -> None:
     logger = logging.getLogger(__name__)
     try:
         urllib.request.urlretrieve(url_file, dest)
@@ -148,3 +150,28 @@ def download_zip_file(url_file: str, dest: str):
         raise
     if not zipfile.is_zipfile(dest):
         raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
+
+
+def get_values_by_key(values: Union[List, dict], out: List[str], key: str='gridfs_id') -> None:
+    my_list = values.items() if isinstance(values, dict) else enumerate(values)
+    for k, v in my_list:
+        if isinstance(v, dict) or isinstance(v, list):
+            get_values_by_key(v, out, key)
+        else:
+            if k == key and v not in out:
+                out.append(v)
+
+
+def get_dict_from_zip(zip: zipfile.ZipFile, file_name: str) -> List[dict]:
+    with zip.open(file_name) as file:
+        return [l for l in csv.DictReader(TextIOWrapper(file, 'utf8'))]
+
+
+def get_content_file_from_grid_out_file(zip_file: GridOut, filename: str) -> List[dict]:
+    with zipfile.ZipFile(zip_file, 'r') as file:
+        try:
+            return get_dict_from_zip(file, filename)
+        except KeyError as e:
+            logging.getLogger(__name__).warning('impossible during download of file: {}'.format(str(e)))
+            pass
+        return []

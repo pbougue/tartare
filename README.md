@@ -3,17 +3,39 @@ data integration
 The global architecture is available in the [architecture.md](documentation/architecture.md) file.
 
 ## Requirements
-- python 3.5
+- python 3.6.2 (or use [pyenv](https://github.com/pyenv/pyenv)
 - [RabbitMQ](https://www.rabbitmq.com/)
-- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)
+- [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) or use [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
 
 ## Installation
 
+### With Python 3.6.2 on your workspace
 ```
 cd path/to/tartare
-mkvirtualenv tartare -p python3.5
+mkvirtualenv tartare -p python3.6.2
 make build
 ```
+
+### With pyenv not to mess with your existing python versions
+
+* Install pyenv (see https://github.com/pyenv/pyenv-installer)
+* Install pyenv-virtualenv plugin if not present (in *~/.pyenv/plugins/pyenv-virtualenv/*) in your pyenv plugins (see https://github.com/pyenv/pyenv-virtualenv)
+
+```
+cd path/to/tartare
+pyenv install 3.6.2
+pyenv local 3.6.2
+pyenv virtualenv 3.6.2 tartare
+pyenv activate tartare
+make build
+```
+
+## Database migration
+```
+mongodb-migrate --host [your_mongo_host] --database tartare
+```
+
+For __workon__ occurrences within this documentation, replace it with __pyenv activate__ if you want to use pyenv instead
 
 ## Run the application (for development)
 ```

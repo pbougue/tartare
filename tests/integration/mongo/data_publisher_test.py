@@ -46,7 +46,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage not found: default'
 
     def test_publish_unknwon_environment(self, contributor):
@@ -57,8 +57,10 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         {
+                            "sequence": 0,
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
@@ -77,7 +79,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/bob/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Environment not found: bob'
 
     def test_publish_coverage_without_export(self, contributor):
@@ -88,8 +90,10 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         {
+                            "sequence": 0,
                             "type": "navitia",
                             "protocol": "http",
                             "url": "http://bob/v0/jobs"
@@ -108,7 +112,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found'
+        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage default without export.'
 
     def _create_contributor(self, id, url='bob'):
@@ -139,6 +143,7 @@ class TestDataPublisher(TartareFixture):
             "environments": {
                 "production": {
                     "name": "production",
+                    "sequence": 0,
                     "publication_platforms": [
                         publication_platform
                     ]
@@ -159,13 +164,13 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
+            "sequence": 0,
             "type": "navitia",
             "protocol": "http",
             "url": "http://bob/v0/jobs"
         }
         self._create_contributor(contributor_id)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
-
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
@@ -204,6 +209,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -244,6 +250,7 @@ class TestDataPublisher(TartareFixture):
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -278,6 +285,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=sample_data))
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
@@ -328,6 +336,7 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
+            "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
             "url": "whatever.com",
@@ -353,6 +362,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
             ip_http_download=init_http_download_server.ip_addr, filename=filename))
         publication_platform = {
+            "sequence": 0,
             "type": "stop_area",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
