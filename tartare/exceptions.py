@@ -54,3 +54,7 @@ class FusioException(Exception):
 
 class IntegrityException(Exception):
     pass
+
+
+class ParameterException(Exception):
+    pass

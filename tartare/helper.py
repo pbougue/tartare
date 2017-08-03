@@ -43,6 +43,8 @@ import uuid
 import urllib.request
 from urllib.error import ContentTooShortError, HTTPError, URLError
 import zipfile
+import csv
+from io import TextIOWrapper
 
 
 # monkey patching of gridfs file for exposing the size in a "standard" way
@@ -158,3 +160,18 @@ def get_values_by_key(values: Union[List, dict], out: List[str], key: str='gridf
         else:
             if k == key and v not in out:
                 out.append(v)
+
+
+def get_dict_from_zip(zip: zipfile.ZipFile, file_name: str) -> List[dict]:
+    with zip.open(file_name) as file:
+        return [l for l in csv.DictReader(TextIOWrapper(file, 'utf8'))]
+
+
+def get_content_file_from_grid_out_file(zip_file: GridOut, filename: str) -> List[dict]:
+    with zipfile.ZipFile(zip_file, 'r') as file:
+        try:
+            return get_dict_from_zip(file, filename)
+        except KeyError as e:
+            logging.getLogger(__name__).warning('impossible during download of file: {}'.format(str(e)))
+            pass
+        return []

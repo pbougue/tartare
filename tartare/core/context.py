@@ -73,6 +73,14 @@ class Context():
                      for contributor_context in self.contributor_contexts
                      if contributor_context.contributor.id == contributor_id), None)
 
+    def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str) -> Optional[DataSourceContext]:
+        data_source_contexts = self.get_contributor_data_source_contexts(contributor_id)
+        if not data_source_contexts:
+            return None
+        return next((data_source_context
+                     for data_source_context in data_source_contexts
+                     if data_source_context.data_source_id == data_source_id), None)
+
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
                                             validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
         contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
