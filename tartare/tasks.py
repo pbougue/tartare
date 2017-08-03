@@ -193,7 +193,7 @@ def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
         context = contributor_export_functions.fetch_datasets(contributor, context)
         if context.contributor_has_datasources(contributor.id):
             models.Job.update(job_id=job.id, state="running", step="preprocess")
-            context = launch([], context)
+            context = launch(contributor.preprocesses, context)
 
             models.Job.update(job_id=job.id, state="running", step="merge")
             context = contributor_export_functions.merge(contributor, context)
