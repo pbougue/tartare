@@ -74,9 +74,7 @@ class Context():
                      if contributor_context.contributor.id == contributor_id), None)
 
     def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str) -> Optional[DataSourceContext]:
-        data_source_contexts = next((contributor_context.data_source_contexts
-                                     for contributor_context in self.contributor_contexts
-                                     if contributor_context.contributor.id == contributor_id), None)
+        data_source_contexts = self.get_contributor_data_source_contexts(contributor_id)
         if not data_source_contexts:
             return None
         return next((data_source_context

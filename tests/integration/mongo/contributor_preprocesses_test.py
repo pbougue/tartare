@@ -35,7 +35,7 @@ from datetime import date
 from tartare import app
 import os
 from zipfile import ZipFile
-from tartare.core.calendar_handler import get_dict_from_zip
+from tartare.helper import get_dict_from_zip
 from gridfs.errors import NoFile
 import pytest
 

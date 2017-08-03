@@ -15,22 +15,6 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
         "url": "http://data.localhost/AMI_gtfs.zip"
       }
     }
-  ],
-  "preprocesses": [
-    {
-      "type": "GtfsAdencyFile",
-      "sequence": 1,
-      "data_source_ids": [
-        "data_source_id_ami"
-      ],
-      "params": {
-        "data": {
-          "agency_id": "112",
-          "agency_name": "AMI",
-          "agency_url": "http://ami.com"
-        }
-      }
-    }
   ]
 }'
 ```

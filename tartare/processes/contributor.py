@@ -32,7 +32,7 @@ import logging
 from tartare.core.gridfs_handler import GridFsHandler
 from zipfile import ZipFile
 import csv
-from tartare.core.calendar_handler import get_dict_from_zip
+from tartare.helper import get_dict_from_zip
 import tempfile
 import shutil
 from typing import List
@@ -68,12 +68,12 @@ class GtfsAgencyFile(AbstractProcess):
                 pass
             return []
     @staticmethod
-    def is_valid(data: List[dict]) -> bool:
+    def is_agency_dict_valid(data: List[dict]) -> bool:
         if not data:
             return False
         return any([(v in data[0].keys()) for v in ['agency_name', 'agency_url', 'agency_timezone']])
 
-    def get_data(self) -> dict:
+    def _get_data(self) -> dict:
         # for more informations, see : https://developers.google.com/transit/gtfs/reference/agency-file
         agency_data = {
             "agency_id": 42,
@@ -89,7 +89,7 @@ class GtfsAgencyFile(AbstractProcess):
         return agency_data
 
     def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str) -> str:
-        new_data = self.get_data()
+        new_data = self._get_data()
         files_zip.extractall(tmp_dir_name)
         with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'a') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
@@ -103,7 +103,7 @@ class GtfsAgencyFile(AbstractProcess):
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         filename = grid_out.filename
         data = self.get_content_agency(grid_out)
-        if not self.is_valid(data):
+        if not self.is_agency_dict_valid(data):
             logging.getLogger(__name__).debug('data source {}  without agency.txt file'.
                                                   format(data_source_context.data_source_id))
             with ZipFile(grid_out, 'r') as files_zip:
