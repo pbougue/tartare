@@ -59,8 +59,7 @@ class HeadsignShortName(AbstractProcess):
 
 class GtfsAgencyFile(AbstractProcess):
 
-    @staticmethod
-    def is_agency_dict_valid(data: List[dict]) -> bool:
+    def _is_agency_dict_valid(self, data: List[dict]) -> bool:
         if not data:
             return False
         return any([(v in data[0].keys()) for v in ['agency_name', 'agency_url', 'agency_timezone']])
@@ -95,7 +94,7 @@ class GtfsAgencyFile(AbstractProcess):
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         filename = grid_out.filename
         data = get_content_file_from_grid_out_file(grid_out, 'agency.txt')
-        if not self.is_agency_dict_valid(data):
+        if not self._is_agency_dict_valid(data):
             logging.getLogger(__name__).debug('data source {}  without or empty agency.txt file'.
                                               format(data_source_context.data_source_id))
             with ZipFile(grid_out, 'r') as files_zip:
