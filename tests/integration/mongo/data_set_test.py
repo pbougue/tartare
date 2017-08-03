@@ -45,10 +45,10 @@ class TestDatasetApi(TartareFixture):
         assert r["error"] == "Bad contributor unknown"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
-        raw = self.post('/contributors/{}/data_sources/unknown/data_sets'.format(contributor.get('id')))
+        raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.to_json(raw)
-        assert r["error"] == "Data source unknown not found."
+        assert r["error"] == "Data source unknown not found for contributor id_test."
 
     def test_post_dataset_without_file(self, data_source):
         raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
