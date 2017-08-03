@@ -10,8 +10,9 @@ List of preprocesses for coverages
 ...
 
 ### GtfsAgencyFile
-This preprocess permit to add 'agency.txt' file if not exist or empty.
-default values: "agency_id": 42 and empty all others columns if data not defined in preprocess.
+This preprocess allows to add "agency.txt" file if it does not exist.
+If "agency.txt" exists but is empty, default values are filled (agency_id = 42 and all others values empty) 
+otherwise values in the preprocess params are filled
 
 ```json
 {
