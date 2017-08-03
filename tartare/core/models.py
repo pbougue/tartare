@@ -537,7 +537,7 @@ class Historisable(object):
 class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: ValidityPeriod, gridfs_id: str=None,
+    def __init__(self, contributor_id: str, data_source_id: str, validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
                  created_at: datetime=None, id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
