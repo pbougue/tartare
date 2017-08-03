@@ -60,4 +60,4 @@ class DataSet(Resource):
         data_source_fetched.save_dataset(file.filename, os.path.basename(file.filename))
         data_source_fetched.save()
 
-        return {'datasets': [models.MongoDataSourceFetchedSchema().dump(data_source_fetched).data]}, 200
+        return {'data_sets': [models.MongoDataSourceFetchedSchema().dump(data_source_fetched).data]}, 201

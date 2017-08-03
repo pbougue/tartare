@@ -39,26 +39,26 @@ fixtures_path = os.path.realpath('tests/fixtures/gtfs/some_archive.zip')
 
 class TestDatasetApi(TartareFixture):
     def test_post_dataset_of_unknown_contributor(self):
-        raw = self.post('/contributors/unknown/data_sources/unknown/datasets')
+        raw = self.post('/contributors/unknown/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.to_json(raw)
         assert r["error"] == "Bad contributor unknown"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
-        raw = self.post('/contributors/{}/data_sources/unknown/datasets'.format(contributor.get('id')))
+        raw = self.post('/contributors/{}/data_sources/unknown/data_sets'.format(contributor.get('id')))
         assert raw.status_code == 404
         r = self.to_json(raw)
         assert r["error"] == "Data source unknown not found."
 
     def test_post_dataset_without_file(self, data_source):
-        raw = self.post('/contributors/id_test/data_sources/{}/datasets'.format(data_source.get('id')))
+        raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert r["error"] == "No file provided."
 
     def test_post_dataset_with_bad_file_param(self, data_source):
         with open(fixtures_path, 'rb') as file:
-            raw = self.post('/contributors/id_test/data_sources/{}/datasets'.format(data_source.get('id')),
+            raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')),
                             params={'bad_param': file},
                             headers={})
             assert raw.status_code == 400
@@ -67,13 +67,13 @@ class TestDatasetApi(TartareFixture):
 
     def test_post_dataset(self,  data_source):
         with open(fixtures_path, 'rb') as file:
-            raw = self.post('/contributors/id_test/data_sources/{}/datasets'.format(data_source.get('id')),
+            raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')),
                             params={'file': file},
                             headers={})
-            assert raw.status_code == 200
+            assert raw.status_code == 201
             r = self.to_json(raw)
-            assert len(r["datasets"]) == 1
+            assert len(r["data_sets"]) == 1
 
             with app.app_context():
-                gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["datasets"][0]["gridfs_id"])})
+                gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["data_sets"][0]["gridfs_id"])})
                 assert gridfs["filename"] == "some_archive.zip"
