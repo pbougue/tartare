@@ -12,19 +12,16 @@ List of preprocesses for coverages
 ### GtfsAgencyFile
 ```json
 {
-  "type": "GtfsAdencyFile",
-  "sequence": 1,
-  "data_source_ids": [
-    "id1",
-    "id2"
-  ],
-  "params": {
-    "data": {
-      "agency_id": "112",
-      "agency_name": "stif",
-      "agency_url": "http://stif.com"
+    "type": "GtfsAdencyFile",
+    "sequence": 1,
+    "data_source_ids": ["id1", "id2"],
+    "params": {
+        "data": {
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_url": "http://stif.com"
+        }
     }
-  }
 }
 ```
 

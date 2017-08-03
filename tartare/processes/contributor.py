@@ -32,11 +32,11 @@ import logging
 from tartare.core.gridfs_handler import GridFsHandler
 from zipfile import ZipFile
 import csv
-from tartare.helper import get_dict_from_zip
+from tartare.helper import get_content_file_from_grid_out_file
 import tempfile
 import shutil
 from typing import List
-from gridfs.grid_file import GridOut
+from tartare.exceptions import ParameterException
 
 
 class Ruspell(AbstractProcess):
@@ -60,23 +60,15 @@ class HeadsignShortName(AbstractProcess):
 class GtfsAgencyFile(AbstractProcess):
 
     @staticmethod
-    def get_content_agency(gtfs_zip: GridOut) -> List[dict]:
-        with ZipFile(gtfs_zip, 'r') as gtfs_zip:
-            try:
-                return get_dict_from_zip(gtfs_zip, 'agency.txt')
-            except KeyError:
-                pass
-            return []
-    @staticmethod
     def is_agency_dict_valid(data: List[dict]) -> bool:
         if not data:
             return False
         return any([(v in data[0].keys()) for v in ['agency_name', 'agency_url', 'agency_timezone']])
 
-    def _get_data(self) -> dict:
+    def _get_agency_data(self) -> dict:
         # for more informations, see : https://developers.google.com/transit/gtfs/reference/agency-file
         agency_data = {
-            "agency_id": 42,
+            "agency_id": '42',
             "agency_name": "",
             "agency_url": "",
             "agency_timezone": "",
@@ -89,7 +81,7 @@ class GtfsAgencyFile(AbstractProcess):
         return agency_data
 
     def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str) -> str:
-        new_data = self._get_data()
+        new_data = self._get_agency_data()
         files_zip.extractall(tmp_dir_name)
         with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'a') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
@@ -102,17 +94,18 @@ class GtfsAgencyFile(AbstractProcess):
     def manage_agency_file(self, data_source_context: DataSourceContext) -> None:
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         filename = grid_out.filename
-        data = self.get_content_agency(grid_out)
+        data = get_content_file_from_grid_out_file(grid_out, 'agency.txt')
         if not self.is_agency_dict_valid(data):
-            logging.getLogger(__name__).debug('data source {}  without agency.txt file'.
-                                                  format(data_source_context.data_source_id))
+            logging.getLogger(__name__).debug('data source {}  without or empty agency.txt file'.
+                                              format(data_source_context.data_source_id))
             with ZipFile(grid_out, 'r') as files_zip:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     new_zip = self.create_new_zip(files_zip, tmp_dir_name, grid_out.filename)
                     with open('{}.{}'.format(new_zip, 'zip'), 'rb') as file:
-                        GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
+                        old_gridfs_id = data_source_context.gridfs_id
                         data_source_context.gridfs_id = GridFsHandler().save_file_in_gridfs(file=file,
                                                                                             filename=filename)
+                        GridFsHandler().delete_file_from_gridfs(old_gridfs_id)
 
     def do(self) -> Context:
         contributor = self.context.contributor_contexts[0].contributor
@@ -120,11 +113,9 @@ class GtfsAgencyFile(AbstractProcess):
             data_source_context = self.context.get_contributor_data_source_context(contributor_id=contributor.id,
                                                                                    data_source_id=data_source_id)
             if not data_source_context:
-                msg = 'impossible to build preprocess {} : data source {} not exist for contributor {}'.format(
-                    'GtfsAgencyFile',
-                    data_source_id,
-                    contributor.id)
+                msg = 'impossible to build preprocess GtfsAgencyFile : ' \
+                      'data source {} not exist for contributor {}'.format(data_source_id, contributor.id)
                 logging.getLogger(__name__).warning(msg)
-                continue
+                raise ParameterException(msg)
             self.manage_agency_file(data_source_context)
         return self.context
