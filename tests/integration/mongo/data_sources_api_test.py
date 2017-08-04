@@ -79,7 +79,7 @@ class TestDataSources(TartareFixture):
         """
         post_ds = {
             "name": "data_source_name",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -92,7 +92,7 @@ class TestDataSources(TartareFixture):
         r = self.to_json(raw)
         assert raw.status_code == 200, print(r)
         assert len(r["data_sources"]) == 1
-        assert r["data_sources"][0]["data_format"] == "Neptune"
+        assert r["data_sources"][0]["data_format"] == "gtfs"
         assert r["data_sources"][0]["input"]["type"] == "url"
         assert r["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
 
@@ -186,7 +186,7 @@ class TestDataSources(TartareFixture):
         post_ds = {
             "id": "ds1_id",
             "name": "data_source_name1",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -198,7 +198,7 @@ class TestDataSources(TartareFixture):
         post_ds = {
             "id": "ds2_id",
             "name": "data_source_name2",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -209,7 +209,7 @@ class TestDataSources(TartareFixture):
         assert raw.status_code == 201, print(r)
         modif_ds = {
             "name": "name_modified",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -235,8 +235,8 @@ class TestDataSources(TartareFixture):
         assert raw.status_code == 200, print(r)
         assert len(r["data_sources"]) == 3
         patched_data_sources = r["data_sources"]
-        assert patched_data_sources[0]["data_format"] == "Neptune"
-        assert patched_data_sources[1]["data_format"] == "Neptune"
+        assert patched_data_sources[0]["data_format"] == "gtfs"
+        assert patched_data_sources[1]["data_format"] == "gtfs"
         assert patched_data_sources[2]["data_format"] == "gtfs"
         assert patched_data_sources[0]["name"] == "data_source_name1"
         assert patched_data_sources[1]["name"] == "name_modified"

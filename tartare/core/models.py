@@ -40,6 +40,7 @@ from datetime import datetime
 from datetime import date
 import logging
 from typing import Optional, List, Union, Dict, Type
+from tartare.core.mapper import DataFormat
 
 
 @app.before_first_request
@@ -99,8 +100,9 @@ class License(object):
 
 
 class DataSource(object):
-    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, data_format: Optional[str] = "gtfs",
-                 input: Optional[dict] = None, license: Optional[License] = None) -> None:
+    def __init__(self, id: Optional[str]=None, name: Optional[str]=None,
+                 data_format: Optional[str]="gtfs",
+                 input: Optional[dict]=None, license: Optional[License]=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
@@ -608,7 +610,7 @@ class MongoDataSourceFetchedSchema(Schema):
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
-    data_format = fields.String(required=False)
+    data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Dict(required=True)
 
