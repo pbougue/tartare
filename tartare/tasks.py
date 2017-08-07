@@ -44,7 +44,7 @@ from tartare.helper import upload_file
 import tempfile
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
-from tartare.processes.processes import PreProcess
+from tartare.processes.processes import PreProcessManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
 from celery import chain
@@ -257,7 +257,7 @@ def launch(processes: list, context: Context) -> Context:
         return context
     tmp_processes = sorted(processes, key=lambda x: ['sequence'])
     for p in tmp_processes:
-        context = PreProcess.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
+        context = PreProcessManager.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
     return context
 
 

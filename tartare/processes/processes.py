@@ -27,26 +27,28 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from importlib import import_module
-from abc import ABCMeta, abstractmethod
 import logging
-from tartare.core.context import Context
-from tartare.http_exceptions import InvalidArguments
+from abc import ABCMeta, abstractmethod
+from importlib import import_module
 from typing import Optional, List, Dict
+
+from tartare.core.context import Context
+from tartare.core.models import PreProcess
+from tartare.http_exceptions import InvalidArguments
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: dict) -> None:
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
         self.context = context
-        self.params = preprocess.get('params', {}) if preprocess else {} # type: dict
-        self.data_source_ids = preprocess.get('data_source_ids', []) if preprocess else []
+        self.params = preprocess.params if preprocess else {}  # type: dict
+        self.data_source_ids = preprocess.data_source_ids if preprocess else []
 
     @abstractmethod
     def do(self) -> Context:
         pass
 
 
-class PreProcess(object):
+class PreProcessManager(object):
     @classmethod
     def get_preprocess_class(cls, preprocess_name: str, instance: str) -> type:
         try:
@@ -63,7 +65,8 @@ class PreProcess(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: Context, preprocess_name: str, preprocess: Optional[dict]=None) -> AbstractProcess:
+    def get_preprocess(cls, context: Context, preprocess_name: str,
+                       preprocess: Optional[PreProcess] = None) -> AbstractProcess:
         """
         :param preprocess_name: Ruspell, FusioImport, ....
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
@@ -79,4 +82,4 @@ class PreProcess(object):
     @classmethod
     def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:
         for preprocess in preprocesses:
-            PreProcess.get_preprocess_class(preprocess.get('type', ''), instance)
+            PreProcessManager.get_preprocess_class(preprocess.get('type', ''), instance)
