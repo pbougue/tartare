@@ -30,12 +30,13 @@
 # www.navitia.io
 from typing import Any
 
+from celery import Task, Celery
 from flask import Flask, jsonify, Response
 from werkzeug.exceptions import NotFound
 from celery.signals import setup_logging
 from flask_pymongo import PyMongo
 from flask_script import Manager
-from tartare.helper import configure_logger, make_celery
+from tartare.helper import configure_logger
 
 app = Flask(__name__)  # type: Flask
 app.config.from_object('tartare.default_settings')
@@ -58,7 +59,19 @@ def celery_setup_logging(*args: Any, **kwargs: Any) -> Any:
     pass
 
 
-celery = make_celery(app)
+class ContextTask(Task):
+    abstract = True
+
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, *args: list, **kwargs: dict) -> Any:
+        with app.app_context():
+            return Task.__call__(self, *args, **kwargs)
+
+celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+celery.Task = ContextTask
 
 from tartare import api
 

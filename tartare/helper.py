@@ -27,29 +27,29 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging.config
-from io import IOBase
-from typing import Union, Any, Optional, List
-import celery
-from celery import Celery
-from collections.abc import Mapping
-import requests
-from flask import Flask
-from requests import Response
-from gridfs.grid_file import GridOut
-import logging
-from hashlib import md5
-import uuid
-import urllib.request
-from urllib.error import ContentTooShortError, HTTPError, URLError
-import zipfile
 import csv
+import logging
+import logging.config
+import urllib.request
+import uuid
+import zipfile
+from collections.abc import Mapping
+from hashlib import md5
+from io import IOBase
 from io import TextIOWrapper
+from typing import Union, Any, Optional, List
+from urllib.error import ContentTooShortError, HTTPError, URLError
+
+import requests
+from gridfs.grid_file import GridOut
+from requests import Response
 
 
 # monkey patching of gridfs file for exposing the size in a "standard" way
 def grid_out_len(self: GridOut) -> int:
     return self.length
+
+
 GridOut.__len__ = grid_out_len
 
 
@@ -66,26 +66,6 @@ def configure_logger(app_config: dict) -> None:
         logging.config.dictConfig(app_config['LOGGER'])
     else:  # Default is std out
         logging.basicConfig(level='INFO')
-
-
-def make_celery(app: Flask) -> Celery:
-    celery_app = celery.Celery(app.import_name,
-                               broker=app.config['CELERY_BROKER_URL'])
-    celery_app.conf.update(app.config)
-    TaskBase = celery_app.Task
-
-    class ContextTask(TaskBase):
-        abstract = True
-
-        def __init__(self) -> None:
-            pass
-
-        def __call__(self, *args: list, **kwargs: dict) -> Any:
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-
-    celery_app.Task = ContextTask
-    return celery_app
 
 
 def _make_doted_key(*args: Optional[str]) -> str:
@@ -152,7 +132,7 @@ def download_zip_file(url_file: str, dest: str) -> None:
         raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
 
 
-def get_values_by_key(values: Union[List, dict], out: List[str], key: str='gridfs_id') -> None:
+def get_values_by_key(values: Union[List, dict], out: List[str], key: str = 'gridfs_id') -> None:
     my_list = values.items() if isinstance(values, dict) else enumerate(values)
     for k, v in my_list:
         if isinstance(v, dict) or isinstance(v, list):
