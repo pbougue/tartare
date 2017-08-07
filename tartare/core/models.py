@@ -52,6 +52,9 @@ class PreprocessManager(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
+    def __init__(self, preprocesses: List['PreProcess'] = None) -> None:
+        self.preprocesses = [] if preprocesses is None else preprocesses
+
     @classmethod
     def get(cls, contributor_id: str) -> Union['Contributor', 'Coverage']:
         pass
@@ -174,14 +177,15 @@ class GenericPreProcess(object):
         self.type = type
 
     def save_data(self, class_name: Type[PreprocessManager],
-                  mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str) -> None:
+                  mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+                  ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('Bad {} {}'.format(class_name.label, object_id))
         if self.id in [p.id for p in data.preprocesses]:
             raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
 
-        data.preprocesses.append(self)
+        data.preprocesses.append(ref_model_object)
         raw_contrib = mongo_schema().dump(data).data
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
@@ -251,9 +255,9 @@ class PreProcess(GenericPreProcess):
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
-            self.save_data(Contributor, MongoContributorSchema, contributor_id)
+            self.save_data(Contributor, MongoContributorSchema, contributor_id, self)
         if coverage_id:
-            self.save_data(Coverage, MongoCoverageSchema, coverage_id)
+            self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
 
     @classmethod
     def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
@@ -297,11 +301,11 @@ class Contributor(PreprocessManager):
 
     def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
                  preprocesses: List[PreProcess]=None) -> None:
+        super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
         self.data_sources = [] if data_sources is None else data_sources
-        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save(self) -> None:
         raw = MongoContributorSchema().dump(self).data
@@ -352,13 +356,13 @@ class Coverage(PreprocessManager):
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
                  contributors: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None) -> None:
+        super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
-        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()
