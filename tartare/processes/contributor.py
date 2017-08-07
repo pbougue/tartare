@@ -37,6 +37,7 @@ from collections import defaultdict
 from typing import List, Dict, TextIO
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import PreProcess
 from tartare.exceptions import ParameterException, IntegrityException
 from tartare.processes.processes import AbstractProcess
 import logging
@@ -59,7 +60,7 @@ class ComputeDirections(AbstractProcess):
 
     valid_column_names = ['route_id', 'service_id', 'trip_id', 'trip_headsign', 'direction_id', 'block_id']
 
-    def __init__(self, context: Context, preprocess: dict) -> None:
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         self.gfs = GridFsHandler()
 
