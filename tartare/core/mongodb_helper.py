@@ -28,17 +28,19 @@
 # www.navitia.io
 
 import logging
+from typing import Dict
+from typing import Type
 from typing import Union, List
 
 from tartare.core.models import DataSource, PreProcess
-from tartare.interfaces import schema
+from tartare.interfaces.schema import PreProcessSchema, DataSourceSchema
 
 
 def upgrade_dict(source: Union[List[DataSource], List[PreProcess]], request_data: dict, key: str) -> None:
     map_model = {
-        "data_sources": schema.DataSourceSchema,
-        "preprocesses": schema.PreProcessSchema
-    }
+        "data_sources": DataSourceSchema,
+        "preprocesses": PreProcessSchema
+    } #type: Dict[str, Union[Type[DataSourceSchema], Type[PreProcessSchema]]]
     existing_id = [d.id for d in source]
     logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
     # constructing PATCH data
