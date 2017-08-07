@@ -39,7 +39,7 @@ from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalSe
 from tartare.helper import setdefault_ids
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import json_data_validate
-from tartare.processes.processes import PreProcess
+from tartare.processes.processes import PreProcessManager
 
 
 class Contributor(flask_restful.Resource):
@@ -56,7 +56,7 @@ class Contributor(flask_restful.Resource):
 
         preprocesses = post_data.get('preprocesses', [])
 
-        PreProcess.check_preprocesses_for_instance(preprocesses, 'contributor')
+        PreProcessManager.check_preprocesses_for_instance(preprocesses, 'contributor')
 
         setdefault_ids(preprocesses)
 
@@ -105,7 +105,7 @@ class Contributor(flask_restful.Resource):
         # checking errors before updating PATCH data
         setdefault_ids(request_data.get('data_sources', []))
         setdefault_ids(request_data.get('preprocesses', []))
-        PreProcess.check_preprocesses_for_instance(request_data.get('preprocesses', []), 'contributor')
+        PreProcessManager.check_preprocesses_for_instance(request_data.get('preprocesses', []), 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)

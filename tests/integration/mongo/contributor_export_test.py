@@ -123,3 +123,22 @@ class TestContributorExport(TartareFixture):
         assert job['step'] == step
         if error_message:
             assert job['error_message'] == error_message
+
+    def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='some_archive.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", "input": {"url": "' + url + '"}}')
+        assert raw.status_code == 201
+        raw = self.post('/contributors/id_test/preprocesses',
+                        params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],"params":{"data":{"agency_id":"112","agency_name":"stif","agency_url":"http://stif.com"}}}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        assert raw.status_code == 201
+        job = to_json(raw).get('job')
+
+        raw_job = self.get(
+            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
+        job = to_json(raw_job)['jobs'][0]
+        assert job['state'] == 'done', print(job)

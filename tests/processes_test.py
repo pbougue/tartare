@@ -26,15 +26,17 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from datetime import date
+
 import pytest
 import requests
 from freezegun import freeze_time
 from mock import mock
+
 from tartare.core.context import Context, ContributorContext
-from tartare.core.models import ContributorExport, ValidityPeriod
+from tartare.core.models import ValidityPeriod, PreProcess
 from tartare.exceptions import IntegrityException, FusioException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
-from datetime import date
 from tests.utils import get_response
 
 
@@ -96,7 +98,7 @@ class TestFusioProcesses:
         fusio_call.return_value = get_response(200, keep_response_content)
         fusio_get_action_id.return_value = action_id
 
-        fusio_import = FusioImport(context, {"url": "whatever"})
+        fusio_import = FusioImport(context, PreProcess(params={"url": "whatever"}))
         fusio_import.do()
 
         fusio_call.assert_called_with(requests.post, api="api", data=expected_data)
@@ -115,10 +117,11 @@ class TestFusioProcesses:
     def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
         with pytest.raises(IntegrityException) as excinfo:
             contributor_context = ContributorContext(contributor=None,
-                                                     validity_period=ValidityPeriod(contrib_begin_date, contrib_end_date),
+                                                     validity_period=ValidityPeriod(contrib_begin_date,
+                                                                                    contrib_end_date),
                                                      data_source_contexts=None)
             context = Context(contributor_contexts=[contributor_context])
-            fusio_import = FusioImport(context, {"url": "whatever"})
+            fusio_import = FusioImport(context, PreProcess(params={"url": "whatever"}))
             fusio_import.do()
         assert str(excinfo.value) == expected_message
 
@@ -130,7 +133,8 @@ class TestFusioProcesses:
                     <ActionId>1607281547155684</ActionId>
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
-        fusio_preprod = FusioPreProd(context=Context('coverage'), preprocess={'params': {'url': 'http://fusio_host'}})
+        fusio_preprod = FusioPreProd(context=Context('coverage'),
+                                     preprocess=PreProcess(params={'url': 'http://fusio_host'}))
         fusio_preprod.do()
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
@@ -147,13 +151,11 @@ class TestFusioProcesses:
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
         get_export_url.return_value = 'abcd.zip'
-        preprocess = {
-            'params': {
-                'url': 'http://fusio_host',
-                "export_type": "Ntfs"
-            }
+        params = {
+            'url': 'http://fusio_host',
+            "export_type": "Ntfs"
         }
-        fusio_export = FusioExport(context=Context('coverage'), preprocess=preprocess)
+        fusio_export = FusioExport(context=Context('coverage'), preprocess=PreProcess(params=params))
         fusio_export.do()
         data = {
             'action': 'Export',
@@ -166,14 +168,11 @@ class TestFusioProcesses:
         save_export.assert_called_with('abcd.zip')
 
     def test_call_fusio_export_unkown_export_type(self):
-        preprocess = {
-            "params": {
-                'url': 'http://fusio_host',
-                "export_type": "bob"
-            }
+        params = {
+            'url': 'http://fusio_host',
+            "export_type": "bob"
         }
-        fusio_export = FusioExport(context=Context('coverage'), preprocess=preprocess)
+        fusio_export = FusioExport(context=Context('coverage'), preprocess=PreProcess(params=params))
         with pytest.raises(FusioException) as excinfo:
-                fusio_export.do()
+            fusio_export.do()
         assert str(excinfo.value) == "export_type bob not found"
-
