@@ -59,29 +59,26 @@ class ComputeDirections(AbstractProcess):
         super().__init__(context, preprocess)
         self.gfs = GridFsHandler()
 
-    def __get_config_gridfs_id_from_context(self, data_source_contexts: List[DataSourceContext]) -> str:
+    def __get_config_gridfs_id_from_context(self) -> str:
         if not self.params.get('config') or 'data_source_id' not in self.params.get('config'):
             raise ParameterException('data_source_id missing in preprocess config')
 
         data_source_id_config = self.params.get('config')['data_source_id']
-        data_sources_config_context = [dsc for dsc in data_source_contexts if
-                                       dsc.data_source_id == data_source_id_config]
-        if not data_sources_config_context:
+        data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
+                                                                                      data_source_id_config)
+        if not data_source_config_context:
             raise ParameterException(
                 'data_source_id "{data_source_id_config}" in preprocess config does not belong to contributor'.format(
                     data_source_id_config=data_source_id_config))
-        data_source_config_context = data_sources_config_context[0]
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:
-        contributor_context = self.context.contributor_contexts[0]
-        data_source_contexts = self.context.get_contributor_data_source_contexts(
-            contributor_context.contributor.id)
-        config_gridfs_id = self.__get_config_gridfs_id_from_context(data_source_contexts)
+        self.contributor_id = self.context.contributor_contexts[0].contributor.id
+        config_gridfs_id = self.__get_config_gridfs_id_from_context()
 
         for data_source_id_to_process in self.data_source_ids:
             data_source_to_process_context = self.context.get_contributor_data_source_context(
-                contributor_id= contributor_context.contributor.id,
+                contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
             if not data_source_to_process_context:
                 raise ParameterException(
@@ -146,17 +143,19 @@ class ComputeDirections(AbstractProcess):
                 self.gfs.delete_file_from_gridfs(old_gridfs_id)
                 return new_gridfs_id
 
-    def __get_stop_sequence_by_trip(self, tmp_dir_name, trip_to_route):
+    def __get_stop_sequence_by_trip(self, tmp_dir_name: str, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
+        trip_stop_sequences_with_weight = defaultdict(list)  # type: Dict[str, List[Dict[str, str]]]
         with open(os.path.join(tmp_dir_name, 'stop_times.txt'), 'r') as stop_times_file:
-            trip_stop_sequences = defaultdict(list)  # type: dict
             for stop_line in csv.DictReader(stop_times_file):
                 if stop_line['trip_id'] in trip_to_route:
-                    trip_stop_sequences[stop_line['trip_id']].append({"stop_id": stop_line['stop_id'], "stop_sequence": stop_line['stop_sequence']})
+                    trip_stop_sequences_with_weight[stop_line['trip_id']].append(
+                        {"stop_id": stop_line['stop_id'], "stop_sequence": stop_line['stop_sequence']})
         # the following fixes legacy assumption: "it assumes that stop_times comes in order"
         # https://github.com/CanalTP/navitiaio-updater/blob/master/scripts/fr-idf_OIF_fix_direction_id_tn.py#L13
         # it sorts stop_ids by stop_sequence for each trip
         # mapping is cleaned after to only keep useful data
-        for trip_id, stop_sequence in trip_stop_sequences.items():
+        trip_stop_sequences = {}
+        for trip_id, stop_sequence in trip_stop_sequences_with_weight.items():
             sorted(stop_sequence, key=lambda stop: stop['stop_sequence'])
             trip_stop_sequences[trip_id] = list(map(lambda stop: stop['stop_id'], stop_sequence))
         return trip_stop_sequences
