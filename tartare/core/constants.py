@@ -26,26 +26,5 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from marshmallow import utils,  fields
-from tartare.core.constants import data_format_values
 
-
-class DataFormat(fields.Field):
-    """A DataFormat field.
-    """
-
-    default_error_messages = {
-        'invalid': 'data_format not in values {values} possible.'.format(values=data_format_values)
-    }
-
-    def _serialize(self, value, attr, obj):
-        if value in data_format_values:
-            return utils.ensure_text_type(value)
-        else:
-            self.fail('invalid')
-
-    def _deserialize(self, value, attr, data):
-        if value in data_format_values:
-            return utils.ensure_text_type(value)
-        else:
-            self.fail('invalid')
+data_format_values = ["gtfs", "direction_config"]
