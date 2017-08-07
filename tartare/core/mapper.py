@@ -30,6 +30,7 @@ from marshmallow import utils,  fields
 from tartare.core.constants import data_format_values
 
 
+
 class DataFormat(fields.Field):
     """A DataFormat field.
     """
@@ -38,13 +39,13 @@ class DataFormat(fields.Field):
         'invalid': 'data_format not in values {values} possible.'.format(values=data_format_values)
     }
 
-    def _serialize(self, value, attr, obj):
+    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
         if value in data_format_values:
             return utils.ensure_text_type(value)
         else:
             self.fail('invalid')
 
-    def _deserialize(self, value, attr, data):
+    def _deserialize(self, value: str, attr: str, data: dict) -> str:
         if value in data_format_values:
             return utils.ensure_text_type(value)
         else:
