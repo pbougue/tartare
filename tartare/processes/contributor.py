@@ -34,21 +34,17 @@ import shutil
 import tempfile
 import zipfile
 from collections import defaultdict
-from typing import List, Dict, TextIO
+from typing import Dict, TextIO
+from typing import List
+from zipfile import ZipFile
+
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
-from tartare.exceptions import ParameterException, IntegrityException
-from tartare.processes.processes import AbstractProcess
-import logging
-from tartare.core.gridfs_handler import GridFsHandler
-from zipfile import ZipFile
-import csv
-from tartare.helper import get_content_file_from_grid_out_file
-import tempfile
-import shutil
-from typing import List
+from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
+from tartare.helper import get_content_file_from_grid_out_file
+from tartare.processes.processes import AbstractProcess
 
 
 class Ruspell(AbstractProcess):
@@ -57,7 +53,6 @@ class Ruspell(AbstractProcess):
 
 
 class ComputeDirections(AbstractProcess):
-
     valid_column_names = ['route_id', 'service_id', 'trip_id', 'trip_headsign', 'direction_id', 'block_id']
 
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
@@ -85,13 +80,13 @@ class ComputeDirections(AbstractProcess):
         config_gridfs_id = self.__get_config_gridfs_id_from_context(data_source_contexts)
 
         for data_source_id_to_process in self.data_source_ids:
-            data_sources_to_process_context = [dsc for dsc in data_source_contexts if
-                                               dsc.data_source_id == data_source_id_to_process]
-            if not data_sources_to_process_context:
+            data_source_to_process_context = self.context.get_contributor_data_source_context(
+                contributor_id= contributor_context.contributor.id,
+                data_source_id=data_source_id_to_process)
+            if not data_source_to_process_context:
                 raise ParameterException(
                     'data_source_id to preprocess "{data_source_id_to_process}" does not belong to contributor'.format(
                         data_source_id_to_process=data_source_id_to_process))
-            data_source_to_process_context = data_sources_to_process_context[0]
             self.config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
             data_source_to_process_context.gridfs_id = self.__process_file_from_gridfs_id(
                 data_source_to_process_context.gridfs_id)
@@ -181,7 +176,6 @@ class HeadsignShortName(AbstractProcess):
 
 
 class GtfsAgencyFile(AbstractProcess):
-
     def _is_agency_dict_valid(self, data: List[dict]) -> bool:
         if not data:
             return False

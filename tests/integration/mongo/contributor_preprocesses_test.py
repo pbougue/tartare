@@ -271,7 +271,7 @@ class TestComputeDirectionsProcess():
     @pytest.mark.parametrize(
         "data_set_filename", [
             ('compute_directions.zip'),
-            ('compute_directions_missing_column.zip'),
+            # ('compute_directions_missing_column.zip'),
         ])
     def test_compute_directions(self, data_set_filename):
         compute_directions_file_name = _get_file_fixture_full_path(data_set_filename)
