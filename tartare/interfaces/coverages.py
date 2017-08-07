@@ -26,20 +26,21 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 from typing import Optional
 
 import flask_restful
 from flask import Response
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from tartare.core import models
-import logging
-from tartare.interfaces import schema
-from marshmallow import MarshalResult, ValidationError
 from flask import request
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from marshmallow import MarshalResult, ValidationError
+from pymongo.errors import PyMongoError, DuplicateKeyError
+
+from tartare.core import models
 from tartare.decorators import json_data_validate, validate_contributors, validate_patch_coverages
 from tartare.helper import setdefault_ids
-from tartare.processes.processes import PreProcess
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.interfaces import schema
+from tartare.processes.processes import PreProcessManager
 
 
 class Coverage(flask_restful.Resource):
@@ -60,7 +61,7 @@ class Coverage(flask_restful.Resource):
 
         preprocesses = post_data.get('preprocesses', [])
 
-        PreProcess.check_preprocesses_for_instance(preprocesses, 'coverage')
+        PreProcessManager.check_preprocesses_for_instance(preprocesses, 'coverage')
 
         setdefault_ids(preprocesses)
 
