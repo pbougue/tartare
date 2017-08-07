@@ -146,6 +146,21 @@ class ComputeDirections(AbstractProcess):
                 self.gfs.delete_file_from_gridfs(old_gridfs_id)
                 return new_gridfs_id
 
+    def __get_stop_sequence_by_trip(self, tmp_dir_name, trip_to_route):
+        with open(os.path.join(tmp_dir_name, 'stop_times.txt'), 'r') as stop_times_file:
+            trip_stop_sequences = defaultdict(list)  # type: dict
+            for stop_line in csv.DictReader(stop_times_file):
+                if stop_line['trip_id'] in trip_to_route:
+                    trip_stop_sequences[stop_line['trip_id']].append({"stop_id": stop_line['stop_id'], "stop_sequence": stop_line['stop_sequence']})
+        # the following fixes legacy assumption: "it assumes that stop_times comes in order"
+        # https://github.com/CanalTP/navitiaio-updater/blob/master/scripts/fr-idf_OIF_fix_direction_id_tn.py#L13
+        # it sorts stop_ids by stop_sequence for each trip
+        # mapping is cleaned after to only keep useful data
+        for trip_id, stop_sequence in trip_stop_sequences.items():
+            sorted(stop_sequence, key=lambda stop: stop['stop_sequence'])
+            trip_stop_sequences[trip_id] = list(map(lambda stop: stop['stop_id'], stop_sequence))
+        return trip_stop_sequences
+
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str) -> str:
         file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         with zipfile.ZipFile(file_to_process, 'r') as files_zip:
@@ -157,14 +172,9 @@ class ComputeDirections(AbstractProcess):
                 with open(trips_backup_file, 'r') as trips_file_read:
                     trip_to_route = {trip['trip_id']: trip['route_id'] for trip in csv.DictReader(trips_file_read) if
                                      trip['route_id'] in self.config.keys()}
-                    with open(os.path.join(tmp_dir_name, 'stop_times.txt'), 'r') as stop_times_file:
-                        trip_stop_sequences = defaultdict(list)  # type: dict
-                        for stop_line in csv.DictReader(stop_times_file):
-                            if stop_line['trip_id'] in trip_to_route:
-                                trip_stop_sequences[stop_line['trip_id']].append(stop_line['stop_id'])
-
-                        rules = self.__get_rules(trip_to_route, trip_stop_sequences)
-                        self.__apply_rules(trips_file_name, trips_file_read, rules)
+                    trip_stop_sequences = self.__get_stop_sequence_by_trip(tmp_dir_name, trip_to_route)
+                    rules = self.__get_rules(trip_to_route, trip_stop_sequences)
+                    self.__apply_rules(trips_file_name, trips_file_read, rules)
 
                 return self.__create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
                                                                     [trips_backup_file])

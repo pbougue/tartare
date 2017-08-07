@@ -245,7 +245,7 @@ class TestComputeDirectionsProcess():
         contrib_id = 'fr-idf'
         data_source_config_id = 'ds-conf-id'
         data_source_to_process = 'missing'
-        compute_directions_config_file_name = _get_file_fixture_full_path('compute_directions_config.json')
+        compute_directions_config_file_name = _get_file_fixture_full_path('compute_directions/config.json')
         with app.app_context():
             contributor = Contributor(contrib_id, contrib_id, contrib_id)
             contributor.save()
@@ -268,14 +268,22 @@ class TestComputeDirectionsProcess():
                     excinfo.value) == 'data_source_id to preprocess "{data_source_id_to_process}" does not belong to contributor'.format(
                     data_source_id_to_process=data_source_to_process)
 
+    #
+    # Test that:
+    # - direction_id not filled and present in config file are filled with corresponding values
+    # - missing direction_id column case is handled
+    # - if rows in stop_times.txt are not sorted by stop_sequence for each trip_id, the case is handled
+    #
     @pytest.mark.parametrize(
-        "data_set_filename", [
-            ('compute_directions.zip'),
-            # ('compute_directions_missing_column.zip'),
+        "data_set_filename, expected_trips_file_name", [
+            # stop_sequence not in order
+            ('compute_directions/unsorted_stop_sequences.zip', 'compute_directions/expected_trips.txt'),
+            # missing column, stop_sequence in order
+            ('compute_directions/missing_column.zip', 'compute_directions/expected_trips_missing_column.txt'),
         ])
-    def test_compute_directions(self, data_set_filename):
+    def test_compute_directions(self, data_set_filename, expected_trips_file_name):
         compute_directions_file_name = _get_file_fixture_full_path(data_set_filename)
-        compute_directions_config_file_name = _get_file_fixture_full_path('compute_directions_config.json')
+        compute_directions_config_file_name = _get_file_fixture_full_path('compute_directions/config.json')
         contrib_id = 'fr-idf'
         data_source_config_id = 'ds-conf-id'
         data_source_to_process_id = 'ds-to-process-id'
@@ -318,4 +326,4 @@ class TestComputeDirectionsProcess():
                         with tempfile.TemporaryDirectory() as tmp_dir_name:
                             new_zip_file.extractall(tmp_dir_name)
                             assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
-                                                _get_file_fixture_full_path('expected_compute_directions_trips.txt'))
+                                                _get_file_fixture_full_path(expected_trips_file_name))
