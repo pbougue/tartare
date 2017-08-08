@@ -48,7 +48,7 @@ def init_mongo() -> None:
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 
-class PreprocessManager(metaclass=ABCMeta):
+class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
@@ -176,8 +176,8 @@ class GenericPreProcess(object):
         self.params = params if params else {}
         self.type = type
 
-    def save_data(self, class_name: Type[PreprocessManager],
-                  mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def save_data(self, class_name: Type[PreProcessContainer],
+                  mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                   ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
         if data is None:
@@ -190,8 +190,8 @@ class GenericPreProcess(object):
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Type[PreprocessManager],
-                 mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def get_data(cls, class_name: Type[PreProcessContainer],
+                 mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                  preprocess_id: str) -> Optional[List['PreProcess']]:
         if object_id is not None:
             data = class_name.get(object_id)
@@ -213,8 +213,8 @@ class GenericPreProcess(object):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Type[PreprocessManager],
-                    mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def delete_data(cls, class_name: Type[PreProcessContainer],
+                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
         if data is None:
@@ -227,8 +227,8 @@ class GenericPreProcess(object):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Type[PreprocessManager],
-                    mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def update_data(cls, class_name: Type[PreProcessContainer],
+                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str, preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
         if not data:
@@ -254,6 +254,8 @@ class PreProcess(GenericPreProcess):
     def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> None:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
+        # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
+        # so it's the one that will need to be saved as a PreProcess
         if contributor_id:
             self.save_data(Contributor, MongoContributorSchema, contributor_id, self)
         if coverage_id:
@@ -295,7 +297,7 @@ class PreProcess(GenericPreProcess):
             return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
 
 
-class Contributor(PreprocessManager):
+class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
@@ -349,7 +351,7 @@ def get_contributor(contributor_id: str) -> Contributor:
     return contributor
 
 
-class Coverage(PreprocessManager):
+class Coverage(PreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
@@ -627,11 +629,11 @@ class MongoPreProcessSchema(Schema):
         return PreProcess(**data)
 
 
-class MongoPreprocessManagerSchema(Schema):
+class MongoPreProcessContainerSchema(Schema):
     pass
 
 
-class MongoCoverageSchema(MongoPreprocessManagerSchema):
+class MongoCoverageSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
@@ -645,7 +647,7 @@ class MongoCoverageSchema(MongoPreprocessManagerSchema):
         return Coverage(**data)
 
 
-class MongoContributorSchema(MongoPreprocessManagerSchema):
+class MongoContributorSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
