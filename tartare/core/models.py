@@ -30,7 +30,7 @@ from abc import ABCMeta
 from io import IOBase
 from gridfs import GridOut
 from tartare import mongo
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, post_load, utils,  fields
 from tartare import app
 from tartare.helper import to_doted_notation, get_values_by_key
 from tartare.core.gridfs_handler import GridFsHandler
@@ -40,7 +40,7 @@ from datetime import datetime
 from datetime import date
 import logging
 from typing import Optional, List, Union, Dict, Type
-from tartare.core.mapper import DataFormat
+from tartare.core.constants import DATA_FORMAT_VALUES
 
 
 @app.before_first_request
@@ -48,6 +48,27 @@ def init_mongo() -> None:
     mongo.db['contributors'].create_index("data_prefix", unique=True)
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
+
+class DataFormat(fields.Field):
+
+    """A DataFormat field.
+    """
+
+    default_error_messages = {
+        'invalid': 'data_format not in possible values {values}.'.format(values=DATA_FORMAT_VALUES)
+    }
+
+    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
+
+    def _deserialize(self, value: str, attr: str, data: dict) -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
 
 class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
@@ -599,7 +620,6 @@ class DataSourceFetched(Historisable):
         with open(tmp_file, 'rb') as file:
             self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
                                                                  contributor_id=self.contributor_id)
-
 
 
 class MongoDataSourceLicenseSchema(Schema):
