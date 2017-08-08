@@ -35,6 +35,7 @@ from flask import Response
 from flask.globals import request
 from flask_restful import Resource
 from tartare.core import models
+from tartare.interfaces import schema
 from tartare.decorators import validate_post_data_set
 
 
@@ -47,4 +48,4 @@ class DataSet(Resource):
         data_source_fetched.save_dataset(file.filename, os.path.basename(file.filename))
         data_source_fetched.save()
 
-        return {'data_sets': [models.MongoDataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
+        return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201

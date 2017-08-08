@@ -73,6 +73,7 @@ class TestDatasetApi(TartareFixture):
             assert raw.status_code == 201
             r = self.to_json(raw)
             assert len(r["data_sets"]) == 1
+            assert 'id' in r['data_sets'][0]
 
             with app.app_context():
                 gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["data_sets"][0]["gridfs_id"])})
