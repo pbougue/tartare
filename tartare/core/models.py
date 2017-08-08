@@ -109,6 +109,13 @@ class DataSource(object):
         self.input = {} if not input else input
         self.license = license if license else License()
 
+    @classmethod
+    def get_keep_historical(cls, data_source_id: str) -> int:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            raise ValueError("Unknown data source id {}.".format(data_source_id))
+        return app.config.get('KEEP_HISTORICAL', {}).get(data_sources[0].data_format, 3)
+
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
@@ -118,7 +125,7 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
+    def get(cls, contributor_id: str=None, data_source_id: str=None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
             contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
@@ -167,6 +174,14 @@ class DataSource(object):
             return None
 
         return cls.get(contributor_id, data_source_id)[0]
+
+    @classmethod
+    def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            False
+        else:
+            return data_sources[0].data_format == data_format
 
 
 class GenericPreProcess(object):
@@ -545,7 +560,8 @@ class Historisable(object):
 class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
+    def __init__(self, contributor_id: str, data_source_id: str,
+                 validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
                  created_at: datetime=None, id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
@@ -558,7 +574,8 @@ class DataSourceFetched(Historisable):
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(DataSource.get_keep_historical(self.data_source_id),
+                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod
     def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:

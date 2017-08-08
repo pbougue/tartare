@@ -27,8 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from marshmallow import utils,  fields
-from tartare.core.constants import data_format_values
-
+from tartare.core.constants import DATA_FORMAT_VALUES
 
 
 class DataFormat(fields.Field):
@@ -36,17 +35,17 @@ class DataFormat(fields.Field):
     """
 
     default_error_messages = {
-        'invalid': 'data_format not in values {values} possible.'.format(values=data_format_values)
+        'invalid': 'data_format not in possible values {values}.'.format(values=DATA_FORMAT_VALUES)
     }
 
     def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
-        if value in data_format_values:
+        if value in DATA_FORMAT_VALUES:
             return utils.ensure_text_type(value)
         else:
             self.fail('invalid')
 
     def _deserialize(self, value: str, attr: str, data: dict) -> str:
-        if value in data_format_values:
+        if value in DATA_FORMAT_VALUES:
             return utils.ensure_text_type(value)
         else:
             self.fail('invalid')

@@ -251,6 +251,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 400, print(self.to_json(raw))
         r = self.to_json(raw)
         assert 'error' in r
+        assert r['message'] == 'Invalid arguments'
 
     def test_post_contrib_two_data_source(self):
         """
