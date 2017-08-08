@@ -32,7 +32,7 @@
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
-    MongoContributorExportSchema, MongoCoverageExportSchema
+    MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 
 
 class NoUnknownFieldMixin(Schema):
@@ -86,4 +86,8 @@ class ContributorExportSchema(MongoContributorExportSchema, NoUnknownFieldMixin)
 
 
 class CoverageExportSchema(MongoCoverageExportSchema, NoUnknownFieldMixin):
+    id = fields.String()
+
+
+class DataSourceFetchedSchema(MongoDataSourceFetchedSchema, NoUnknownFieldMixin):
     id = fields.String()
