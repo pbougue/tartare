@@ -53,6 +53,8 @@ FUSIO_WAIT_FIXED = 10*1000
 DEFAULT_LICENSE_URL = ''
 DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 
+PLATFORM = os.getenv('PLATFORM', 'local')
+
 # GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
 # The absolute path is CURRENT_DATA_DIR/grid_calendar
 GRID_CALENDAR_DIR = 'grid_calendar'
