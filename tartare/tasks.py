@@ -63,7 +63,7 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
         calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
 
 
-class CallbackTask(tartare.celery.Task):
+class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
         self.update_job(args, exc)
         self.send_mail(args)
