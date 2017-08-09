@@ -60,7 +60,7 @@ PLATFORM = os.getenv('PLATFORM', 'local')
 GRID_CALENDAR_DIR = 'grid_calendar'
 CALENDAR_FILE = 'export_calendars.zip'
 
-KEEP_HISTORICAL = {
+HISTORICAL = {
     'gtfs': 3,
     'direction_config': 1
 }

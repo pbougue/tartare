@@ -131,11 +131,11 @@ class DataSource(object):
         self.license = license if license else License()
 
     @classmethod
-    def get_keep_historical(cls, data_source_id: str) -> int:
+    def get_number_of_historical(cls, data_source_id: str) -> int:
         data_sources = cls.get(data_source_id=data_source_id)
         if not data_sources:
             raise ValueError("Unknown data source id {}.".format(data_source_id))
-        return app.config.get('KEEP_HISTORICAL', {}).get(data_sources[0].data_format, 3)
+        return app.config.get('HISTORICAL', {}).get(data_sources[0].data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
@@ -595,7 +595,7 @@ class DataSourceFetched(Historisable):
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(DataSource.get_keep_historical(self.data_source_id),
+        self.keep_historical(DataSource.get_number_of_historical(self.data_source_id),
                              {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod

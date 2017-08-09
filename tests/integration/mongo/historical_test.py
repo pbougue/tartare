@@ -76,7 +76,7 @@ class TestHistorical():
             'contributor_id': 'contrib_id',
             'data_source_id': 'data_source_gtfs'
         })
-        assert raw.count() == app.config.get('KEEP_HISTORICAL').get('gtfs')
+        assert raw.count() == 3
         # Test the 3 last objects saved are not deleted
         assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
