@@ -53,11 +53,11 @@ class Ruspell(AbstractProcess):
 
 
 class ComputeDirections(AbstractProcess):
-    valid_column_names = ['route_id', 'service_id', 'trip_id', 'trip_headsign', 'direction_id', 'block_id']
-
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         self.gfs = GridFsHandler()
+        if self.context.contributor_contexts:
+            self.contributor_id = self.context.contributor_contexts[0].contributor.id
 
     def __get_config_gridfs_id_from_context(self) -> str:
         if not self.params.get('config') or 'data_source_id' not in self.params.get('config'):
@@ -73,9 +73,7 @@ class ComputeDirections(AbstractProcess):
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:
-        self.contributor_id = self.context.contributor_contexts[0].contributor.id
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
-
         for data_source_id_to_process in self.data_source_ids:
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
@@ -84,17 +82,18 @@ class ComputeDirections(AbstractProcess):
                 raise ParameterException(
                     'data_source_id to preprocess "{data_source_id_to_process}" does not belong to contributor'.format(
                         data_source_id_to_process=data_source_id_to_process))
-            self.config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
+            config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
             data_source_to_process_context.gridfs_id = self.__process_file_from_gridfs_id(
-                data_source_to_process_context.gridfs_id)
+                data_source_to_process_context.gridfs_id, config)
         return self.context
 
-    def __get_rules(self, trip_to_route: Dict[str, str], trip_stop_sequences: Dict[str, List[str]]) -> List[str]:
+    def __get_rules(self, trip_to_route: Dict[str, str], trip_stop_sequences: Dict[str, List[str]],
+                    config: Dict[str, List[str]]) -> List[str]:
         trips_to_invert = []
         for a_trip, a_stop_sequence in trip_stop_sequences.items():
             try:
                 a_route = trip_to_route[a_trip]
-                reference = self.config[a_route]
+                reference = config[a_route]
 
                 new_reference = [item for item in reference if
                                  item in a_stop_sequence]  # reduce to keep only known stops
@@ -123,7 +122,10 @@ class ComputeDirections(AbstractProcess):
         with open(trips_file_name, 'w') as trips_file_write:
             trips_file_read.seek(0)
             reader = csv.DictReader(trips_file_read)
-            writer = csv.DictWriter(trips_file_write, fieldnames=self.valid_column_names, delimiter=',',
+            fieldnames = sorted(reader.fieldnames)
+            if 'direction_id' not in fieldnames:
+                fieldnames.append('direction_id')
+            writer = csv.DictWriter(trips_file_write, fieldnames=fieldnames, delimiter=',',
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
             for row in reader:
@@ -160,7 +162,7 @@ class ComputeDirections(AbstractProcess):
             trip_stop_sequences[trip_id] = list(map(lambda stop: stop['stop_id'], stop_sequence))
         return trip_stop_sequences
 
-    def __process_file_from_gridfs_id(self, gridfs_id_to_process: str) -> str:
+    def __process_file_from_gridfs_id(self, gridfs_id_to_process: str, config: Dict[str, List[str]]) -> str:
         file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         with zipfile.ZipFile(file_to_process, 'r') as files_zip:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -170,9 +172,9 @@ class ComputeDirections(AbstractProcess):
                 shutil.copyfile(trips_file_name, trips_backup_file)
                 with open(trips_backup_file, 'r') as trips_file_read:
                     trip_to_route = {trip['trip_id']: trip['route_id'] for trip in csv.DictReader(trips_file_read) if
-                                     trip['route_id'] in self.config.keys()}
+                                     trip['route_id'] in config.keys()}
                     trip_stop_sequences = self.__get_stop_sequence_by_trip(tmp_dir_name, trip_to_route)
-                    rules = self.__get_rules(trip_to_route, trip_stop_sequences)
+                    rules = self.__get_rules(trip_to_route, trip_stop_sequences, config)
                     self.__apply_rules(trips_file_name, trips_file_read, rules)
 
                 return self.__create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
