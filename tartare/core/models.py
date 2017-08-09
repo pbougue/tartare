@@ -30,7 +30,7 @@ from abc import ABCMeta
 from io import IOBase
 from gridfs import GridOut
 from tartare import mongo
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, post_load, utils,  fields
 from tartare import app
 from tartare.helper import to_doted_notation, get_values_by_key
 from tartare.core.gridfs_handler import GridFsHandler
@@ -40,6 +40,7 @@ from datetime import datetime
 from datetime import date
 import logging
 from typing import Optional, List, Union, Dict, Type
+from tartare.core.constants import DATA_FORMAT_VALUES
 
 
 @app.before_first_request
@@ -47,6 +48,27 @@ def init_mongo() -> None:
     mongo.db['contributors'].create_index("data_prefix", unique=True)
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
+
+class DataFormat(fields.Field):
+
+    """A DataFormat field.
+    """
+
+    default_error_messages = {
+        'invalid': 'data_format not in possible values {values}.'.format(values=DATA_FORMAT_VALUES)
+    }
+
+    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
+
+    def _deserialize(self, value: str, attr: str, data: dict) -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
 
 class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
@@ -99,13 +121,21 @@ class License(object):
 
 
 class DataSource(object):
-    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, data_format: Optional[str] = "gtfs",
-                 input: Optional[dict] = None, license: Optional[License] = None) -> None:
+    def __init__(self, id: Optional[str]=None, name: Optional[str]=None,
+                 data_format: Optional[str]="gtfs",
+                 input: Optional[dict]=None, license: Optional[License]=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = {} if not input else input
         self.license = license if license else License()
+
+    @classmethod
+    def get_number_of_historical(cls, data_source_id: str) -> int:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            raise ValueError("Unknown data source id {}.".format(data_source_id))
+        return app.config.get('HISTORICAL', {}).get(data_sources[0].data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
@@ -116,7 +146,7 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
+    def get(cls, contributor_id: str=None, data_source_id: str=None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
             contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
@@ -165,6 +195,14 @@ class DataSource(object):
             return None
 
         return cls.get(contributor_id, data_source_id)[0]
+
+    @classmethod
+    def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            False
+        else:
+            return data_sources[0].data_format == data_format
 
 
 class GenericPreProcess(object):
@@ -543,7 +581,8 @@ class Historisable(object):
 class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
+    def __init__(self, contributor_id: str, data_source_id: str,
+                 validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
                  created_at: datetime=None, id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
@@ -556,7 +595,8 @@ class DataSourceFetched(Historisable):
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(DataSource.get_number_of_historical(self.data_source_id),
+                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod
     def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
@@ -580,7 +620,6 @@ class DataSourceFetched(Historisable):
         with open(tmp_file, 'rb') as file:
             self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
                                                                  contributor_id=self.contributor_id)
-
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -608,7 +647,7 @@ class MongoDataSourceFetchedSchema(Schema):
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
-    data_format = fields.String(required=False)
+    data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Dict(required=True)
 

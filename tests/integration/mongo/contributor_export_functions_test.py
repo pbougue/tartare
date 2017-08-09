@@ -60,16 +60,19 @@ def test_fetch_data_from_input_failed(mocker):
 class TestFetcher():
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_fetcher(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
-        contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
-        context = Context()
         with app.app_context():
+            data_source = DataSource('666', 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
+            contrib = Contributor('contribId', 'contribName', 'bob')
+            contrib.save()
+            data_source.save(contrib.id)
+            contrib = Contributor.get(contributor_id=contrib.id)
+            context = Context()
             fetch_datasets(contrib, context)
             assert context
             assert len(context.contributor_contexts) == 1
             data_source_contexts = context.contributor_contexts[0].data_source_contexts
             assert len(data_source_contexts) == 1
-            assert data_source_contexts[0].data_source_id == 666
+            assert data_source_contexts[0].data_source_id == '666'
             assert data_source_contexts[0].gridfs_id
             assert data_source_contexts[0].validity_period.end_date == date(2015, 8, 26)
             assert data_source_contexts[0].validity_period.start_date == date(2015, 3, 25)

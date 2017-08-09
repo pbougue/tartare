@@ -186,6 +186,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
 def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
+
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")

@@ -60,6 +60,11 @@ PLATFORM = os.getenv('PLATFORM', 'local')
 GRID_CALENDAR_DIR = 'grid_calendar'
 CALENDAR_FILE = 'export_calendars.zip'
 
+HISTORICAL = {
+    'gtfs': 3,
+    'direction_config': 1
+}
+
 MAILER = {
     'smtp': {
         'host': os.getenv('MAILER_SMTP_HOST', 'smtp.canaltp.local'),

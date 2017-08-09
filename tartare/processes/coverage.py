@@ -35,7 +35,7 @@ from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
 import requests
-from tartare.core.models import Contributor
+from tartare.core.models import Contributor, DataSource
 from tartare.core.context import Context, DataSourceContext
 from tartare.helper import download_zip_file, get_filename
 import tempfile
@@ -69,6 +69,9 @@ class FusioDataUpdate(AbstractProcess):
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
+                if not DataSource.is_type_data_format(data_source_context.data_source_id, 'gtfs'):
+                    continue
+
                 resp = fusio.call(requests.post, api='api',
                                   data=self._get_data(contributor_context.contributor, data_source_context),
                                   files=self._get_files(data_source_context.gridfs_id))
