@@ -197,7 +197,9 @@ class TestGtfsAgencyProcess:
 
 
 class TestComputeDirectionsProcess(TartareFixture):
-    def __setup_contributor_export_environment(self, url, params):
+    def __setup_contributor_export_environment(self, init_http_download_server, params, add_data_source_config=True,
+                                               add_data_source_target=True):
+        url = "http://{ip}/some_archive.zip".format(ip=init_http_download_server.ip_addr)
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -208,40 +210,33 @@ class TestComputeDirectionsProcess(TartareFixture):
                 "params": params
             }]
         }
-        data_sources = [
-            {
-                "name": "ds-to-process",
-                "data_format": "gtfs",
-                "input": {"url": url}
-            },
-            {
+        data_sources = []
+        if add_data_source_target:
+            data_sources.append(
+                {
+                    "name": "ds-to-process",
+                    "data_format": "gtfs",
+                    "input": {"url": url}
+                })
+        if add_data_source_config:
+            data_sources.append({
                 "id": "ds-config",
                 "name": "ds-config",
                 "data_format": "direction_config",
                 "input": {}
-            },
-        ]
+            })
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
         r = self.to_json(raw)
         assert raw.status_code == 201, print(r)
 
-        with open(_get_file_fixture_full_path('compute_directions/config.json'), 'rb') as file:
-            raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
-                            params={'file': file},
-                            headers={})
-            r = self.to_json(raw)
-            assert raw.status_code == 201, print(r)
-
-    @pytest.mark.parametrize(
-        "params", [
-            ({}),
-            ({"config": {}}),
-            ({"config": {"something": "bob"}}),
-        ])
-    def test_compute_directions_invalid_params(self, params, init_http_download_server):
-        url = "http://{ip}/some_archive.zip".format(ip=init_http_download_server.ip_addr)
-        self.__setup_contributor_export_environment(url, params)
+        if add_data_source_config:
+            with open(_get_file_fixture_full_path('compute_directions/config.json'), 'rb') as file:
+                raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
+                                params={'file': file},
+                                headers={})
+                r = self.to_json(raw)
+                assert raw.status_code == 201, print(r)
 
         raw = self.post('/contributors/id_test/actions/export')
         r = self.to_json(raw)
@@ -250,32 +245,27 @@ class TestComputeDirectionsProcess(TartareFixture):
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.to_json(raw)
         assert raw.status_code == 200, print(r)
-        job = r['jobs'][0]
-        assert job['state'] == 'failed'
-        assert job['step'] == 'preprocess'
-        assert job['error_message'] == 'data_source_id missing in preprocess config'
+        return r['jobs'][0]
 
-    def test_compute_directions_missing_ds_config(self):
-        contrib_id = 'fr-idf'
-        data_source_config_id = 'wrong-ds-conf-id'
-        with app.app_context():
-            contributor = Contributor(contrib_id, contrib_id, contrib_id)
-            contributor.save()
-            data_source_to_process = DataSource(id='whatever', data_format='gtfs')
-            data_source_to_process.save(contrib_id)
+    @pytest.mark.parametrize(
+        "params", [
+            ({}),
+            ({"config": {}}),
+            ({"config": {"something": "bob"}}),
+        ])
+    def test_compute_directions_invalid_params(self, params, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server, params)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == 'data_source_id missing in preprocess config', print(job)
 
-            data_source_context = DataSourceContext(data_source_to_process.id, '')
-            contributor_context = ContributorContext(contributor, [data_source_context])
-
-            context = Context('contributor', contributor_contexts=[contributor_context])
-            compute_directions = ComputeDirections(context=context,
-                                                   preprocess=PreProcess(
-                                                       params={"config": {"data_source_id": data_source_config_id}}))
-            with pytest.raises(ParameterException) as excinfo:
-                compute_directions.do()
-            assert str(
-                excinfo.value) == 'data_source_id "{ds_conf}" in preprocess config does not belong to contributor'.format(
-                ds_conf=data_source_config_id)
+    def test_compute_directions_missing_ds_config(self, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server,
+                                                          {"config": {"data_source_id": "ds-config"}},
+                                                          add_data_source_config=False)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == 'data_source_id "ds-config" in preprocess config does not belong to contributor', print(job)
 
     def test_compute_directions_missing_ds_target(self):
         contrib_id = 'fr-idf'
