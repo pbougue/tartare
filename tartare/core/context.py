@@ -26,7 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from tartare import app
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource
 import logging
 from typing import List, Optional
@@ -82,7 +82,7 @@ class Context():
                      if data_source_context.data_source_id == data_source_id), None)
 
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
-                                            validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
+                                            validity_period: Optional[ValidityPeriod], gridfs_id: Optional[str]) -> None:
         contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
                                     if contributor_context.contributor.id == contributor_id), None)
         if contributor_context:
@@ -110,8 +110,11 @@ class Context():
 
     def __del__(self) -> None:
         logging.getLogger(__name__).debug('Delete files context')
-        for contributor_context in self.contributor_contexts:
-            for data_source_context in contributor_context.data_source_contexts:
-                GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
-        if self.global_gridfs_id:
-            GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)
+        # following line avoid getting warnings in tests because trying tu remove files ouside of context
+        # temporary fix, @TODO: find a better way to manage files removal
+        with app.app_context():
+            for contributor_context in self.contributor_contexts:
+                for data_source_context in contributor_context.data_source_contexts:
+                    GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
+            if self.global_gridfs_id:
+                GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)
