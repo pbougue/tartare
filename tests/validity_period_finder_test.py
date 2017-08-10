@@ -101,8 +101,8 @@ def test_calendar_with_not_date():
     file = _get_file_fixture_full_path('validity_period/calendar_invalid_end_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
             finder.get_validity_period(file)
-    assert str(excinfo.value) == 'Impossible to parse file calendar.txt, Error ' \
-                                 'parsing datetime string "AAAA" at position 0'
+    assert str(excinfo.value) == "Impossible to parse file calendar.txt, " \
+                                 "Error time data 'AAAA' does not match format '%Y%m%d' (match)"
 
 
 def test_calendar_dates_without_exception_type():
