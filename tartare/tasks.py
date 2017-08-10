@@ -190,9 +190,12 @@ def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
+        logger.info('contributor_export')
         # Launch fetch all dataset for contributor
-        context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.contributor_has_datasources(contributor.id):
+        nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(contributor)
+        logger.info('number of data_sources updated: {number}'.format(number=nb_updated_data_sources_fetched))
+        if nb_updated_data_sources_fetched:
+            context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)
 

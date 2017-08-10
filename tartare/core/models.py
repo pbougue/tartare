@@ -607,7 +607,7 @@ class DataSourceFetched(Historisable):
             'data_source_id': data_source_id
         }
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
-        lasts = MongoDataSourceFetchedSchema(many=True).load(raw).data
+        lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
     def get_md5(self) -> str:
@@ -637,7 +637,7 @@ class MongoDataSourceFetchedSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
     created_at = fields.DateTime(required=False)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source_fetched(self, data: dict) -> DataSourceFetched:
