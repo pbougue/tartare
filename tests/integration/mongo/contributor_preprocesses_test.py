@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import json
 import os
 import tempfile
 from datetime import date
@@ -41,6 +42,7 @@ from tartare.core.models import Contributor, ValidityPeriod, DataSource, PreProc
 from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
 from tartare.processes.contributor import GtfsAgencyFile, ComputeDirections
+from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals
 
 
@@ -58,11 +60,9 @@ class TestGtfsAgencyProcess:
                         "agency_phone", "agency_fare_url", "agency_email"]
     excepted_headers.sort()
 
-
     def get_gridfs_id(self, filename, contributor_id='contrib_id'):
         with open(_get_file_fixture_full_path('gtfs/{filename}'.format(filename=filename)), 'rb') as file:
             return GridFsHandler().save_file_in_gridfs(file, filename=filename, contributor_id=contributor_id)
-
 
     def manage_gtfs_and_get_context(self, gridfs_id, context, data_source_id='id2', contributor_preprocess=None):
         contributor = Contributor('123', 'ABC', 'abc')
@@ -73,7 +73,6 @@ class TestGtfsAgencyProcess:
         pr = contributor_preprocess if contributor_preprocess else self.preprocess
         gtfs_agency_file = GtfsAgencyFile(context, pr)
         gtfs_agency_file.do()
-
 
     def test_gtfs_without_agency_file(self):
         with app.app_context():
@@ -103,7 +102,6 @@ class TestGtfsAgencyProcess:
                 for key, value in self.preprocess.params.get("data").items():
                     assert value == data[0][key]
 
-
     def test_gtfs_with_agency_file(self):
         with app.app_context():
             context = Context()
@@ -120,7 +118,6 @@ class TestGtfsAgencyProcess:
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 2
-
 
     def test_gtfs_with_empty_agency_file(self):
         with app.app_context():
@@ -149,7 +146,6 @@ class TestGtfsAgencyProcess:
                 for key, value in self.preprocess.params.get("data").items():
                     assert value == data[0][key]
 
-
     def test_gtfs_with_data_source_not_in_context(self):
         with app.app_context():
             context = Context()
@@ -158,7 +154,6 @@ class TestGtfsAgencyProcess:
                 self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context, data_source_id='id15')
             assert str(excinfo.value).startswith('impossible to build preprocess GtfsAgencyFile : '
                                                  'data source id2 not exist for contributor 123')
-
 
     def test_gtfs_with_empty_agency_file_default_values(self):
         with app.app_context():
@@ -201,23 +196,64 @@ class TestGtfsAgencyProcess:
                     assert value == data[0][key]
 
 
-class TestComputeDirectionsProcess():
+class TestComputeDirectionsProcess(TartareFixture):
+    def __setup_contributor_export_environment(self, url, params):
+        contrib_payload = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "preprocesses": [{
+                "sequence": 0,
+                "type": "ComputeDirections",
+                "params": params
+            }]
+        }
+        data_sources = [
+            {
+                "name": "ds-to-process",
+                "data_format": "gtfs",
+                "input": {"url": url}
+            },
+            {
+                "id": "ds-config",
+                "name": "ds-config",
+                "data_format": "direction_config",
+                "input": {}
+            },
+        ]
+        contrib_payload['data_sources'] = data_sources
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        r = self.to_json(raw)
+        assert raw.status_code == 201, print(r)
+
+        with open(_get_file_fixture_full_path('compute_directions/config.json'), 'rb') as file:
+            raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
+                            params={'file': file},
+                            headers={})
+            r = self.to_json(raw)
+            assert raw.status_code == 201, print(r)
+
     @pytest.mark.parametrize(
         "params", [
             ({}),
             ({"config": {}}),
             ({"config": {"something": "bob"}}),
         ])
-    def test_compute_directions_invalid_params(self, params):
-        contrib_id = 'fr-idf'
-        with app.app_context():
-            contributor = Contributor(contrib_id, contrib_id, contrib_id)
-            contributor_context = ContributorContext(contributor)
-            compute_directions = ComputeDirections(context=Context(contributor_contexts=[contributor_context]),
-                                                   preprocess=PreProcess(params=params))
-            with pytest.raises(ParameterException) as excinfo:
-                compute_directions.do()
-            assert str(excinfo.value) == "data_source_id missing in preprocess config"
+    def test_compute_directions_invalid_params(self, params, init_http_download_server):
+        url = "http://{ip}/some_archive.zip".format(ip=init_http_download_server.ip_addr)
+        self.__setup_contributor_export_environment(url, params)
+
+        raw = self.post('/contributors/id_test/actions/export')
+        r = self.to_json(raw)
+        assert raw.status_code == 201, print(r)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.to_json(raw)
+        assert raw.status_code == 200, print(r)
+        job = r['jobs'][0]
+        assert job['state'] == 'failed'
+        assert job['step'] == 'preprocess'
+        assert job['error_message'] == 'data_source_id missing in preprocess config'
 
     def test_compute_directions_missing_ds_config(self):
         contrib_id = 'fr-idf'
