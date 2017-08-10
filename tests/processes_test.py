@@ -110,9 +110,9 @@ class TestFusioProcesses:
         "contrib_begin_date,contrib_end_date,expected_message", [
             # one contributor
             (date(2015, 1, 20), date(2015, 7, 14),
-             "bounds date from fusio import incorrect (end_date: 14/07/2015 < now: 15/01/2017)"),
+             "bounds date from fusio import incorrect: calculating validity period union on past periods (end_date: 14/07/2015 < now: 15/01/2017)"),
             (date(2017, 1, 1), date(2017, 1, 14),
-             "bounds date from fusio import incorrect (end_date: 14/01/2017 < now: 15/01/2017)"),
+             "bounds date from fusio import incorrect: calculating validity period union on past periods (end_date: 14/01/2017 < now: 15/01/2017)"),
         ])
     def test_fusio_import_invalid_dates(self, contrib_begin_date, contrib_end_date, expected_message):
         with pytest.raises(IntegrityException) as excinfo:

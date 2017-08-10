@@ -31,25 +31,25 @@ from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, 
 import logging
 from typing import List, Optional
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.validity_period_finder import ValidityPeriodContainer
 
 
-class DataSourceContext():
+class DataSourceContext:
     def __init__(self, data_source_id: str, gridfs_id: str, validity_period: Optional[ValidityPeriod]=None) -> None:
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
 
 
-class ContributorContext():
-    def __init__(self, contributor: Contributor,
-                 data_source_contexts: Optional[List[DataSourceContext]]=None,
-                 validity_period: ValidityPeriod=None) -> None:
+class ContributorContext(ValidityPeriodContainer):
+    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]] = None,
+                 validity_period: ValidityPeriod = None) -> None:
+        super().__init__(validity_period)
         self.contributor = contributor
         self.data_source_contexts = data_source_contexts if data_source_contexts else []
-        self.validity_period = validity_period
 
 
-class Context():
+class Context:
     def __init__(self, instance: str='contributor', coverage: Coverage=None,
                  validity_period: ValidityPeriod=None, contributor_contexts: List[ContributorContext]=None) -> None:
         self.instance = instance

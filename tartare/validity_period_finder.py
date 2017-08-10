@@ -36,6 +36,14 @@ import numpy as np
 from tartare.core.csv_reader import CsvReader
 import pandas as pd
 
+from tartare.core.models import ValidityPeriod
+from tartare.exceptions import InvalidFile, ValidityPeriodInPastException
+
+
+class ValidityPeriodContainer(object):
+    def __init__(self, validity_period: ValidityPeriod = None) -> None:
+        self.validity_period = validity_period
+
 
 class ValidityPeriodFinder(object):
     feed_info_filename = 'feed_info.txt'
@@ -152,3 +160,25 @@ class ValidityPeriodFinder(object):
 
         self.start_date = self.reader.data.at[0, 'feed_start_date'].date()
         self.end_date = self.reader.data.at[0, 'feed_end_date'].date()
+
+    @classmethod
+    def get_validity_period_union(self,
+                                  validity_period_container_list: List[ValidityPeriodContainer]) -> ValidityPeriod:
+        container_with_min_start_date = min(validity_period_container_list,
+                                            key=lambda container: container.validity_period.start_date)
+
+        container_with_max_end_date = max(validity_period_container_list,
+                                          key=lambda container: container.validity_period.end_date)
+        begin_date = container_with_min_start_date.validity_period.start_date
+        end_date = container_with_max_end_date.validity_period.end_date
+        now_date = datetime.now().date()
+        if end_date < now_date:
+            raise ValidityPeriodInPastException(
+                'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
+                    end=end_date.strftime('%d/%m/%Y'), now=now_date.strftime('%d/%m/%Y')))
+        if abs(begin_date - end_date).days > 365:
+            logging.getLogger(__name__).warning(
+                'period bounds for union of validity periods exceed one year')
+            begin_date = max(begin_date, now_date)
+            end_date = min(begin_date + timedelta(days=364), end_date)
+        return ValidityPeriod(begin_date, end_date)
