@@ -5,7 +5,20 @@ List of preprocesses for coverages
 ### Ruspell
 ...
 ### ComputeDirections
-...
+This preprocess fixes trips.txt files into one or more gtfs data sources (referenced by data_source_ids) having missing direction_id based upon a provided config file as a data source (referenced by params.config.data_source_id)
+```json
+{
+    "id": "my-compute-dir-id",
+    "type": "ComputeDirections",
+    "data_source_ids": ["data-source-id-to-preprocess"],
+    "params": {
+        "config": {
+            "data_source_id": "data-source-id-config"
+        }
+    },
+    "sequence": 0
+ }
+```
 ### HeadsignShortName
 ...
 

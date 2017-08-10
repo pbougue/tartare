@@ -258,6 +258,7 @@ def launch(processes: list, context: Context) -> Context:
         return context
     tmp_processes = sorted(processes, key=lambda x: ['sequence'])
     for p in tmp_processes:
+        logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=p.type))
         context = PreProcessManager.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
     return context
 
