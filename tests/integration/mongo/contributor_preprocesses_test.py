@@ -307,7 +307,7 @@ class TestComputeDirectionsProcess(TartareFixture):
 
         with app.app_context():
             export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export['gridfs_id'])
+            new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
             with ZipFile(new_zip_file, 'r') as new_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     new_zip_file.extractall(tmp_dir_name)
