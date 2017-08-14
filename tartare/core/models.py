@@ -41,6 +41,7 @@ from datetime import date
 import logging
 from typing import Optional, List, Union, Dict, Type
 from tartare.core.constants import DATA_FORMAT_VALUES
+from io import IOBase
 
 
 @app.before_first_request
@@ -618,7 +619,10 @@ class DataSourceFetched(Historisable):
 
     def save_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
         with open(tmp_file, 'rb') as file:
-            self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
+            self.save_dataset_from_io(file, filename)
+
+    def save_dataset_from_io(self, io: IOBase, filename: str) -> None:
+        self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
                                                                  contributor_id=self.contributor_id)
 
 

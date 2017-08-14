@@ -45,7 +45,8 @@ class DataSet(Resource):
         file = request.files['file']
         data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
                                                        data_source_id=data_source_id)
-        data_source_fetched.save_dataset(file.filename, os.path.basename(file.filename))
+
+        data_source_fetched.save_dataset_from_io(file.stream, os.path.basename(file.filename))
         data_source_fetched.save()
 
         return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
