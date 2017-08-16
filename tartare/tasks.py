@@ -27,30 +27,30 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import datetime
 import logging
 import os
-import datetime
+import tempfile
 from typing import Optional
+from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
+
 from billiard.einfo import ExceptionInfo
+from celery import chain
 from celery.task import Task
 
+import tartare
 from tartare import celery
 from tartare.core import calendar_handler, models
-from tartare.core.calendar_handler import GridCalendarData
-from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
-from tartare.helper import upload_file
-import tempfile
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
-from tartare.processes.processes import PreProcessManager
+from tartare.core.calendar_handler import GridCalendarData
+from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
-from celery import chain
-from urllib.error import ContentTooShortError, HTTPError, URLError
-import tartare
-
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
+from tartare.helper import upload_file
+from tartare.processes.processes import PreProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type:
     file = grifs_handler.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
-    #TODO: how to handle timeout?
+    # TODO: how to handle timeout?
     try:
         response = upload_file(url, file.filename, file)
         if response.status_code != 200:
@@ -185,14 +185,20 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
-
+def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> None:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
+        logger.info('contributor_export')
         # Launch fetch all dataset for contributor
-        context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.contributor_has_datasources(contributor.id):
+        nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
+            contributor)
+        logger.info('number of data_sources updated for contributor {cid}: {number}'.format(cid=contributor.id,
+                                                                                            number=nb_updated_data_sources_fetched))
+        # contributor export is always done if coming from API call, we skip updated data verification
+        # when in automatic update, it's only done if at least one of data sources has changed
+        if not check_for_update or nb_updated_data_sources_fetched:
+            context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)
 

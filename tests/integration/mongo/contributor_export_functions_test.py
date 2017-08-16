@@ -29,14 +29,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.core.contributor_export_functions import fetch_datasets
+from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
 from tartare.core.models import DataSource, Contributor
 import mock
 from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app
 import pytest
 from urllib.error import ContentTooShortError
-from tartare.exceptions import InvalidFile
+from tartare.exceptions import InvalidFile, ParameterException
 from datetime import date
 from tartare.core.context import Context
 
@@ -53,29 +53,20 @@ def test_fetch_data_from_input_failed(mocker):
     #following test needs to be improved to handle file creation on local drive
     with pytest.raises(InvalidFile) as excinfo:
         with app.app_context():
-            fetch_datasets(contrib, Context())
+            fetch_datasets_and_return_updated_number(contrib)
     assert str(excinfo.typename) == 'InvalidFile'
 
 
 class TestFetcher():
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_fetcher(self, urlretrieve_func):
+    def test_build_no_data_set(self, urlretrieve_func):
+        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
+        contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
+        context = Context()
         with app.app_context():
-            data_source = DataSource('666', 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
-            contrib = Contributor('contribId', 'contribName', 'bob')
-            contrib.save()
-            data_source.save(contrib.id)
-            contrib = Contributor.get(contributor_id=contrib.id)
-            context = Context()
-            fetch_datasets(contrib, context)
-            assert context
-            assert len(context.contributor_contexts) == 1
-            data_source_contexts = context.contributor_contexts[0].data_source_contexts
-            assert len(data_source_contexts) == 1
-            assert data_source_contexts[0].data_source_id == '666'
-            assert data_source_contexts[0].gridfs_id
-            assert data_source_contexts[0].validity_period.end_date == date(2015, 8, 26)
-            assert data_source_contexts[0].validity_period.start_date == date(2015, 3, 25)
+            with pytest.raises(ParameterException) as excinfo:
+                build_context(contrib, context)
+            assert str(excinfo.value) == 'data source 666 has no data set'
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):
@@ -83,7 +74,7 @@ class TestFetcher():
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         with app.app_context():
             with pytest.raises(ContentTooShortError) as excinfo:
-                fetch_datasets(contrib, Context())
+                fetch_datasets_and_return_updated_number(contrib)
             assert str(excinfo.value) == "<urlopen error http://bob.com>"
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_zip_file)
@@ -92,5 +83,5 @@ class TestFetcher():
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         with app.app_context():
             with pytest.raises(Exception) as excinfo:
-                fetch_datasets(contrib, Context())
+                fetch_datasets_and_return_updated_number(contrib)
             assert str(excinfo.value) == 'downloaded file from url http://bob.com is not a zip file'

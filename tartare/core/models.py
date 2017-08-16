@@ -497,7 +497,7 @@ class MongoValidityPeriodSchema(Schema):
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def make_contributorexportdatasource(self, data: dict) -> ContributorExportDataSource:
@@ -607,7 +607,7 @@ class DataSourceFetched(Historisable):
             'data_source_id': data_source_id
         }
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
-        lasts = MongoDataSourceFetchedSchema(many=True).load(raw).data
+        lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
     def get_md5(self) -> str:
@@ -637,7 +637,7 @@ class MongoDataSourceFetchedSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
     created_at = fields.DateTime(required=False)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source_fetched(self, data: dict) -> DataSourceFetched:
@@ -815,7 +815,7 @@ class ContributorExport(Historisable):
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
-        lasts = MongoContributorExportSchema(many=True).load(raw).data
+        lasts = MongoContributorExportSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
 
@@ -824,7 +824,7 @@ class MongoContributorExportSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True, required=False)
 
     @post_load
@@ -842,7 +842,7 @@ class CoverageExportContributor(object):
 
 class MongoCoverageExportContributorSchema(Schema):
     contributor_id = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
 
     @post_load
@@ -889,7 +889,7 @@ class MongoCoverageExportSchema(Schema):
     coverage_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)
 
     @post_load
