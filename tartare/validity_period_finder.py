@@ -37,7 +37,7 @@ from tartare.core.csv_reader import CsvReader
 import pandas as pd
 
 from tartare.core.models import ValidityPeriod
-from tartare.exceptions import InvalidFile, ValidityPeriodInPastException
+from tartare.exceptions import InvalidFile, ValidityPeriodException
 
 
 class ValidityPeriodContainer(object):
@@ -164,6 +164,8 @@ class ValidityPeriodFinder(object):
     @classmethod
     def get_validity_period_union(self,
                                   validity_period_container_list: List[ValidityPeriodContainer]) -> ValidityPeriod:
+        if not validity_period_container_list:
+            raise ValidityPeriodException('empty validity period list given to calculate union')
         container_with_min_start_date = min(validity_period_container_list,
                                             key=lambda container: container.validity_period.start_date)
 
@@ -173,7 +175,7 @@ class ValidityPeriodFinder(object):
         end_date = container_with_max_end_date.validity_period.end_date
         now_date = datetime.now().date()
         if end_date < now_date:
-            raise ValidityPeriodInPastException(
+            raise ValidityPeriodException(
                 'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
                     end=end_date.strftime('%d/%m/%Y'), now=now_date.strftime('%d/%m/%Y')))
         if abs(begin_date - end_date).days > 365:

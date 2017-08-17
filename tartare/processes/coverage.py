@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
-from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodInPastException
+from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.processes.processes import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.core.gridfs_handler import GridFsHandler
@@ -81,8 +81,8 @@ class FusioImport(AbstractProcess):
     def get_validity_period(self) -> ValidityPeriod:
         try:
             validity_period_union = ValidityPeriodFinder.get_validity_period_union(self.context.contributor_contexts)
-        except ValidityPeriodInPastException as exception:
-            raise IntegrityException('bounds date from fusio import incorrect: {detail}'.format(detail=str(exception)))
+        except ValidityPeriodException as exception:
+            raise IntegrityException('bounds date for fusio import incorrect: {detail}'.format(detail=str(exception)))
         return validity_period_union
 
     def do(self) -> Context:
