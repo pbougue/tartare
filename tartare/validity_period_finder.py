@@ -29,9 +29,8 @@
 
 from zipfile import is_zipfile
 import logging
-from datetime import timedelta, date
-from typing import Tuple
-from tartare.exceptions import InvalidFile
+from datetime import timedelta, date, datetime
+from typing import Tuple, List
 import numpy as np
 from tartare.core.csv_reader import CsvReader
 import pandas as pd
