@@ -27,7 +27,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from abc import ABCMeta
-from io import IOBase
 from gridfs import GridOut
 from tartare import mongo
 from marshmallow import Schema, post_load, utils,  fields
@@ -39,7 +38,7 @@ import uuid
 from datetime import datetime
 from datetime import date
 import logging
-from typing import Optional, List, Union, Dict, Type
+from typing import Optional, List, Union, Dict, Type, BinaryIO
 from tartare.core.constants import DATA_FORMAT_VALUES
 from io import IOBase
 
@@ -621,7 +620,7 @@ class DataSourceFetched(Historisable):
         with open(tmp_file, 'rb') as file:
             self.save_dataset_from_io(file, filename)
 
-    def save_dataset_from_io(self, io: IOBase, filename: str) -> None:
+    def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
         self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
                                                                  contributor_id=self.contributor_id)
 

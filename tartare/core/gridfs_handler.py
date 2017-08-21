@@ -32,7 +32,7 @@ from bson.objectid import ObjectId
 from pymongo.database import Database
 
 from tartare import mongo
-from typing import Union
+from typing import Union, BinaryIO
 from io import IOBase
 from gridfs.grid_file import GridOut
 
@@ -43,7 +43,7 @@ class GridFsHandler(object):
             database = mongo.db
         self.gridfs = GridFS(database)
 
-    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, GridOut], **kwargs: str) -> str:
+    def save_file_in_gridfs(self, file: Union[str, bytes, IOBase, BinaryIO, GridOut], **kwargs: str) -> str:
         """
             :rtype: the id of the gridfs
         """
