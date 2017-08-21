@@ -27,20 +27,23 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
-from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
-from tartare.processes.processes import AbstractProcess
-from tartare.processes.fusio import Fusio
-from tartare.core.gridfs_handler import GridFsHandler
-import requests
-from tartare.core.models import Contributor, DataSource, ValidityPeriod
-from tartare.core.context import Context, DataSourceContext
-from tartare.helper import download_zip_file, get_filename
 import tempfile
+from typing import List
+
+import requests
+
+from tartare.core.context import Context, DataSourceContext
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import Contributor, DataSource, ValidityPeriod
+from tartare.core.models import ValidityPeriodContainer
+from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
+from tartare.helper import download_zip_file, get_filename
+from tartare.processes.fusio import Fusio
+from tartare.processes.processes import AbstractProcess
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 
 class FusioDataUpdate(AbstractProcess):
-
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
@@ -79,8 +82,10 @@ class FusioDataUpdate(AbstractProcess):
 
 class FusioImport(AbstractProcess):
     def get_validity_period(self) -> ValidityPeriod:
+        contributor_contexts_with_validity = [ceds for ceds in self.context.contributor_contexts if
+                                                     ceds.validity_period]  # type: List[ValidityPeriodContainer]
         try:
-            validity_period_union = ValidityPeriodFinder.get_validity_period_union(self.context.contributor_contexts)
+            validity_period_union = ValidityPeriodFinder.get_validity_period_union(contributor_contexts_with_validity)
         except ValidityPeriodException as exception:
             raise IntegrityException('bounds date for fusio import incorrect: {detail}'.format(detail=str(exception)))
         return validity_period_union

@@ -35,14 +35,8 @@ import numpy as np
 from tartare.core.csv_reader import CsvReader
 import pandas as pd
 
-from tartare.core.models import ValidityPeriod
+from tartare.core.models import ValidityPeriod, ValidityPeriodContainer
 from tartare.exceptions import InvalidFile, ValidityPeriodException
-
-
-class ValidityPeriodContainer(object):
-    def __init__(self, validity_period: ValidityPeriod = None) -> None:
-        self.validity_period = validity_period
-
 
 class ValidityPeriodFinder(object):
     feed_info_filename = 'feed_info.txt'

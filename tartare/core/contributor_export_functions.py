@@ -30,6 +30,7 @@
 import logging
 import os
 import tempfile
+from typing import List
 
 from tartare.core import models
 from tartare.core.context import Context
@@ -37,6 +38,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException
 from tartare.helper import get_filename, get_md5_content_file, download_zip_file
+from tartare.validity_period_finder import ValidityPeriodContainer
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ def save_export(contributor: Contributor, context: Context) -> Context:
 
     if contrib_export_data_sources:
         contrib_export_data_sources_with_validity = [ceds for ceds in contrib_export_data_sources if
-                                                     ceds.validity_period]
+                                                     ceds.validity_period]  # type: List[ValidityPeriodContainer]
         # grid fs id is taken from the first data source having a validity period
         # contributor with multiple data sources is not handled yet
         grid_fs_id = next((data_source.gridfs_id
