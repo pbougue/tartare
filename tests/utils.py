@@ -29,11 +29,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+import os
+from contextlib import contextmanager
+from glob import glob
 from io import BytesIO
 from zipfile import ZipFile, ZIP_DEFLATED
-from glob import glob
-from contextlib import contextmanager
-import os
+
 from mock import MagicMock
 from requests import Response
 
@@ -104,6 +105,12 @@ def get_response(status_code: int=200, content: str=None) -> Response:
 
 def _get_file_fixture_full_path(rel_path):
     return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'tests/fixtures'), rel_path)
+
+
+def assert_zip_contains_only_txt_files(zip_file):
+    for zip_info in zip_file.filelist:
+        assert zip_info.filename[-3:] == 'txt', print(
+            'file {filename} should not be in zip archive (only txt files allowed)'.format(filename=zip_info.filename))
 
 
 def assert_files_equals(result_file_name, expected_file_name):

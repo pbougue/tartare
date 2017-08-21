@@ -44,7 +44,7 @@ from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
 from tartare.processes.contributor import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals
+from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files
 
 
 class TestGtfsAgencyProcess:
@@ -92,6 +92,7 @@ class TestGtfsAgencyProcess:
 
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 1
@@ -116,6 +117,7 @@ class TestGtfsAgencyProcess:
 
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 2
@@ -137,6 +139,7 @@ class TestGtfsAgencyProcess:
 
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 1
@@ -176,6 +179,7 @@ class TestGtfsAgencyProcess:
 
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 1
@@ -298,7 +302,8 @@ class TestComputeDirectionsProcess(TartareFixture):
             # missing column, stop_sequence in order
             ('missing_column.zip', 'compute_directions/expected_trips_missing_column.txt'),
         ])
-    def test_compute_directions(self, init_http_download_server_global_fixtures, data_set_filename, expected_trips_file_name):
+    def test_compute_directions(self, init_http_download_server_global_fixtures, data_set_filename,
+                                expected_trips_file_name):
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
                                                           {"config": {"data_source_id": "ds-config"}},
                                                           data_set_filename=data_set_filename)
@@ -312,6 +317,7 @@ class TestComputeDirectionsProcess(TartareFixture):
             new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
             with ZipFile(new_zip_file, 'r') as new_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
+                    assert_zip_contains_only_txt_files(new_zip_file)
                     new_zip_file.extractall(tmp_dir_name)
                     assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
                                         _get_file_fixture_full_path(expected_trips_file_name))
