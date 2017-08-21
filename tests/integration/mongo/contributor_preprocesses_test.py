@@ -33,6 +33,7 @@ from datetime import date
 from zipfile import ZipFile
 
 import pytest
+from freezegun import freeze_time
 from gridfs.errors import NoFile
 
 from tartare import app
@@ -289,6 +290,7 @@ class TestComputeDirectionsProcess(TartareFixture):
     # - missing direction_id column case is handled
     # - if rows in stop_times.txt are not sorted by stop_sequence for each trip_id, the case is handled
     #
+    @freeze_time("2017-01-15")
     @pytest.mark.parametrize(
         "data_set_filename, expected_trips_file_name", [
             # stop_sequence not in order
