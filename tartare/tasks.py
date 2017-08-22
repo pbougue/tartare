@@ -216,6 +216,8 @@ def contributor_export(self: Task, contributor: Contributor, job: Job, check_for
                 for coverage in coverages:
                     # Launch coverage export
                     coverage_export.delay(coverage, job)
+            # remove temporary gridfs if export is a success
+            context.cleanup()
 
     except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
         msg = 'Contributor export failed, error {}'.format(str(exc))
@@ -251,8 +253,13 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
             sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
+                # remove temporary gridfs after the last publication
+                actions.append(cleanup_context.si(context))
         if actions:
             chain(*actions).delay()
+        # if no publications, cleanup separately
+        else:
+            context.cleanup()
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))
         logger.error(msg)
@@ -268,6 +275,10 @@ def launch(processes: list, context: Context) -> Context:
         context = PreProcessManager.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
     return context
 
+
+@celery.task()
+def cleanup_context(context: Context) -> None:
+    context.cleanup()
 
 @celery.task()
 def automatic_update() -> None:

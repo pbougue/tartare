@@ -189,13 +189,16 @@ class TestHistorical():
         context = Context()
         context = self.populate_data_fetched(context, contributor)
         contributor_export_functions.save_export(contributor, context)
+        context.cleanup()
 
     def test_data_source_fetched_historical_use_context(self):
         list_ids = []
         contributor = models.Contributor.get('contrib_id')
         data_sources = models.DataSource.get(data_source_id='data_source_gtfs')
         for i in range(1, 6):
-            self.populate_data_fetched(Context(), contributor)
+            context = Context()
+            self.populate_data_fetched(context, contributor)
+            context.cleanup()
         # test that there are only 3 data sources
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
             'contributor_id': contributor.id,
@@ -210,11 +213,12 @@ class TestHistorical():
         raw = mongo.db['fs.files'].find({})
         assert raw.count() == 3
 
-    def couverage_save_export(self, coverage):
+    def coverage_save_export(self, coverage):
         context = Context('coverage', coverage)
         context.fill_contributor_contexts(coverage)
         coverage_export_functions.postprocess(coverage,context)
         coverage_export_functions.save_export(coverage, context)
+        context.cleanup()
 
     def test_data_source_fetched_historical_and_save_export_use_context(self):
         list_ids = []
@@ -251,7 +255,7 @@ class TestHistorical():
         coverage = models.Coverage.get('c1')
         for i in range(1, 6):
             self.populate_data_fetched_and_save_export(contributor)
-            self.couverage_save_export(coverage)
+            self.coverage_save_export(coverage)
         # test that there are only 3 data sources
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
             'contributor_id': contributor.id,

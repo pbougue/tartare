@@ -108,13 +108,10 @@ class Context():
                                            data_source_contexts=data_source_contexts))
         self.coverage = coverage
 
-    def __del__(self) -> None:
+    def cleanup(self) -> None:
         logging.getLogger(__name__).debug('Delete files context')
-        # following line avoid getting warnings in tests because trying tu remove files ouside of context
-        # temporary fix, @TODO: find a better way to manage files removal
-        with app.app_context():
-            for contributor_context in self.contributor_contexts:
-                for data_source_context in contributor_context.data_source_contexts:
-                    GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
-            if self.global_gridfs_id:
-                GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)
+        for contributor_context in self.contributor_contexts:
+            for data_source_context in contributor_context.data_source_contexts:
+                GridFsHandler().delete_file_from_gridfs(data_source_context.gridfs_id)
+        if self.global_gridfs_id:
+            GridFsHandler().delete_file_from_gridfs(self.global_gridfs_id)
