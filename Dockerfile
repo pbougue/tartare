@@ -20,6 +20,7 @@ COPY requirements.txt /usr/src/app
 # those are needed for uwsgi
 RUN apk --update add \
         g++ \
+        libstdc++ \
         build-base \
         python-dev \
         zlib-dev \
@@ -30,6 +31,10 @@ RUN apk --update add \
         libmemcached-dev && \
     pip install uwsgi && \
     pip install --no-cache-dir -r requirements.txt && \
+    find /usr/local \
+        \( -type d -a -name test -o -name tests \) \
+        -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
+        -exec rm -rf '{}' + && \
     apk del \
         g++ \
         build-base \
