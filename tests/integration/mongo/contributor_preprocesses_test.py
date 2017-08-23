@@ -237,7 +237,7 @@ class TestComputeDirectionsProcess(TartareFixture):
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         if add_data_source_config:
             with open(_get_file_fixture_full_path('compute_directions/config.json'), 'rb') as file:
@@ -245,15 +245,15 @@ class TestComputeDirectionsProcess(TartareFixture):
                                 params={'file': file},
                                 headers={})
                 r = self.to_json(raw)
-                assert raw.status_code == 201, print(r)
+                self.assert_sucessful_call(raw, 201)
 
         raw = self.post('/contributors/id_test/actions/export')
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         return r['jobs'][0]
 
     @pytest.mark.parametrize(

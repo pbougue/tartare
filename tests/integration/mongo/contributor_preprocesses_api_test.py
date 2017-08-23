@@ -56,7 +56,7 @@ class TestContributorPreProcesses(TartareFixture):
 
         raw = self.get('/contributors/id_test/preprocesses')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
         assert r["preprocesses"][0]["data_source_ids"].sort() == post_ps["data_source_ids"].sort()
@@ -66,7 +66,7 @@ class TestContributorPreProcesses(TartareFixture):
 
         raw = self.get('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
         assert r["preprocesses"][0]["data_source_ids"].sort() == post_ps["data_source_ids"].sort()
@@ -101,7 +101,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         assert r["contributors"][0]["preprocesses"][0]['id'] == 'toto'
 
@@ -124,7 +124,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         new_preprocess = {
@@ -137,7 +137,7 @@ class TestContributorPreProcesses(TartareFixture):
 
         raw = self.patch('/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == new_preprocess["type"]
         assert r["preprocesses"][0]["params"] == new_preprocess["params"]
@@ -159,7 +159,7 @@ class TestContributorPreProcesses(TartareFixture):
         }]
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         raw = self.delete('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
@@ -209,7 +209,7 @@ class TestContributorPreProcesses(TartareFixture):
         }]
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         new_preprocess = {
@@ -253,7 +253,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         new_preprocess = {
             "type": "HeadsignShortName",
@@ -263,13 +263,13 @@ class TestContributorPreProcesses(TartareFixture):
 
         raw = self.patch('/contributors/id_test/preprocesses/titi', json.dumps(new_preprocess))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         # Update only one preprocess
         assert len(r["preprocesses"]) == 1
 
         raw = self.get('/contributors/id_test')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         p_titi = None
         for p in r["contributors"][0]["preprocesses"]:
