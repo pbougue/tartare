@@ -38,12 +38,13 @@ from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.helper import setdefault_ids
 from tartare.core.mongodb_helper import upgrade_dict
-from tartare.decorators import json_data_validate
+from tartare.decorators import json_data_validate, validate_contributor_prepocesses_data_source_ids
 from tartare.processes.processes import PreProcessManager
 
 
 class Contributor(flask_restful.Resource):
     @json_data_validate()
+    @validate_contributor_prepocesses_data_source_ids()
     def post(self) -> Response:
         post_data = request.json
         if 'data_prefix' not in post_data:
@@ -102,10 +103,15 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
 
         request_data = request.json
+        preprocess_dict_list = request_data.get('preprocesses', [])
+        data_sources_dict_list = request_data.get('data_sources', [])
+
         # checking errors before updating PATCH data
-        setdefault_ids(request_data.get('data_sources', []))
-        setdefault_ids(request_data.get('preprocesses', []))
-        PreProcessManager.check_preprocesses_for_instance(request_data.get('preprocesses', []), 'contributor')
+        setdefault_ids(data_sources_dict_list)
+        setdefault_ids(preprocess_dict_list)
+
+        PreProcessManager.check_preprocesses_for_instance(preprocess_dict_list, 'contributor')
+        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, data_sources_dict_list, 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)
