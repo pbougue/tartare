@@ -38,6 +38,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException
 from tartare.helper import get_filename, get_md5_content_file, download_zip_file
+from tartare.validity_period_finder import ValidityPeriodContainer
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
@@ -54,21 +55,31 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
 
 
 def save_export(contributor: Contributor, context: Context) -> Context:
-    data_sources = []
+    contrib_export_data_sources = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
         if not data_source_context.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_context.data_source_id))
             continue
-        data_sources.append(
+        contrib_export_data_sources.append(
             ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
                                         gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
                                         validity_period=data_source_context.validity_period)
         )
-    if data_sources:
+
+    if contrib_export_data_sources:
+        contrib_export_data_sources_with_validity = [ceds for ceds in contrib_export_data_sources if
+                                                     ceds.validity_period]  # type: List[ValidityPeriodContainer]
+        # grid fs id is taken from the first data source having a validity period
+        # contributor with multiple data sources is not handled yet
+        grid_fs_id = next((data_source.gridfs_id
+                           for data_source in contrib_export_data_sources
+                           if data_source.validity_period), None)
+        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
+            contrib_export_data_sources_with_validity)
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=data_sources[0].gridfs_id,
-                                   validity_period=data_source_context.validity_period,
-                                   data_sources=data_sources)
+                                   gridfs_id=grid_fs_id,
+                                   validity_period=contributor_export_validity_period,
+                                   data_sources=contrib_export_data_sources)
         export.save()
     return context
 
@@ -126,7 +137,8 @@ def build_context(contributor: Contributor, context: Context) -> Context:
     for data_source in contributor.data_sources:
         data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
         if not data_set:
-            raise ParameterException('data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+            raise ParameterException(
+                'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
         context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
                                                     GridFsHandler().copy_file(data_set.gridfs_id))
     return context

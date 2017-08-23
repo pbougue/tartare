@@ -27,22 +27,23 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
-
-from datetime import datetime, timedelta
-
-from tartare.exceptions import IntegrityException, FusioException
-from tartare.processes.processes import AbstractProcess
-from tartare.processes.fusio import Fusio
-from tartare.core.gridfs_handler import GridFsHandler
-import requests
-from tartare.core.models import Contributor, DataSource
-from tartare.core.context import Context, DataSourceContext
-from tartare.helper import download_zip_file, get_filename
 import tempfile
+from typing import List
+
+import requests
+
+from tartare.core.context import Context, DataSourceContext
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import Contributor, DataSource, ValidityPeriod
+from tartare.core.models import ValidityPeriodContainer
+from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
+from tartare.helper import download_zip_file, get_filename
+from tartare.processes.fusio import Fusio
+from tartare.processes.processes import AbstractProcess
+from tartare.validity_period_finder import ValidityPeriodFinder
 
 
 class FusioDataUpdate(AbstractProcess):
-
     @staticmethod
     def _get_files(gridfs_id: str) -> dict:
         return {
@@ -80,32 +81,22 @@ class FusioDataUpdate(AbstractProcess):
 
 
 class FusioImport(AbstractProcess):
-    def _get_period_bounds(self) -> tuple:
-        min_contributor = min(self.context.contributor_contexts,
-                              key=lambda contrib: contrib.validity_period.start_date)
-
-        max_contributor = max(self.context.contributor_contexts,
-                              key=lambda contrib: contrib.validity_period.end_date)
-        begin_date = min_contributor.validity_period.start_date
-        end_date = max_contributor.validity_period.end_date
-        now_date = datetime.now().date()
-        if end_date < now_date:
-            raise IntegrityException('bounds date from fusio import incorrect (end_date: {end} < now: {now})'.format(
-                end=Fusio.format_date(end_date), now=Fusio.format_date(now_date)))
-        if abs(begin_date - end_date).days > 365:
-            logging.getLogger(__name__).warning(
-                'period bounds for union of contributors validity periods exceed one year')
-            begin_date = max(begin_date, now_date)
-            end_date = min(begin_date + timedelta(days=364), end_date)
-        return begin_date, end_date
+    def get_validity_period(self) -> ValidityPeriod:
+        contributor_contexts_with_validity = [ceds for ceds in self.context.contributor_contexts if
+                                                     ceds.validity_period]  # type: List[ValidityPeriodContainer]
+        try:
+            validity_period_union = ValidityPeriodFinder.get_validity_period_union(contributor_contexts_with_validity)
+        except ValidityPeriodException as exception:
+            raise IntegrityException('bounds date for fusio import incorrect: {detail}'.format(detail=str(exception)))
+        return validity_period_union
 
     def do(self) -> Context:
         fusio = Fusio(self.params.get("url"))
-        begin_date, end_date = self._get_period_bounds()
+        validity_period = self.get_validity_period()
         resp = fusio.call(requests.post, api='api',
                           data={
-                              'DateDebut': Fusio.format_date(begin_date),
-                              'DateFin': Fusio.format_date(end_date),
+                              'DateDebut': Fusio.format_date(validity_period.start_date),
+                              'DateFin': Fusio.format_date(validity_period.end_date),
                               'action': 'regionalimport',
                           })
         fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))

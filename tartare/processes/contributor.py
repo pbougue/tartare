@@ -207,16 +207,15 @@ class GtfsAgencyFile(AbstractProcess):
         agency_data.update(self.params.get("data", {}))
         return agency_data
 
-    def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str) -> str:
+    def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str, zip_destination: str) -> str:
         new_data = self._get_agency_data()
         files_zip.extractall(tmp_dir_name)
         with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'a') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
             writer.writeheader()
             writer.writerow(new_data)
-        new_zip = '{}/{}'.format(tmp_dir_name, filename.split(".")[0])
-        shutil.make_archive(new_zip, 'zip', tmp_dir_name)
-        return new_zip
+        new_zip = '{}/{}'.format(zip_destination, filename.split(".")[0])
+        return shutil.make_archive(new_zip, 'zip', tmp_dir_name)
 
     def manage_agency_file(self, data_source_context: DataSourceContext) -> None:
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
@@ -227,12 +226,13 @@ class GtfsAgencyFile(AbstractProcess):
                                               format(data_source_context.data_source_id))
             with ZipFile(grid_out, 'r') as files_zip:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    new_zip = self.create_new_zip(files_zip, tmp_dir_name, grid_out.filename)
-                    with open('{}.{}'.format(new_zip, 'zip'), 'rb') as file:
-                        old_gridfs_id = data_source_context.gridfs_id
-                        data_source_context.gridfs_id = GridFsHandler().save_file_in_gridfs(file=file,
-                                                                                            filename=filename)
-                        GridFsHandler().delete_file_from_gridfs(old_gridfs_id)
+                    with tempfile.TemporaryDirectory() as zip_destination:
+                        new_zip = self.create_new_zip(files_zip, tmp_dir_name, grid_out.filename, zip_destination)
+                        with open(new_zip, 'rb') as file:
+                            old_gridfs_id = data_source_context.gridfs_id
+                            data_source_context.gridfs_id = GridFsHandler().save_file_in_gridfs(file=file,
+                                                                                                filename=filename)
+                            GridFsHandler().delete_file_from_gridfs(old_gridfs_id)
 
     def do(self) -> Context:
         contributor = self.context.contributor_contexts[0].contributor

@@ -106,10 +106,15 @@ class ValidityPeriod(object):
         self.end_date = end_date
 
 
-class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str=None, gridfs_id: str=None, validity_period: ValidityPeriod=None) -> None:
-        self.data_source_id = data_source_id
+class ValidityPeriodContainer(object):
+    def __init__(self, validity_period: ValidityPeriod = None) -> None:
         self.validity_period = validity_period
+
+
+class ContributorExportDataSource(ValidityPeriodContainer):
+    def __init__(self, data_source_id: str = None, gridfs_id: str = None, validity_period: ValidityPeriod = None) -> None:
+        super().__init__(validity_period)
+        self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
 
 

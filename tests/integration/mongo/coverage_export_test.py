@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from freezegun import freeze_time
 
 from tests.integration.test_mechanism import TartareFixture
 import mock
@@ -99,6 +100,7 @@ class TestCoverageExport(TartareFixture):
         assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/bob/exports] but did you mean /coverages/<string:coverage_id>/exports or /coverages/<string:coverage_id>/actions/export or /coverages/<string:coverage_id>/jobs ?'
         assert r['error'] == 'Coverage not found: bob'
 
+    @freeze_time("2015-08-10")
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_save_coverage_export(self, mock_urlretrieve):
         # Add contributor with data_sources

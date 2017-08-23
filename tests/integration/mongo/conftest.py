@@ -51,7 +51,6 @@ def init_mongo_db(docker):
     """
     app.config['MONGO_TEST_DBNAME'] = docker.db_name
     app.config['MONGO_TEST_HOST'] = docker.ip_addr
-    app.config['SKIP_CLEAN_CONTEXT'] = True
     mongo.init_app(app, 'MONGO_TEST')
 
 
