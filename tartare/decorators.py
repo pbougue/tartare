@@ -102,8 +102,10 @@ class validate_contributor_prepocesses_data_source_ids(object):
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
+            existing_data_source_ids = [data_source['id'] for data_source in post_data.get('data_sources', []) if
+                                        'id' in data_source]
             PreProcessManager.check_preprocess_data_source_integrity(post_data.get('preprocesses', []),
-                                                                     post_data.get('data_sources', []), 'contributor')
+                                                                     existing_data_source_ids, 'contributor')
             return func(*args, **kwargs)
 
         return wrapper

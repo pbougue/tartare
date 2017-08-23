@@ -111,7 +111,8 @@ class Contributor(flask_restful.Resource):
         setdefault_ids(preprocess_dict_list)
 
         PreProcessManager.check_preprocesses_for_instance(preprocess_dict_list, 'contributor')
-        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, data_sources_dict_list, 'contributor')
+        existing_data_source_ids = [data_source.id for data_source in contributor.data_sources]
+        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids, 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)

@@ -555,6 +555,50 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', json.dumps(payload))
         assert raw.status_code == 400
         r = self.to_json(raw)
-        assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
+        assert r[
+                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
+            missing_id=missing_id)
+        assert r['message'] == "Invalid arguments"
+
+    @pytest.mark.parametrize("data_source_to_build_ids,preprocess_data_source_ids,missing_id", [
+        ([], ['test'], 'test'),
+        (['one-id'], ['another-id'], 'another-id'),
+        (['one-id'], ['one-id', 'another-id'], 'another-id'),
+        (['one-id', 'another-id'], ['third-id'], 'third-id'),
+        (['one-id', 'another-id'], ['another-id', 'third-id'], 'third-id')
+    ])
+    def test_patch_contrib_integrity_fail_data_source_ids(self, data_source_to_build_ids, preprocess_data_source_ids,
+                                                          missing_id):
+        data_sources = []
+        for data_source_to_build_id in data_source_to_build_ids:
+            data_sources.append({
+                "id": data_source_to_build_id,
+                "name": data_source_to_build_id,
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            })
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": data_sources
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 201)
+        payload = {
+            "preprocesses": [
+                {
+                    "type": "GtfsAgencyFile",
+                    "data_source_ids": preprocess_data_source_ids
+                }
+            ]
+        }
+        raw = self.patch('/contributors/id_test', json.dumps(payload))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r[
+                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
             missing_id=missing_id)
         assert r['message'] == "Invalid arguments"

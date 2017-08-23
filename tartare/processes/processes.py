@@ -87,8 +87,7 @@ class PreProcessManager(object):
 
     @classmethod
     def check_preprocess_data_source_integrity(cls, preprocess_dict_list: List[Dict[str, str]],
-                                               data_source_dict_list: List[Dict[str, str]], instance: str) -> None:
-        existing_data_source_ids = [data_source['id'] for data_source in data_source_dict_list if 'id' in data_source]
+                                               existing_data_source_ids: List[str], instance: str) -> None:
         for preprocess in preprocess_dict_list:
             if 'data_source_ids' in preprocess and preprocess['data_source_ids']:
                 for data_source_id in preprocess['data_source_ids']:
