@@ -78,10 +78,6 @@ class ComputeDirections(AbstractProcess):
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
-            if not data_source_to_process_context:
-                raise ParameterException(
-                    'data_source_id to preprocess "{data_source_id_to_process}" does not belong to contributor'.format(
-                        data_source_id_to_process=data_source_id_to_process))
             config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
             data_source_to_process_context.gridfs_id = self.__process_file_from_gridfs_id(
                 data_source_to_process_context.gridfs_id, config)

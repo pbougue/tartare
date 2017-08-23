@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -73,7 +74,6 @@ class TestContributorPreProcesses(TartareFixture):
         assert r["preprocesses"][0]["params"] == post_ps["params"]
 
     def test_preprocess_not_found(self):
-
         contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
         raw = self.post('/contributors', json.dumps(contributor))
         assert raw.status_code == 201, print(self.to_json(raw))
@@ -86,17 +86,27 @@ class TestContributorPreProcesses(TartareFixture):
         '''
         using /contributors endpoint
         '''
-        post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
-        post_data["preprocesses"] = [{
-            "id": "toto",
-            "type": "Ruspell",
-            "sequence": 1,
-            "data_source_ids": ["datasource_stif"],
-            "params": {
-                "bano_data_ids": ["bano_75", "bano_91"],
-                "config_file": "conf_yml"
-            }
-        }]
+        post_data = {
+            "id": "id_test", "name": "name_test", "data_prefix": "AAA",
+            "data_sources": [{
+                "id": "datasource_stif",
+                "name": "datasource_stif",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            }],
+            "preprocesses": [{
+                "id": "toto",
+                "type": "Ruspell",
+                "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
+                "params": {
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
+                }
+            }]
+        }
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
@@ -109,17 +119,27 @@ class TestContributorPreProcesses(TartareFixture):
         '''
         using /contributors endpoint
         '''
-        post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
-        post_data["preprocesses"] = [{
-            "id": "toto",
-            "type": "Ruspell",
-            "sequence": 1,
-            "data_source_ids": ["datasource_stif"],
-            "params": {
-                "bano_data_ids": ["bano_75", "bano_91"],
-                "config_file": "conf_yml"
-            }
-        }]
+        post_data = {
+            "id": "id_test", "name": "name_test", "data_prefix": "AAA",
+            "data_sources": [{
+                "id": "datasource_stif",
+                "name": "datasource_stif",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            }],
+            "preprocesses": [{
+                "id": "toto",
+                "type": "Ruspell",
+                "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
+                "params": {
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
+                }
+            }]
+        }
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
@@ -146,17 +166,27 @@ class TestContributorPreProcesses(TartareFixture):
         '''
         using /contributors endpoint
         '''
-        post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
-        post_data["preprocesses"] = [{
-            "id": "toto",
-            "type": "Ruspell",
-            "sequence": 1,
-            "data_source_ids": ["datasource_stif"],
-            "params": {
-                "bano_data_ids": ["bano_75", "bano_91"],
-                "config_file": "conf_yml"
-            }
-        }]
+        post_data = {
+            "id": "id_test", "name": "name_test", "data_prefix": "AAA",
+            "data_sources": [{
+                "id": "datasource_stif",
+                "name": "datasource_stif",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            }],
+            "preprocesses": [{
+                "id": "toto",
+                "type": "Ruspell",
+                "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
+                "params": {
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
+                }
+            }]
+        }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
@@ -196,17 +226,27 @@ class TestContributorPreProcesses(TartareFixture):
         '''
         using /contributors endpoint
         '''
-        post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
-        post_data["preprocesses"] = [{
-            "id": "toto",
-            "type": "Ruspell",
-            "sequence": 1,
-            "data_source_ids": ["datasource_stif"],
-            "params": {
-                "bano_data_ids": ["bano_75", "bano_91"],
-                "config_file": "conf_yml"
-            }
-        }]
+        post_data = {
+            "id": "id_test", "name": "name_test", "data_prefix": "AAA",
+            "data_sources": [{
+                "id": "datasource_stif",
+                "name": "datasource_stif",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            }],
+            "preprocesses": [{
+                "id": "toto",
+                "type": "Ruspell",
+                "sequence": 1,
+                "data_source_ids": ["datasource_stif"],
+                "params": {
+                    "bano_data_ids": ["bano_75", "bano_91"],
+                    "config_file": "conf_yml"
+                }
+            }]
+        }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
@@ -229,25 +269,34 @@ class TestContributorPreProcesses(TartareFixture):
         '''
         using /contributors endpoint
         '''
-        post_data = {"id": "id_test", "name":"name_test", "data_prefix":"AAA"}
-        post_data["preprocesses"] = [
-            {
-                "id": "toto",
-                "type": "Ruspell",
-                "sequence": 1,
-                "data_source_ids": ["datasource_stif"],
-                "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
+        post_data = {
+            "id": "id_test", "name": "name_test", "data_prefix": "AAA",
+            "data_sources": [{
+                "id": "datasource_stif",
+                "name": "datasource_stif",
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
                 }
-            },
-            {
-                "id": "titi",
-                "type": "ComputeDirections",
-                "sequence": 2,
-                "data_source_ids": ["gtfs"]
-            }
-        ]
+            }],
+            "preprocesses": [
+                {
+                    "id": "toto",
+                    "type": "Ruspell",
+                    "sequence": 1,
+                    "data_source_ids": ["datasource_stif"],
+                    "params": {
+                        "bano_data_ids": ["bano_75", "bano_91"],
+                        "config_file": "conf_yml"
+                    }
+                },
+                {
+                    "id": "titi",
+                    "type": "ComputeDirections",
+                    "sequence": 2,
+                    "data_source_ids": ["datasource_stif"]
+                }
+            ]}
 
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 201, print(self.to_json(raw))
@@ -258,7 +307,7 @@ class TestContributorPreProcesses(TartareFixture):
         new_preprocess = {
             "type": "HeadsignShortName",
             "sequence": 3,
-            "data_source_ids": ["ffff"]
+            "data_source_ids": ["datasource_stif"]
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/titi', json.dumps(new_preprocess))
