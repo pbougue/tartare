@@ -27,4 +27,4 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-DATA_FORMAT_VALUES = ["gtfs", "direction_config"]
+DATA_FORMAT_VALUES = ["gtfs", "direction_config", "ruspell_config"]

@@ -45,12 +45,12 @@ logger = logging.getLogger(__name__)
 
 
 def merge(contributor: Contributor, context: Context) -> Context:
-    logger.info("contributor_id : %s", contributor.id)
+    logger.info("Merge for contributor_id : %s", contributor.id)
     return context
 
 
 def postprocess(contributor: Contributor, context: Context) -> Context:
-    logger.info("contributor_id : %s", contributor.id)
+    logger.info("Post process for contributor_id : %s", contributor.id)
     return context
 
 

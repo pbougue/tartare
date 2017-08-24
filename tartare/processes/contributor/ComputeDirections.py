@@ -45,6 +45,12 @@ from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractProcess
 
 
+class Ruspell(AbstractProcess):
+    def do(self) -> Context:
+        logging.getLogger(__name__).debug('DO RUSPELL')
+        return self.context
+
+
 class ComputeDirections(AbstractProcess):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)

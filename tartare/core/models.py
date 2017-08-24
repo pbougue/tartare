@@ -105,6 +105,9 @@ class ValidityPeriod(object):
         self.start_date = start_date
         self.end_date = end_date
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class ValidityPeriodContainer(object):
     def __init__(self, validity_period: ValidityPeriod = None) -> None:
@@ -124,6 +127,9 @@ class License(object):
         self.name = name
         self.url = url
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class DataSource(object):
     def __init__(self, id: Optional[str]=None, name: Optional[str]=None,
@@ -134,6 +140,9 @@ class DataSource(object):
         self.data_format = data_format
         self.input = {} if not input else input
         self.license = license if license else License()
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
     @classmethod
     def get_number_of_historical(cls, data_source_id: str) -> int:
@@ -339,6 +348,9 @@ class PreProcess(GenericPreProcess):
         if coverage_id:
             return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
@@ -351,6 +363,9 @@ class Contributor(PreProcessContainer):
         self.name = name
         self.data_prefix = data_prefix
         self.data_sources = [] if data_sources is None else data_sources
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
     def save(self) -> None:
         raw = MongoContributorSchema().dump(self).data

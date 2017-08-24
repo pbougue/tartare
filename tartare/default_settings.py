@@ -10,20 +10,26 @@ from kombu import Exchange, Queue
 # the default vhost is "/" so the URL end with *two* slash
 # http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
 CELERY_BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
+CELERY_RESULT_BACKEND = 'rpc'
 
 CELERY_DEFAULT_QUEUE = 'tartare'
-
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
+CELERY_DEFAULT_ROUTING_KEY ='celery'
 
 # Temporary, to be deleted soon
 CELERYD_CONCURRENCY = 1
 
+exchange = Exchange(CELERY_DEFAULT_EXCHANGE)
+
 CELERY_QUEUES = (
-    Queue(CELERY_DEFAULT_QUEUE, Exchange(CELERY_DEFAULT_EXCHANGE), routing_key='celery'),
+    Queue(CELERY_DEFAULT_QUEUE, exchange=exchange, routing_key='celery'),
+    Queue('process_ruspell', exchange=exchange, routing_key='process.ruspell'),
 )
 
 
 # configuration of celery, don't edit
+CELERY_TASK_SERIALIZER = 'pickle'
+CELERY_RESULT_SERIALIZER = 'pickle'
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERYBEAT_SCHEDULE = {
@@ -43,7 +49,7 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 
 MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
 MONGO_DATABASE = os.getenv('MONGO_DATABASE', 'tartare')
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}'.format(host=MONGO_HOST, database=MONGO_DATABASE))
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}?connect=false'.format(host=MONGO_HOST, database=MONGO_DATABASE))
 TYR_UPLOAD_TIMEOUT = os.getenv('TYR_UPLOAD_TIMEOUT', 10)
 
 FUSIO_STOP_MAX_ATTEMPT_NUMBER = 100

@@ -40,6 +40,9 @@ class DataSourceContext:
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class ContributorContext(ValidityPeriodContainer):
     def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]] = None,
@@ -47,6 +50,9 @@ class ContributorContext(ValidityPeriodContainer):
         super().__init__(validity_period)
         self.contributor = contributor
         self.data_source_contexts = data_source_contexts if data_source_contexts else []
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class Context:
