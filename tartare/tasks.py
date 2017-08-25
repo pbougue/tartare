@@ -269,18 +269,18 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
 def launch(processes: list, context: Context) -> Context:
     if not processes:
         return context
-    tmp_processes = sorted(processes, key=lambda x: ['sequence'])
+    sorted_preprocesses = sorted(processes, key=lambda x: ['sequence'])
     actions = []
 
     # Do better
     def get_queue(preprocess: PreProcess) -> str:
         return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
 
-    if tmp_processes:
-        first_process = tmp_processes[0]
+    if sorted_preprocesses:
+        first_process = sorted_preprocesses[0]
         actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
 
-        for p in tmp_processes[1:]:
+        for p in sorted_preprocesses[1:]:
             actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
 
         return chain(actions).apply_async().get()
