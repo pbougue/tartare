@@ -283,7 +283,7 @@ def launch(processes: list, context: Context) -> Context:
         for p in tmp_processes[1:]:
             actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
 
-        return chain(actions).apply_async()
+        return chain(actions).apply_async().get()
 
 
 @celery.task
