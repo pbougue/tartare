@@ -31,7 +31,7 @@ import datetime
 import logging
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, List
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
 
@@ -266,24 +266,22 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
         raise self.retry(exc=exc)
 
 
-def launch(processes: list, context: Context) -> Context:
+def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    sorted_preprocesses = sorted(processes, key=lambda x: ['sequence'])
+    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
     actions = []
 
     # Do better
     def get_queue(preprocess: PreProcess) -> str:
         return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
 
-    if sorted_preprocesses:
-        first_process = sorted_preprocesses[0]
-        actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+    first_process = sorted_preprocesses[0]
+    actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
 
-        for p in sorted_preprocesses[1:]:
-            actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
-
-        return chain(actions).apply_async().get()
+    for p in sorted_preprocesses[1:]:
+        actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
+    return chain(actions).apply().get()
 
 
 @celery.task
