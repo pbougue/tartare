@@ -42,7 +42,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
 from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
-from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess
 
 
 class ComputeDirections(AbstractProcess):

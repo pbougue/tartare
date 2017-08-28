@@ -32,7 +32,7 @@ import requests
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource
-from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess
 from tartare.processes.fusio import Fusio
 
 

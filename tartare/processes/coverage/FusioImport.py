@@ -34,7 +34,7 @@ from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod
 from tartare.core.models import ValidityPeriodContainer
 from tartare.exceptions import IntegrityException, ValidityPeriodException
-from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess
 from tartare.processes.fusio import Fusio
 from tartare.validity_period_finder import ValidityPeriodFinder
 

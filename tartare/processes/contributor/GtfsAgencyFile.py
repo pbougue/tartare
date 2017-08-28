@@ -37,7 +37,7 @@ from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ParameterException
 from tartare.helper import get_content_file_from_grid_out_file
-from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess
 
 
 class GtfsAgencyFile(AbstractProcess):

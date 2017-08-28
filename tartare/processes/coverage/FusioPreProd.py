@@ -30,7 +30,7 @@
 import requests
 
 from tartare.core.context import Context
-from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess
 from tartare.processes.fusio import Fusio
 
 
