@@ -28,8 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import glob
-from os.path import dirname, basename, isfile
-
-modules = glob.glob(dirname(__file__) + "/*.py")
-__all__ = [basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
+from tartare.processes.coverage.coverage import FusioDataUpdate
+from tartare.processes.coverage.coverage import FusioExport
+from tartare.processes.coverage.coverage import FusioImport
+from tartare.processes.coverage.coverage import FusioPreProd

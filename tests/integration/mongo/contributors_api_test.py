@@ -498,7 +498,7 @@ class TestContributors(TartareFixture):
         assert "error" in r
         assert r["message"] == "Invalid arguments"
         assert r['error'] == "impossible to build preprocess BOB : " \
-                             "module tartare.processes.contributor has no class BOB"
+                             "modules within tartare.processes.contributor have no class BOB"
 
     def test_patch_contrib_preprocesses_gtfs_agency_file(self, contributor):
         """

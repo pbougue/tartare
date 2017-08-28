@@ -174,7 +174,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             + "module tartare.processes.coverage has no class bob"
+                             + "modules within tartare.processes.coverage have no class bob"
 
     def test_update_preprocess_with_unknown_type(self):
         '''
@@ -207,7 +207,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             + "module tartare.processes.coverage has no class bob"
+                             + "modules within tartare.processes.coverage have no class bob"
 
     def test_update_preprocesses_with_id(self):
         '''

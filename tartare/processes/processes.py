@@ -30,8 +30,8 @@
 import logging
 
 from tartare.processes.abstract_preocess import AbstractProcess
-from tartare.processes.contributor import *
-from tartare.processes.coverage import *
+from tartare.processes import contributor
+from tartare.processes import coverage
 from typing import Optional, List, Dict
 
 from tartare.core.context import Context

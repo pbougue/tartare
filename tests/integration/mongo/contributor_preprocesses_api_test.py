@@ -220,7 +220,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             "module tartare.processes.contributor has no class bob"
+                             "modules within tartare.processes.contributor have no class bob"
 
     def test_update_preprocess_with_unknown_type(self):
         '''
@@ -263,7 +263,7 @@ class TestContributorPreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             "module tartare.processes.contributor has no class bob"
+                             "modules within tartare.processes.contributor have no class bob"
 
     def test_update_preprocesses_with_id(self):
         '''
