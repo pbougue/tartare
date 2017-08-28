@@ -39,7 +39,7 @@ from tartare.core.models import ValidityPeriodContainer
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.helper import download_zip_file, get_filename
 from tartare.processes.fusio import Fusio
-from tartare.processes.processes import AbstractProcess
+from tartare.processes.abstract_preocess import AbstractProcess
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 

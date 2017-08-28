@@ -44,7 +44,7 @@ from tartare.core.models import PreProcess
 from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
 from tartare.helper import get_content_file_from_grid_out_file
-from tartare.processes.processes import AbstractProcess
+from tartare.processes.abstract_preocess import AbstractProcess
 
 
 class Ruspell(AbstractProcess):
