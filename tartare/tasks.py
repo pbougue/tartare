@@ -281,8 +281,7 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
 
     for p in sorted_preprocesses[1:]:
         actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
-    return chain(actions).apply().get()
-
+    return chain(actions).apply_async().get(disable_sync_subtasks=False)
 
 @celery.task
 def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:

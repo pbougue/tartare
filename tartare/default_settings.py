@@ -49,7 +49,7 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 
 MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
 MONGO_DATABASE = os.getenv('MONGO_DATABASE', 'tartare')
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}'.format(host=MONGO_HOST, database=MONGO_DATABASE))
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}?connect=false'.format(host=MONGO_HOST, database=MONGO_DATABASE))
 TYR_UPLOAD_TIMEOUT = os.getenv('TYR_UPLOAD_TIMEOUT', 10)
 
 FUSIO_STOP_MAX_ATTEMPT_NUMBER = 100
