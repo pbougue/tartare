@@ -42,7 +42,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
 from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
-from tartare.processes.contributor import GtfsAgencyFile
+from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files
 

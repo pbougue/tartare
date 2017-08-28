@@ -28,8 +28,10 @@
 # www.navitia.io
 
 import logging
-from abc import ABCMeta, abstractmethod
-from importlib import import_module
+
+from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes import contributor
+from tartare.processes import coverage
 from typing import Optional, List, Dict
 
 from tartare.core.context import Context
@@ -37,30 +39,19 @@ from tartare.core.models import PreProcess
 from tartare.http_exceptions import InvalidArguments
 
 
-class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        self.context = context
-        self.params = preprocess.params if preprocess else {}  # type: dict
-        self.data_source_ids = preprocess.data_source_ids if preprocess else []
-
-    @abstractmethod
-    def do(self) -> Context:
-        pass
-
-
 class PreProcessManager(object):
     @classmethod
     def get_preprocess_class(cls, preprocess_name: str, instance: str) -> type:
         try:
-            module = import_module('tartare.processes.{}'.format(instance))
-            return getattr(module, preprocess_name)
-        except AttributeError as e:
-            msg = 'impossible to build preprocess {} : module tartare.processes.{} has no class {}'.format(
+            if instance == 'contributor':
+                return getattr(contributor, preprocess_name)
+            elif instance == 'coverage':
+                return getattr(coverage, preprocess_name)
+            else:
+                raise InvalidArguments('unknown instance {instance}'.format(instance=instance))
+        except AttributeError:
+            msg = 'impossible to build preprocess {} : modules within tartare.processes.{} have no class {}'.format(
                 preprocess_name, instance, preprocess_name)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
-        except ImportError as e:
-            msg = 'cannot find class {} : {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
