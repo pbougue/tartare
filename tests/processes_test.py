@@ -35,7 +35,7 @@ from mock import mock
 from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod, PreProcess
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
-from tartare.processes.coverage.coverage import FusioImport, FusioPreProd, FusioExport
+from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from tests.utils import get_response
 
 
@@ -91,7 +91,7 @@ class TestFusioProcesses:
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
 
-    @mock.patch('tartare.processes.coverage.coverage.FusioExport.save_export')
+    @mock.patch('tartare.processes.coverage.FusioExport.save_export')
     @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')

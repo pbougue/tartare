@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,7 +26,17 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.coverage.FusioDataUpdate import FusioDataUpdate
-from tartare.processes.coverage.FusioExport import FusioExport
-from tartare.processes.coverage.FusioImport import FusioImport
-from tartare.processes.coverage.FusioPreProd import FusioPreProd
+
+import requests
+
+from tartare.core.context import Context
+from tartare.processes.abstract_preocess import AbstractProcess
+from tartare.processes.fusio import Fusio
+
+
+class FusioPreProd(AbstractProcess):
+    def do(self) -> Context:
+        fusio = Fusio(self.params.get("url"))
+        resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
+        fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
+        return self.context

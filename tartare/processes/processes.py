@@ -47,13 +47,11 @@ class PreProcessManager(object):
                 return getattr(contributor, preprocess_name)
             elif instance == 'coverage':
                 return getattr(coverage, preprocess_name)
+            else:
+                raise InvalidArguments('unknown instance {instance}'.format(instance=instance))
         except AttributeError:
             msg = 'impossible to build preprocess {} : modules within tartare.processes.{} have no class {}'.format(
                 preprocess_name, instance, preprocess_name)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
-        except ImportError as e:
-            msg = 'cannot find class {} : {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
