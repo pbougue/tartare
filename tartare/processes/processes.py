@@ -82,4 +82,17 @@ class PreProcessManager(object):
     @classmethod
     def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:
         for preprocess in preprocesses:
+            # will raise InvalidArguments if not valid
             PreProcessManager.get_preprocess_class(preprocess.get('type', ''), instance)
+
+    @classmethod
+    def check_preprocess_data_source_integrity(cls, preprocess_dict_list: List[Dict[str, str]],
+                                               existing_data_source_ids: List[str], instance: str) -> None:
+        for preprocess in preprocess_dict_list:
+            if 'data_source_ids' in preprocess and preprocess['data_source_ids']:
+                for data_source_id in preprocess['data_source_ids']:
+                    if data_source_id not in existing_data_source_ids:
+                        msg = "data_source referenced by id '{data_source_id}' in preprocess '{preprocess}' not found in {instance}".format(
+                            data_source_id=data_source_id, preprocess=preprocess['type'], instance=instance)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)

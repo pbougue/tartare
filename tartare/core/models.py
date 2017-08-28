@@ -672,7 +672,7 @@ class MongoPreProcessSchema(Schema):
     data_source_ids = fields.List(fields.String(), required=False)
 
     @post_load
-    def build_data_source(self, data: dict) -> PreProcess:
+    def build_preprocess(self, data: dict) -> PreProcess:
         return PreProcess(**data)
 
 

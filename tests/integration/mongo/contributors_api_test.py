@@ -29,6 +29,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+
+import pytest
+
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -199,7 +202,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
     def test_post_contrib_one_data_source_with_id(self):
@@ -225,7 +228,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
     def test_post_contrib_one_data_source_with_data_format(self):
@@ -282,7 +285,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 201
         raw = self.get('/contributors/id_test/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 2
         assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
 
@@ -306,11 +309,11 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
         r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
@@ -332,7 +335,7 @@ class TestContributors(TartareFixture):
         print("patching data with ", json.dumps(data_source_list))
         raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
@@ -369,7 +372,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
         new_data_source = {
             "id": r["contributors"][0]["data_sources"][1]["id"],
             "name": "name_modified",
@@ -393,7 +396,7 @@ class TestContributors(TartareFixture):
         print("patching data with ", json.dumps(data_source_list))
         raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 3
         patched_data_sources = r["contributors"][0]["data_sources"]
         assert patched_data_sources[0]["data_format"] == "gtfs"
@@ -411,7 +414,7 @@ class TestContributors(TartareFixture):
             {
                 "type": "Ruspell",
                 "sequence": 1,
-                "data_source_ids": ["datasource_stif"],
+                "data_source_ids": [],
                 "params": {
                     "bano_data_ids": ["bano_75", "bano_91"],
                     "config_file": "conf_yml"
@@ -427,12 +430,12 @@ class TestContributors(TartareFixture):
         ]
         raw = self.get('/contributors')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
         excepted = [p.get("type") for p in preprocesses]
@@ -447,7 +450,7 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "type": "Ruspell",
                 "sequence": 1,
-                "data_source_ids": ["datasource_stif"],
+                "data_source_ids": [],
                 "params": {
                     "bano_data_ids": ["bano_75", "bano_91"],
                     "config_file": "conf_yml"
@@ -456,12 +459,12 @@ class TestContributors(TartareFixture):
         ]
         raw = self.get('/contributors')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
         assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
@@ -484,7 +487,7 @@ class TestContributors(TartareFixture):
         ]
         raw = self.get('/contributors')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
@@ -507,22 +510,22 @@ class TestContributors(TartareFixture):
                 "sequence": 1,
                 "type": "GtfsAgencyFile",
                 "params": {
-                   "data_source_ids": ["tc-stif"],
+                    "data_source_ids": ["tc-stif"],
                     "data": {
-                      "agency_id": "112",
-                      "agency_name": "stif",
-                      "agency_url": "http://stif.com"
+                        "agency_id": "112",
+                        "agency_name": "stif",
+                        "agency_url": "http://stif.com"
                     }
                 }
             }
         ]
         raw = self.get('/contributors')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
-        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         assert r["contributors"][0]["preprocesses"][0]["id"] == preprocesses[0]["id"]
         assert r["contributors"][0]["preprocesses"][0]["sequence"] == preprocesses[0]["sequence"]
@@ -531,3 +534,71 @@ class TestContributors(TartareFixture):
                preprocesses[0]["params"]["data"]["agency_id"]
         assert r["contributors"][0]["preprocesses"][0]["params"]["data"]["agency_name"] == \
                preprocesses[0]["params"]["data"]["agency_name"]
+
+    @pytest.mark.parametrize("data_sources,data_source_ids,missing_id", [
+        ([], ['test'], 'test'),
+        ([{'id': 'one-id'}], ['another-id'], 'another-id'),
+        ([{'id': 'one-id'}], ['one-id', 'another-id'], 'another-id'),
+        ([{'id': 'one-id'}, {'id': 'another-id'}], ['third-id'], 'third-id'),
+        ([{'id': 'one-id'}, {'id': 'another-id'}], ['another-id', 'third-id'], 'third-id')
+    ])
+    def test_post_contrib_integrity_fail_data_source_ids(self, data_sources, data_source_ids, missing_id):
+        payload = {
+            "data_sources": data_sources,
+            "preprocesses": [
+                {
+                    "type": "GtfsAgencyFile",
+                    "data_source_ids": data_source_ids
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(payload))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r[
+                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
+            missing_id=missing_id)
+        assert r['message'] == "Invalid arguments"
+
+    @pytest.mark.parametrize("data_source_to_build_ids,preprocess_data_source_ids,missing_id", [
+        ([], ['test'], 'test'),
+        (['one-id'], ['another-id'], 'another-id'),
+        (['one-id'], ['one-id', 'another-id'], 'another-id'),
+        (['one-id', 'another-id'], ['third-id'], 'third-id'),
+        (['one-id', 'another-id'], ['another-id', 'third-id'], 'third-id')
+    ])
+    def test_patch_contrib_integrity_fail_data_source_ids(self, data_source_to_build_ids, preprocess_data_source_ids,
+                                                          missing_id):
+        data_sources = []
+        for data_source_to_build_id in data_source_to_build_ids:
+            data_sources.append({
+                "id": data_source_to_build_id,
+                "name": data_source_to_build_id,
+                "input": {
+                    "type": "url",
+                    "url": "http://stif.com/ods.zip"
+                }
+            })
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": data_sources
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 201)
+        payload = {
+            "preprocesses": [
+                {
+                    "type": "GtfsAgencyFile",
+                    "data_source_ids": preprocess_data_source_ids
+                }
+            ]
+        }
+        raw = self.patch('/contributors/id_test', json.dumps(payload))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert r[
+                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
+            missing_id=missing_id)
+        assert r['message'] == "Invalid arguments"
