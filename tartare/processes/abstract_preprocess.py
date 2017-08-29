@@ -41,3 +41,10 @@ class AbstractProcess(metaclass=ABCMeta):
     @abstractmethod
     def do(self) -> Context:
         pass
+
+
+class AbstractContributorProcess(metaclass=ABCMeta, AbstractProcess):
+    def __init__(self, context: Context, preprocess: PreProcess):
+        super().__init__(context, preprocess)
+        if self.context.contributor_contexts:
+            self.contributor_id = self.context.contributor_contexts[0].contributor.id

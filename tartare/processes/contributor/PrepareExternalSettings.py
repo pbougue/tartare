@@ -26,13 +26,24 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
 
 from tartare.core.context import Context
+from tartare.core.models import PreProcess
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class Ruspell(AbstractContributorProcess):
+class PrepareExternalSettings(AbstractContributorProcess):
+    contrib_trigram = "OIF"
+
+    def __init__(self, context: Context, preprocess: PreProcess):
+        super().__init__(context, preprocess)
+
+    def get_navitia_code_from_gtfs_stop_point(self, gtfs_stop_code):
+        return "{}:SP:{}".format(self.contrib_trigram, gtfs_stop_code[10:])
+
     def do(self) -> Context:
-        logging.getLogger(__name__).debug('DO RUSPELL')
+        for data_source_id_to_process in self.data_source_ids:
+            data_source_to_process_context = self.context.get_contributor_data_source_context(
+                contributor_id=self.contributor_id,
+                data_source_id=data_source_id_to_process)
         return self.context

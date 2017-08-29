@@ -42,16 +42,10 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
 from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class Ruspell(AbstractProcess):
-    def do(self) -> Context:
-        logging.getLogger(__name__).debug('DO RUSPELL')
-        return self.context
-
-
-class ComputeDirections(AbstractProcess):
+class ComputeDirections(AbstractContributorProcess):
     direction_id_normal = '0'
     direction_id_return = '1'
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
@@ -179,8 +173,3 @@ class ComputeDirections(AbstractProcess):
 
                 return self.__create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
                                                                     [trips_backup_file])
-
-
-class HeadsignShortName(AbstractProcess):
-    def do(self) -> Context:
-        return self.context

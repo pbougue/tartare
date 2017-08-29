@@ -28,9 +28,9 @@
 # www.navitia.io
 
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class HeadsignShortName(AbstractProcess):
+class HeadsignShortName(AbstractContributorProcess):
     def do(self) -> Context:
         return self.context

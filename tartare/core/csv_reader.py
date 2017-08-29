@@ -53,7 +53,7 @@ class CsvReader:
     def get_min(self, column: str) -> Any:
         return self.data.iloc[:, self.data.columns.get_loc(column)].min()
 
-    def get_columns_not_in_file(self, filename: str, columns: List[str], sep: str=',') -> List[str]:
+    def __get_columns_not_in_file(self, filename: str, columns: List[str], sep: str= ',') -> List[str]:
         if not columns:
             return []
         data = pd.read_csv(filename, sep=sep)
@@ -68,7 +68,7 @@ class CsvReader:
         with ZipFile(zip_file, 'r') as files_zip, tempfile.TemporaryDirectory() as tmp_path:
             files_zip.extract(filename, tmp_path)
             tmp_filename = '{}/{}'.format(tmp_path, filename)
-            not_in = self.get_columns_not_in_file(tmp_filename, usecols, sep)
+            not_in = self.__get_columns_not_in_file(tmp_filename, usecols, sep)
             if not_in:
                 raise InvalidFile("Header not found in file {}, Error : '{}' is not in list".
                                   format(filename, ", ".join(not_in)))
