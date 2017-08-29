@@ -38,7 +38,6 @@ from typing import Dict, TextIO
 from typing import List
 
 from tartare.core.context import Context
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
 from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
@@ -50,7 +49,6 @@ class ComputeDirections(AbstractContributorProcess):
     direction_id_return = '1'
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
-        self.gfs = GridFsHandler()
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
 
@@ -70,6 +68,8 @@ class ComputeDirections(AbstractContributorProcess):
     def do(self) -> Context:
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
         for data_source_id_to_process in self.data_source_ids:
+            # following data_source_to_process_context cannot be None because of integrity checks
+            # when creating contributor
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
@@ -126,18 +126,6 @@ class ComputeDirections(AbstractContributorProcess):
                     row['direction_id'] = trips_to_fix[row['trip_id']]
                 writer.writerow(row)
 
-    def __create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
-                                                backup_files: List[str] = []) -> str:
-        computed_file_name = 'gtfs-computed-directions'
-        for backup_file in backup_files:
-            os.remove(backup_file)
-        with tempfile.TemporaryDirectory() as tmp_out_dir_name:
-            new_archive_file_name = os.path.join(tmp_out_dir_name, 'gtfs-computed-directions')
-            new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_dir_name)
-            with open(new_archive_file_name, 'rb') as new_archive_file:
-                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
-                self.gfs.delete_file_from_gridfs(old_gridfs_id)
-                return new_gridfs_id
 
     def __get_stop_sequence_by_trip(self, tmp_dir_name: str, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
         trip_stop_sequences_with_weight = defaultdict(list)  # type: Dict[str, List[Dict[str, str]]]

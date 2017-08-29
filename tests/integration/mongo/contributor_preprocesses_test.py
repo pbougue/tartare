@@ -236,7 +236,6 @@ class TestComputeDirectionsProcess(TartareFixture):
             })
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
 
         if add_data_source_config:
@@ -244,7 +243,6 @@ class TestComputeDirectionsProcess(TartareFixture):
                 raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
                                 params={'file': file},
                                 headers={})
-                r = self.to_json(raw)
                 self.assert_sucessful_call(raw, 201)
 
         raw = self.post('/contributors/id_test/actions/export')
@@ -312,3 +310,97 @@ class TestComputeDirectionsProcess(TartareFixture):
                     new_zip_file.extractall(tmp_dir_name)
                     assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
                                         _get_file_fixture_full_path(expected_trips_file_name))
+
+
+class TestPrepareExternalSettings(TartareFixture):
+    def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
+        url = "http://{ip}/prepare_external_settings/stif_gtfs.zip".format(ip=init_http_download_server.ip_addr)
+        contrib_payload = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "preprocesses": [{
+                "sequence": 0,
+                "data_source_ids": ["ds-to-process"],
+                "type": "PrepareExternalSettings",
+                "params": params
+            }]
+        }
+        data_sources = []
+        data_sources.append(
+            {
+                "id": "ds-to-process",
+                "name": "ds-to-process",
+                "data_format": "gtfs",
+                "input": {"url": url}
+            })
+
+        for name, value in links.items():
+            data_sources.append(
+                {
+                    "id": value,
+                    "name": value,
+                    "data_format": name,
+                    "input": {}
+                })
+
+        contrib_payload['data_sources'] = data_sources
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+
+        for name, value in links.items():
+            with open(_get_file_fixture_full_path('prepare_external_settings/{id}.json'.format(id=value)), 'rb') as file:
+                raw = self.post('/contributors/id_test/data_sources/{id}/data_sets'.format(id=value),
+                                params={'file': file},
+                                headers={})
+                self.assert_sucessful_call(raw, 201)
+
+
+        raw = self.post('/contributors/id_test/actions/export')
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw, 201)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        return r['jobs'][0]
+
+    @pytest.mark.parametrize(
+        "params, expected_message", [
+            ({}, 'contributor_trigram missing in preprocess config'),
+            ({'contributor_trigram': 'OIF'}, 'links missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'links': {}}, 'link tr_perimeter missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'links': {'contributor_trigram': 'OIF', 'lines_referential': 'something'}},
+             'link tr_perimeter missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+             'link lines_referential missing in preprocess config'),
+        ])
+    def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
+                                                      expected_message):
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == expected_message, print(job)
+
+    @pytest.mark.parametrize(
+        "links, expected_message", [
+            ({}, 'link tr_perimeter_id is not a data_source id present in contributor'),
+            ({'tr_perimeter': 'tr_perimeter_id'}, 'link lines_referential_id is not a data_source id present in contributor'),
+            ({'lines_referential': 'lines_referential_id'}, 'link tr_perimeter_id is not a data_source id present in contributor'),
+        ])
+    def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
+                                                     expected_message):
+        params = {'contributor_trigram': 'OIF',
+                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == expected_message, print(job)
+
+    def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
+        params = {'contributor_trigram': 'OIF',
+                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
+                            'lines_referential': 'lines_referential_id'}}
+        links={'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+                                                          params, links)

@@ -32,3 +32,4 @@ from tartare.processes.contributor.ComputeDirections import ComputeDirections
 from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
 from tartare.processes.contributor.HeadsignShortName import HeadsignShortName
 from tartare.processes.contributor.Ruspell import Ruspell
+from tartare.processes.contributor.PrepareExternalSettings import PrepareExternalSettings

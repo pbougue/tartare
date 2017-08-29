@@ -59,9 +59,9 @@ class ValidityPeriodFinder(object):
         return self.end_date != date.min
 
     def _parse_calendar(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.calendar_filename,
-                              usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_filename,
+                                                usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
+                                                date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
 
         if self.reader.count_rows():
             self.start_date = self.reader.get_min('start_date').date()
@@ -104,10 +104,10 @@ class ValidityPeriodFinder(object):
                 break
 
     def _parse_calendar_dates(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.calendar_dates_filename,
-                              usecols=['date', 'exception_type'],
-                              parse_dates=['date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_filename,
+                                                usecols=['date', 'exception_type'],
+                                                parse_dates=['date'],
+                                                date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
 
         dates = self.reader.data[(self.reader.data.exception_type == 1)].date.tolist()
         self.add_dates(dates)
@@ -145,7 +145,7 @@ class ValidityPeriodFinder(object):
         return self.start_date, self.end_date
 
     def _parse_feed_info(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.feed_info_filename,
+        self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
                               usecols=['feed_start_date', 'feed_end_date'],
                               parse_dates=['feed_start_date', 'feed_end_date'],
                               date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
