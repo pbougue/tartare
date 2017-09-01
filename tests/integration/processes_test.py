@@ -42,24 +42,20 @@ def test_contributor_preprocess():
     map_test = {
         "Ruspell": contributor.Ruspell,
         "HeadsignShortName": contributor.HeadsignShortName,
-        "GtfsAgencyFile": contributor.GtfsAgencyFile
+        "GtfsAgencyFile": contributor.GtfsAgencyFile,
+        "PrepareExternalSettings": contributor.PrepareExternalSettings,
+        "ComputeDirections": contributor.ComputeDirections,
     }
 
     # Contributor Preprocess
     for key, value in map_test.items():
-        assert isinstance(PreProcessManager.get_preprocess(Context('contributor'), PreProcess(type=key)), value)
+        with app.app_context():
+            assert isinstance(PreProcessManager.get_preprocess(Context('contributor'), PreProcess(type=key)), value)
     # Coverage Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
             PreProcessManager.get_preprocess(Context('coverage'), PreProcess(type=key))
         assert str(excinfo.typename) == "InvalidArguments"
-
-
-def test_compute_directions_preprocess():
-    with app.app_context():
-        assert isinstance(PreProcessManager.get_preprocess(Context('contributor'),
-                                                           PreProcess(type='ComputeDirections')), ComputeDirections)
-
 
 def test_coverage_preprocess():
     map_test = {

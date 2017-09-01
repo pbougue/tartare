@@ -28,6 +28,7 @@
 # www.navitia.io
 
 import logging
+import os
 import tempfile
 from abc import ABCMeta
 from typing import List, Any, Optional
@@ -94,13 +95,14 @@ class CsvReader(AbstractPandaReader):
             tmp_filename = '{}/{}'.format(tmp_path, filename)
             self.load_csv_data(tmp_filename, sep, usecols, **kwargs)
 
-    def load_csv_data(self, csv_filename, sep: str = ',', usecols: Optional[List[str]] = None,
+    def load_csv_data(self, csv_full_filename, sep: str = ',', usecols: Optional[List[str]] = None,
                       **kwargs: Any) -> None:
-        not_in = self.__get_columns_not_in_file(csv_filename, usecols, sep)
+        filename = csv_full_filename.split(os.path.sep)[-1]
+        not_in = self.__get_columns_not_in_file(csv_full_filename, usecols, sep)
         if not_in:
             raise InvalidFile("Header not found in file {}, Error : '{}' is not in list".
-                              format(csv_filename, ", ".join(not_in)))
+                              format(filename, ", ".join(not_in)))
         try:
-            self.data = pd.read_csv(csv_filename, sep=sep, usecols=usecols, **kwargs)
+            self.data = pd.read_csv(csv_full_filename, sep=sep, usecols=usecols, **kwargs)
         except ValueError as e:
-            raise InvalidFile('Impossible to parse file {}, Error {}'.format(csv_filename, str(e)))
+            raise InvalidFile('Impossible to parse file {}, Error {}'.format(filename, str(e)))

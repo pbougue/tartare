@@ -126,7 +126,6 @@ class ComputeDirections(AbstractContributorProcess):
                     row['direction_id'] = trips_to_fix[row['trip_id']]
                 writer.writerow(row)
 
-
     def __get_stop_sequence_by_trip(self, tmp_dir_name: str, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
         trip_stop_sequences_with_weight = defaultdict(list)  # type: Dict[str, List[Dict[str, str]]]
         with open(os.path.join(tmp_dir_name, 'stop_times.txt'), 'r') as stop_times_file:
@@ -159,5 +158,5 @@ class ComputeDirections(AbstractContributorProcess):
                     rules = self.__get_rules(trip_to_route, trip_stop_sequences, config)
                     self.__apply_rules(trips_file_name, trips_file_read, rules)
 
-                return self.__create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
-                                                                    [trips_backup_file])
+                return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
+                                                                  [trips_backup_file])
