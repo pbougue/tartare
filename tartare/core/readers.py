@@ -29,25 +29,23 @@
 
 import logging
 import tempfile
+from abc import ABCMeta
 from typing import List, Any, Optional
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
+import json
 
 from tartare.exceptions import InvalidFile
 
 
-class CsvReader:
+class AbstractPandaReader(metaclass=ABCMeta):
     def __init__(self) -> None:
         self.data = None  # type: pd.DataFrame
 
     def count_rows(self) -> int:
         """gives number of rows"""
         return self.data.shape[0]
-
-    def file_in_zip_files(self, zip_file: str, filename: str) -> bool:
-        with ZipFile(zip_file, 'r') as files_zip:
-            return filename in files_zip.namelist()
 
     def get_max(self, column: str) -> Any:
         return self.data.iloc[:, self.data.columns.get_loc(column)].max()
@@ -60,6 +58,23 @@ class CsvReader:
         columns_used.append('temp')
         route_and_nav_code_records = self.data.loc[:, columns_used].to_dict('records')
         return list(map(lambda row: {row[key_column]: row['temp']}, route_and_nav_code_records))
+
+    def get_group_by_to_dict(self, columns: List[str], id: str) -> dict:
+        return self.data.groupby(columns)[id].count().to_dict()
+
+
+class JsonReader(AbstractPandaReader):
+    def load_json_data_from_file(self, json_file) -> None:
+        try:
+           self.data = pd.io.json.json_normalize(json.load(json_file))
+        except ValueError as e:
+            raise InvalidFile('Impossible to parse file {}, Error {}'.format(json_file.filename, str(e)))
+
+
+class CsvReader(AbstractPandaReader):
+    def file_in_zip_files(self, zip_file: str, filename: str) -> bool:
+        with ZipFile(zip_file, 'r') as files_zip:
+            return filename in files_zip.namelist()
 
     def __get_columns_not_in_file(self, filename: str, columns: List[str], sep: str = ',') -> List[str]:
         if not columns:

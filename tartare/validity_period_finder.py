@@ -34,7 +34,7 @@ from typing import Tuple, List
 import numpy as np
 from pandas._libs.tslib import NaTType
 
-from tartare.core.csv_reader import CsvReader
+from tartare.core.readers import CsvReader
 import pandas as pd
 
 from tartare.core.models import ValidityPeriod, ValidityPeriodContainer

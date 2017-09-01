@@ -58,7 +58,7 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
         self.gfs = GridFsHandler()
 
 
-    def __create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
+    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
                                                 backup_files: List[str] = []) -> str:
         computed_file_name = 'gtfs-computed-directions'
         for backup_file in backup_files:
