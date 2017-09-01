@@ -35,6 +35,7 @@ otherwise values in the preprocess params are filled
 
 ```json
 {
+    "id": "agency-id",
     "type": "GtfsAgencyFile",
     "sequence": 1,
     "data_source_ids": ["id1", "id2"],

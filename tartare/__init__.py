@@ -69,7 +69,7 @@ class ContextTask(Task):
         with app.app_context():
             return Task.__call__(self, *args, **kwargs)
 
-celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
+celery = Celery(app.import_name)
 celery.conf.update(app.config)
 celery.Task = ContextTask
 

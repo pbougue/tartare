@@ -31,7 +31,7 @@ import datetime
 import logging
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, List
 from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
 
@@ -47,7 +47,7 @@ from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
@@ -266,19 +266,34 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
         raise self.retry(exc=exc)
 
 
-def launch(processes: list, context: Context) -> Context:
+def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    tmp_processes = sorted(processes, key=lambda x: ['sequence'])
-    for p in tmp_processes:
-        logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=p.type))
-        context = PreProcessManager.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
-    return context
+    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    actions = []
+
+    # Do better
+    def get_queue(preprocess: PreProcess) -> str:
+        return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
+
+    first_process = sorted_preprocesses[0]
+    actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+
+    for p in sorted_preprocesses[1:]:
+        actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
+    return chain(actions).apply_async().get(disable_sync_subtasks=False)
+
+@celery.task
+def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:
+    process_instance = PreProcessManager.get_preprocess(context, preprocess=preprocess)
+    logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=preprocess.type))
+    return process_instance.do()
 
 
 @celery.task()
 def cleanup_context(context: Context) -> None:
     context.cleanup()
+
 
 @celery.task()
 def automatic_update() -> None:

@@ -56,17 +56,16 @@ class PreProcessManager(object):
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: Context, preprocess_name: str,
-                       preprocess: Optional[PreProcess] = None) -> AbstractProcess:
+    def get_preprocess(cls, context: Context, preprocess: PreProcess) -> AbstractProcess:
         """
         :param preprocess_name: Ruspell, FusioImport, ....
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
-        attr = cls.get_preprocess_class(preprocess_name, context.instance)
+        attr = cls.get_preprocess_class(preprocess.type, context.instance)
         try:
             return attr(context, preprocess)  # call to the contructor, with all the args
         except TypeError as e:
-            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess_name, str(e))
+            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess.type, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
