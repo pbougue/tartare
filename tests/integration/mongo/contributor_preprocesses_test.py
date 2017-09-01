@@ -369,15 +369,13 @@ class TestPrepareExternalSettings(TartareFixture):
     @pytest.mark.parametrize(
         "params, expected_message", [
             ({}, 'contributor_trigram missing in preprocess config'),
-            ({'object_system': 'SIRI_STIF'}, 'contributor_trigram missing in preprocess config'),
-            ({'contributor_trigram': 'OIF'}, 'object_system missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF'}, 'links missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF', 'links': {}},
+            ({'contributor_trigram': 'OIF'}, 'links missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'links': {}},
              'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+            ({'contributor_trigram': 'OIF',
               'links': {'contributor_trigram': 'OIF', 'lines_referential': 'something'}},
              'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+            ({'contributor_trigram': 'OIF',
               'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
              'link lines_referential missing in preprocess config'),
         ])
@@ -398,7 +396,7 @@ class TestPrepareExternalSettings(TartareFixture):
         ])
     def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
                                                      expected_message):
-        params = {'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+        params = {'contributor_trigram': 'OIF',
                   'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
                             'lines_referential': 'lines_referential_id'}}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
@@ -407,7 +405,7 @@ class TestPrepareExternalSettings(TartareFixture):
         assert job['error_message'] == expected_message, print(job)
 
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
-        params = {'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+        params = {'contributor_trigram': 'OIF',
                   'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
                             'lines_referential': 'lines_referential_id'}}
         links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}

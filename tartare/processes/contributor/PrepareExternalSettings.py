@@ -158,11 +158,8 @@ class PrepareExternalSettings(AbstractContributorProcess):
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
 
     def __check_config(self):
-        config_to_check = ['contributor_trigram', 'object_system']
-        for config_param in config_to_check:
-            if config_param not in self.params:
-                raise ParameterException(
-                    '{config_param} missing in preprocess config'.format(config_param=config_param))
+        if 'contributor_trigram' not in self.params:
+            raise ParameterException('contributor_trigram missing in preprocess config')
         links_to_check = ['tr_perimeter', 'lines_referential']
         if 'links' not in self.params:
             raise ParameterException('links missing in preprocess config')
