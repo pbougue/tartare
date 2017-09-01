@@ -49,6 +49,38 @@ otherwise values in the preprocess params are filled
 }
 ```
 
+### Ruspell
+This preprocess perform a spell-check on csv file.
+
+see [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell)
+
+#### Parameters in params field
+| Field | Type | Description | Mandatory | Default |
+| ----- | :--: | :---------: | :-------: | :-----: |
+| links.config | string | Ruspell config file datasource identifier | yes ||
+| links.bano | array | List of ids for bano file data sources | yes ||
+| binary_path | string | Path to ruspell bainary file | no | /usr/src/app/bin/ruspell (path in docker worker-ruspell) |
+
+
+```json
+{
+    "id": "ruspell-id",
+    "type": "Ruspell",
+    "sequence": 1,
+    "data_source_ids": ["id1", "id2"],
+    "params": {
+        "links" : {
+            "config" : "data_source_id_of_ruspell_config",
+            "bano" : [
+                "data_source_id_of_bano-1",
+                "data_source_id_of_bano-2"
+            ]
+        },
+        "binary_path" : "/ruspell_binary_path"
+    }
+}
+```
+
 ## Coverage processes
 List of preprocesses for coverages
 ### FusioDataUpdate
@@ -143,19 +175,3 @@ curl -i -X POST \
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.
 The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source is configured as "computed".
 If the data source is configured as "manual" or "url", the preprocess will be skipped. 
-
-
-#### FusioSendPtExternalSettings (Coverage preprocess)
-```json
-{
-   "id":"fusio_export",
-   "params":{
-      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll"
-   },
-   "type":"FusioSendPtExternalSettings",
-   "sequence":4
-}
-```
-
-This preprocess will use the "computed" data source from contributor export and send the csv files to fusio
-For now the multi-contributor coverage is not supported so no merge will be done

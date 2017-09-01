@@ -28,6 +28,7 @@
 # www.navitia.io
 from tartare import app
 from tartare.core.models import PreProcess
+from tartare.processes.contributor import ComputeDirections
 from tartare.processes.coverage import FusioPreProd
 from tartare.processes.processes import PreProcessManager
 from tartare.processes import contributor
@@ -46,15 +47,22 @@ def test_contributor_preprocess():
         "ComputeDirections": contributor.ComputeDirections,
     }
 
-    # Contributor Preprocess
-    for key, value in map_test.items():
-        with app.app_context():
+    with app.app_context():
+        # Contributor Preprocess
+        for key, value in map_test.items():
             assert isinstance(PreProcessManager.get_preprocess(Context('contributor'), PreProcess(type=key)), value)
     # Coverage Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
             PreProcessManager.get_preprocess(Context('coverage'), PreProcess(type=key))
         assert str(excinfo.typename) == "InvalidArguments"
+
+
+def test_compute_directions_preprocess():
+    with app.app_context():
+        assert isinstance(PreProcessManager.get_preprocess(Context('contributor'),
+                                                           PreProcess(type='ComputeDirections')), ComputeDirections)
+
 
 def test_coverage_preprocess():
     map_test = {

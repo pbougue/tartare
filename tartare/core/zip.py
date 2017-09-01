@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -26,43 +26,28 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Optional
+
+import logging
+import os
+import shutil
+from typing import Callable, Any
+from zipfile import is_zipfile, ZipFile
+from tartare.exceptions import InvalidFile
+
+logger = logging.getLogger(__name__)
 
 
-class ColumnNotFound(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
-        self.message = message
+def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
+                          new_zip_path: str, f: Callable[..., Any], *args: Any) -> str:
+    if not is_zipfile(zip_file):
+        msg = '{} is not a zip file or does not exist.'.format(zip_file)
+        logger.error(msg)
+        raise InvalidFile(msg)
+    with ZipFile(zip_file, 'r') as files_zip:
+        files_zip.extractall(extract_zip_path)
+        data_source_path = '{}/{}'.format(extract_zip_path, filename)
 
+        f(data_source_path, *args)
 
-class FileNotFound(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
-        self.message = message
-
-
-class InvalidFile(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
-        self.message = message
-
-
-class ProtocolException(Exception):
-    pass
-
-
-class FusioException(Exception):
-    pass
-
-class ValidityPeriodException(Exception):
-    pass
-
-class IntegrityException(Exception):
-    pass
-
-
-class ParameterException(Exception):
-    pass
-
-
-class CommandRuntimeException(Exception):
-    def __init__(self, command: str, message: Optional[str]='') -> None:
-        message = '{}: {}'.format(command, message)
-        super(CommandRuntimeException, self).__init__(message)
+        new_archive_file_name = os.path.join(new_zip_path, 'gtfs-ruspell')
+        return shutil.make_archive(new_archive_file_name, 'zip', extract_zip_path)
