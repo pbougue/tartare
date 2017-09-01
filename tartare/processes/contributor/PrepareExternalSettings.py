@@ -64,10 +64,10 @@ class PrepareExternalSettings(AbstractContributorProcess):
             "object_id": object_id
         })
 
-    def __get_navitia_code_from_gtfs_stop_point(self, gtfs_stop_code):
+    def __get_navitia_code_from_gtfs_stop_point(self, gtfs_stop_code: str) -> str:
         return "{}:SP:{}".format(self.params.get('contributor_trigram'), gtfs_stop_code[10:])
 
-    def __init_route_id_to_navitia_code_mapping(self, zip_file_name):
+    def __init_route_id_to_navitia_code_mapping(self, zip_file_name: str) -> None:
         columns_used = ['route_id', 'agency_id']
         routes_reader = CsvReader()
         routes_reader.load_csv_data_from_zip_file(zip_file_name, "routes.txt", usecols=columns_used)
@@ -81,7 +81,7 @@ class PrepareExternalSettings(AbstractContributorProcess):
                                          route_id, navitia_code in row.items()}
 
     def __create_rules_deactivate_realtime_for_routes_from_gtfs(self, tmp_dir_name: str,
-                                                              writer_properties: csv.DictWriter):
+                                                              writer_properties: csv.DictWriter) -> None:
         routes_file_name = os.path.join(tmp_dir_name, "routes.txt")
         routes_reader = CsvReader()
         routes_reader.load_csv_data(routes_file_name, usecols=['route_id'])
@@ -92,7 +92,7 @@ class PrepareExternalSettings(AbstractContributorProcess):
                 for rid in [route_id, route_id + "_R"]:
                     self.__write_row_for_properties(writer_properties, "route", "realtime_deactivation", "True", rid)
 
-    def __create_rules_from_stop_extensions(self, tmp_dir_name: str, writer_codes: csv.DictWriter):
+    def __create_rules_from_stop_extensions(self, tmp_dir_name: str, writer_codes: csv.DictWriter) -> None:
         stop_extensions_file_name = os.path.join(tmp_dir_name, "stop_extensions.txt")
         stop_extensions_reader = CsvReader()
         stop_extensions_reader.load_csv_data(stop_extensions_file_name)
@@ -103,7 +103,7 @@ class PrepareExternalSettings(AbstractContributorProcess):
             self.__write_row_for_codes(writer_codes, "stop_point", self.siri_stif_object_system, object_id,
                                        'STIF:StopPoint:Q:{}:'.format(row[self.stop_extensions_object_code_column]))
 
-    def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter):
+    def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter) -> None:
         lines_referential_data_source_context = self.context.get_contributor_data_source_context(
             self.contributor_id, self.params['links'].get('lines_referential'))
         reader = JsonReader()
@@ -123,7 +123,7 @@ class PrepareExternalSettings(AbstractContributorProcess):
             logging.getLogger(__name__).warning(
                 '{nb} lines in Codifligne are not in the GTFS'.format(nb=nb_lines_not_in_gtfs))
 
-    def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter):
+    def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter) -> None:
         tr_perimeter_data_source_context = self.context.get_contributor_data_source_context(
             self.contributor_id, self.params['links'].get('tr_perimeter'))
         reader = JsonReader()
@@ -157,7 +157,7 @@ class PrepareExternalSettings(AbstractContributorProcess):
 
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
 
-    def __check_config(self):
+    def __check_config(self) -> None:
         if 'contributor_trigram' not in self.params:
             raise ParameterException('contributor_trigram missing in preprocess config')
         links_to_check = ['tr_perimeter', 'lines_referential']

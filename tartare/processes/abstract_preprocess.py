@@ -51,7 +51,7 @@ class AbstractProcess(metaclass=ABCMeta):
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id

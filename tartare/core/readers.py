@@ -31,11 +31,13 @@ import logging
 import os
 import tempfile
 from abc import ABCMeta
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Callable
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 import json
+
+from gridfs import GridOut
 
 from tartare.exceptions import InvalidFile
 
@@ -54,7 +56,7 @@ class AbstractPandaReader(metaclass=ABCMeta):
     def get_min(self, column: str) -> Any:
         return self.data.iloc[:, self.data.columns.get_loc(column)].min()
 
-    def get_mapping_from_columns(self, key_column: str, value_apply_function, columns_used: List[str]):
+    def get_mapping_from_columns(self, key_column: str, value_apply_function: Callable, columns_used: List[str]) -> List[dict]:
         self.data['temp'] = self.data.loc[:, columns_used].apply(value_apply_function, axis=1)
         columns_used.append('temp')
         route_and_nav_code_records = self.data.loc[:, columns_used].to_dict('records')
@@ -65,7 +67,7 @@ class AbstractPandaReader(metaclass=ABCMeta):
 
 
 class JsonReader(AbstractPandaReader):
-    def load_json_data_from_file(self, json_file) -> None:
+    def load_json_data_from_file(self, json_file: GridOut) -> None:
         try:
            self.data = pd.io.json.json_normalize(json.load(json_file))
         except ValueError as e:
@@ -95,7 +97,7 @@ class CsvReader(AbstractPandaReader):
             tmp_filename = '{}/{}'.format(tmp_path, filename)
             self.load_csv_data(tmp_filename, sep, usecols, **kwargs)
 
-    def load_csv_data(self, csv_full_filename, sep: str = ',', usecols: Optional[List[str]] = None,
+    def load_csv_data(self, csv_full_filename: str, sep: str = ',', usecols: Optional[List[str]] = None,
                       **kwargs: Any) -> None:
         filename = csv_full_filename.split(os.path.sep)[-1]
         not_in = self.__get_columns_not_in_file(csv_full_filename, usecols, sep)
