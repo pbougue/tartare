@@ -107,10 +107,13 @@ def _get_file_fixture_full_path(rel_path):
     return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'tests/fixtures'), rel_path)
 
 
-def assert_zip_contains_only_txt_files(zip_file):
+def assert_zip_contains_only_files_with_extensions(zip_file, extensions):
     for zip_info in zip_file.filelist:
-        assert zip_info.filename[-3:] == 'txt', print(
-            'file {filename} should not be in zip archive (only txt files allowed)'.format(filename=zip_info.filename))
+        assert zip_info.filename[-3:] in extensions, print(
+            'file {filename} should not be in zip archive (only {extensions} files allowed)'.format(filename=zip_info.filename, extensions=','.join(extensions)))
+
+def assert_zip_contains_only_txt_files(zip_file):
+    assert_zip_contains_only_files_with_extensions(zip_file, ['txt'])
 
 
 def assert_files_equals(result_file_name, expected_file_name):

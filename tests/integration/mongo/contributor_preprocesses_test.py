@@ -44,7 +44,8 @@ from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
 from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files
+from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
+    assert_zip_contains_only_files_with_extensions
 
 
 class TestGtfsAgencyProcess:
@@ -314,7 +315,7 @@ class TestComputeDirectionsProcess(TartareFixture):
 
 class TestPrepareExternalSettings(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
-        url = "http://{ip}/prepare_external_settings/stif_gtfs.zip".format(ip=init_http_download_server.ip_addr)
+        url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(ip=init_http_download_server.ip_addr)
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -349,12 +350,12 @@ class TestPrepareExternalSettings(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
         for name, value in links.items():
-            with open(_get_file_fixture_full_path('prepare_external_settings/{id}.json'.format(id=value)), 'rb') as file:
+            with open(_get_file_fixture_full_path('prepare_external_settings/{id}.json'.format(id=value)),
+                      'rb') as file:
                 raw = self.post('/contributors/id_test/data_sources/{id}/data_sets'.format(id=value),
                                 params={'file': file},
                                 headers={})
                 self.assert_sucessful_call(raw, 201)
-
 
         raw = self.post('/contributors/id_test/actions/export')
         r = self.to_json(raw)
@@ -368,11 +369,16 @@ class TestPrepareExternalSettings(TartareFixture):
     @pytest.mark.parametrize(
         "params, expected_message", [
             ({}, 'contributor_trigram missing in preprocess config'),
-            ({'contributor_trigram': 'OIF'}, 'links missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'links': {}}, 'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'links': {'contributor_trigram': 'OIF', 'lines_referential': 'something'}},
+            ({'object_system': 'SIRI_STIF'}, 'contributor_trigram missing in preprocess config'),
+            ({'contributor_trigram': 'OIF'}, 'object_system missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF'}, 'links missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF', 'links': {}},
              'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+              'links': {'contributor_trigram': 'OIF', 'lines_referential': 'something'}},
+             'link tr_perimeter missing in preprocess config'),
+            ({'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+              'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
              'link lines_referential missing in preprocess config'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
@@ -385,22 +391,40 @@ class TestPrepareExternalSettings(TartareFixture):
     @pytest.mark.parametrize(
         "links, expected_message", [
             ({}, 'link tr_perimeter_id is not a data_source id present in contributor'),
-            ({'tr_perimeter': 'tr_perimeter_id'}, 'link lines_referential_id is not a data_source id present in contributor'),
-            ({'lines_referential': 'lines_referential_id'}, 'link tr_perimeter_id is not a data_source id present in contributor'),
+            ({'tr_perimeter': 'tr_perimeter_id'},
+             'link lines_referential_id is not a data_source id present in contributor'),
+            ({'lines_referential': 'lines_referential_id'},
+             'link tr_perimeter_id is not a data_source id present in contributor'),
         ])
     def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
                                                      expected_message):
-        params = {'contributor_trigram': 'OIF',
-                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        params = {'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
+                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
+                            'lines_referential': 'lines_referential_id'}}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
-        params = {'contributor_trigram': 'OIF',
+        params = {'contributor_trigram': 'OIF', 'object_system': 'SIRI_STIF',
                   'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
                             'lines_referential': 'lines_referential_id'}}
-        links={'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
+        links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
                                                           params, links)
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_contributor_export', print(job)
+        assert job['error_message'] == '', print(job)
+
+        with app.app_context():
+            export = ContributorExport.get_last('id_test')
+            new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
+            with ZipFile(new_zip_file, 'r') as new_zip_file:
+                with tempfile.TemporaryDirectory() as tmp_dir_name:
+                    assert_zip_contains_only_files_with_extensions(new_zip_file, ['txt', 'csv'])
+                    new_zip_file.extractall(tmp_dir_name)
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_objects_codes.csv'),
+                                        _get_file_fixture_full_path('prepare_external_settings/expected_fusio_objects_codes.csv'))
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.csv'),
+                                        _get_file_fixture_full_path('prepare_external_settings/expected_fusio_object_properties.csv'))

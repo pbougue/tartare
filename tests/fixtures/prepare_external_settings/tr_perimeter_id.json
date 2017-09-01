@@ -1,0 +1,6 @@
+[
+  {"datasetid": "perimetre-tr-plateforme-stif", "fields": {"codifligne_line_externalcode": "800:C", "lineref": "STIF:Line::C00594:"}},
+  {"datasetid": "perimetre-tr-plateforme-stif", "fields": {"codifligne_line_externalcode": "800:C", "lineref": "STIF:Line::C01851"}},
+  {"datasetid": "perimetre-tr-plateforme-stif", "fields": {"codifligne_line_externalcode": "800:D", "lineref": "STIF:Line::C01728:"}},
+  {"datasetid": "perimetre-tr-plateforme-stif", "fields": {"codifligne_line_externalcode": "800:D", "lineref": "STIF:Line::C01852:"}}
+]
