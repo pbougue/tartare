@@ -30,6 +30,8 @@ import ftplib
 from abc import ABCMeta, abstractmethod
 import logging
 import requests
+
+from tartare import app
 from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.exceptions import ProtocolException
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -52,14 +54,15 @@ class AbstractProtocol(metaclass=ABCMeta):
 
 class HttpProtocol(AbstractProtocol):
     def publish(self, file: BinaryIO, filename: str) -> None:
+        timeout = app.config.get('TYR_UPLOAD_TIMEOUT')
         logger.info('publishing file {filename} on {url}...'.format(filename=filename, url=self.url))
         if self.options:
             response = requests.post(self.url,
                                      auth=(self.options['authent']['username'], self.options['authent']['password']),
-                                     files={'file': file, 'filename': filename}, timeout=10)
+                                     files={'file': file, 'filename': filename}, timeout=timeout)
         else:
             response = requests.post(self.url, files={'file': file, 'filename': filename},
-                                     timeout=10)
+                                     timeout=timeout)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
                 url=self.url, status_code=response.status_code)
