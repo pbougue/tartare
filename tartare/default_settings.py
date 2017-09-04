@@ -9,7 +9,7 @@ from kombu import Exchange, Queue
 # amqp://<user>:<password>@<host>:<port>/<vhost>
 # the default vhost is "/" so the URL end with *two* slash
 # http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
-CELERY_BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
+BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
 CELERY_RESULT_BACKEND = 'rpc'
 
 CELERY_DEFAULT_QUEUE = 'tartare'
