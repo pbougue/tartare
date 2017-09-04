@@ -66,3 +66,6 @@ class TartareFixture(object):
         except ValueError as e:
             return False
         return True
+
+    def assert_sucessful_call(self, raw, status_code_expected=200):
+        assert raw.status_code == status_code_expected, print(self.to_json(raw))

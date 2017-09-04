@@ -27,30 +27,30 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import datetime
 import logging
 import os
-import datetime
-from typing import Optional
+import tempfile
+from typing import Optional, List
+from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
+
 from billiard.einfo import ExceptionInfo
+from celery import chain
 from celery.task import Task
 
+import tartare
 from tartare import celery
 from tartare.core import calendar_handler, models
-from tartare.core.calendar_handler import GridCalendarData
-from tartare.core.context import Context
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
-from tartare.helper import upload_file
-import tempfile
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
-from tartare.processes.processes import PreProcessManager
+from tartare.core.calendar_handler import GridCalendarData
+from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor
-from celery import chain
-from urllib.error import ContentTooShortError, HTTPError, URLError
-import tartare
-
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
+from tartare.helper import upload_file
+from tartare.processes.processes import PreProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
         calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
 
 
-class CallbackTask(tartare.celery.Task):
+class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
         self.update_job(args, exc)
         self.send_mail(args)
@@ -96,7 +96,7 @@ def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type:
     file = grifs_handler.get_file_from_gridfs(file_id)
     logging.debug('file: %s', file)
     logger.info('trying to send %s to %s', file.filename, url)
-    #TODO: how to handle timeout?
+    # TODO: how to handle timeout?
     try:
         response = upload_file(url, file.filename, file)
         if response.status_code != 200:
@@ -185,13 +185,20 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
+def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> None:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
+        logger.info('contributor_export')
         # Launch fetch all dataset for contributor
-        context = contributor_export_functions.fetch_datasets(contributor, context)
-        if context.contributor_has_datasources(contributor.id):
+        nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
+            contributor)
+        logger.info('number of data_sources updated for contributor {cid}: {number}'.format(cid=contributor.id,
+                                                                                            number=nb_updated_data_sources_fetched))
+        # contributor export is always done if coming from API call, we skip updated data verification
+        # when in automatic update, it's only done if at least one of data sources has changed
+        if not check_for_update or nb_updated_data_sources_fetched:
+            context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)
 
@@ -209,6 +216,8 @@ def contributor_export(self: Task, contributor: Contributor, job: Job) -> None:
                 for coverage in coverages:
                     # Launch coverage export
                     coverage_export.delay(coverage, job)
+            # remove temporary gridfs if export is a success
+            context.cleanup()
 
     except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
         msg = 'Contributor export failed, error {}'.format(str(exc))
@@ -244,21 +253,46 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
             sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
+                # remove temporary gridfs after the last publication
+                actions.append(cleanup_context.si(context))
         if actions:
             chain(*actions).delay()
+        # if no publications, cleanup separately
+        else:
+            context.cleanup()
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))
         logger.error(msg)
         raise self.retry(exc=exc)
 
 
-def launch(processes: list, context: Context) -> Context:
+def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    tmp_processes = sorted(processes, key=lambda x: ['sequence'])
-    for p in tmp_processes:
-        context = PreProcessManager.get_preprocess(context, preprocess_name=p.type, preprocess=p).do()
-    return context
+    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    actions = []
+
+    # Do better
+    def get_queue(preprocess: PreProcess) -> str:
+        return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
+
+    first_process = sorted_preprocesses[0]
+    actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+
+    for p in sorted_preprocesses[1:]:
+        actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
+    return chain(actions).apply_async().get(disable_sync_subtasks=False)
+
+@celery.task
+def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:
+    process_instance = PreProcessManager.get_preprocess(context, preprocess=preprocess)
+    logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=preprocess.type))
+    return process_instance.do()
+
+
+@celery.task()
+def cleanup_context(context: Context) -> None:
+    context.cleanup()
 
 
 @celery.task()

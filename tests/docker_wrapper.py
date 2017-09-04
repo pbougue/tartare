@@ -25,10 +25,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import os
-import docker
 import logging
-from abc import ABCMeta, abstractmethod, abstractproperty
+import os
+from abc import ABCMeta, abstractproperty
+
+import docker
 
 
 class AbstractDocker(metaclass=ABCMeta):
@@ -192,6 +193,21 @@ class DownloadFtpServerDocker(AbstractDocker):
 
     def _remove_temporary_files(self):
         pass
+
+
+class DownloadHttpServerGlobalDocker(DownloadHttpServerDocker):
+    @property
+    def volumes_bindings(self):
+        return {
+            self.fixtures_directory: {
+                'bind': self.working_dir,
+                'mode': 'rw',
+            },
+        }
+
+    @property
+    def container_name(self):
+        return 'http_download_server_global'
 
 
 class UploadFtpServerDocker(AbstractDocker):

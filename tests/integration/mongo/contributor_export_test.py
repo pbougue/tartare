@@ -28,6 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from freezegun import freeze_time
+
 from tests.utils import to_json, post
 import pytest
 
@@ -91,6 +93,7 @@ class TestContributorExport(TartareFixture):
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
+    @freeze_time("2015-08-10")
     @pytest.mark.parametrize("method,filename,state,step,error_message", [
         ('http', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('http', 'unexisting_file.zip', 'failed', 'fetching data', 'HTTP Error 404: Not Found'),
@@ -124,6 +127,7 @@ class TestContributorExport(TartareFixture):
         if error_message:
             assert job['error_message'] == error_message
 
+    @freeze_time("2015-08-10")
     def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='some_archive.zip')

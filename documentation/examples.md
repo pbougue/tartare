@@ -1,4 +1,4 @@
-# How to create contributor
+# How to create contributor with periodically fetched data source
 
 ```bash
 curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: application/json" -d \
@@ -17,6 +17,30 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
     }
   ]
 }'
+```
+
+# How to create contributor with manual data set attached
+```bash
+curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: application/json" -d \
+'{
+  "id": "AMI",
+  "name": "contrib-amien",
+  "data_prefix": "AMI",
+  "data_sources": [
+    {
+      "data_format": "direction_config",
+      "id": "data_source_id_config",
+      "name": "data_source_name_config",
+      "input": {}
+    }
+  ]
+}'
+```
+Then
+```bash
+curl -X POST  \
+-F "file=@\"./path/to/your_config_file.json\";type=application/json;filename=\"your_config_file.json\"" \
+"http://tartare.localhost/contributors/AMI/data_sources/data_source_id_config/data_sets"
 ```
 
 # How to create coverage with preprocesses

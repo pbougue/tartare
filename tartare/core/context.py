@@ -26,30 +26,36 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from tartare import app
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource
 import logging
 from typing import List, Optional
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.validity_period_finder import ValidityPeriodContainer
 
 
-class DataSourceContext():
-    def __init__(self, data_source_id: str, gridfs_id: str, validity_period: ValidityPeriod) -> None:
+class DataSourceContext:
+    def __init__(self, data_source_id: str, gridfs_id: str, validity_period: Optional[ValidityPeriod]=None) -> None:
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
 
+    def __repr__(self) -> str:
+        return str(vars(self))
 
-class ContributorContext():
-    def __init__(self, contributor: Contributor,
-                 data_source_contexts: Optional[List[DataSourceContext]]=None,
-                 validity_period: ValidityPeriod=None) -> None:
+
+class ContributorContext(ValidityPeriodContainer):
+    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]] = None,
+                 validity_period: ValidityPeriod = None) -> None:
+        super().__init__(validity_period)
         self.contributor = contributor
         self.data_source_contexts = data_source_contexts if data_source_contexts else []
-        self.validity_period = validity_period
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
-class Context():
+class Context:
     def __init__(self, instance: str='contributor', coverage: Coverage=None,
                  validity_period: ValidityPeriod=None, contributor_contexts: List[ContributorContext]=None) -> None:
         self.instance = instance
@@ -82,7 +88,7 @@ class Context():
                      if data_source_context.data_source_id == data_source_id), None)
 
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
-                                            validity_period: ValidityPeriod, gridfs_id: Optional[str]) -> None:
+                                            validity_period: Optional[ValidityPeriod], gridfs_id: Optional[str]) -> None:
         contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
                                     if contributor_context.contributor.id == contributor_id), None)
         if contributor_context:
@@ -108,7 +114,7 @@ class Context():
                                            data_source_contexts=data_source_contexts))
         self.coverage = coverage
 
-    def __del__(self) -> None:
+    def cleanup(self) -> None:
         logging.getLogger(__name__).debug('Delete files context')
         for contributor_context in self.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:

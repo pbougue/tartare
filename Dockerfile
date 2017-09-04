@@ -20,26 +20,17 @@ COPY requirements.txt /usr/src/app
 # those are needed for uwsgi
 RUN apk --update add \
         g++ \
-        build-base \
-        python-dev \
-        zlib-dev \
-        linux-headers \
-        musl \
-        musl-dev \
-        memcached \
-        libmemcached-dev && \
+        libstdc++ \
+        linux-headers && \
     pip install uwsgi && \
     pip install --no-cache-dir -r requirements.txt && \
+    find /usr/local \
+        \( -type d -a -name test -o -name tests \) \
+        -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
+        -exec rm -rf '{}' + && \
     apk del \
         g++ \
-        build-base \
-        python-dev \
-        zlib-dev \
-        linux-headers \
-        musl \
-        musl-dev \
-        memcached \
-        libmemcached-dev && \
+        linux-headers && \
     rm -rf /var/apk/cache/*
 
 ENV TARTARE_RABBITMQ_HOST amqp://guest:guest@localhost:5672//

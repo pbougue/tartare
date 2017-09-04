@@ -51,6 +51,8 @@ class ProtocolException(Exception):
 class FusioException(Exception):
     pass
 
+class ValidityPeriodException(Exception):
+    pass
 
 class IntegrityException(Exception):
     pass

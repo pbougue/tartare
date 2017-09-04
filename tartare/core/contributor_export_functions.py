@@ -30,50 +30,63 @@
 import logging
 import os
 import tempfile
+from typing import List
+
+from tartare.core import models
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor
-from tartare.validity_period_finder import ValidityPeriodFinder
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
+from tartare.exceptions import ParameterException
 from tartare.helper import get_filename, get_md5_content_file, download_zip_file
-from tartare.core import models
-
+from tartare.validity_period_finder import ValidityPeriodContainer
+from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
 
 
 def merge(contributor: Contributor, context: Context) -> Context:
-    logger.info("contributor_id : %s", contributor.id)
+    logger.info("Merge for contributor_id : %s", contributor.id)
     return context
 
 
 def postprocess(contributor: Contributor, context: Context) -> Context:
-    logger.info("contributor_id : %s", contributor.id)
+    logger.info("Post process for contributor_id : %s", contributor.id)
     return context
 
 
 def save_export(contributor: Contributor, context: Context) -> Context:
-    data_sources = []
+    contrib_export_data_sources = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
         if not data_source_context.gridfs_id:
             logger.info("data source {} without gridfs id.".format(data_source_context.data_source_id))
             continue
-        data_sources.append(
+        contrib_export_data_sources.append(
             ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
                                         gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
                                         validity_period=data_source_context.validity_period)
         )
-    if data_sources:
+
+    if contrib_export_data_sources:
+        contrib_export_data_sources_with_validity = [ceds for ceds in contrib_export_data_sources if
+                                                     ceds.validity_period]  # type: List[ValidityPeriodContainer]
+        # grid fs id is taken from the first data source having a validity period
+        # contributor with multiple data sources is not handled yet
+        grid_fs_id = next((data_source.gridfs_id
+                           for data_source in contrib_export_data_sources
+                           if data_source.validity_period), None)
+        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
+            contrib_export_data_sources_with_validity)
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=data_sources[0].gridfs_id,
-                                   validity_period=data_source_context.validity_period,
-                                   data_sources=data_sources)
+                                   gridfs_id=grid_fs_id,
+                                   validity_period=contributor_export_validity_period,
+                                   data_sources=contrib_export_data_sources)
         export.save()
     return context
 
 
 def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
-                                        contributor_id: str, data_source_id: str,
-                                        validity_period: models.ValidityPeriod) -> Context:
+                                      contributor_id: str, data_source_id: str,
+                                      validity_period: models.ValidityPeriod) -> Context:
     data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
                                                    data_source_id=data_source_id,
                                                    validity_period=validity_period)
@@ -86,8 +99,8 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
     return context
 
 
-def fetch_datasets(contributor: Contributor, context: Context) -> Context:
-    context.add_contributor_context(contributor)
+def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
+    nb_updated_datasets = 0
     for data_source in contributor.data_sources:
         if data_source.input:
             url = data_source.input.get('url')
@@ -100,17 +113,32 @@ def fetch_datasets(contributor: Contributor, context: Context) -> Context:
                 data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
                                                                         data_source_id=data_source.id)
                 if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(tmp_file_name):
-                        logger.debug('already existing file {} for contributor {}'.format(filename, contributor.id))
-                        continue
+                    logger.debug(
+                        'fetched file {} for contributor {} has not changed since last fetch, skipping'.format(filename,
+                                                                                                               contributor.id))
+                    continue
                 logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
                     contributor.id, data_source.id
                 ))
                 start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
                 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-                context = save_data_fetched_and_get_context(context=context,
-                                                            file=tmp_file_name,
-                                                            filename=filename,
-                                                            contributor_id=contributor.id,
-                                                            data_source_id=data_source.id,
-                                                            validity_period=validity_period)
+
+                data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
+                                                               data_source_id=data_source.id,
+                                                               validity_period=validity_period)
+                data_source_fetched.save_dataset(tmp_file_name, filename)
+                data_source_fetched.save()
+                nb_updated_datasets += 1
+    return nb_updated_datasets
+
+
+def build_context(contributor: Contributor, context: Context) -> Context:
+    context.add_contributor_context(contributor)
+    for data_source in contributor.data_sources:
+        data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
+        if not data_set:
+            raise ParameterException(
+                'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+        context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
+                                                    GridFsHandler().copy_file(data_set.gridfs_id))
     return context

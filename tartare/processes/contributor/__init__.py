@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding: utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
@@ -29,24 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-import os
-from flask import Response
-from flask.globals import request
-from flask_restful import Resource
-from tartare.core import models
-from tartare.interfaces import schema
-from tartare.decorators import validate_post_data_set
-
-
-class DataSet(Resource):
-    @validate_post_data_set
-    def post(self, contributor_id: str, data_source_id: str) -> Response:
-        file = request.files['file']
-        data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                       data_source_id=data_source_id)
-
-        data_source_fetched.save_dataset_from_io(file.stream, os.path.basename(file.filename))
-        data_source_fetched.save()
-
-        return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
+from tartare.processes.contributor.ComputeDirections import ComputeDirections
+from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
+from tartare.processes.contributor.HeadsignShortName import HeadsignShortName
+from tartare.processes.contributor.Ruspell import Ruspell

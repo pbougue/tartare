@@ -54,7 +54,7 @@ class TestCoveragePreProcesses(TartareFixture):
 
         raw = self.get('/coverages/jdr/preprocesses')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
         assert r["preprocesses"][0]["params"] == post_ps["params"]
@@ -63,7 +63,7 @@ class TestCoveragePreProcesses(TartareFixture):
 
         raw = self.get('/coverages/jdr/preprocesses/{}'.format(preprocess_id))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
         assert r["preprocesses"][0]["params"] == post_ps["params"]
@@ -89,7 +89,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/coverages/jdr/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["coverages"][0]["preprocesses"]) == 1
         assert r["coverages"][0]["preprocesses"][0]['id'] == 'toto'
 
@@ -110,7 +110,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/coverages/jdr/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["coverages"][0]["preprocesses"]) == 1
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         new_preprocess = {
@@ -124,7 +124,7 @@ class TestCoveragePreProcesses(TartareFixture):
 
         raw = self.patch('/coverages/jdr/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == new_preprocess["type"]
         assert r["preprocesses"][0]["params"] == new_preprocess["params"]
@@ -144,7 +144,7 @@ class TestCoveragePreProcesses(TartareFixture):
         }]
         raw = self.post('/coverages', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         raw = self.delete('/coverages/jdr/preprocesses/{}'.format(preprocess_id))
@@ -174,7 +174,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             + "module tartare.processes.coverage has no class bob"
+                             + "modules within tartare.processes.coverage have no class bob"
 
     def test_update_preprocess_with_unknown_type(self):
         '''
@@ -191,7 +191,7 @@ class TestCoveragePreProcesses(TartareFixture):
         }]
         raw = self.post('/coverages', json.dumps(post_data))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         new_preprocess = {
@@ -207,7 +207,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
-                             + "module tartare.processes.coverage has no class bob"
+                             + "modules within tartare.processes.coverage have no class bob"
 
     def test_update_preprocesses_with_id(self):
         '''
@@ -237,7 +237,7 @@ class TestCoveragePreProcesses(TartareFixture):
         assert raw.status_code == 201, print(self.to_json(raw))
         raw = self.get('/coverages/jdr/')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["coverages"][0]["preprocesses"]) == 2
         new_preprocess = {
             "type": "FusioPreProd",
@@ -249,13 +249,13 @@ class TestCoveragePreProcesses(TartareFixture):
 
         raw = self.patch('/coverages/jdr/preprocesses/titi', json.dumps(new_preprocess))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         # Update only one preprocess
         assert len(r["preprocesses"]) == 1
 
         raw = self.get('/coverages/jdr')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["coverages"][0]["preprocesses"]) == 2
         p_titi = None
         for p in r["coverages"][0]["preprocesses"]:

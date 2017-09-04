@@ -36,7 +36,7 @@ import mock
 import pytest
 import ftplib
 from freezegun import freeze_time
-from tests.utils import mock_urlretrieve, mock_requests_post
+from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals
 from tests.integration.test_mechanism import TartareFixture
 import json
 
@@ -159,6 +159,7 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
         return resp
 
+    @freeze_time("2015-08-10")
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_publish_ok(self, urlretrieve_func):
         contributor_id = 'fr-idf'
@@ -202,6 +203,7 @@ class TestDataPublisher(TartareFixture):
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
 
+    @freeze_time("2015-08-10")
     def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -234,6 +236,7 @@ class TestDataPublisher(TartareFixture):
         session.delete('{coverage_id}.zip'.format(coverage_id=coverage_id))
         session.quit()
 
+    @freeze_time("2015-08-10")
     def test_publish_ftp_ods_with_directory(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -278,7 +281,7 @@ class TestDataPublisher(TartareFixture):
         ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
         (None, None, 'sample_1.zip', 'my-coverage-id')
     ])
-    @freeze_time("2017-01-15")
+    @freeze_time("2015-08-10")
     def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, fixture_dir,
                                            license_url, license_name, sample_data, coverage_id):
         contributor_id = 'whatever'
@@ -324,11 +327,7 @@ class TestDataPublisher(TartareFixture):
                 ods_zip.extract(metadata_file_name, tmp_dirname)
                 fixture = os.path.join(fixture_dir, 'metadata', metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
-                with open(metadata, 'r') as debug_metadata, open(fixture, 'r') as debug_fixture:
-                    uploaded_metadata = debug_metadata.read()
-                    expected_metadata = debug_fixture.read()
-                    assert uploaded_metadata == expected_metadata, print(
-                        "<========>\n".join([uploaded_metadata, expected_metadata]))
+                assert_files_equals(metadata, fixture)
         session.quit()
 
     def test_config_user_password(self, contributor):
@@ -355,6 +354,7 @@ class TestDataPublisher(TartareFixture):
         assert 'username' in pub_platform['options']['authent']
         assert user_to_set == pub_platform['options']['authent']['username']
 
+    @freeze_time("2015-08-10")
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'

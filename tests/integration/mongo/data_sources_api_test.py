@@ -50,7 +50,7 @@ class TestDataSources(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
 
     def test_post_ds_one_data_source_with_id(self, contributor):
@@ -70,7 +70,7 @@ class TestDataSources(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
 
     def test_post_ds_one_data_source_with_data_format(self, contributor):
@@ -79,7 +79,7 @@ class TestDataSources(TartareFixture):
         """
         post_ds = {
             "name": "data_source_name",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -90,9 +90,9 @@ class TestDataSources(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
-        assert r["data_sources"][0]["data_format"] == "Neptune"
+        assert r["data_sources"][0]["data_format"] == "gtfs"
         assert r["data_sources"][0]["input"]["type"] == "url"
         assert r["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
 
@@ -121,7 +121,7 @@ class TestDataSources(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 2
         assert r["data_sources"][0]["id"] != r["data_sources"][1]["id"]
 
@@ -161,7 +161,7 @@ class TestDataSources(TartareFixture):
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]),
                          self.dict_to_json(data_source))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         patched_data_source = r["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
@@ -173,7 +173,7 @@ class TestDataSources(TartareFixture):
         modif_ds = {"name": "name_modified"}
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         patched_data_source = r["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
@@ -186,7 +186,7 @@ class TestDataSources(TartareFixture):
         post_ds = {
             "id": "ds1_id",
             "name": "data_source_name1",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -194,11 +194,11 @@ class TestDataSources(TartareFixture):
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
         post_ds = {
             "id": "ds2_id",
             "name": "data_source_name2",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -206,10 +206,10 @@ class TestDataSources(TartareFixture):
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
         modif_ds = {
             "name": "name_modified",
-            "data_format": "Neptune",
+            "data_format": "gtfs",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
@@ -217,7 +217,7 @@ class TestDataSources(TartareFixture):
         }
         raw = self.patch('/contributors/id_test/data_sources/ds2_id', self.dict_to_json(modif_ds))
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         post_ds = {
             "id": "ds3_id",
             "name": "data_source_name3",
@@ -228,15 +228,15 @@ class TestDataSources(TartareFixture):
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
         r = self.to_json(raw)
-        assert raw.status_code == 201, print(r)
+        self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 3
         patched_data_sources = r["data_sources"]
-        assert patched_data_sources[0]["data_format"] == "Neptune"
-        assert patched_data_sources[1]["data_format"] == "Neptune"
+        assert patched_data_sources[0]["data_format"] == "gtfs"
+        assert patched_data_sources[1]["data_format"] == "gtfs"
         assert patched_data_sources[2]["data_format"] == "gtfs"
         assert patched_data_sources[0]["name"] == "data_source_name1"
         assert patched_data_sources[1]["name"] == "name_modified"
@@ -254,7 +254,7 @@ class TestDataSources(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.to_json(raw)
-        assert raw.status_code == 200, print(r)
+        self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 0
 
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [

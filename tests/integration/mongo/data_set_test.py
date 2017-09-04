@@ -65,7 +65,7 @@ class TestDatasetApi(TartareFixture):
             r = self.to_json(raw)
             assert r["error"] == 'File provided with bad param ("file" param expected).'
 
-    def test_post_dataset(self,  data_source):
+    def test_post_dataset(self, data_source):
         with open(fixtures_path, 'rb') as file:
             raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')),
                             params={'file': file},
@@ -73,6 +73,7 @@ class TestDatasetApi(TartareFixture):
             assert raw.status_code == 201
             r = self.to_json(raw)
             assert len(r["data_sets"]) == 1
+            assert 'id' in r['data_sets'][0]
 
             with app.app_context():
                 gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["data_sets"][0]["gridfs_id"])})

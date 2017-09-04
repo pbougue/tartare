@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -29,24 +26,18 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from abc import ABCMeta, abstractmethod
 
-import os
-from flask import Response
-from flask.globals import request
-from flask_restful import Resource
-from tartare.core import models
-from tartare.interfaces import schema
-from tartare.decorators import validate_post_data_set
+from tartare.core.context import Context
+from tartare.core.models import PreProcess
 
 
-class DataSet(Resource):
-    @validate_post_data_set
-    def post(self, contributor_id: str, data_source_id: str) -> Response:
-        file = request.files['file']
-        data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                       data_source_id=data_source_id)
+class AbstractProcess(metaclass=ABCMeta):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+        self.context = context
+        self.params = preprocess.params if preprocess else {}  # type: dict
+        self.data_source_ids = preprocess.data_source_ids if preprocess else []
 
-        data_source_fetched.save_dataset_from_io(file.stream, os.path.basename(file.filename))
-        data_source_fetched.save()
-
-        return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
+    @abstractmethod
+    def do(self) -> Context:
+        pass

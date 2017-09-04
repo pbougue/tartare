@@ -27,13 +27,16 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from typing import Any, Callable
-from tartare.core.models import Coverage, CoverageExport
-from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 import logging
 from functools import wraps
+from typing import Any, Callable
+
 from flask import request
+
 from tartare.core import models
+from tartare.core.models import Coverage, CoverageExport
+from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
+from tartare.processes.processes import PreProcessManager
 
 
 class publish_params_validate(object):
@@ -59,6 +62,7 @@ class publish_params_validate(object):
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
             return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -72,6 +76,7 @@ class json_data_validate(object):
                 logging.getLogger(__name__).error(msg)
                 raise UnsupportedMediaType(msg)
             return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -88,6 +93,21 @@ class validate_contributors(object):
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)
+
+        return wrapper
+
+
+class validate_contributor_prepocesses_data_source_ids(object):
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            post_data = request.json
+            existing_data_source_ids = [data_source['id'] for data_source in post_data.get('data_sources', []) if
+                                        'id' in data_source]
+            PreProcessManager.check_preprocess_data_source_integrity(post_data.get('preprocesses', []),
+                                                                     existing_data_source_ids, 'contributor')
+            return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -104,6 +124,7 @@ class validate_patch_coverages(object):
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -128,4 +149,5 @@ def validate_post_data_set(func: Callable) -> Any:
             raise InvalidArguments('File provided with bad param ("file" param expected).')
 
         return func(*args, **kwargs)
+
     return wrapper

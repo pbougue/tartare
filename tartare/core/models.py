@@ -27,10 +27,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from abc import ABCMeta
-from io import IOBase
 from gridfs import GridOut
 from tartare import mongo
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, post_load, utils,  fields
 from tartare import app
 from tartare.helper import to_doted_notation, get_values_by_key
 from tartare.core.gridfs_handler import GridFsHandler
@@ -39,7 +38,9 @@ import uuid
 from datetime import datetime
 from datetime import date
 import logging
-from typing import Optional, List, Union, Dict, Type
+from typing import Optional, List, Union, Dict, Type, BinaryIO
+from tartare.core.constants import DATA_FORMAT_VALUES
+from io import IOBase
 
 
 @app.before_first_request
@@ -48,9 +49,33 @@ def init_mongo() -> None:
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 
-class PreprocessManager(metaclass=ABCMeta):
+class DataFormat(fields.Field):
+
+    """A DataFormat field.
+    """
+
+    default_error_messages = {
+        'invalid': 'data_format not in possible values {values}.'.format(values=DATA_FORMAT_VALUES)
+    }
+
+    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
+
+    def _deserialize(self, value: str, attr: str, data: dict) -> str:
+        if value in DATA_FORMAT_VALUES:
+            return utils.ensure_text_type(value)
+        else:
+            self.fail('invalid')
+
+class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
+
+    def __init__(self, preprocesses: List['PreProcess'] = None) -> None:
+        self.preprocesses = [] if preprocesses is None else preprocesses
 
     @classmethod
     def get(cls, contributor_id: str) -> Union['Contributor', 'Coverage']:
@@ -80,11 +105,19 @@ class ValidityPeriod(object):
         self.start_date = start_date
         self.end_date = end_date
 
+    def __repr__(self) -> str:
+        return str(vars(self))
 
-class ContributorExportDataSource(object):
-    def __init__(self, data_source_id: str=None, gridfs_id: str=None, validity_period: ValidityPeriod=None) -> None:
-        self.data_source_id = data_source_id
+
+class ValidityPeriodContainer(object):
+    def __init__(self, validity_period: ValidityPeriod = None) -> None:
         self.validity_period = validity_period
+
+
+class ContributorExportDataSource(ValidityPeriodContainer):
+    def __init__(self, data_source_id: str = None, gridfs_id: str = None, validity_period: ValidityPeriod = None) -> None:
+        super().__init__(validity_period)
+        self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
 
 
@@ -94,15 +127,29 @@ class License(object):
         self.name = name
         self.url = url
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class DataSource(object):
-    def __init__(self, id: Optional[str] = None, name: Optional[str] = None, data_format: Optional[str] = "gtfs",
-                 input: Optional[dict] = None, license: Optional[License] = None) -> None:
+    def __init__(self, id: Optional[str]=None, name: Optional[str]=None,
+                 data_format: Optional[str]="gtfs",
+                 input: Optional[dict]=None, license: Optional[License]=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = {} if not input else input
         self.license = license if license else License()
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+    @classmethod
+    def get_number_of_historical(cls, data_source_id: str) -> int:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            raise ValueError("Unknown data source id {}.".format(data_source_id))
+        return app.config.get('HISTORICAL', {}).get(data_sources[0].data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
@@ -113,7 +160,7 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
+    def get(cls, contributor_id: str=None, data_source_id: str=None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
             contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
@@ -163,6 +210,14 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
+    @classmethod
+    def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
+        data_sources = cls.get(data_source_id=data_source_id)
+        if not data_sources:
+            False
+        else:
+            return data_sources[0].data_format == data_format
+
 
 class GenericPreProcess(object):
     def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
@@ -173,21 +228,22 @@ class GenericPreProcess(object):
         self.params = params if params else {}
         self.type = type
 
-    def save_data(self, class_name: Type[PreprocessManager],
-                  mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str) -> None:
+    def save_data(self, class_name: Type[PreProcessContainer],
+                  mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
+                  ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('Bad {} {}'.format(class_name.label, object_id))
         if self.id in [p.id for p in data.preprocesses]:
             raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
 
-        data.preprocesses.append(self)
+        data.preprocesses.append(ref_model_object)
         raw_contrib = mongo_schema().dump(data).data
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Type[PreprocessManager],
-                 mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def get_data(cls, class_name: Type[PreProcessContainer],
+                 mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                  preprocess_id: str) -> Optional[List['PreProcess']]:
         if object_id is not None:
             data = class_name.get(object_id)
@@ -209,8 +265,8 @@ class GenericPreProcess(object):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Type[PreprocessManager],
-                    mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def delete_data(cls, class_name: Type[PreProcessContainer],
+                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
         if data is None:
@@ -223,8 +279,8 @@ class GenericPreProcess(object):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Type[PreprocessManager],
-                    mongo_schema: Type['MongoPreprocessManagerSchema'], object_id: str,
+    def update_data(cls, class_name: Type[PreProcessContainer],
+                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str, preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
         if not data:
@@ -250,10 +306,12 @@ class PreProcess(GenericPreProcess):
     def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> None:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
+        # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
+        # so it's the one that will need to be saved as a PreProcess
         if contributor_id:
-            self.save_data(Contributor, MongoContributorSchema, contributor_id)
+            self.save_data(Contributor, MongoContributorSchema, contributor_id, self)
         if coverage_id:
-            self.save_data(Coverage, MongoCoverageSchema, coverage_id)
+            self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
 
     @classmethod
     def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
@@ -290,18 +348,24 @@ class PreProcess(GenericPreProcess):
         if coverage_id:
             return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
 
+    def __repr__(self) -> str:
+        return str(vars(self))
 
-class Contributor(PreprocessManager):
+
+class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
     def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
                  preprocesses: List[PreProcess]=None) -> None:
+        super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
         self.data_sources = [] if data_sources is None else data_sources
-        self.preprocesses = [] if preprocesses is None else preprocesses
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
     def save(self) -> None:
         raw = MongoContributorSchema().dump(self).data
@@ -345,20 +409,20 @@ def get_contributor(contributor_id: str) -> Contributor:
     return contributor
 
 
-class Coverage(PreprocessManager):
+class Coverage(PreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
                  contributors: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None) -> None:
+        super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
-        self.preprocesses = [] if preprocesses is None else preprocesses
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()
@@ -453,7 +517,7 @@ class MongoValidityPeriodSchema(Schema):
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def make_contributorexportdatasource(self, data: dict) -> ContributorExportDataSource:
@@ -537,7 +601,8 @@ class Historisable(object):
 class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
-    def __init__(self, contributor_id: str, data_source_id: str, validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
+    def __init__(self, contributor_id: str, data_source_id: str,
+                 validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
                  created_at: datetime=None, id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
@@ -550,7 +615,8 @@ class DataSourceFetched(Historisable):
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(DataSource.get_number_of_historical(self.data_source_id),
+                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod
     def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
@@ -561,7 +627,7 @@ class DataSourceFetched(Historisable):
             'data_source_id': data_source_id
         }
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
-        lasts = MongoDataSourceFetchedSchema(many=True).load(raw).data
+        lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
     def get_md5(self) -> str:
@@ -572,9 +638,11 @@ class DataSourceFetched(Historisable):
 
     def save_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
         with open(tmp_file, 'rb') as file:
-            self.gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=filename,
-                                                                 contributor_id=self.contributor_id)
+            self.save_dataset_from_io(file, filename)
 
+    def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
+        self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
+                                                                 contributor_id=self.contributor_id)
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -592,7 +660,7 @@ class MongoDataSourceFetchedSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
     created_at = fields.DateTime(required=False)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source_fetched(self, data: dict) -> DataSourceFetched:
@@ -602,7 +670,7 @@ class MongoDataSourceFetchedSchema(Schema):
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
-    data_format = fields.String(required=False)
+    data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Dict(required=True)
 
@@ -619,15 +687,15 @@ class MongoPreProcessSchema(Schema):
     data_source_ids = fields.List(fields.String(), required=False)
 
     @post_load
-    def build_data_source(self, data: dict) -> PreProcess:
+    def build_preprocess(self, data: dict) -> PreProcess:
         return PreProcess(**data)
 
 
-class MongoPreprocessManagerSchema(Schema):
+class MongoPreProcessContainerSchema(Schema):
     pass
 
 
-class MongoCoverageSchema(MongoPreprocessManagerSchema):
+class MongoCoverageSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
@@ -641,7 +709,7 @@ class MongoCoverageSchema(MongoPreprocessManagerSchema):
         return Coverage(**data)
 
 
-class MongoContributorSchema(MongoPreprocessManagerSchema):
+class MongoContributorSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
@@ -770,7 +838,7 @@ class ContributorExport(Historisable):
         if not contributor_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'contributor_id': contributor_id}).sort("created_at", -1).limit(1)
-        lasts = MongoContributorExportSchema(many=True).load(raw).data
+        lasts = MongoContributorExportSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
 
@@ -779,7 +847,7 @@ class MongoContributorExportSchema(Schema):
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True, required=False)
 
     @post_load
@@ -797,7 +865,7 @@ class CoverageExportContributor(object):
 
 class MongoCoverageExportContributorSchema(Schema):
     contributor_id = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True)
 
     @post_load
@@ -844,7 +912,7 @@ class MongoCoverageExportSchema(Schema):
     coverage_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)
 
     @post_load

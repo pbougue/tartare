@@ -28,8 +28,10 @@
 # www.navitia.io
 
 import logging
-from abc import ABCMeta, abstractmethod
-from importlib import import_module
+
+from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes import contributor
+from tartare.processes import coverage
 from typing import Optional, List, Dict
 
 from tartare.core.context import Context
@@ -37,49 +39,50 @@ from tartare.core.models import PreProcess
 from tartare.http_exceptions import InvalidArguments
 
 
-class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        self.context = context
-        self.params = preprocess.params if preprocess else {}  # type: dict
-        self.data_source_ids = preprocess.data_source_ids if preprocess else []
-
-    @abstractmethod
-    def do(self) -> Context:
-        pass
-
-
 class PreProcessManager(object):
     @classmethod
     def get_preprocess_class(cls, preprocess_name: str, instance: str) -> type:
         try:
-            module = import_module('tartare.processes.{}'.format(instance))
-            return getattr(module, preprocess_name)
-        except AttributeError as e:
-            msg = 'impossible to build preprocess {} : module tartare.processes.{} has no class {}'.format(
+            if instance == 'contributor':
+                return getattr(contributor, preprocess_name)
+            elif instance == 'coverage':
+                return getattr(coverage, preprocess_name)
+            else:
+                raise InvalidArguments('unknown instance {instance}'.format(instance=instance))
+        except AttributeError:
+            msg = 'impossible to build preprocess {} : modules within tartare.processes.{} have no class {}'.format(
                 preprocess_name, instance, preprocess_name)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
-        except ImportError as e:
-            msg = 'cannot find class {} : {}'.format(preprocess_name, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: Context, preprocess_name: str,
-                       preprocess: Optional[PreProcess] = None) -> AbstractProcess:
+    def get_preprocess(cls, context: Context, preprocess: PreProcess) -> AbstractProcess:
         """
         :param preprocess_name: Ruspell, FusioImport, ....
         :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
         """
-        attr = cls.get_preprocess_class(preprocess_name, context.instance)
+        attr = cls.get_preprocess_class(preprocess.type, context.instance)
         try:
             return attr(context, preprocess)  # call to the contructor, with all the args
         except TypeError as e:
-            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess_name, str(e))
+            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess.type, str(e))
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
     @classmethod
     def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:
         for preprocess in preprocesses:
+            # will raise InvalidArguments if not valid
             PreProcessManager.get_preprocess_class(preprocess.get('type', ''), instance)
+
+    @classmethod
+    def check_preprocess_data_source_integrity(cls, preprocess_dict_list: List[Dict[str, str]],
+                                               existing_data_source_ids: List[str], instance: str) -> None:
+        for preprocess in preprocess_dict_list:
+            if 'data_source_ids' in preprocess and preprocess['data_source_ids']:
+                for data_source_id in preprocess['data_source_ids']:
+                    if data_source_id not in existing_data_source_ids:
+                        msg = "data_source referenced by id '{data_source_id}' in preprocess '{preprocess}' not found in {instance}".format(
+                            data_source_id=data_source_id, preprocess=preprocess['type'], instance=instance)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
