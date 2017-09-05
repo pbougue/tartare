@@ -3,13 +3,13 @@
 ## Compute Directions
 
 ### Use case  
-GTFS have a *trips.txt* file that may have no **direction_id column**, an empty column or each line having the same **direction_id** if it is of lower quality.  
+GTFS have a *trips.txt* file that may have no **direction_id** column, an empty column or each line having the same **direction_id** if it is of lower quality.  
 As this information is needed to separate trips by direction when publishing time tables, we will need to rework the *trips.txt* to have the relevant information on the directions.  
 This is the ***compute_directions*** preprocess' job.  
 
 ### How does it work?
-The ***ComputeDirections*** preprocess is associated to the contributor.  
-It will use as parameter a "**direction_config**" type *data_source* : a json containing lines and their stop_points sorted from origin to destination.  
+The ***ComputeDirections*** preprocess is associated to the contributor and will be use only on specific data_sources found in **data_source_ids**.  
+It will use as config a "**direction_config**" type *data_source* : a json containing lines and their stop_points sorted from origin to destination.  
 From the *trips.txt*, each route of a line will have their stop_points order compare to the stop_points order of their line in the json : if it's a match then it will be the 0 direction, else it will be the opposite direction.   
 At the end, a new *trips.txt* file will be generate with a **direction_id** column and each line will have a direction.  
 
