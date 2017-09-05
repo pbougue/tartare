@@ -27,11 +27,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
+import shutil
 import tempfile
 from abc import ABCMeta, abstractmethod
-
-import shutil
-
 from typing import List
 
 from tartare.core.context import Context
@@ -57,10 +55,8 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
 
-
-    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
-                                                backup_files: List[str] = []) -> str:
-        computed_file_name = 'gtfs-computed-directions'
+    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str, backup_files: List[str] = [],
+                                              computed_file_name: str = 'gtfs-processed') -> str:
         for backup_file in backup_files:
             os.remove(backup_file)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:

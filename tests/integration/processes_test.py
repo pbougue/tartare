@@ -28,7 +28,6 @@
 # www.navitia.io
 from tartare import app
 from tartare.core.models import PreProcess
-from tartare.processes.contributor import ComputeDirections
 from tartare.processes.coverage import FusioPreProd
 from tartare.processes.processes import PreProcessManager
 from tartare.processes import contributor

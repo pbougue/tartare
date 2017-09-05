@@ -51,6 +51,7 @@ class ValidityPeriodFinder(object):
         self.end_date = date.min
         self.date_format = date_format
         self.reader = CsvReader()
+        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
 
     def is_start_date_valid(self) -> bool:
         return self.start_date != date.max
@@ -61,7 +62,7 @@ class ValidityPeriodFinder(object):
     def _parse_calendar(self, files_zip: str) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_filename,
                                                 usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
-                                                date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+                                                date_parser=self.date_parser)
 
         if self.reader.count_rows():
             self.start_date = self.reader.get_min('start_date').date()
@@ -107,7 +108,7 @@ class ValidityPeriodFinder(object):
         self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_filename,
                                                 usecols=['date', 'exception_type'],
                                                 parse_dates=['date'],
-                                                date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+                                                date_parser=self.date_parser)
 
         dates = self.reader.data[(self.reader.data.exception_type == 1)].date.tolist()
         self.add_dates(dates)
@@ -148,7 +149,7 @@ class ValidityPeriodFinder(object):
         self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
                               usecols=['feed_start_date', 'feed_end_date'],
                               parse_dates=['feed_start_date', 'feed_end_date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+                              date_parser=self.date_parser)
         if self.reader.count_rows() > 1:
             msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
             logging.getLogger(__name__).error(msg)

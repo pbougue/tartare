@@ -110,7 +110,6 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
    "data_source_ids": ["your-gtfs-id"]
    "id":"prepare_ext_settings",
    "params":{
-      "contributor_trigram":"my-trigram",
       "links": {
         "tr_perimeter": "my-data-source-of-perimeter-json-id",
         "lines_referential": "my-data-source-of-lines-json-id",

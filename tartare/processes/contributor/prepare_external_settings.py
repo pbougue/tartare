@@ -32,13 +32,21 @@ import os
 import tempfile
 import zipfile
 
+from gridfs import GridOut
+
 from tartare.core.context import Context
+from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
 class PrepareExternalSettings(AbstractContributorProcess):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \
+            self.context.contributor_contexts and self.context.contributor_contexts[0].contributor else None
+
     fieldnames_codes = ['object_system', 'object_type', 'object_id', 'object_code']
     fieldnames_properties = ['object_type', 'object_id', 'object_property_name', 'object_property_value']
     objects_codes_file_name = 'fusio_objects_codes.csv'
@@ -65,30 +73,29 @@ class PrepareExternalSettings(AbstractContributorProcess):
         })
 
     def __get_navitia_code_from_gtfs_stop_point(self, gtfs_stop_code: str) -> str:
-        return "{}:SP:{}".format(self.params.get('contributor_trigram'), gtfs_stop_code[10:])
+        return "{}:SP:{}".format(self.contributor_trigram, gtfs_stop_code[10:])
 
-    def __init_route_id_to_navitia_code_mapping(self, zip_file_name: str) -> None:
+    def __init_route_id_to_navitia_code_mapping(self, zip_file: GridOut) -> None:
         columns_used = ['route_id', 'agency_id']
         routes_reader = CsvReader()
-        routes_reader.load_csv_data_from_zip_file(zip_file_name, "routes.txt", usecols=columns_used)
+        routes_reader.load_csv_data_from_zip_file(zip_file, "routes.txt", usecols=columns_used)
 
         route_id_to_navitia_code_list = routes_reader.get_mapping_from_columns(
             'route_id',
-            lambda row, contrib_trigram=self.params.get('contributor_trigram'):
-            '{tri}:{rid}{tri}{aid}'.format(tri=contrib_trigram, rid=row['route_id'], aid=str(row['agency_id'])),
-            columns_used)
+            lambda row, contrib_trigram=self.contributor_trigram:
+            '{tri}:{rid}{tri}{aid}'.format(tri=contrib_trigram, rid=row['route_id'], aid=str(row['agency_id'])))
         self.route_id_to_navitia_code = {route_id: navitia_code for row in route_id_to_navitia_code_list for
                                          route_id, navitia_code in row.items()}
 
     def __create_rules_deactivate_realtime_for_routes_from_gtfs(self, tmp_dir_name: str,
-                                                              writer_properties: csv.DictWriter) -> None:
+                                                                writer_properties: csv.DictWriter) -> None:
         routes_file_name = os.path.join(tmp_dir_name, "routes.txt")
         routes_reader = CsvReader()
         routes_reader.load_csv_data(routes_file_name, usecols=['route_id'])
         for route_id in routes_reader.data.to_dict('list')['route_id']:
             # On vérifie que c'est bien une ligne de substitution créée par Fusio sur le réseau Transilien
             if route_id.split(":")[-1].lower() == "bus" and route_id.split(":")[0] in ["800", "810"]:
-                route_id = "{}:{}".format(self.params.get('contributor_trigram'), route_id)
+                route_id = "{}:{}".format(self.contributor_trigram, route_id)
                 for rid in [route_id, route_id + "_R"]:
                     self.__write_row_for_properties(writer_properties, "route", "realtime_deactivation", "True", rid)
 
@@ -107,18 +114,17 @@ class PrepareExternalSettings(AbstractContributorProcess):
         lines_referential_data_source_context = self.context.get_contributor_data_source_context(
             self.contributor_id, self.params['links'].get('lines_referential'))
         reader = JsonReader()
-        reader.load_json_data_from_file(
-            self.gfs.get_file_from_gridfs(lines_referential_data_source_context.gridfs_id))
-        ext_code_line_id_couples = reader.get_group_by_to_dict(
-            ['fields.externalcode_line', 'fields.id_line'], 'datasetid'
-        )
+        reader.load_json_data_from_io(
+            self.gfs.get_file_from_gridfs(lines_referential_data_source_context.gridfs_id),
+            ['fields.externalcode_line', 'fields.id_line'])
         nb_lines_not_in_gtfs = 0
-        for (ext_code, line_id), count in ext_code_line_id_couples.items():
-            object_id = self.route_id_to_navitia_code.get(ext_code)
+        for row in reader.data.to_dict('records'):
+            object_id = self.route_id_to_navitia_code.get(row['fields.externalcode_line'])
             if not object_id:
                 object_id = 'line not found'
                 nb_lines_not_in_gtfs += 1
-            self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id, line_id)
+            self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
+                                       row['fields.id_line'])
         if nb_lines_not_in_gtfs:
             logging.getLogger(__name__).warning(
                 '{nb} lines in Codifligne are not in the GTFS'.format(nb=nb_lines_not_in_gtfs))
@@ -127,13 +133,12 @@ class PrepareExternalSettings(AbstractContributorProcess):
         tr_perimeter_data_source_context = self.context.get_contributor_data_source_context(
             self.contributor_id, self.params['links'].get('tr_perimeter'))
         reader = JsonReader()
-        reader.load_json_data_from_file(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id))
-        ext_code_lineref_couples = reader.get_group_by_to_dict(
-            ['fields.codifligne_line_externalcode', 'fields.lineref'], 'datasetid'
-        )
-        for (ext_code, lineref), count in ext_code_lineref_couples.items():
-            object_id = self.route_id_to_navitia_code.get(ext_code, 'line not found')
-            self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id, lineref)
+        reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
+                                      ['fields.codifligne_line_externalcode', 'fields.lineref'])
+        for row in reader.data.to_dict('records'):
+            object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line not found')
+            self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
+                                       row['fields.lineref'])
             self.__write_row_for_properties(writer_properties, "line", "realtime_system", self.siri_stif_object_system,
                                             object_id)
 
@@ -158,8 +163,6 @@ class PrepareExternalSettings(AbstractContributorProcess):
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
 
     def __check_config(self) -> None:
-        if 'contributor_trigram' not in self.params:
-            raise ParameterException('contributor_trigram missing in preprocess config')
         links_to_check = ['tr_perimeter', 'lines_referential']
         if 'links' not in self.params:
             raise ParameterException('links missing in preprocess config')

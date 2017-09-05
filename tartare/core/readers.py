@@ -27,16 +27,15 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import json
 import logging
 import os
 import tempfile
 from abc import ABCMeta
-from typing import List, Any, Optional, Callable
+from typing import List, Any, Optional, Callable, Generator
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
-import json
-
 from gridfs import GridOut
 
 from tartare.exceptions import InvalidFile
@@ -56,20 +55,30 @@ class AbstractPandaReader(metaclass=ABCMeta):
     def get_min(self, column: str) -> Any:
         return self.data.iloc[:, self.data.columns.get_loc(column)].min()
 
-    def get_mapping_from_columns(self, key_column: str, value_apply_function: Callable, columns_used: List[str]) -> List[dict]:
-        self.data['temp'] = self.data.loc[:, columns_used].apply(value_apply_function, axis=1)
-        columns_used.append('temp')
-        route_and_nav_code_records = self.data.loc[:, columns_used].to_dict('records')
-        return list(map(lambda row: {row[key_column]: row['temp']}, route_and_nav_code_records))
-
-    def get_group_by_to_dict(self, columns: List[str], id: str) -> dict:
-        return self.data.groupby(columns)[id].count().to_dict()
+    def get_mapping_from_columns(self, key_column: str, value_apply_function: Callable[..., Any]) -> Generator:
+        """
+        :param key_column: the column to use as a key in the dict generated
+        :param value_apply_function: a lambda function to apply on the self.data restricted to columns used the get
+        the value of the dict
+        :return: a list of dict with value of column key_column as key and value_apply_function(columns_used, row)
+        as value:
+            [
+                {"value_of_key_column_row_1": value_apply_function(columns_used, row1)},
+                {"value_of_key_column_row_2": value_apply_function(columns_used, row2)},
+                ...
+                {"value_of_key_column_row_n": value_apply_function(columns_used, rown)}
+            ]
+        """
+        for key, value in self.data.iterrows():
+            yield {value[key_column]: value_apply_function(value)}
 
 
 class JsonReader(AbstractPandaReader):
-    def load_json_data_from_file(self, json_file: GridOut) -> None:
+    def load_json_data_from_io(self, json_file: GridOut, usecols: Optional[List[str]] = None) -> None:
         try:
-           self.data = pd.io.json.json_normalize(json.load(json_file))
+            self.data = pd.io.json.json_normalize(json.load(json_file))
+            if usecols:
+                self.data = self.data.filter(items=usecols).drop_duplicates()
         except ValueError as e:
             raise InvalidFile('Impossible to parse file {}, Error {}'.format(json_file.filename, str(e)))
 
@@ -85,7 +94,7 @@ class CsvReader(AbstractPandaReader):
         data = pd.read_csv(filename, sep=sep)
         return list(set(columns) - set(data.columns.tolist()))
 
-    def load_csv_data_from_zip_file(self, zip_file: str, filename: str, sep: str = ',',
+    def load_csv_data_from_zip_file(self, zip_file: GridOut, filename: str, sep: str = ',',
                                     usecols: Optional[List[str]] = None,
                                     **kwargs: Any) -> None:
         if not is_zipfile(zip_file):

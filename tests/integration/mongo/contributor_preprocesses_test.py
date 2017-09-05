@@ -42,7 +42,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
 from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
-from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
+from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
     assert_zip_contains_only_files_with_extensions
@@ -319,7 +319,7 @@ class TestPrepareExternalSettings(TartareFixture):
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
-            "data_prefix": "AAA",
+            "data_prefix": "OIF",
             "preprocesses": [{
                 "sequence": 0,
                 "data_source_ids": ["ds-to-process"],
@@ -368,15 +368,12 @@ class TestPrepareExternalSettings(TartareFixture):
 
     @pytest.mark.parametrize(
         "params, expected_message", [
-            ({}, 'contributor_trigram missing in preprocess config'),
-            ({'contributor_trigram': 'OIF'}, 'links missing in preprocess config'),
-            ({'contributor_trigram': 'OIF', 'links': {}},
+            ({}, 'links missing in preprocess config'),
+            ({'links': {}},
              'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF',
-              'links': {'contributor_trigram': 'OIF', 'lines_referential': 'something'}},
+            ({'links': {'lines_referential': 'something'}},
              'link tr_perimeter missing in preprocess config'),
-            ({'contributor_trigram': 'OIF',
-              'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+            ({'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
              'link lines_referential missing in preprocess config'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
@@ -396,18 +393,14 @@ class TestPrepareExternalSettings(TartareFixture):
         ])
     def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
                                                      expected_message):
-        params = {'contributor_trigram': 'OIF',
-                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
-                            'lines_referential': 'lines_referential_id'}}
+        params = {'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
-        params = {'contributor_trigram': 'OIF',
-                  'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'tr_perimeter_id',
-                            'lines_referential': 'lines_referential_id'}}
+        params = {'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
         links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
                                                           params, links)

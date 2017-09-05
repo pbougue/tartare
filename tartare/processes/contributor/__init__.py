@@ -28,8 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.contributor.ComputeDirections import ComputeDirections
-from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
-from tartare.processes.contributor.HeadsignShortName import HeadsignShortName
-from tartare.processes.contributor.Ruspell import Ruspell
-from tartare.processes.contributor.PrepareExternalSettings import PrepareExternalSettings
+from tartare.processes.contributor.compute_directions import ComputeDirections
+from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
+from tartare.processes.contributor.headsign_short_name import HeadsignShortName
+from tartare.processes.contributor.prepare_external_settings import PrepareExternalSettings
+from tartare.processes.contributor.ruspell import Ruspell
