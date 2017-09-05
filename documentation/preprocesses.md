@@ -59,7 +59,6 @@ see [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell)
 | ----- | :--: | :---------: | :-------: | :-----: |
 | links.config | string | Ruspell config file datasource identifier | yes ||
 | links.bano | array | List of ids for bano file data sources | yes ||
-| binary_path | string | Path to ruspell bainary file | no | /usr/src/app/bin/ruspell (path in docker worker-ruspell) |
 
 
 ```json
@@ -75,8 +74,7 @@ see [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell)
                 "data_source_id_of_bano-1",
                 "data_source_id_of_bano-2"
             ]
-        },
-        "binary_path" : "/ruspell_binary_path"
+        }
     }
 }
 ```
