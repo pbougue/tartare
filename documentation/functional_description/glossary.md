@@ -18,7 +18,10 @@ This export will contain PT data from chosen dataset versions (which may have be
 
 ## DataSource
 As said on the thin this is a data source, defined as:
-  * A format
+  * A format  
+      * gtfs
+      * direction_config (Used by the ComputeDirection preprocess)
+      * ruspell_config
   * A license
   * The url and protocol required to get it.
   * An update frequency
