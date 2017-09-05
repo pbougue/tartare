@@ -26,29 +26,23 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
 import logging
-import os
-import shutil
-from typing import Callable, Any
-from zipfile import is_zipfile, ZipFile
-from tartare.exceptions import InvalidFile
+import subprocess
+
+from tartare.exceptions import CommandRuntimeException
 
 logger = logging.getLogger(__name__)
 
 
-def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
-                          new_zip_path: str, f: Callable[..., Any], *args: Any,
-                          computed_file_name: str = 'gtfs-processed') -> str:
-    if not is_zipfile(zip_file):
-        msg = '{} is not a zip file or does not exist.'.format(zip_file)
-        logger.error(msg)
-        raise InvalidFile(msg)
-    with ZipFile(zip_file, 'r') as files_zip:
-        files_zip.extractall(extract_zip_path)
-        data_source_path = '{}/{}'.format(extract_zip_path, filename)
+class SubProcessWrapper(object):
+    def __init__(self, name: str) -> None:
+        self.name = name
 
-        f(data_source_path, *args)
+    def run_cmd(self, command: str) -> None:
+        logger.info('Running command: {}'.format(command))
+        popen = subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = popen.communicate()
+        if err:
+            raise CommandRuntimeException(self.name, str(err))
 
-        new_archive_file_name = os.path.join(new_zip_path, computed_file_name)
-        return shutil.make_archive(new_archive_file_name, 'zip', extract_zip_path)
+        logger.info('Command result: {}'.format(out))
