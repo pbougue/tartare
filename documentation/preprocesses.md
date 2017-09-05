@@ -55,10 +55,10 @@ This preprocess perform a spell-check on csv file.
 see [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell)
 
 #### Parameters in params field
-| Field | Type | Description | Mandatory | Default |
-| ----- | :--: | :---------: | :-------: | :-----: |
-| links.config | string | Ruspell config file datasource identifier | yes ||
-| links.bano | array | List of ids for bano file data sources | yes ||
+| Field | Type | Description | Data format |
+| ----- | :--: | :---------: | :-----: |
+| links.config | string | Ruspell config file datasource identifier | config_ruspell ||
+| links.bano | array | List of ids for bano file data sources | bano_file or osm_file ||
 
 
 ```json
