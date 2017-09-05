@@ -9,14 +9,14 @@ This is the ***compute_directions*** preprocess' job.
 
 ### How does it work?
 The ***ComputeDirections*** preprocess is associated to the contributor.  
-It will be apply to specific **data_sources**, defined by the contributor.  
-Each of these data sources will have a json config file witch contain, for each line, the stop_points order.  
-Each route of a line will have their stop_points order compare to the stop_points order of their line in the config.json : if it's a match then it will be the 0 direction, else it will be the opposite direction.  
-At the end, a new *trips.txt* file will be generate with a direction_id column and each line will have a direction.  
+It will use as parameter a "**direction_config**" type *data_source* : a json containing lines and their stop_points sorted from origin to destination.  
+From the *trips.txt*, each route of a line will have their stop_points order compare to the stop_points order of their line in the json : if it's a match then it will be the 0 direction, else it will be the opposite direction.   
+At the end, a new *trips.txt* file will be generate with a **direction_id** column and each line will have a direction.  
 
 ### Notes & articles
 The ***ComputeDirections*** preprocess will overwrite the **direction_id** column in the *trips.txt*, if there is one.  
 The **direction_id** column is made from scratch.  
+This is a case where we use a data_source as a tool (the **direction_config** type *data_source*) to do a preprocess on a **gtfs** type *data_source*.  
 http://www.kisiodigital.com/Blog/Entry/id/132  
 
 ### Acceptance criteria
