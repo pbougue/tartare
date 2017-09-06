@@ -17,7 +17,7 @@ This export will contain PT data from chosen dataset versions (which may have be
 
 
 ## DataSource
-As said on the thin this is a data source, defined as:
+As said on the tin this is a data source, defined as:
   * A format  
       * gtfs
       * direction_config (Used by the ComputeDirection preprocess)
@@ -51,5 +51,11 @@ For example, these processes can be:
   * structural refactory (outside FUSIO)
   * agregation in FUSIO
   * treatment in FUSIO
-  * Modify Stop point names (Fixing capital letters and so forth)
+  * Modify Stop point names (Fixing capital letters and so forth)  
+  
+Preprocesses are defined by:  
+  * The data_sources they will act upon.  
+  * The type of preprocess.  
+    * a set of params, like the data source used as config.   
+
 
