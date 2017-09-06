@@ -13,6 +13,16 @@ It will use as config a "**direction_config**" type *data_source* : a json conta
 From the *trips.txt*, each route of a line will have their stop_points order compare to the stop_points order of their line in the json : if it's a match then it will be the 0 direction, else it will be the opposite direction.   
 At the end, a new *trips.txt* file will be generate with a **direction_id** column and each line will have a direction.  
 
+### How to use it?
+1. Post a *contributor* (***/contributors***)
+2. Post a *data_source* for this contributor with **direction_config** as format. ***(/contributors/{contributor_id}/data_sources)***
+3. Post a json as *data_sets* for this data_source.  ***(/contributors/{contributor_id}/data_sources/{data_source_id}/data_sets)***
+4. Post a *data_source* for this contributor with **gtfs** as format. ***(/contributors/{contributor_id}/data_sources)***
+5. Post a **ComputeDirections** preprocess for this contributor ***(/contributors/{contributor_id}/preprocesses)*** with :
+    * the *data_source* created on step 4 in **data_source_ids**
+    * the *data_source* created on step 2 in **config:{data_source_id:{data_source}}**
+6. Post an *export* for this contributor (***/contributors/{contributor_id}/actions/export***).
+
 ### Notes & articles
 The ***ComputeDirections*** preprocess will overwrite the **direction_id** column in the *trips.txt*, if there is one.  
 The **direction_id** column is made from scratch.  
