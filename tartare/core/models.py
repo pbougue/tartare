@@ -55,20 +55,21 @@ class DataFormat(fields.Field):
     """
 
     default_error_messages = {
-        'invalid': 'data_format not in possible values {values}.'.format(values=DATA_FORMAT_VALUES)
+        'invalid': 'data_format "{current_value}" not in possible values {possible_values}.'
     }
 
     def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
         if value in DATA_FORMAT_VALUES:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid')
+            self.fail('invalid', current_value=value, possible_values=DATA_FORMAT_VALUES)
 
     def _deserialize(self, value: str, attr: str, data: dict) -> str:
         if value in DATA_FORMAT_VALUES:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid')
+            self.fail('invalid', current_value=value, possible_values=DATA_FORMAT_VALUES)
+
 
 class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
