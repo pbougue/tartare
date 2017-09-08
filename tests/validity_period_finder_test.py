@@ -220,7 +220,7 @@ def test_gtfs_feed_info_with_2_rows():
     file = _get_file_fixture_full_path('validity_period/gtfs_feed_info_with_2_rows.zip')
     with pytest.raises(InvalidFile) as excinfo:
         finder.get_validity_period(file)
-    assert str(excinfo.value) == 'Impossible to find validity period, invalid feed_info.txt file.'
+    assert str(excinfo.value) == 'Impossible to find validity period, invalid file feed_info.txt.'
 
 dummy_contrib = Contributor('cid', 'cname', 'pref')
 

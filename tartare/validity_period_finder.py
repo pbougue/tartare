@@ -150,7 +150,7 @@ class ValidityPeriodFinder(object):
                               parse_dates=['feed_start_date', 'feed_end_date'],
                               date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
         if self.reader.count_rows() > 1:
-            msg = 'Impossible to find validity period, invalid {} file.'.format(self.feed_info_filename)
+            msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
