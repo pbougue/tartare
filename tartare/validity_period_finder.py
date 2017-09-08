@@ -32,6 +32,8 @@ import logging
 from datetime import timedelta, date, datetime
 from typing import Tuple, List
 import numpy as np
+from pandas._libs.tslib import NaTType
+
 from tartare.core.csv_reader import CsvReader
 import pandas as pd
 
@@ -151,8 +153,11 @@ class ValidityPeriodFinder(object):
                               parse_dates=['feed_start_date', 'feed_end_date'],
                               date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
 
-        self.start_date = self.reader.data.at[0, 'feed_start_date'].date()
-        self.end_date = self.reader.data.at[0, 'feed_end_date'].date()
+        start_date = self.reader.data.at[0, 'feed_start_date'].date()
+        end_date = self.reader.data.at[0, 'feed_end_date'].date()
+        # NaTType correspond to an empty column
+        self.start_date = start_date if not isinstance(start_date, NaTType) else self.start_date
+        self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
 
     @classmethod
     def get_validity_period_union(self,

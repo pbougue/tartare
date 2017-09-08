@@ -62,6 +62,14 @@ def test_zip_file_only_feed_info_invalid():
     assert end_date == date(2016, 12, 24)
 
 
+def test_zip_file_only_feed_info_missing_dates():
+    finder = ValidityPeriodFinder()
+    file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_missing_dates.zip')
+    start_date, end_date = finder.get_validity_period(file)
+    assert start_date == date(2016, 10, 4), print(start_date)
+    assert end_date == date(2016, 12, 24), print(end_date)
+
+
 def test_zip_file_invalid():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('gtfs/bob.zip')
