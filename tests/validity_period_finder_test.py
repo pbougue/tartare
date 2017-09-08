@@ -57,9 +57,9 @@ def test_zip_file_only_feed_info():
 def test_zip_file_only_feed_info_invalid():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_invalid.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2016, 10, 4)
-    assert end_date == date(2016, 12, 24)
+    with pytest.raises(InvalidFile) as excinfo:
+        finder.get_validity_period(file)
+    assert str(excinfo.value) == "Header not found in file feed_info.txt, Error : 'feed_start_date' is not in list"
 
 
 def test_zip_file_only_feed_info_missing_dates():
@@ -214,6 +214,13 @@ def test_calendar_with_empty_line_and_add_date_only():
     assert start_date == date(2017, 1, 2)
     assert end_date == date(2017, 1, 31)
 
+
+def test_gtfs_feed_info_with_2_rows():
+    finder = ValidityPeriodFinder()
+    file = _get_file_fixture_full_path('validity_period/gtfs_feed_info_with_2_rows.zip')
+    with pytest.raises(InvalidFile) as excinfo:
+        finder.get_validity_period(file)
+    assert str(excinfo.value) == 'Impossible to find validity period, invalid feed_info.txt file.'
 
 dummy_contrib = Contributor('cid', 'cname', 'pref')
 
