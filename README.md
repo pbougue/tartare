@@ -96,3 +96,10 @@ cd path/to/tartare
 workon tartare
 make check
 ```
+
+### Functional tests
+```
+cd path/to/tartare
+workon tartare
+make functional_test
+```
