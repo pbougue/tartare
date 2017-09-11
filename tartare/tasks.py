@@ -281,9 +281,6 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
     for p in sorted_preprocesses[1:]:
         actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
 
-    #from celery.result import allow_join_result
-#    from celery.result import allow_join_result
-#    with allow_join_result():
     return chain(*actions).apply_async().get(disable_sync_subtasks=False)
 
 
