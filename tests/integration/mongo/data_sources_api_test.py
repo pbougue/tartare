@@ -28,9 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import tartare
-from tests.integration.test_mechanism import TartareFixture
 import pytest
+
+import tartare
+from tartare.core.constants import DATA_FORMAT_VALUES
+from tests.integration.test_mechanism import TartareFixture
 
 
 class TestDataSources(TartareFixture):
@@ -291,3 +293,27 @@ class TestDataSources(TartareFixture):
                 expected_name = license_name if license_name else tartare.app.config.get('DEFAULT_LICENSE_NAME')
                 assert data_source_from_api['license']['url'] == expected_url
                 assert data_source_from_api['license']['name'] == expected_name
+
+    def test_post_data_source_wrong_data_format(self, contributor):
+        data_source = {
+            "data_format": "failed",
+            "input": {},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
+        assert response.status_code == 400, print(response)
+        response_payload = self.to_json(response)
+        assert {'error': {'data_format': [
+            'data_format "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
+                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+
+    def test_post_data_source_valid_data_format(self, contributor):
+        for data_format in DATA_FORMAT_VALUES:
+            data_source = {
+                "data_format": data_format,
+                "input": {},
+                "name": "ds-name-" + data_format
+            }
+            response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                                 self.dict_to_json(data_source))
+            assert response.status_code == 201, print(response)
