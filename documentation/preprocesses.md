@@ -110,6 +110,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
    "data_source_ids": ["your-gtfs-id"]
    "id":"prepare_ext_settings",
    "params":{
+      "target_data_source_id": "my_external_settings_data_source_id"
       "links": {
         "tr_perimeter": "my-data-source-of-perimeter-json-id",
         "lines_referential": "my-data-source-of-lines-json-id",
@@ -139,4 +140,6 @@ curl -i -X POST \
  'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-lines-json-id/data_sets'
 ```
 
-You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs 
+You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.
+The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source is configured as "computed".
+If the data source is configured as "manual" or "url", the preprocess will be skipped. 
