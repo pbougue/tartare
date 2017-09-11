@@ -31,7 +31,9 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
       "data_format": "direction_config",
       "id": "data_source_id_config",
       "name": "data_source_name_config",
-      "input": {}
+      "input": {
+        "type": "manual"
+      }
     }
   ]
 }'

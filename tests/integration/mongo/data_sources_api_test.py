@@ -31,7 +31,7 @@
 import pytest
 
 import tartare
-from tartare.core.constants import DATA_FORMAT_VALUES
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -270,7 +270,7 @@ class TestDataSources(TartareFixture):
 
         data_source = {
             "input": {
-                "type": "http",
+                "type": "url",
                 "url": "http://my.server/some_archive.zip"
             },
             "name": "inputHttpDemo"
@@ -297,23 +297,47 @@ class TestDataSources(TartareFixture):
     def test_post_data_source_wrong_data_format(self, contributor):
         data_source = {
             "data_format": "failed",
-            "input": {},
+            "input": {'type': 'manual'},
             "name": "ds-name"
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
         assert {'error': {'data_format': [
-            'data_format "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
+            'choice "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
+                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+
+    def test_post_data_source_wrong_input_type(self, contributor):
+        data_source = {
+            "data_format": "gtfs",
+            "input": {'type': 'wrong'},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
+        assert response.status_code == 400, print(response)
+        response_payload = self.to_json(response)
+        assert {'error': {'input': {'type': [
+            'choice "wrong" not in possible values [\'' + ('\', \''.join(INPUT_TYPE_VALUES)) + '\'].']}},
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
 
     def test_post_data_source_valid_data_format(self, contributor):
         for data_format in DATA_FORMAT_VALUES:
             data_source = {
                 "data_format": data_format,
-                "input": {},
+                "input": {'type': 'manual'},
                 "name": "ds-name-" + data_format
             }
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json(data_source))
-            assert response.status_code == 201, print(response)
+            assert response.status_code == 201, print(self.to_json(response))
+
+    def test_post_data_source_valid_input_type(self, contributor):
+        for input_type in INPUT_TYPE_VALUES:
+            data_source = {
+                "data_format": 'gtfs',
+                "input": {'type': input_type},
+                "name": "ds-name-" + input_type
+            }
+            response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                                 self.dict_to_json(data_source))
+            assert response.status_code == 201, print(self.to_json(response))
