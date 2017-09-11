@@ -8,5 +8,11 @@ export HTTP_SERVER_IP=$(docker inspect --format '{{range .NetworkSettings.Networ
 py.test -vv  tests/functional
 RESULT=$?
 docker exec -it $(docker-compose -f docker-compose.test.yml ps -q http_download_server) rm -rf /var/www/.temp
+if [ $RESULT -eq 0 ]; then
+    echo "Tests passed"
+else
+    echo "/!\ Tests failed, last logs:"
+    docker logs $(docker-compose -f docker-compose.test.yml ps -q tartare_worker)
+fi
 docker-compose -f docker-compose.test.yml down
 exit $RESULT
