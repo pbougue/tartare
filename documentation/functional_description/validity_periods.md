@@ -18,14 +18,14 @@ If there is a *calendar_dates.txt* in the GTFS, we will also look into it to fou
 | OK  | OK | Final validity dates of calendar.txt removed  | OK |
 | OK  | OK | Days out of calendar.txt scope added | OK |
 | OK | N/A | N/A | OK |
-| OK | N/A | OK | NOK ==> *calendar.txt* is required, the export should fail. |
+| OK | N/A | OK | OK | 
 | OK | OK | N/A | OK |
-| N/A | N/A | OK | NOK ==> export refused, but because no validity period found. Should be because no *calendar.txt* |
+| N/A | N/A | OK | OK |
 
 
 
 
 ## Notes
-* A Gtfs with no *calendar.txt* should be rejected.  
+* A Gtfs with no *calendar.txt* but with a *calendar_dates.txt* can be accepted. This is OK.
 * Mono contributor right now.
 * If more than one publisher in *feed_info.txt*, only the first one is taken into account.
