@@ -19,7 +19,7 @@ This preprocess fixes trips.txt files into one or more gtfs data sources (refere
     "sequence": 0
  }
 ```
-You will then need to provide a json config file (see example in [here](tests/fixtures/compute_directions/config.json)) to the data source identified by "data-source-id-config" by doing:
+You will then need to provide a json config file (see example in [here](https://github.com/CanalTP/tartare/blob/master/tests/fixtures/compute_directions/config.json)) to the data source identified by "data-source-id-config" by doing:
 ```bash
 curl -i -X POST \
   -F "file=@\"./path/to/your_config_file.json\";type=application/json;filename=\"your_config_file.json\"" \
