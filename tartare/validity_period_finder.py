@@ -128,12 +128,9 @@ class ValidityPeriodFinder(object):
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
         if self.reader.file_in_zip_files(file, self.feed_info_filename):
-            try:
-                self._parse_feed_info(file)
-                if self.is_start_date_valid() and self.is_end_date_valid():
-                    return self.start_date, self.end_date
-            except (ValueError, InvalidFile):
-                pass
+            self._parse_feed_info(file)
+            if self.is_start_date_valid() and self.is_end_date_valid():
+                return self.start_date, self.end_date
 
         if self.reader.file_in_zip_files(file, self.calendar_filename):
             self._parse_calendar(file)
@@ -152,6 +149,10 @@ class ValidityPeriodFinder(object):
                               usecols=['feed_start_date', 'feed_end_date'],
                               parse_dates=['feed_start_date', 'feed_end_date'],
                               date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+        if self.reader.count_rows() > 1:
+            msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
 
         start_date = self.reader.data.at[0, 'feed_start_date'].date()
         end_date = self.reader.data.at[0, 'feed_end_date'].date()
