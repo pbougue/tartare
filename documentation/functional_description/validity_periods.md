@@ -1,9 +1,23 @@
 # Validity periods
 A data source have a validity period, with a start date and an end date.  
-This information is found in the *feed_info.txt* file.   
-If the *feed_info.txt* is incomplete, the *calendar.txt* file will be use to found the needed information.  
+Same for a data set and the final GTFS sent to Navitia & ODS.  
+It can be found or calculate through the *feed_info.txt*, *calendar.txt* or *calendar_dates.txt*.  
+
+## Feed info > calendar_dates > calendar.
+The Data source's validity periods can be found in the *feed_info.txt* file. If this file is present and the start date and end date culumns are filled, then we take the information from here.  
+If the *feed_info.txt* is incomplete, the *calendar.txt* file will be use to found the needed information.   
 In this case, we go through each line of the *calendar.txt* and take the oldest **start_date** and the farthest **end_date** available.  
 If there is a *calendar_dates.txt* in the GTFS, we will also look into it to found dates out of the scope with an **exception_type** of 1 (Added date of services).  
+
+## Multiple data sources with different validity periods for a data set.
+A contributor can have more than one data source to create their data set (a Tramway data source and a bus data source for example).  
+If these data sources have different validity periods, we will use the common period.  
+Example :  
+Data source #1 :     Mai 2017 <----------------------------------------> Aout 2017
+Data source #2 :                        Juillet 2017  <-----------------------------------------------> Novembre 2017
+Period used :                           Juillet 2017  <----------------> Aout 2017
+
+
 
 ## Tests
 
