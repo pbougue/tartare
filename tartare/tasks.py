@@ -87,7 +87,6 @@ class CallbackTask(tartare.ContextTask):
             with tartare.app.app_context():
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
-
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
@@ -269,11 +268,27 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
 def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    tmp_processes = sorted(processes, key=lambda x: ['sequence'])
-    for p in tmp_processes:
-        logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=p.type))
-        context = PreProcessManager.get_preprocess(context, p).do()
-    return context
+    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    actions = []
+
+    # Do better
+    def get_queue(preprocess: PreProcess) -> str:
+        return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
+
+    first_process = sorted_preprocesses[0]
+    actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+
+    for p in sorted_preprocesses[1:]:
+        actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
+
+    return chain(*actions).apply_async().get(disable_sync_subtasks=False)
+
+
+@celery.task
+def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:
+    process_instance = PreProcessManager.get_preprocess(context, preprocess=preprocess)
+    logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=preprocess.type))
+    return process_instance.do()
 
 
 @celery.task()

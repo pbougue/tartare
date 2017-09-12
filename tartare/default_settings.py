@@ -10,23 +10,22 @@ from kombu import Exchange, Queue
 # the default vhost is "/" so the URL end with *two* slash
 # http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
 BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
-
+CELERY_RESULT_BACKEND = 'rpc'
 CELERY_DEFAULT_QUEUE = 'tartare'
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
 CELERY_DEFAULT_ROUTING_KEY ='celery'
-
-# Temporary, to be deleted soon
-CELERYD_CONCURRENCY = 1
 
 exchange = Exchange(CELERY_DEFAULT_EXCHANGE)
 
 CELERY_QUEUES = (
     Queue(CELERY_DEFAULT_QUEUE, exchange=exchange, routing_key='celery'),
+    Queue('process_ruspell', exchange=exchange, routing_key='process.ruspell'),
 )
 
 
 # configuration of celery, don't edit
 CELERY_TASK_SERIALIZER = 'pickle'
+CELERY_RESULT_SERIALIZER = 'pickle'
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERYBEAT_SCHEDULE = {
