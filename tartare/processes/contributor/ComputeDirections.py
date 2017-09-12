@@ -52,6 +52,8 @@ class Ruspell(AbstractProcess):
 
 
 class ComputeDirections(AbstractProcess):
+    direction_id_normal = '0'
+    direction_id_return = '1'
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         self.gfs = GridFsHandler()
@@ -83,8 +85,8 @@ class ComputeDirections(AbstractProcess):
         return self.context
 
     def __get_rules(self, trip_to_route: Dict[str, str], trip_stop_sequences: Dict[str, List[str]],
-                    config: Dict[str, List[str]]) -> List[str]:
-        trips_to_invert = []
+                    config: Dict[str, List[str]]) -> Dict[str, str]:
+        trips_to_fix = {}
         for a_trip, a_stop_sequence in trip_stop_sequences.items():
             try:
                 a_route = trip_to_route[a_trip]
@@ -108,12 +110,14 @@ class ComputeDirections(AbstractProcess):
                         forward_sequence_count += 1
                 # si moins de la moitié des couples d'arrêts ne sont pas dans le bon sens, on passe en sens retour
                 if forward_sequence_count < sequence_count / 2:
-                    trips_to_invert.append(a_trip)
+                    trips_to_fix[a_trip] = self.direction_id_return
+                else:
+                    trips_to_fix[a_trip] = self.direction_id_normal
             except IntegrityException as e:
                 logging.getLogger(__name__).error(str(e))
-        return trips_to_invert
+        return trips_to_fix
 
-    def __apply_rules(self, trips_file_name: str, trips_file_read: TextIO, trips_to_invert: List[str]) -> None:
+    def __apply_rules(self, trips_file_name: str, trips_file_read: TextIO, trips_to_fix: Dict[str, str]) -> None:
         with open(trips_file_name, 'w') as trips_file_write:
             trips_file_read.seek(0)
             reader = csv.DictReader(trips_file_read)
@@ -124,7 +128,8 @@ class ComputeDirections(AbstractProcess):
                                     quoting=csv.QUOTE_MINIMAL)
             writer.writeheader()
             for row in reader:
-                row['direction_id'] = '0' if row['trip_id'] in trips_to_invert else '1'
+                if row['trip_id'] in trips_to_fix:
+                    row['direction_id'] = trips_to_fix[row['trip_id']]
                 writer.writerow(row)
 
     def __create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,

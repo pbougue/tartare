@@ -36,12 +36,12 @@ logger = logging.getLogger(__name__)
 
 
 def merge(coverage: Coverage, context: Context) -> Context:
-    logger.info("coverage_id : %s", coverage.id)
+    logger.info("merge for coverage_id = %s", coverage.id)
     return context
 
 
 def postprocess(coverage: Coverage, context: Context) -> Context:
-    logger.info("coverage_id : %s", coverage.id)
+    logger.info("postprocess for coverage_id = %s", coverage.id)
     for contributor_context in context.contributor_contexts:
         if not context.validity_period:
             context.validity_period = contributor_context.validity_period
