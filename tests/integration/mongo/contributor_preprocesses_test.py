@@ -282,6 +282,8 @@ class TestComputeDirectionsProcess(TartareFixture):
     # - direction_id not filled and present in config file are filled with corresponding values
     # - missing direction_id column case is handled
     # - if rows in stop_times.txt are not sorted by stop_sequence for each trip_id, the case is handled
+    # - if trips line is not present in config file, old direction_id values are kept
+    # - 0 is normal direction and 1 is reverse
     #
     @freeze_time("2017-01-15")
     @pytest.mark.parametrize(
