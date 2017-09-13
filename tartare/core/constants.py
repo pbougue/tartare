@@ -27,5 +27,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-INPUT_TYPE_VALUES = ["url", "manual", "computed"]
+INPUT_TYPE_URL = 'url'
+INPUT_TYPE_MANUAL = 'manual'
+INPUT_TYPE_COMPUTED = 'computed'
+INPUT_TYPE_VALUES = [INPUT_TYPE_URL, INPUT_TYPE_MANUAL, INPUT_TYPE_COMPUTED]
 DATA_FORMAT_VALUES = ["gtfs", "direction_config", "ruspell_config"]

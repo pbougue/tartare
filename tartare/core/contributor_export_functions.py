@@ -33,6 +33,7 @@ import tempfile
 from typing import List
 
 from tartare.core import models
+from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
@@ -102,7 +103,7 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input.type == 'url' and data_source.input.url:
+        if data_source.input.type == INPUT_TYPE_URL and data_source.input.url:
             url = data_source.input.url
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
