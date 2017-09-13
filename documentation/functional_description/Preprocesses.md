@@ -25,6 +25,7 @@ At the end, a new *trips.txt* file will be generate with a **direction_id** colu
 
 ### Notes & articles
 The ***ComputeDirections*** preprocess will overwrite the **direction_id** column in the *trips.txt* for all routes mentioned in the **direction_config** data source.  
+If a route's direction from the **direction_config** data source can't be calculated, then it will be 0 by default.
 The **direction_id** of routes not mentioned in the **direction_config** data source will not be modified. If their **direction_id** is empty, they will stay empty.  
 If there is no **direction_id** column, it will be made from scratch. **Direction_id** of routes not mentioned in the **direction_config** will be empty.  
 
