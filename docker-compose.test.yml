@@ -37,5 +37,3 @@ services:
 
   http_download_server:
     image: visity/webdav
-    volumes:
-      - ./tests/fixtures:/var/www
