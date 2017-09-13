@@ -14,9 +14,9 @@ A contributor can have more than one data source to create their data set (a Tra
 Currently, we take the oldest start date and the farthest end date.   
 
 Example :  
-Data source #1 :............Mai 2017 <-------------------> Aout 2017   
-Data source #2 :.......................Juillet 2017  <-----------------------------------------------> Novembre 2017  
-Period used :...............Mai 2017 <---------------------------------------------------------> Novembre 2017  
+Data source #1 : Mai 2017 - Aout 2017   
+Data source #2 : Juillet 2017  - Novembre 2017  
+Period used : Mai 2017 - Novembre 2017  
 
 ## Validity period > 365 days forbidden.
 A validity period can't be longer than 365 days.   
