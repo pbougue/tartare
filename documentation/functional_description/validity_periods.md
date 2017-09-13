@@ -10,36 +10,22 @@ In this case, we go through each line of the *calendar.txt* and take the oldest 
 If there is a *calendar_dates.txt* in the GTFS, we will also look into it to found dates out of the scope with an **exception_type** of 1 (Added date of services).  
 
 ## Multiple data sources with different validity periods for a data set.
-A contributor can have more than one data source to create their data set (a Tramway data source and a bus data source for example).  
-If these data sources have different validity periods, we will use the common period.  
+A contributor can have more than one data source to create their data set (a Tramway data source and a bus data source for example).    
+Currently, we take the oldest start date and the farthest end date.   
+
 Example :  
-Data source #1 :     Mai 2017 <----------------------------------------> Aout 2017
-Data source #2 :                        Juillet 2017  <-----------------------------------------------> Novembre 2017
-Period used :                           Juillet 2017  <----------------> Aout 2017
+Data source #1 :............Mai 2017 <-------------------> Aout 2017   
+Data source #2 :.......................Juillet 2017  <-----------------------------------------------> Novembre 2017  
+Period used :...............Mai 2017 <---------------------------------------------------------> Novembre 2017  
 
-
-
-## Tests
-
-| *feed_info.txt*  | *calendar.txt* | *calendar_dates.txt* | Result |
-|----|---|---|---|
-| OK | OK | N/A | OK |
-| Empty | OK | N/A | OK |
-| N/A | OK | N/A | OK |
-| N/A | OK | Empty | OK |
-| N/A | OK | Days out of calendar.txt scope added | OK |
-| N/A | OK | Final validity dates of calendar.txt removed | OK |
-| OK  | OK | Final validity dates of calendar.txt removed  | OK |
-| OK  | OK | Days out of calendar.txt scope added | OK |
-| OK | N/A | N/A | OK |
-| OK | N/A | OK | OK | 
-| OK | OK | N/A | OK |
-| N/A | N/A | OK | OK |
-
-
-
+## Validity period > 365 days forbidden.
+A validity period can't be longer than 365 days.   
+If the addition of the validity periods of two data sources is more than 365 days, then :  
+  * If the start date is older than today, we use today as start date. Else, if the start date is in the future, we take the start date.  
+  * As end date, we take the lowest value between the end date and the new start date + 364 days.  
 
 ## Notes
 * A Gtfs with no *calendar.txt* but with a *calendar_dates.txt* can be accepted. This is OK.
 * Mono contributor right now.
 * If more than one publisher in *feed_info.txt*, only the first one is taken into account.
+* Some contributors may want to have the intersection between two data sources' validity period. This is not supported right now.
