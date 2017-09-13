@@ -3,11 +3,12 @@
 docker-compose -f docker-compose.test.yml down
 docker build -t tartare_functional_tests .
 docker-compose -f docker-compose.test.yml up -d
+HTTP_SERVER_ID=$(docker-compose -f docker-compose.test.yml ps -q http_download_server)
 export TARTARE_HOST_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker-compose -f docker-compose.test.yml ps -q tartare_webservice))
-export HTTP_SERVER_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'  $(docker-compose -f docker-compose.test.yml ps -q http_download_server))
+export HTTP_SERVER_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'  $HTTP_SERVER_ID)
+docker cp tests/fixtures/. $HTTP_SERVER_ID:/var/www
 py.test -vv  tests/functional
 RESULT=$?
-docker exec -it $(docker-compose -f docker-compose.test.yml ps -q http_download_server) rm -rf /var/www/.temp
 if [ $RESULT -eq 0 ]; then
     echo "Tests passed"
 else
