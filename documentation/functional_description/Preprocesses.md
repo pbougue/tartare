@@ -9,9 +9,9 @@ This is the ***ComputeDirections*** preprocess' job.
 
 ### How does it work?
 The ***ComputeDirections*** preprocess is associated to the contributor and will be use only on specific data sources found in **data_source_ids**.  
-It will use as config a "**direction_config**" format *data_source* : a json containing lines and their stop points sorted from origin to destination.  
-From the *trips.txt*, each route of a line will have their stop_points order compared to the stop points order of their line in the json : if it's a match then it will be the 0 direction, else it will be the opposite direction.   
-At the end, a new *trips.txt* file will be generate with a **direction_id** column and each line will have a direction.  
+It will use as config a "**direction_config**" format *data_source* : a json containing routes and their stop points sorted from origin to destination.  
+From the *trips.txt*, each route mentioned in the **direction_config** data source will have their stop_points order compared to the stop points order of their route in the json : if it's a match then it will be the 0 direction, else it will be the opposite direction.   
+At the end, a new *trips.txt* file will be generate with a **direction_id** column and each route mentioned in the **direction_config** data source will have a direction. The other routes will be unchanged.    
 
 ### How to use it?
 1. Post a *contributor* ***(/contributors)***
@@ -24,13 +24,14 @@ At the end, a new *trips.txt* file will be generate with a **direction_id** colu
 6. Launch the export action for this contributor ***(/contributors/{contributor_id}/actions/export)***.
 
 ### Notes & articles
-The ***ComputeDirections*** preprocess will overwrite the **direction_id** column in the *trips.txt*, if there is one.  
-The **direction_id** column is made from scratch.  
+The ***ComputeDirections*** preprocess will overwrite the **direction_id** column in the *trips.txt* for all routes mentioned in the **direction_config** data source.  
+The **direction_id** of routes not mentioned in the **direction_config** data source will not be modified. If their **direction_id** is empty, they will stay empty.  
+If there is no **direction_id** column, it will be made from scratch. **Direction_id** of routes not mentioned in the **direction_config** will be empty.  
+
 This is a case where we use a data source as a tool (the **direction_config** format *data_source*) to do a preprocess on a **gtfs** format *data_source*.  
+
 http://www.kisiodigital.com/Blog/Entry/id/132  
 
-### Acceptance criteria
-We expect the *trips.txt* generate through the ***ComputeDirections*** preprocess to have at least 1/3 **direction_id** at 0 and 1/3 **direction_id** at 1.  
 
 
 
