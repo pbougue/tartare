@@ -102,8 +102,8 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input:
-            url = data_source.input.get('url')
+        if data_source.input.type == 'url' and data_source.input.url:
+            url = data_source.input.url
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 filename = get_filename(url, data_source.id)

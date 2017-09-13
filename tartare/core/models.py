@@ -52,7 +52,7 @@ def init_mongo() -> None:
 
 
 class ChoiceField(fields.Field):
-    def __init__(self, possible_values, **metadata):
+    def __init__(self, possible_values: List[str], **metadata: dict) -> None:
         super().__init__(**metadata)
         self.possible_values = possible_values
 
@@ -77,12 +77,12 @@ class ChoiceField(fields.Field):
 
 
 class DataFormat(ChoiceField):
-    def __init__(self, **metadata):
+    def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_FORMAT_VALUES, **metadata)
 
 
 class InputType(ChoiceField):
-    def __init__(self, **metadata):
+    def __init__(self, **metadata: dict) -> None:
         super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
@@ -149,7 +149,7 @@ class License(object):
 
 
 class Input(object):
-    def __init__(self, type: InputType, url: Optional[str] = None):
+    def __init__(self, type: str, url: Optional[str] = None) -> None:
         self.type = type
         self.url = url
 
@@ -237,7 +237,7 @@ class DataSource(object):
     def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
         data_sources = cls.get(data_source_id=data_source_id)
         if not data_sources:
-            False
+            return False
         else:
             return data_sources[0].data_format == data_format
 

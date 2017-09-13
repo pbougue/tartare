@@ -326,8 +326,8 @@ class TestContributors(TartareFixture):
             "id": data_source["id"],
             "name": "name_modified",
             "input": {
-                "type": "existing_version",
-                "v": "-2"
+                "type": "url",
+                "url": "http://bob.com",
             }
         }
         data_source_list = {}
@@ -340,8 +340,8 @@ class TestContributors(TartareFixture):
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
         assert patched_data_source["data_format"] == "gtfs"
-        assert patched_data_source["input"]["type"] == "existing_version"
-        assert patched_data_source["input"]["v"] == "-2"
+        assert patched_data_source["input"]["type"] == "url"
+        assert patched_data_source["input"]["url"] == "http://bob.com"
 
     def test_patch_contrib_one_data_source_name_of_two_and_add_one(self):
         """
@@ -377,8 +377,7 @@ class TestContributors(TartareFixture):
             "id": r["contributors"][0]["data_sources"][1]["id"],
             "name": "name_modified",
             "input": {
-                "type": "existing_version",
-                "v": "-2"
+                "type": "manual",
             }
         }
         r["contributors"][0]["data_sources"][0] = new_data_source
@@ -388,8 +387,7 @@ class TestContributors(TartareFixture):
             {
                 "name": "data_source_3",
                 "input": {
-                    "type": "url",
-                    "url": "http://stif.com/od.zip"
+                    "type": "computed",
                 }
             }
         ]

@@ -112,7 +112,7 @@ class TestContributorExport(TartareFixture):
         if error_message and '%url%' in error_message:
             error_message = error_message.replace('%url%', url)
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"url": "' + url + '"}}')
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
         raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
@@ -132,7 +132,7 @@ class TestContributorExport(TartareFixture):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='some_archive.zip')
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", "input": {"url": "' + url + '"}}')
+                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
         raw = self.post('/contributors/id_test/preprocesses',
                         params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],"params":{"data":{"agency_id":"112","agency_name":"stif","agency_url":"http://stif.com"}}}')
