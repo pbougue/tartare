@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any
 
 import pymongo
 from gridfs import GridOut
@@ -40,7 +40,8 @@ from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
 from tartare import mongo
-from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, INPUT_TYPE_MANUAL, DATA_FORMAT_DEFAULT, \
+    INPUT_TYPE_DEFAULT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
 
@@ -82,7 +83,7 @@ class DataFormat(ChoiceField):
 
 
 class InputType(ChoiceField):
-    def __init__(self, **metadata: dict) -> None:
+    def __init__(self, **metadata: Any) -> None:
         super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
@@ -149,15 +150,15 @@ class License(object):
 
 
 class Input(object):
-    def __init__(self, type: str, url: Optional[str] = None) -> None:
+    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None) -> None:
         self.type = type
         self.url = url
 
 
 class DataSource(object):
     def __init__(self, id: Optional[str] = None, name: Optional[str] = None,
-                 data_format: Optional[str] = "gtfs",
-                 input: Optional[Input] = None, license: Optional[License] = None) -> None:
+                 data_format: Optional[str] = DATA_FORMAT_DEFAULT,
+                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT), license: Optional[License] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
@@ -691,7 +692,7 @@ class MongoDataSourceFetchedSchema(Schema):
 
 
 class MongoDataSourceInputSchema(Schema):
-    type = InputType()
+    type = InputType(required=False, allow_none=True)
     url = fields.String(required=False, allow_none=True)
 
     @post_load
@@ -704,7 +705,7 @@ class MongoDataSourceSchema(Schema):
     name = fields.String(required=True)
     data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
-    input = fields.Nested(MongoDataSourceInputSchema, required=True)
+    input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
