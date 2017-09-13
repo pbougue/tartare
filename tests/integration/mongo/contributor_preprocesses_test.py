@@ -225,14 +225,14 @@ class TestComputeDirectionsProcess(TartareFixture):
                     "id": "ds-to-process",
                     "name": "ds-to-process",
                     "data_format": "gtfs",
-                    "input": {"url": url}
+                    "input": {"type": "url", "url": url}
                 })
         if add_data_source_config:
             data_sources.append({
                 "id": "ds-config",
                 "name": "ds-config",
                 "data_format": "direction_config",
-                "input": {}
+                "input": {"type": "manual"}
             })
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))

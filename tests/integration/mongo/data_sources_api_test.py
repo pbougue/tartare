@@ -28,9 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import tartare
-from tests.integration.test_mechanism import TartareFixture
 import pytest
+
+import tartare
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT
+from tests.integration.test_mechanism import TartareFixture
 
 
 class TestDataSources(TartareFixture):
@@ -242,21 +244,6 @@ class TestDataSources(TartareFixture):
         assert patched_data_sources[1]["name"] == "name_modified"
         assert patched_data_sources[2]["name"] == "data_source_name3"
 
-    def test_post_ds_one_data_source_without_input(self, contributor):
-        """
-        using /data_sources endpoint
-        """
-        post_ds = {"name": "data_source_name"}
-        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        r = self.to_json(raw)
-        assert 'error' in r
-        assert raw.status_code == 400, print(self.to_json(raw))
-
-        raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
-        self.assert_sucessful_call(raw)
-        assert len(r["data_sources"]) == 0
-
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
         ('http://license.org/othercompany', 'my license full name', 201),
@@ -268,7 +255,7 @@ class TestDataSources(TartareFixture):
 
         data_source = {
             "input": {
-                "type": "http",
+                "type": "url",
                 "url": "http://my.server/some_archive.zip"
             },
             "name": "inputHttpDemo"
@@ -291,3 +278,74 @@ class TestDataSources(TartareFixture):
                 expected_name = license_name if license_name else tartare.app.config.get('DEFAULT_LICENSE_NAME')
                 assert data_source_from_api['license']['url'] == expected_url
                 assert data_source_from_api['license']['name'] == expected_name
+
+    def test_post_data_source_wrong_data_format(self, contributor):
+        data_source = {
+            "data_format": "failed",
+            "input": {'type': 'manual'},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
+        assert response.status_code == 400, print(response)
+        response_payload = self.to_json(response)
+        assert {'error': {'data_format': [
+            'choice "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
+                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+
+    def test_post_data_source_wrong_input_type(self, contributor):
+        data_source = {
+            "data_format": "gtfs",
+            "input": {'type': 'wrong'},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
+        assert response.status_code == 400, print(response)
+        response_payload = self.to_json(response)
+        assert {'error': {'input': {'type': [
+            'choice "wrong" not in possible values [\'' + ('\', \''.join(INPUT_TYPE_VALUES)) + '\'].']}},
+                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+
+    def test_post_data_source_valid_data_format(self, contributor):
+        for data_format in DATA_FORMAT_VALUES:
+            data_source = {
+                "data_format": data_format,
+                "input": {'type': 'manual'},
+                "name": "ds-name-" + data_format
+            }
+            response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                                 self.dict_to_json(data_source))
+            assert response.status_code == 201, print(self.to_json(response))
+
+    def test_post_data_source_valid_input_type(self, contributor):
+        for input_type in INPUT_TYPE_VALUES:
+            data_source = {
+                "data_format": 'gtfs',
+                "input": {'type': input_type},
+                "name": "ds-name-" + input_type
+            }
+            response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                                 self.dict_to_json(data_source))
+            assert response.status_code == 201, print(self.to_json(response))
+
+    def test_data_source_data_format_default_value(self, contributor):
+        data_source = {
+            "input": {'type': 'manual'},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+        response_payload = self.to_json(response)
+        assert response.status_code == 201, print(response_payload)
+        assert response_payload['data_sources'][0]['data_format'] == DATA_FORMAT_DEFAULT, print(response_payload)
+
+    def test_data_source_input_type_default_value(self, contributor):
+        data_source = {
+            "data_format": "gtfs",
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+        response_payload = self.to_json(response)
+        assert response.status_code == 201, print(response_payload)
+        assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
+

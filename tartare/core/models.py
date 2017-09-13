@@ -26,21 +26,24 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from abc import ABCMeta
-from gridfs import GridOut
-from tartare import mongo
-from marshmallow import Schema, post_load, utils,  fields
-from tartare import app
-from tartare.helper import to_doted_notation, get_values_by_key
-from tartare.core.gridfs_handler import GridFsHandler
-import pymongo
-import uuid
-from datetime import datetime
-from datetime import date
 import logging
-from typing import Optional, List, Union, Dict, Type, BinaryIO
-from tartare.core.constants import DATA_FORMAT_VALUES
+import uuid
+from abc import ABCMeta
+from datetime import date
+from datetime import datetime
 from io import IOBase
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any
+
+import pymongo
+from gridfs import GridOut
+from marshmallow import Schema, post_load, utils, fields
+
+from tartare import app
+from tartare import mongo
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, INPUT_TYPE_MANUAL, DATA_FORMAT_DEFAULT, \
+    INPUT_TYPE_DEFAULT
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.helper import to_doted_notation, get_values_by_key
 
 
 @app.before_first_request
@@ -49,26 +52,39 @@ def init_mongo() -> None:
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 
-class DataFormat(fields.Field):
+class ChoiceField(fields.Field):
+    def __init__(self, possible_values: List[str], **metadata: dict) -> None:
+        super().__init__(**metadata)
+        self.possible_values = possible_values
 
-    """A DataFormat field.
     """
-
+    A Choice field.
+    """
     default_error_messages = {
-        'invalid': 'data_format "{current_value}" not in possible values {possible_values}.'
+        'invalid': 'choice "{current_value}" not in possible values {possible_values}.'
     }
 
     def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
-        if value in DATA_FORMAT_VALUES:
+        if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=DATA_FORMAT_VALUES)
+            self.fail('invalid', current_value=value, possible_values=self.possible_values)
 
     def _deserialize(self, value: str, attr: str, data: dict) -> str:
-        if value in DATA_FORMAT_VALUES:
+        if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=DATA_FORMAT_VALUES)
+            self.fail('invalid', current_value=value, possible_values=self.possible_values)
+
+
+class DataFormat(ChoiceField):
+    def __init__(self, **metadata: dict) -> None:
+        super().__init__(DATA_FORMAT_VALUES, **metadata)
+
+
+class InputType(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
 class PreProcessContainer(metaclass=ABCMeta):
@@ -84,7 +100,7 @@ class PreProcessContainer(metaclass=ABCMeta):
 
 
 class Platform(object):
-    def __init__(self, protocol: str, type: str, url: str, options: dict=None, sequence: Optional[int]=0) -> None:
+    def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0) -> None:
         self.type = type
         self.protocol = protocol
         self.url = url
@@ -93,8 +109,8 @@ class Platform(object):
 
 
 class Environment(object):
-    def __init__(self, name: str=None, current_ntfs_id: str=None, publication_platforms: List[Platform]=None,
-                 sequence: Optional[int]=0) -> None:
+    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None,
+                 sequence: Optional[int] = 0) -> None:
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
@@ -116,7 +132,8 @@ class ValidityPeriodContainer(object):
 
 
 class ContributorExportDataSource(ValidityPeriodContainer):
-    def __init__(self, data_source_id: str = None, gridfs_id: str = None, validity_period: ValidityPeriod = None) -> None:
+    def __init__(self, data_source_id: str = None, gridfs_id: str = None,
+                 validity_period: ValidityPeriod = None) -> None:
         super().__init__(validity_period)
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
@@ -132,14 +149,20 @@ class License(object):
         return str(vars(self))
 
 
+class Input(object):
+    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None) -> None:
+        self.type = type
+        self.url = url
+
+
 class DataSource(object):
-    def __init__(self, id: Optional[str]=None, name: Optional[str]=None,
-                 data_format: Optional[str]="gtfs",
-                 input: Optional[dict]=None, license: Optional[License]=None) -> None:
+    def __init__(self, id: Optional[str] = None, name: Optional[str] = None,
+                 data_format: Optional[str] = DATA_FORMAT_DEFAULT,
+                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT), license: Optional[License] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
-        self.input = {} if not input else input
+        self.input = input
         self.license = license if license else License()
 
     def __repr__(self) -> str:
@@ -161,7 +184,7 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str=None, data_source_id: str=None) -> Optional[List['DataSource']]:
+    def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
             contributor = get_contributor(contributor_id)
         elif data_source_id is not None:
@@ -215,14 +238,14 @@ class DataSource(object):
     def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
         data_sources = cls.get(data_source_id=data_source_id)
         if not data_sources:
-            False
+            return False
         else:
             return data_sources[0].data_format == data_format
 
 
 class GenericPreProcess(object):
-    def __init__(self, id: Optional[str]=None, type: Optional[str]=None, params: Optional[dict]=None,
-                 sequence: Optional[int]=0, data_source_ids: Optional[List[str]]=None) -> None:
+    def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
+                 sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None) -> None:
         self.id = str(uuid.uuid4()) if not id else id
         self.sequence = sequence
         self.data_source_ids = data_source_ids if data_source_ids else []
@@ -304,7 +327,7 @@ class GenericPreProcess(object):
 
 
 class PreProcess(GenericPreProcess):
-    def save(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> None:
+    def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
@@ -315,8 +338,8 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
 
     @classmethod
-    def get(cls, preprocess_id: Optional[str]=None, contributor_id: Optional[str]=None,
-            coverage_id: Optional[str]=None) -> Optional[List['PreProcess']]:
+    def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
+            coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('Bad arguments.')
         if contributor_id:
@@ -325,7 +348,7 @@ class PreProcess(GenericPreProcess):
             return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def delete(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> int:
+    def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
         if preprocess_id is None:
             raise ValueError('A preprocess id is required')
         if not any([coverage_id, contributor_id]):
@@ -336,8 +359,8 @@ class PreProcess(GenericPreProcess):
             return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
 
     @classmethod
-    def update(cls, preprocess_id: str, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None,
-               preprocess: Optional[dict]=None) -> Optional[List['PreProcess']]:
+    def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
+               preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         if preprocess_id is None:
             raise ValueError('A PreProcess id is required')
 
@@ -357,8 +380,8 @@ class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
-    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
-                 preprocesses: List[PreProcess]=None) -> None:
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
+                 preprocesses: List[PreProcess] = None) -> None:
         super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
@@ -593,7 +616,7 @@ class Historisable(object):
             num_deleted = self.delete_many([row.get('_id') for row in old_rows])
             # Delete all associated gridFS
             if num_deleted:
-                gridfs_ids = [] # type: List[str]
+                gridfs_ids = []  # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
                 for gridf_ids in gridfs_ids:
                     GridFsHandler().delete_file_from_gridfs(gridf_ids)
@@ -603,8 +626,8 @@ class DataSourceFetched(Historisable):
     mongo_collection = 'data_source_fetched'
 
     def __init__(self, contributor_id: str, data_source_id: str,
-                 validity_period: Optional[ValidityPeriod]=None, gridfs_id: str=None,
-                 created_at: datetime=None, id: str=None) -> None:
+                 validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
+                 created_at: datetime = None, id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
@@ -643,7 +666,7 @@ class DataSourceFetched(Historisable):
 
     def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
         self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
-                                                                 contributor_id=self.contributor_id)
+                                                             contributor_id=self.contributor_id)
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -668,12 +691,21 @@ class MongoDataSourceFetchedSchema(Schema):
         return DataSourceFetched(**data)
 
 
+class MongoDataSourceInputSchema(Schema):
+    type = InputType(required=False, allow_none=True)
+    url = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_input(self, data: dict) -> Input:
+        return Input(**data)
+
+
 class MongoDataSourceSchema(Schema):
     id = fields.String(required=True)
     name = fields.String(required=True)
     data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
-    input = fields.Dict(required=True)
+    input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
@@ -811,9 +843,9 @@ class ContributorExport(Historisable):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource]=None,
-                 id: str=None,
-                 created_at: datetime=None) -> None:
+                 data_sources: List[ContributorExportDataSource] = None,
+                 id: str = None,
+                 created_at: datetime = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id

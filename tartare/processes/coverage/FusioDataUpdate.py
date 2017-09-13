@@ -29,6 +29,7 @@
 
 import requests
 
+from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource
@@ -63,7 +64,7 @@ class FusioDataUpdate(AbstractProcess):
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
-                if not DataSource.is_type_data_format(data_source_context.data_source_id, 'gtfs'):
+                if not DataSource.is_type_data_format(data_source_context.data_source_id, DATA_FORMAT_GTFS):
                     continue
 
                 resp = fusio.call(requests.post, api='api',
