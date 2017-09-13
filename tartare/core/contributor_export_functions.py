@@ -140,10 +140,12 @@ def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
 def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
-        data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
-        if not data_set:
-            raise ParameterException(
-                'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
-        context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                    GridFsHandler().copy_file(data_set.gridfs_id))
+        if data_source.input.type != 'computed':
+            data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
+            if not data_set:
+                raise ParameterException(
+                    'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+            context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
+                                                        GridFsHandler().copy_file(data_set.gridfs_id))
+        context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
     return context

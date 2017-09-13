@@ -32,8 +32,10 @@ import os
 import tempfile
 import zipfile
 
+import shutil
 from gridfs import GridOut
 
+from tartare.core.constants import DATA_FORMAT_FUSIO_OBJECT_SETTINGS
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
@@ -142,13 +144,23 @@ class PrepareExternalSettings(AbstractContributorProcess):
             self.__write_row_for_properties(writer_properties, "line", "realtime_system", self.siri_stif_object_system,
                                             object_id)
 
+    def __save_csv_files_as_data_set(self, tmp_csv_workspace: str) -> str:
+        with tempfile.TemporaryDirectory() as tmp_out_dir_name:
+            new_archive_file_name = os.path.join(tmp_out_dir_name, DATA_FORMAT_FUSIO_OBJECT_SETTINGS)
+            new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_csv_workspace)
+            with open(new_archive_file_name, 'rb') as new_archive_file:
+                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=DATA_FORMAT_FUSIO_OBJECT_SETTINGS + '.zip')
+                return new_gridfs_id
+
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str) -> str:
         file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         self.__init_route_id_to_navitia_code_mapping(file_to_process)
-        with zipfile.ZipFile(file_to_process, 'r') as files_zip, tempfile.TemporaryDirectory() as tmp_dir_name:
+        with zipfile.ZipFile(file_to_process, 'r') as files_zip, \
+                tempfile.TemporaryDirectory() as tmp_dir_name, \
+                tempfile.TemporaryDirectory() as tmp_csv_workspace:
             files_zip.extractall(tmp_dir_name)
-            csv_codes = os.path.join(tmp_dir_name, self.objects_codes_file_name)
-            csv_properties = os.path.join(tmp_dir_name, self.objects_properties_file_name)
+            csv_codes = os.path.join(tmp_csv_workspace, self.objects_codes_file_name)
+            csv_properties = os.path.join(tmp_csv_workspace, self.objects_properties_file_name)
             with open(csv_codes, 'w') as rules_csv_codes_file, \
                     open(csv_properties, 'w') as rules_csv_properties_file:
                 writer_codes = csv.DictWriter(rules_csv_codes_file, fieldnames=self.fieldnames_codes)
@@ -160,9 +172,11 @@ class PrepareExternalSettings(AbstractContributorProcess):
                 self.__create_rules_from_stop_extensions(tmp_dir_name, writer_codes)
                 self.__create_rules_deactivate_realtime_for_routes_from_gtfs(tmp_dir_name, writer_properties)
 
-            return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
+            return self.__save_csv_files_as_data_set(tmp_csv_workspace)
 
     def __check_config(self) -> None:
+        if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
+            raise ParameterException('target_data_source_id missing in preprocess config')
         links_to_check = ['tr_perimeter', 'lines_referential']
         if 'links' not in self.params:
             raise ParameterException('links missing in preprocess config')
@@ -177,6 +191,10 @@ class PrepareExternalSettings(AbstractContributorProcess):
                 raise ParameterException(
                     'link {data_source_id} is not a data_source id present in contributor'.format(
                         data_source_id=data_source_id))
+        if not self.context.get_contributor_data_source_context(self.contributor_id,
+                                                                self.params['target_data_source_id']):
+            raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
+                self.params['target_data_source_id']))
 
     def do(self) -> Context:
         self.__check_config()
@@ -184,7 +202,10 @@ class PrepareExternalSettings(AbstractContributorProcess):
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
-            data_source_to_process_context.gridfs_id = self.__process_file_from_gridfs_id(
-                data_source_to_process_context.gridfs_id)
+            target_data_set_gridfs_id = self.__process_file_from_gridfs_id(data_source_to_process_context.gridfs_id)
+            data_source_target_context = self.context.get_contributor_data_source_context(
+                contributor_id=self.contributor_id,
+                data_source_id=self.params['target_data_source_id'])
+            data_source_target_context.gridfs_id = target_data_set_gridfs_id
 
         return self.context

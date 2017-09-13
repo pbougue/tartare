@@ -60,7 +60,7 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
         for backup_file in backup_files:
             os.remove(backup_file)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
-            new_archive_file_name = os.path.join(tmp_out_dir_name, 'gtfs-computed-directions')
+            new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_dir_name)
             with open(new_archive_file_name, 'rb') as new_archive_file:
                 new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')

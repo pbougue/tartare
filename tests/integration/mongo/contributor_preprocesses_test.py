@@ -37,6 +37,7 @@ from freezegun import freeze_time
 from gridfs.errors import NoFile
 
 from tartare import app
+from tartare.core.constants import DATA_FORMAT_FUSIO_OBJECT_SETTINGS
 from tartare.core.context import Context, DataSourceContext, ContributorContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
@@ -315,7 +316,8 @@ class TestComputeDirectionsProcess(TartareFixture):
 
 class TestPrepareExternalSettings(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
-        url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(ip=init_http_download_server.ip_addr)
+        url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(
+            ip=init_http_download_server.ip_addr)
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -327,14 +329,20 @@ class TestPrepareExternalSettings(TartareFixture):
                 "params": params
             }]
         }
-        data_sources = []
-        data_sources.append(
+        data_sources = [
             {
                 "id": "ds-to-process",
                 "name": "ds-to-process",
                 "data_format": "gtfs",
-                "input": {"url": url}
-            })
+                "input": {"type": "url", "url": url}
+            },
+            {
+                "id": "ds-target",
+                "name": "ds-target",
+                "data_format": DATA_FORMAT_FUSIO_OBJECT_SETTINGS,
+                "input": {"type": "computed"}
+            }
+        ]
 
         for name, value in links.items():
             data_sources.append(
@@ -342,7 +350,7 @@ class TestPrepareExternalSettings(TartareFixture):
                     "id": value,
                     "name": value,
                     "data_format": name,
-                    "input": {}
+                    "input": {"type": "manual"}
                 })
 
         contrib_payload['data_sources'] = data_sources
@@ -368,13 +376,15 @@ class TestPrepareExternalSettings(TartareFixture):
 
     @pytest.mark.parametrize(
         "params, expected_message", [
-            ({}, 'links missing in preprocess config'),
-            ({'links': {}},
+            ({}, 'target_data_source_id missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target', 'links': {}},
              'link tr_perimeter missing in preprocess config'),
-            ({'links': {'lines_referential': 'something'}},
+            ({'target_data_source_id': 'ds-target', 'links': {'lines_referential': 'something'}},
              'link tr_perimeter missing in preprocess config'),
-            ({'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
-             'link lines_referential missing in preprocess config'),
+            (
+            {'target_data_source_id': 'ds-target', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+            'link lines_referential missing in preprocess config'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
                                                       expected_message):
@@ -393,14 +403,16 @@ class TestPrepareExternalSettings(TartareFixture):
         ])
     def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
                                                      expected_message):
-        params = {'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        params = {'target_data_source_id': 'ds-target',
+                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
-        params = {'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        params = {'target_data_source_id': 'ds-target',
+                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
         links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
                                                           params, links)
@@ -410,12 +422,17 @@ class TestPrepareExternalSettings(TartareFixture):
 
         with app.app_context():
             export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
-            with ZipFile(new_zip_file, 'r') as new_zip_file:
+            target_grid_fs_id = next((data_source.gridfs_id
+                               for data_source in export.data_sources
+                               if data_source.data_source_id == 'ds-target'), None)
+            fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
+            with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    assert_zip_contains_only_files_with_extensions(new_zip_file, ['txt', 'csv'])
-                    new_zip_file.extractall(tmp_dir_name)
+                    assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['csv'])
+                    fusio_settings_zip_file.extractall(tmp_dir_name)
                     assert_files_equals(os.path.join(tmp_dir_name, 'fusio_objects_codes.csv'),
-                                        _get_file_fixture_full_path('prepare_external_settings/expected_fusio_objects_codes.csv'))
+                                        _get_file_fixture_full_path(
+                                            'prepare_external_settings/expected_fusio_objects_codes.csv'))
                     assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.csv'),
-                                        _get_file_fixture_full_path('prepare_external_settings/expected_fusio_object_properties.csv'))
+                                        _get_file_fixture_full_path(
+                                            'prepare_external_settings/expected_fusio_object_properties.csv'))
