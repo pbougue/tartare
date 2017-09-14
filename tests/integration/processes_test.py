@@ -61,12 +61,13 @@ def test_coverage_preprocess():
         "FusioDataUpdate": coverage.FusioDataUpdate,
         "FusioImport": coverage.FusioImport,
         "FusioPreProd": coverage.FusioPreProd,
-        "FusioExport": coverage.FusioExport
+        "FusioExport": coverage.FusioExport,
+        "FusioSendPtExternalSettings": coverage.FusioSendPtExternalSettings,
     }
 
     # Coverage Preprocess
     for key, value in map_test.items():
-        assert isinstance(PreProcessManager.get_preprocess(Context('coverage'), PreProcess(type=key)), value)
+        assert isinstance(PreProcessManager.get_preprocess(Context('coverage'), PreProcess(type=key, params={'url': 'http://fusio.com'})), value)
     # Contributor Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:

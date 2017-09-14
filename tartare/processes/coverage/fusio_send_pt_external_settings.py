@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,8 +26,23 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.coverage.fusio_data_update import FusioDataUpdate
-from tartare.processes.coverage.fusio_export import FusioExport
-from tartare.processes.coverage.fusio_import import FusioImport
-from tartare.processes.coverage.fusio_preprod import FusioPreProd
-from tartare.processes.coverage.fusio_send_pt_external_settings import FusioSendPtExternalSettings
+
+import requests
+
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
+from tartare.core.context import Context
+from tartare.core.models import DataSource
+from tartare.processes.abstract_preprocess import AbstractFusioProcess
+
+
+class FusioSendPtExternalSettings(AbstractFusioProcess):
+    def do(self) -> Context:
+        for contributor_context in self.context.contributor_contexts:
+            for data_source_context in contributor_context.data_source_contexts:
+                if data_source_context.gridfs_id and DataSource.is_type_data_format(data_source_context.data_source_id,
+                                                                                    DATA_FORMAT_PT_EXTERNAL_SETTINGS):
+                    resp = self.fusio.call(requests.post, api='api',
+                                           data={'action': 'externalstgupdate'},
+                                           files=self.get_files_from_gridfs(data_source_context.gridfs_id))
+                    self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+        return self.context
