@@ -102,13 +102,13 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
 
 ## Contributor coupled with Coverage preprocess
 
-### PrepareExternalSettings and FusioExportExternalSettings
+### ComputeExternalSettings and FusioExportExternalSettings
 
-#### PrepareExternalSettings
+#### ComputeExternalSettings
 ```json
 {
    "data_source_ids": ["your-gtfs-id"]
-   "id":"prepare_ext_settings",
+   "id":"compute_ext_settings",
    "params":{
       "target_data_source_id": "my_external_settings_data_source_id"
       "links": {
@@ -116,7 +116,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
         "lines_referential": "my-data-source-of-lines-json-id",
       }
    },
-   "type":"PrepareExternalSettings",
+   "type":"ComputeExternalSettings",
    "sequence":0
 }
 ```

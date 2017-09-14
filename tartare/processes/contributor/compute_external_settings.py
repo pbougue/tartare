@@ -43,7 +43,7 @@ from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class PrepareExternalSettings(AbstractContributorProcess):
+class ComputeExternalSettings(AbstractContributorProcess):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \

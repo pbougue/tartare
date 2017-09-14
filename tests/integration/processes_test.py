@@ -42,7 +42,7 @@ def test_contributor_preprocess():
         "Ruspell": contributor.Ruspell,
         "HeadsignShortName": contributor.HeadsignShortName,
         "GtfsAgencyFile": contributor.GtfsAgencyFile,
-        "PrepareExternalSettings": contributor.PrepareExternalSettings,
+        "ComputeExternalSettings": contributor.ComputeExternalSettings,
         "ComputeDirections": contributor.ComputeDirections,
     }
 

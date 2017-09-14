@@ -314,7 +314,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                                         _get_file_fixture_full_path(expected_trips_file_name))
 
 
-class TestPrepareExternalSettings(TartareFixture):
+class TestComputeExternalSettings(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
         url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(
             ip=init_http_download_server.ip_addr)
@@ -325,7 +325,7 @@ class TestPrepareExternalSettings(TartareFixture):
             "preprocesses": [{
                 "sequence": 0,
                 "data_source_ids": ["ds-to-process"],
-                "type": "PrepareExternalSettings",
+                "type": "ComputeExternalSettings",
                 "params": params
             }]
         }
