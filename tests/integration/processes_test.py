@@ -58,12 +58,6 @@ def test_contributor_preprocess():
         assert str(excinfo.typename) == "InvalidArguments"
 
 
-def test_compute_directions_preprocess():
-    with app.app_context():
-        assert isinstance(PreProcessManager.get_preprocess(Context('contributor'),
-                                                           PreProcess(type='ComputeDirections')), ComputeDirections)
-
-
 def test_coverage_preprocess():
     map_test = {
         "FusioDataUpdate": coverage.FusioDataUpdate,

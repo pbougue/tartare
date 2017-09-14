@@ -378,14 +378,14 @@ class TestComputeExternalSettings(TartareFixture):
     @pytest.mark.parametrize(
         "params, expected_message", [
             ({}, 'target_data_source_id missing in preprocess config'),
-            ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target'}, 'tr_perimeter missing in preprocess links'),
             ({'target_data_source_id': 'ds-target', 'links': {}},
-             'link tr_perimeter missing in preprocess config'),
+             'tr_perimeter missing in preprocess links'),
             ({'target_data_source_id': 'ds-target', 'links': {'lines_referential': 'something'}},
-             'link tr_perimeter missing in preprocess config'),
+             'tr_perimeter missing in preprocess links'),
             (
             {'target_data_source_id': 'ds-target', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
-            'link lines_referential missing in preprocess config'),
+            'link whatever is not a data_source id present in contributor'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
                                                       expected_message):

@@ -100,3 +100,89 @@ class TestFullExport:
         job = self.__get_dict_from_response(raw)['jobs'][0]
         assert job['state'] == 'done'
         assert job['step'] == 'save_contributor_export'
+
+    def test_contrib_export_with_ruspell(self):
+        # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
+        contributor = {
+            "data_prefix": "bob",
+            "data_sources": [
+                {
+                    "data_format": "gtfs",
+                    "id": "Google-1",
+                    "input": {
+                        "type": "url",
+                        "url": "http://{HTTP_SERVER_IP}/ruspell/gtfs.zip".format(
+                            HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
+                    },
+                    "name": "données gtfs"
+                },
+                {
+                    "data_format": "ruspell_config",
+                    "id": "ruspell-config",
+                    "input": {},
+                    "name": "Configuration Ruspell"
+                },
+                {
+                    "data_format": "bano_file",
+                    "id": "ruspell-bano_file",
+                    "input": {},
+                    "name": "Bano Ruspell"
+                }
+            ],
+            "id": "AMI",
+            "name": "AMI",
+            "preprocesses": [
+                {
+                    "id": "ruspell_id",
+                    "type": "Ruspell",
+                    "sequence": 1,
+                    "data_source_ids": ["Google-1"],
+                    "params": {
+                        "links": {
+                            "config": "ruspell-config",
+                            "bano": [
+                                "ruspell-bano_file"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+
+        raw = self.__post('contributors', contributor)
+        assert raw.status_code == 201, print(raw.content)
+
+        # post config ruspell
+        with open(self.__fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
+            raw = requests.post(
+                self.__get_url() + '/contributors/AMI/data_sources/ruspell-config/data_sets',
+                files={'file': file}, headers={})
+            assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
+
+        # post bano data
+        with open(self.__fixture_path('ruspell//bano-75.csv'), 'rb') as file:
+            raw = requests.post(
+                self.__get_url() + '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
+                files={'file': file}, headers={})
+            assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
+
+        # launch ruspell preprocess
+        raw = self.__post('contributors/AMI/actions/export')
+        job_id = self.__get_dict_from_response(raw)['job']['id']
+        nb_retries_max = 30
+        retry = 4
+        while retry < nb_retries_max:
+            raw = self.__get('jobs/' + job_id)
+            job = self.__get_dict_from_response(raw)['jobs'][0]
+            status = job['state']
+            assert status != 'failed', print(job)
+            if status != 'done':
+                sleep(1)
+                retry += 1
+            else:
+                break
+        raw = self.__get('jobs/' + job_id)
+        job = self.__get_dict_from_response(raw)['jobs'][0]
+        assert job['state'] == 'done'
+        assert job['step'] == 'save_contributor_export'
+

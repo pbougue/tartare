@@ -173,3 +173,20 @@ curl -i -X POST \
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.
 The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source is configured as "computed".
 If the data source is configured as "manual" or "url", the preprocess will be skipped. 
+
+
+#### FusioSendPtExternalSettings (Coverage preprocess)
+
+```json
+{
+   "id":"fusio_export",
+   "params":{
+      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll"
+   },
+   "type":"FusioSendPtExternalSettings",
+   "sequence":4
+}
+```
+
+This preprocess will use the "computed" data source from contributor export and send the csv files to fusio
+For now the multi-contributor coverage is not supported so no merge will be done

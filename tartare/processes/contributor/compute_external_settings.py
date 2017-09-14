@@ -178,13 +178,9 @@ class ComputeExternalSettings(AbstractContributorProcess):
         if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
             raise ParameterException('target_data_source_id missing in preprocess config')
         links_to_check = ['tr_perimeter', 'lines_referential']
-        if 'links' not in self.params:
-            raise ParameterException('links missing in preprocess config')
+
         for param in links_to_check:
-            if not self.params['links'].get(param):
-                raise ParameterException('link {param} missing in preprocess config'.format(param=param))
-        for param in links_to_check:
-            data_source_id = self.params['links'].get(param)
+            data_source_id = self.get_link(param)
             data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
                                                                                           data_source_id)
             if not data_source_config_context:

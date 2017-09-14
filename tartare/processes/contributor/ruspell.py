@@ -27,42 +27,28 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
-import subprocess
-
 import os
-from typing import Any
 
 from tartare.core.context import Context
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
-from tartare.exceptions import ParameterException, CommandRuntimeException
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.exceptions import ParameterException
 import tempfile
 from tartare.core import zip
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 logger = logging.getLogger(__name__)
 
 
-class Ruspell(AbstractProcess):
+class Ruspell(AbstractContributorProcess):
     stops_filename = 'stops.txt'
     rules_filename = 'rules.csv'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output} -r {rules}'
 
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
-        self.gfs = GridFsHandler()
-        if self.context.contributor_contexts:
-            self.contributor_id = self.context.contributor_contexts[0].contributor.id
-
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')
-
-    def __get_link(self, key: str) -> Any:
-        if not self.params.get('links') or key not in self.params.get('links'):
-            raise ParameterException('{} missing in preprocess links'.format(key))
-
-        return self.params.get('links')[key]
 
     def __get_gridfs_id_from_data_source_context(self, data_source_id: str) -> str:
         data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
@@ -88,17 +74,16 @@ class Ruspell(AbstractProcess):
                                               input=data_source_path,
                                               output=output_path,
                                               rules=rules_path)
-
         subprocess_wrapper = SubProcessWrapper('ruspell')
         subprocess_wrapper.run_cmd(command)
 
     def do(self) -> Context:
         with tempfile.TemporaryDirectory() as extract_dir_name, tempfile.TemporaryDirectory() as ruspell_dir_name:
             # Get config
-            config_path = self.__extract_data_source_from_gridfs(self.__get_link('config'), ruspell_dir_name)
+            config_path = self.__extract_data_source_from_gridfs(self.get_link('config'), ruspell_dir_name)
 
             # Get Banos
-            for data_source_id in self.__get_link('bano'):
+            for data_source_id in self.get_link('bano'):
                 self.__extract_data_source_from_gridfs(data_source_id, ruspell_dir_name)
 
             for data_source_id_to_process in self.data_source_ids:
@@ -120,11 +105,9 @@ class Ruspell(AbstractProcess):
                                                                rules_path,
                                                                config_path)
 
-                with open(gtfs_computed_path, 'rb') as new_archive_file:
-                    new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file,
-                                                                 filename=os.path.basename(gtfs_computed_path))
-                    self.gfs.delete_file_from_gridfs(data_source_to_process_context.gridfs_id)
-
-                    data_source_to_process_context.gridfs_id = new_gridfs_id
+                data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
+                    old_gridfs_id=data_source_to_process_context.gridfs_id,
+                    files=gtfs_computed_path,
+                    computed_file_name=os.path.basename(gtfs_computed_path))
 
         return self.context

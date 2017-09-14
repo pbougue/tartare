@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 
 def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
-                          new_zip_path: str, f: Callable[..., Any], *args: Any,
-                          computed_file_name: str = 'gtfs-processed') -> str:
+                          new_zip_path: str, f: Callable[..., Any],
+                          *args: Any, computed_file_name: str='gtfs-processed') -> str:
     if not is_zipfile(zip_file):
         msg = '{} is not a zip file or does not exist.'.format(zip_file)
         logger.error(msg)
@@ -47,7 +47,6 @@ def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
     with ZipFile(zip_file, 'r') as files_zip:
         files_zip.extractall(extract_zip_path)
         data_source_path = '{}/{}'.format(extract_zip_path, filename)
-
         f(data_source_path, *args)
 
         new_archive_file_name = os.path.join(new_zip_path, computed_file_name)
