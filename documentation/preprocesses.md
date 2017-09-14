@@ -100,3 +100,46 @@ List of preprocesses for coverages
 ```
 values possibles for export_type: ntfs, gtfsv2 and googletransit
 
+## Contributor coupled with Coverage preprocess
+
+### ComputeExternalSettings and FusioExportExternalSettings
+
+#### ComputeExternalSettings
+```json
+{
+   "data_source_ids": ["your-gtfs-id"]
+   "id":"compute_ext_settings",
+   "params":{
+      "target_data_source_id": "my_external_settings_data_source_id"
+      "links": {
+        "tr_perimeter": "my-data-source-of-perimeter-json-id",
+        "lines_referential": "my-data-source-of-lines-json-id",
+      }
+   },
+   "type":"ComputeExternalSettings",
+   "sequence":0
+}
+```
+You will then need to provide two json config file:
+- tr_perimeter: see here [https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true](https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true)
+- lines_referential: see here [https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin](https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin)
+
+by doing
+
+```bash
+curl -i -X POST \
+  -F "file=@\"./path/to/your_tr_perimeter_file.json\"" \
+ 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
+```
+
+and 
+
+```bash
+curl -i -X POST \
+  -F "file=@\"./path/to/your_lines_referential_file.json\"" \
+ 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-lines-json-id/data_sets'
+```
+
+You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.
+The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source is configured as "computed".
+If the data source is configured as "manual" or "url", the preprocess will be skipped. 

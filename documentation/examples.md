@@ -10,14 +10,36 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
     {
       "id": "data_source_id_ami",
       "name": "data_source_name_ami",
+      "data_format": "gtfs",
       "input": {
-        "type": "gtfs",
+        "type": "url",
         "url": "http://data.localhost/AMI_gtfs.zip"
       }
     }
   ]
 }'
 ```
+
+# How to create contributor with computed data set attached
+```bash
+curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: application/json" -d \
+'{
+  "id": "AMI",
+  "name": "contrib-amien",
+  "data_prefix": "AMI",
+  "data_sources": [
+    {
+      "data_format": "pt_external_settings",
+      "id": "fusio_object_data_source_id",
+      "name": "fusio_object_data_source_name",
+      "input": {
+        "type": "computed"
+      }
+    }
+  ]
+}'
+```
+
 
 # How to create contributor with manual data set attached
 ```bash
@@ -57,7 +79,7 @@ curl -X POST "http://tartare.localhost/coverages" -H "Content-Type: application/
             "id": "fusio",
             "type": "FusioDataUpdate",
             "params": {
-            "url": "http://fusio-ihm.localhost/cgi-bin/fusio.dll/"
+                "url": "http://fusio-ihm.localhost/cgi-bin/fusio.dll/"
             },
             "sequence": 0
         }

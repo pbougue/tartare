@@ -26,11 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class Ruspell(AbstractProcess):
+class Ruspell(AbstractContributorProcess):
     def do(self) -> Context:
+        logging.getLogger(__name__).debug('DO RUSPELL')
         return self.context

@@ -34,7 +34,7 @@ import requests
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import FusioException
-from tartare.helper import download_zip_file, get_filename
+from tartare.helper import download_file, get_filename
 from tartare.processes.abstract_preprocess import AbstractProcess
 from tartare.processes.fusio import Fusio
 
@@ -57,7 +57,7 @@ class FusioExport(AbstractProcess):
     def save_export(self, url: str) -> Context:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
-            download_zip_file(url, file_name)
+            download_file(url, file_name, "gtfs")
             with open(file_name, 'rb') as file:
                 self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context

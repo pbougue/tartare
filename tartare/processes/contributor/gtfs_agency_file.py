@@ -37,10 +37,10 @@ from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ParameterException
 from tartare.helper import get_content_file_from_grid_out_file
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class GtfsAgencyFile(AbstractProcess):
+class GtfsAgencyFile(AbstractContributorProcess):
     def _is_agency_dict_valid(self, data: List[dict]) -> bool:
         if not data:
             return False

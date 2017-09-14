@@ -37,14 +37,16 @@ from freezegun import freeze_time
 from gridfs.errors import NoFile
 
 from tartare import app
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tartare.core.context import Context, DataSourceContext, ContributorContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
 from tartare.exceptions import ParameterException
 from tartare.helper import get_dict_from_zip
-from tartare.processes.contributor.GtfsAgencyFile import GtfsAgencyFile
+from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files
+from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
+    assert_zip_contains_only_files_with_extensions
 
 
 class TestGtfsAgencyProcess:
@@ -236,7 +238,6 @@ class TestComputeDirectionsProcess(TartareFixture):
             })
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
 
         if add_data_source_config:
@@ -244,7 +245,6 @@ class TestComputeDirectionsProcess(TartareFixture):
                 raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
                                 params={'file': file},
                                 headers={})
-                r = self.to_json(raw)
                 self.assert_sucessful_call(raw, 201)
 
         raw = self.post('/contributors/id_test/actions/export')
@@ -313,3 +313,127 @@ class TestComputeDirectionsProcess(TartareFixture):
                     new_zip_file.extractall(tmp_dir_name)
                     assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
                                         _get_file_fixture_full_path(expected_trips_file_name))
+
+
+class TestComputeExternalSettings(TartareFixture):
+    def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
+        url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(
+            ip=init_http_download_server.ip_addr)
+        contrib_payload = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "OIF",
+            "preprocesses": [{
+                "sequence": 0,
+                "data_source_ids": ["ds-to-process"],
+                "type": "ComputeExternalSettings",
+                "params": params
+            }]
+        }
+        data_sources = [
+            {
+                "id": "ds-to-process",
+                "name": "ds-to-process",
+                "data_format": "gtfs",
+                "input": {"type": "url", "url": url}
+            },
+            {
+                "id": "ds-target",
+                "name": "ds-target",
+                "data_format": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+                "input": {"type": "computed"}
+            }
+        ]
+
+        for name, value in links.items():
+            data_sources.append(
+                {
+                    "id": value,
+                    "name": value,
+                    "data_format": name,
+                    "input": {"type": "manual"}
+                })
+
+        contrib_payload['data_sources'] = data_sources
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+
+        for name, value in links.items():
+            with open(_get_file_fixture_full_path('prepare_external_settings/{id}.json'.format(id=value)),
+                      'rb') as file:
+                raw = self.post('/contributors/id_test/data_sources/{id}/data_sets'.format(id=value),
+                                params={'file': file},
+                                headers={})
+                self.assert_sucessful_call(raw, 201)
+
+        raw = self.post('/contributors/id_test/actions/export')
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw, 201)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        return r['jobs'][0]
+
+    @pytest.mark.parametrize(
+        "params, expected_message", [
+            ({}, 'target_data_source_id missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target', 'links': {}},
+             'link tr_perimeter missing in preprocess config'),
+            ({'target_data_source_id': 'ds-target', 'links': {'lines_referential': 'something'}},
+             'link tr_perimeter missing in preprocess config'),
+            (
+            {'target_data_source_id': 'ds-target', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+            'link lines_referential missing in preprocess config'),
+        ])
+    def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
+                                                      expected_message):
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == expected_message, print(job)
+
+    @pytest.mark.parametrize(
+        "links, expected_message", [
+            ({}, 'link tr_perimeter_id is not a data_source id present in contributor'),
+            ({'tr_perimeter': 'tr_perimeter_id'},
+             'link lines_referential_id is not a data_source id present in contributor'),
+            ({'lines_referential': 'lines_referential_id'},
+             'link tr_perimeter_id is not a data_source id present in contributor'),
+        ])
+    def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
+                                                     expected_message):
+        params = {'target_data_source_id': 'ds-target',
+                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
+        assert job['state'] == 'failed', print(job)
+        assert job['step'] == 'preprocess', print(job)
+        assert job['error_message'] == expected_message, print(job)
+
+    def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
+        params = {'target_data_source_id': 'ds-target',
+                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+        links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
+        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+                                                          params, links)
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_contributor_export', print(job)
+        assert job['error_message'] == '', print(job)
+
+        with app.app_context():
+            export = ContributorExport.get_last('id_test')
+            target_grid_fs_id = next((data_source.gridfs_id
+                               for data_source in export.data_sources
+                               if data_source.data_source_id == 'ds-target'), None)
+            fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
+            with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
+                with tempfile.TemporaryDirectory() as tmp_dir_name:
+                    assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['csv'])
+                    fusio_settings_zip_file.extractall(tmp_dir_name)
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_objects_codes.csv'),
+                                        _get_file_fixture_full_path(
+                                            'prepare_external_settings/expected_fusio_objects_codes.csv'))
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.csv'),
+                                        _get_file_fixture_full_path(
+                                            'prepare_external_settings/expected_fusio_object_properties.csv'))
