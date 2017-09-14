@@ -35,7 +35,7 @@ import zipfile
 import shutil
 from gridfs import GridOut
 
-from tartare.core.constants import DATA_FORMAT_FUSIO_OBJECT_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
@@ -146,10 +146,10 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
     def __save_csv_files_as_data_set(self, tmp_csv_workspace: str) -> str:
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
-            new_archive_file_name = os.path.join(tmp_out_dir_name, DATA_FORMAT_FUSIO_OBJECT_SETTINGS)
+            new_archive_file_name = os.path.join(tmp_out_dir_name, DATA_FORMAT_PT_EXTERNAL_SETTINGS)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_csv_workspace)
             with open(new_archive_file_name, 'rb') as new_archive_file:
-                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=DATA_FORMAT_FUSIO_OBJECT_SETTINGS + '.zip')
+                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=DATA_FORMAT_PT_EXTERNAL_SETTINGS + '.zip')
                 return new_gridfs_id
 
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str) -> str:

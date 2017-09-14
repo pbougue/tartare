@@ -37,7 +37,7 @@ from freezegun import freeze_time
 from gridfs.errors import NoFile
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_FUSIO_OBJECT_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tartare.core.context import Context, DataSourceContext, ContributorContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
@@ -339,7 +339,7 @@ class TestComputeExternalSettings(TartareFixture):
             {
                 "id": "ds-target",
                 "name": "ds-target",
-                "data_format": DATA_FORMAT_FUSIO_OBJECT_SETTINGS,
+                "data_format": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
                 "input": {"type": "computed"}
             }
         ]

@@ -29,7 +29,7 @@ curl -X POST "http://tartare.localhost/contributors" -H "Content-Type: applicati
   "data_prefix": "AMI",
   "data_sources": [
     {
-      "data_format": "fusio_object_settings",
+      "data_format": "pt_external_settings",
       "id": "fusio_object_data_source_id",
       "name": "fusio_object_data_source_name",
       "input": {
