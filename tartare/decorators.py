@@ -32,11 +32,19 @@ from functools import wraps
 from typing import Any, Callable
 
 from flask import request
+import re
 
 from tartare.core import models
 from tartare.core.models import Coverage, CoverageExport
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 from tartare.processes.processes import PreProcessManager
+
+
+id_format_text = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+id_format = re.compile(id_format_text)
+
+id_gridfs_text = '^[0-9a-f]{24}$'
+id_gridfs = re.compile(id_gridfs_text)
 
 
 class publish_params_validate(object):
@@ -151,3 +159,63 @@ def validate_post_data_set(func: Callable) -> Any:
         return func(*args, **kwargs)
 
     return wrapper
+
+
+class validate_file_params(object):
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            contributor_id = kwargs.get("contributor_id")
+            coverage_id = kwargs.get("coverage_id")
+            export_id = kwargs.get("export_id")
+            file_id = kwargs.get("file_id")
+            environment_id = kwargs.get("environment_id")
+
+            if not id_gridfs.match(file_id):
+                msg = "Invalid file id, you give {}".format(file_id)
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+
+            if export_id and not id_format.match(export_id):
+                msg = "Invalid export id, you give {}".format(export_id)
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+
+            if not coverage_id and not contributor_id:
+                msg = "Invalid argument, required argument contributor_id or coverage_id"
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+
+            if coverage_id:
+                coverage = models.Coverage.get(coverage_id)
+                if not coverage:
+                    msg = "Coverage not found."
+                    logging.getLogger(__name__).error(msg)
+                    raise ObjectNotFound(msg)
+                if environment_id:
+                    environment = coverage.get_environment(environment_id)
+                    if not environment:
+                        msg = "Environment not found."
+                        logging.getLogger(__name__).error(msg)
+                        raise ObjectNotFound(msg)
+                    if environment.current_ntfs_id != file_id:
+                        msg = "Environment file not found."
+                        logging.getLogger(__name__).error(msg)
+                        raise ObjectNotFound(msg)
+                else:
+                    coverage_export = models.CoverageExport.get(coverage_id)
+                    if not coverage_export or not next((ce for ce in coverage_export if ce.gridfs_id == file_id), None):
+                        msg = "Coverage export not found."
+                        logging.getLogger(__name__).error(msg)
+                        raise ObjectNotFound(msg)
+
+            if contributor_id:
+                contributor_export = models.ContributorExport.get(contributor_id)
+                if not contributor_export or not next((ce for ce in contributor_export if ce.gridfs_id == file_id), None):
+                    msg = "Contributor export not found."
+                    logging.getLogger(__name__).error(msg)
+                    raise ObjectNotFound(msg)
+
+            return func(*args, **kwargs)
+
+        return wrapper

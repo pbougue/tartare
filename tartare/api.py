@@ -56,8 +56,16 @@ coverage_and_id = coverage + '/<string:coverage_id>'
 
 contributor = '/contributors'
 contributor_and_id = contributor + '/<string:contributor_id>'
+environment = "/environments"
+environment_and_id = environment + "/<string:environment_id>"
+environment_and_type = environment + "/<string:environment_type>"
+
+export = '/exports'
+export_and_id = export + '/<string:export_id>'
+
 
 file_and_id = '/files/<string:file_id>'
+
 
 api.add_resource(Index,
                  '/',
@@ -68,7 +76,9 @@ api.add_resource(Status,
                  endpoint='status')
 
 api.add_resource(File,
-                 file_and_id,
+                 coverage_and_id + environment_and_id + file_and_id,
+                 coverage_and_id + export_and_id + file_and_id,
+                 contributor_and_id + export_and_id + file_and_id,
                  endpoint='files')
 
 api.add_resource(Coverage,
@@ -81,11 +91,11 @@ api.add_resource(GridCalendar,
                  endpoint='grid_calendar')
 
 api.add_resource(DataUpdate,
-                 coverage_and_id + '/environments/<string:environment_type>/data_update',
+                 coverage_and_id + environment_and_type + '/data_update',
                  endpoint='data_update')
 
 api.add_resource(CoverageData,
-                 coverage_and_id + '/environments/<string:environment_type>/data/<string:data_type>',
+                 coverage_and_id + environment_and_type + '/data/<string:data_type>',
                  endpoint='data')
 
 api.add_resource(Contributor,
@@ -111,7 +121,8 @@ api.add_resource(CoverageContributorSubscription,
                  coverage_and_id + contributor_and_id)
 
 api.add_resource(ContributorExportResource,
-                 contributor_and_id + '/exports',
+                 contributor_and_id + export,
+                 contributor_and_id + export_and_id,
                  contributor_and_id + '/actions/export')
 
 api.add_resource(Job,
@@ -124,8 +135,9 @@ api.add_resource(Job,
                  endpoint='jobs')
 
 api.add_resource(CoverageExportResource,
-                 coverage_and_id + '/exports',
+                 coverage_and_id + export,
+                 coverage_and_id + export_and_id,
                  coverage_and_id + '/actions/export')
 
 api.add_resource(DataPublisher,
-                 coverage_and_id + '/environments/<string:environment_id>/actions/publish')
+                 coverage_and_id + environment_and_id + '/actions/publish')

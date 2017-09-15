@@ -485,7 +485,7 @@ class Coverage(PreProcessContainer):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str = None) -> 'Coverage':
+    def get(cls, coverage_id: str=None) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
             return None
@@ -937,7 +937,7 @@ class CoverageExport(Historisable):
         self.keep_historical(3, {'coverage_id': self.coverage_id})
 
     @classmethod
-    def get(cls, coverage_id: str) -> Optional['CoverageExport']:
+    def get(cls, coverage_id: str) -> Optional[List['CoverageExport']]:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)

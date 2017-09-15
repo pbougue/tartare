@@ -29,18 +29,15 @@
 
 import flask_restful
 from flask import Response, send_file
-from tartare.http_exceptions import ObjectNotFound
-import logging
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.decorators import validate_file_params
+from typing import Any
 
 
 class File(flask_restful.Resource):
-    def get(self, file_id: str) -> Response:
+    @validate_file_params()
+    def get(self, file_id: str, **kwargs: Any) -> Response:
         file = GridFsHandler().get_file_from_gridfs(id=file_id)
-        if not file:
-            msg = 'file not found: {}'.format(file_id)
-            logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
         return send_file(file, as_attachment=True,
-                         attachment_filename='aa',
+                         attachment_filename=file.filename,
                          mimetype='multipart/form-data')
