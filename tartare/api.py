@@ -45,6 +45,7 @@ from tartare.interfaces.coverage_export import CoverageExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
 from tartare.interfaces.data_publisher import DataPublisher
+from tartare.interfaces.files import File
 
 api = Api(app)
 
@@ -56,6 +57,8 @@ coverage_and_id = coverage + '/<string:coverage_id>'
 contributor = '/contributors'
 contributor_and_id = contributor + '/<string:contributor_id>'
 
+file_and_id = '/files/<string:file_id>'
+
 api.add_resource(Index,
                  '/',
                  endpoint='index')
@@ -63,6 +66,10 @@ api.add_resource(Index,
 api.add_resource(Status,
                  '/status',
                  endpoint='status')
+
+api.add_resource(File,
+                 file_and_id,
+                 endpoint='files')
 
 api.add_resource(Coverage,
                  coverage,
