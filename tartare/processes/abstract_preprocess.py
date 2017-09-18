@@ -35,6 +35,8 @@ from typing import List
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
+from tartare.exceptions import ParameterException
+from tartare.processes.fusio import Fusio
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -46,6 +48,17 @@ class AbstractProcess(metaclass=ABCMeta):
     @abstractmethod
     def do(self) -> Context:
         pass
+
+class AbstractFusioProcess(AbstractProcess):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        if not 'url' in self.params:
+            raise ParameterException('params.url not present in fusio preprocess')
+        self.fusio = Fusio(self.params['url'])
+
+    @staticmethod
+    def get_files_from_gridfs(gridfs_id: str) -> dict:
+        return {"filename": GridFsHandler().get_file_from_gridfs(gridfs_id)}
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):

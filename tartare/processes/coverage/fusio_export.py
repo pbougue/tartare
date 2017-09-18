@@ -35,11 +35,10 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import FusioException
 from tartare.helper import download_file, get_filename
-from tartare.processes.abstract_preprocess import AbstractProcess
-from tartare.processes.fusio import Fusio
+from tartare.processes.abstract_preprocess import AbstractFusioProcess
 
 
-class FusioExport(AbstractProcess):
+class FusioExport(AbstractFusioProcess):
     def get_export_type(self) -> int:
         export_type = self.params.get('export_type', "ntfs")
         map_export_type = {
@@ -63,12 +62,11 @@ class FusioExport(AbstractProcess):
         return self.context
 
     def do(self) -> Context:
-        fusio = Fusio(self.params.get("url"))
         data = {
             'action': 'Export',
             'ExportType': self.get_export_type(),
             'Source': 4}
-        resp = fusio.call(requests.post, api='api', data=data)
-        action_id = fusio.get_action_id(resp.content)
-        fusio.wait_for_action_terminated(action_id)
-        return self.save_export(fusio.get_export_url(action_id))
+        resp = self.fusio.call(requests.post, api='api', data=data)
+        action_id = self.fusio.get_action_id(resp.content)
+        self.fusio.wait_for_action_terminated(action_id)
+        return self.save_export(self.fusio.get_export_url(action_id))

@@ -2,4 +2,6 @@
 *.pyc
 __pycache__
 data
+.mypy_cache
+tests
 
