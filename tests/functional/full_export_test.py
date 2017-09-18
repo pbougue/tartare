@@ -27,8 +27,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-import os
-from time import sleep
 
 import pytest
 import requests

@@ -29,6 +29,8 @@
 
 import flask_restful
 from flask import Response
+
+from tartare.core.context import Context
 from tartare.tasks import coverage_export, finish_job
 from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
@@ -43,7 +45,7 @@ class CoverageExportResource(flask_restful.Resource):
     def _export(coverage: Coverage) -> Job:
         job = Job(coverage_id=coverage.id, action_type="coverage_export")
         job.save()
-        chain(coverage_export.si(coverage, job), finish_job.si(job.id)).delay()
+        chain(coverage_export.s(Context('coverage'), coverage, job), finish_job.s(job.id)).delay()
         return job
 
     def post(self, coverage_id: str) -> Response:

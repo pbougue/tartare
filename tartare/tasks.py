@@ -155,8 +155,9 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
 
 
 @celery.task()
-def finish_job(job_id: str) -> None:
+def finish_job(context: Context, job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
+    context.cleanup()
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -184,7 +185,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> None:
+def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> Context:
     try:
         context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
@@ -211,12 +212,14 @@ def contributor_export(self: Task, contributor: Contributor, job: Job, check_for
             models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
             contributor_export_functions.save_export(contributor, context)
             coverages = [coverage for coverage in models.Coverage.all() if coverage.has_contributor(contributor)]
+            actions = []
             if coverages:
-                for coverage in coverages:
+                actions.append(coverage_export.s(context, coverages[0], job))
+                for coverage in coverages[1:]:
                     # Launch coverage export
-                    coverage_export.delay(coverage, job)
-            # remove temporary gridfs if export is a success
-            context.cleanup()
+                    actions.append(coverage_export.s(coverage, job))
+                context = chain(*actions).apply().get()
+            return context
 
     except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
         msg = 'Contributor export failed, error {}'.format(str(exc))
@@ -225,10 +228,10 @@ def contributor_export(self: Task, contributor: Contributor, job: Job, check_for
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
+def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
     logger.info('coverage_export')
     try:
-        context = Context('coverage')
+        context.instance = 'coverage'
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         context.fill_contributor_contexts(coverage)
 
@@ -252,13 +255,9 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
             sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
-                # remove temporary gridfs after the last publication
-                actions.append(cleanup_context.si(context))
         if actions:
-            chain(*actions).delay()
-        # if no publications, cleanup separately
-        else:
-            context.cleanup()
+            chain(*actions).apply()
+        return context
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))
         logger.error(msg)
@@ -292,11 +291,6 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def cleanup_context(context: Context) -> None:
-    context.cleanup()
-
-
-@celery.task()
 def automatic_update() -> None:
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
@@ -304,4 +298,4 @@ def automatic_update() -> None:
         # launch contributor export
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
-        chain(contributor_export.si(contributor, job), finish_job.si(job.id)).delay()
+        chain(contributor_export.s(contributor, job), finish_job.s(job.id)).delay()

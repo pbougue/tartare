@@ -97,6 +97,7 @@ class Context:
                                                                               validity_period=validity_period))
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
+        self.contributor_contexts = []
         for contributor_id in coverage.contributors:
             contributor_export = ContributorExport.get_last(contributor_id)
             if contributor_export:

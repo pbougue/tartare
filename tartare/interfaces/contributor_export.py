@@ -44,7 +44,7 @@ class ContributorExportResource(flask_restful.Resource):
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
         try:
-            chain(contributor_export.si(contributor, job, False), finish_job.si(job.id)).delay()
+            chain(contributor_export.s(contributor, job, False), finish_job.s(job.id)).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
