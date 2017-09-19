@@ -136,3 +136,23 @@ class TestFullExport(AbstractRequestClient):
         raw = self.post('contributors/contributor_id/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+
+    def test_exports_combined_two_coverages(self):
+        self.reset_api()
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
+        raw = self.post('contributors', json_file)
+        assert raw.status_code == 201, print(raw.content)
+
+        with open(self.path_in_functional_folder('coverage.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            assert raw.status_code == 201, print(raw.content)
+
+        with open(self.path_in_functional_folder('other_coverage.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            assert raw.status_code == 201, print(raw.content)
+
+        raw = self.post('contributors/contributor_id/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
