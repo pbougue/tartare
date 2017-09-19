@@ -411,6 +411,7 @@ class TestComputeExternalSettings(TartareFixture):
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
+    @freeze_time("2017-09-11")
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
         params = {'target_data_source_id': 'ds-target',
                   'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
