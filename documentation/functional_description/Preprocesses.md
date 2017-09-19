@@ -53,7 +53,8 @@ If there is already an *agency.txt* and there is at least one line (+ column tit
 2. Fill its param with the data you wish to add.  
 
 ### Notes
-Since Tartare is currently only mono contributor, an export coverage with two or more contributors will not have a merged *agency.txt*.  
+Since Tartare is currently only mono contributor, an export coverage with two or more contributors will not have a merged *agency.txt*. Files generated through GtfsAgencyFile preprocess can only contain 1 agency. 
+
 
 
 
