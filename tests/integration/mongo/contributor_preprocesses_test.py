@@ -202,6 +202,46 @@ class TestGtfsAgencyProcess:
                 for key, value in default_agency_data.items():
                     assert value == data[0][key]
 
+    def test_gtfs_header_only_in_agency_file(self):
+        with app.app_context():
+            context = Context()
+            gridfs_id = self.get_gridfs_id(filename="gtfs_header_only_in_agency_file.zip")
+            contributor_preprocess = PreProcess(data_source_ids=["id2"])
+
+            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context,
+                                             contributor_preprocess=contributor_preprocess)
+            assert len(context.contributor_contexts) == 1
+            assert len(context.contributor_contexts[0].data_source_contexts) == 1
+            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
+
+            assert gridfs_id != new_gridfs_id
+
+            with pytest.raises(NoFile) as excinfo:
+                GridFsHandler().get_file_from_gridfs(gridfs_id)
+            assert str(excinfo.value).startswith('no file in gridfs collection')
+
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
+            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
+                assert 'agency.txt' in gtfs_zip.namelist()
+                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
+                assert len(data) == 1
+
+                keys = list(data[0].keys())
+                keys.sort()
+                assert keys == self.excepted_headers
+                default_agency_data = {
+                    "agency_id": '42',
+                    "agency_name": "",
+                    "agency_url": "",
+                    "agency_timezone": "",
+                    "agency_lang": "",
+                    "agency_phone": "",
+                    "agency_fare_url": "",
+                    "agency_email": ""
+                }
+                for key, value in default_agency_data.items():
+                    assert value == data[0][key]
 
 class TestComputeDirectionsProcess(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, add_data_source_config=True,
