@@ -1,9 +1,9 @@
 # Validity periods
-A data source have a validity period, with a start date and an end date.  
+A data set (A data source version at a specific time) has a validity period, with a start date and an end date.  
 Same for a data set and the final GTFS sent to Navitia & ODS.  
-It can be found or calculate through the *feed_info.txt*, *calendar.txt* or *calendar_dates.txt*.  
+It can be found or calculated through the *feed_info.txt*, *calendar.txt* and/or *calendar_dates.txt*.  
 
-## Feed info > calendar_dates > calendar.
+## Feed info > calendar_dates / calendar.
 The Data source's validity periods can be found in the *feed_info.txt* file. If this file is present and the start date and end date culumns are filled, then we take the information from here.  
 If the *feed_info.txt* is incomplete, the *calendar.txt* file will be use to found the needed information.   
 In this case, we go through each line of the *calendar.txt* and take the oldest **start_date** and the farthest **end_date** available.  
@@ -26,6 +26,6 @@ If the addition of the validity periods of two data sources is more than 365 day
 
 ## Notes
 * A Gtfs with no *calendar.txt* but with a *calendar_dates.txt* can be accepted. This is OK.
-* Mono contributor right now.
+* Mono contributor and mono data source right now.
 * If more than one publisher in *feed_info.txt*, only the first one is taken into account.
 * Some contributors may want to have the intersection between two data sources' validity period. This is not supported right now.
