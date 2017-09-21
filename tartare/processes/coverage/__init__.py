@@ -28,7 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.coverage.FusioDataUpdate import FusioDataUpdate
-from tartare.processes.coverage.FusioExport import FusioExport
-from tartare.processes.coverage.FusioImport import FusioImport
-from tartare.processes.coverage.FusioPreProd import FusioPreProd
+from tartare.processes.coverage.fusio_data_update import FusioDataUpdate
+from tartare.processes.coverage.fusio_export import FusioExport
+from tartare.processes.coverage.fusio_import import FusioImport
+from tartare.processes.coverage.fusio_preprod import FusioPreProd
+from tartare.processes.coverage.fusio_send_pt_external_settings import FusioSendPtExternalSettings

@@ -11,13 +11,9 @@ from kombu import Exchange, Queue
 # http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
 BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
 CELERY_RESULT_BACKEND = 'rpc'
-
 CELERY_DEFAULT_QUEUE = 'tartare'
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
 CELERY_DEFAULT_ROUTING_KEY ='celery'
-
-# Temporary, to be deleted soon
-CELERYD_CONCURRENCY = 1
 
 exchange = Exchange(CELERY_DEFAULT_EXCHANGE)
 

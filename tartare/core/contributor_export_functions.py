@@ -33,11 +33,12 @@ import tempfile
 from typing import List
 
 from tartare.core import models
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException
-from tartare.helper import get_filename, get_md5_content_file, download_zip_file
+from tartare.helper import get_filename, get_md5_content_file, download_file
 from tartare.validity_period_finder import ValidityPeriodContainer
 from tartare.validity_period_finder import ValidityPeriodFinder
 
@@ -102,43 +103,50 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input:
-            url = data_source.input.get('url')
+        if data_source.input.type == INPUT_TYPE_URL and data_source.input.url:
+            url = data_source.input.url
             logger.info("fetching data from url {}".format(url))
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 filename = get_filename(url, data_source.id)
                 tmp_file_name = os.path.join(tmp_dir_name, filename)
-                download_zip_file(url, tmp_file_name)
+                download_file(url, tmp_file_name, data_source.data_format)
 
                 data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
                                                                         data_source_id=data_source.id)
-                if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(tmp_file_name):
-                    logger.debug(
-                        'fetched file {} for contributor {} has not changed since last fetch, skipping'.format(filename,
-                                                                                                               contributor.id))
-                    continue
+                if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
+                    if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(tmp_file_name):
+                        logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
+                                     .format(filename, contributor.id))
+                        continue
+                    else:
+                        nb_updated_datasets += 1
                 logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
                     contributor.id, data_source.id
                 ))
-                start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
-                validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
+                if data_source.data_format == 'gtfs':
+                    start_date, end_date = ValidityPeriodFinder().get_validity_period(file=tmp_file_name)
+                    validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
+                else:
+                    validity_period = None
 
                 data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
                                                                data_source_id=data_source.id,
                                                                validity_period=validity_period)
                 data_source_fetched.save_dataset(tmp_file_name, filename)
                 data_source_fetched.save()
-                nb_updated_datasets += 1
     return nb_updated_datasets
 
 
 def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
-        data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
-        if not data_set:
-            raise ParameterException(
-                'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
-        context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                    GridFsHandler().copy_file(data_set.gridfs_id))
+        if data_source.input.type != 'computed':
+            data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
+            if not data_set:
+                raise ParameterException(
+                    'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+            context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
+                                                        GridFsHandler().copy_file(data_set.gridfs_id))
+        else:
+            context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
     return context

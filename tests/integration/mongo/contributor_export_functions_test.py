@@ -30,7 +30,7 @@
 # www.navitia.io
 
 from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
-from tartare.core.models import DataSource, Contributor
+from tartare.core.models import DataSource, Contributor, Input, InputType
 import mock
 from tests.utils import mock_urlretrieve, mock_zip_file
 from tartare import app
@@ -43,7 +43,7 @@ from tartare.core.context import Context
 
 def test_fetch_data_from_input_failed(mocker):
     url = "http://whatever.com/gtfs.zip"
-    data_source = DataSource('myDSId', 'myDS', 'gtfs', {"type": "ftp", "url": url})
+    data_source = DataSource('myDSId', 'myDS', 'gtfs', Input('url', url))
     contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
 
     mock_dl = mocker.patch('urllib.request.urlretrieve', autospec=True)
@@ -60,7 +60,7 @@ def test_fetch_data_from_input_failed(mocker):
 class TestFetcher():
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_build_no_data_set(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
+        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', 'bob'))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         context = Context()
         with app.app_context():
@@ -70,7 +70,7 @@ class TestFetcher():
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "bob"})
+        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com"))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         with app.app_context():
             with pytest.raises(ContentTooShortError) as excinfo:
@@ -79,8 +79,8 @@ class TestFetcher():
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_zip_file)
     def test_fetcher_raises_not_zip_file(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', {"type": "ftp", "url": "http://bob.com"})
-        contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
+        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com"))
+        contrib = Contributor('contribId', 'contribName', 'http://bob.com', [data_source])
         with app.app_context():
             with pytest.raises(Exception) as excinfo:
                 fetch_datasets_and_return_updated_number(contrib)

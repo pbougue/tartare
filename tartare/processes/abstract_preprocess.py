@@ -26,10 +26,17 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import os
+import shutil
+import tempfile
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 from tartare.core.context import Context
+from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
+from tartare.exceptions import ParameterException
+from tartare.processes.fusio import Fusio
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -41,3 +48,32 @@ class AbstractProcess(metaclass=ABCMeta):
     @abstractmethod
     def do(self) -> Context:
         pass
+
+class AbstractFusioProcess(AbstractProcess):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        if not 'url' in self.params:
+            raise ParameterException('params.url not present in fusio preprocess')
+        self.fusio = Fusio(self.params['url'])
+
+    @staticmethod
+    def get_files_from_gridfs(gridfs_id: str) -> dict:
+        return {"filename": GridFsHandler().get_file_from_gridfs(gridfs_id)}
+
+
+class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
+    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        if self.context.contributor_contexts:
+            self.contributor_id = self.context.contributor_contexts[0].contributor.id
+        self.gfs = GridFsHandler()
+
+    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
+                                              computed_file_name: str = 'gtfs-processed') -> str:
+        with tempfile.TemporaryDirectory() as tmp_out_dir_name:
+            new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
+            new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_dir_name)
+            with open(new_archive_file_name, 'rb') as new_archive_file:
+                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
+                self.gfs.delete_file_from_gridfs(old_gridfs_id)
+                return new_gridfs_id

@@ -34,12 +34,11 @@ import requests
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import FusioException
-from tartare.helper import download_zip_file, get_filename
-from tartare.processes.abstract_preprocess import AbstractProcess
-from tartare.processes.fusio import Fusio
+from tartare.helper import download_file, get_filename
+from tartare.processes.abstract_preprocess import AbstractFusioProcess
 
 
-class FusioExport(AbstractProcess):
+class FusioExport(AbstractFusioProcess):
     def get_export_type(self) -> int:
         export_type = self.params.get('export_type', "ntfs")
         map_export_type = {
@@ -57,18 +56,17 @@ class FusioExport(AbstractProcess):
     def save_export(self, url: str) -> Context:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             file_name = '{}/{}'.format(tmp_dir_name, get_filename(url, 'fusio'))
-            download_zip_file(url, file_name)
+            download_file(url, file_name, "gtfs")
             with open(file_name, 'rb') as file:
                 self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=file_name)
         return self.context
 
     def do(self) -> Context:
-        fusio = Fusio(self.params.get("url"))
         data = {
             'action': 'Export',
             'ExportType': self.get_export_type(),
             'Source': 4}
-        resp = fusio.call(requests.post, api='api', data=data)
-        action_id = fusio.get_action_id(resp.content)
-        fusio.wait_for_action_terminated(action_id)
-        return self.save_export(fusio.get_export_url(action_id))
+        resp = self.fusio.call(requests.post, api='api', data=data)
+        action_id = self.fusio.get_action_id(resp.content)
+        self.fusio.wait_for_action_terminated(action_id)
+        return self.save_export(self.fusio.get_export_url(action_id))

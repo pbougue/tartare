@@ -32,7 +32,9 @@ import logging
 from datetime import timedelta, date, datetime
 from typing import Tuple, List
 import numpy as np
-from tartare.core.csv_reader import CsvReader
+from pandas._libs.tslib import NaTType
+
+from tartare.core.readers import CsvReader
 import pandas as pd
 
 from tartare.core.models import ValidityPeriod, ValidityPeriodContainer
@@ -49,6 +51,7 @@ class ValidityPeriodFinder(object):
         self.end_date = date.min
         self.date_format = date_format
         self.reader = CsvReader()
+        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
 
     def is_start_date_valid(self) -> bool:
         return self.start_date != date.max
@@ -57,9 +60,9 @@ class ValidityPeriodFinder(object):
         return self.end_date != date.min
 
     def _parse_calendar(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.calendar_filename,
-                              usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_filename,
+                                                usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
+                                                date_parser=self.date_parser)
 
         if self.reader.count_rows():
             self.start_date = self.reader.get_min('start_date').date()
@@ -102,10 +105,10 @@ class ValidityPeriodFinder(object):
                 break
 
     def _parse_calendar_dates(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.calendar_dates_filename,
-                              usecols=['date', 'exception_type'],
-                              parse_dates=['date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_filename,
+                                                usecols=['date', 'exception_type'],
+                                                parse_dates=['date'],
+                                                date_parser=self.date_parser)
 
         dates = self.reader.data[(self.reader.data.exception_type == 1)].date.tolist()
         self.add_dates(dates)
@@ -126,12 +129,9 @@ class ValidityPeriodFinder(object):
                 logging.getLogger(__name__).error(msg)
                 raise InvalidFile(msg)
         if self.reader.file_in_zip_files(file, self.feed_info_filename):
-            try:
-                self._parse_feed_info(file)
-                if self.is_start_date_valid() and self.is_end_date_valid():
-                    return self.start_date, self.end_date
-            except (ValueError, InvalidFile):
-                pass
+            self._parse_feed_info(file)
+            if self.is_start_date_valid() and self.is_end_date_valid():
+                return self.start_date, self.end_date
 
         if self.reader.file_in_zip_files(file, self.calendar_filename):
             self._parse_calendar(file)
@@ -146,13 +146,20 @@ class ValidityPeriodFinder(object):
         return self.start_date, self.end_date
 
     def _parse_feed_info(self, files_zip: str) -> None:
-        self.reader.load_data(files_zip, self.feed_info_filename,
+        self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
                               usecols=['feed_start_date', 'feed_end_date'],
                               parse_dates=['feed_start_date', 'feed_end_date'],
-                              date_parser=lambda x: pd.to_datetime(x, format='%Y%m%d'))
+                              date_parser=self.date_parser)
+        if self.reader.count_rows() > 1:
+            msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
 
-        self.start_date = self.reader.data.at[0, 'feed_start_date'].date()
-        self.end_date = self.reader.data.at[0, 'feed_end_date'].date()
+        start_date = self.reader.data.at[0, 'feed_start_date'].date()
+        end_date = self.reader.data.at[0, 'feed_end_date'].date()
+        # NaTType correspond to an empty column
+        self.start_date = start_date if not isinstance(start_date, NaTType) else self.start_date
+        self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
 
     @classmethod
     def get_validity_period_union(self,

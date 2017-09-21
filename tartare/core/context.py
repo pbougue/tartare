@@ -35,7 +35,7 @@ from tartare.validity_period_finder import ValidityPeriodContainer
 
 
 class DataSourceContext:
-    def __init__(self, data_source_id: str, gridfs_id: str, validity_period: Optional[ValidityPeriod]=None) -> None:
+    def __init__(self, data_source_id: str, gridfs_id: Optional[str], validity_period: Optional[ValidityPeriod]=None) -> None:
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period

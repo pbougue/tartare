@@ -29,20 +29,14 @@
 
 import requests
 
+from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 
 
-class FusioDataUpdate(AbstractProcess):
-    @staticmethod
-    def _get_files(gridfs_id: str) -> dict:
-        return {
-            "filename": GridFsHandler().get_file_from_gridfs(gridfs_id)
-        }
-
+class FusioDataUpdate(AbstractFusioProcess):
     def _get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
         validity_period = data_source_context.validity_period
         return {
@@ -58,16 +52,15 @@ class FusioDataUpdate(AbstractProcess):
         }
 
     def do(self) -> Context:
-        fusio = Fusio(self.params.get("url"))
         for contributor_context in self.context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
-                if not DataSource.is_type_data_format(data_source_context.data_source_id, 'gtfs'):
+                if not DataSource.is_type_data_format(data_source_context.data_source_id, DATA_FORMAT_GTFS):
                     continue
 
-                resp = fusio.call(requests.post, api='api',
-                                  data=self._get_data(contributor_context.contributor, data_source_context),
-                                  files=self._get_files(data_source_context.gridfs_id))
-                fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
+                resp = self.fusio.call(requests.post, api='api',
+                                       data=self._get_data(contributor_context.contributor, data_source_context),
+                                       files=self.get_files_from_gridfs(data_source_context.gridfs_id))
+                self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context

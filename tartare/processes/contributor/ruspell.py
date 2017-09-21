@@ -26,17 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-import requests
+import logging
 
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractProcess
-from tartare.processes.fusio import Fusio
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 
 
-class FusioPreProd(AbstractProcess):
+class Ruspell(AbstractContributorProcess):
     def do(self) -> Context:
-        fusio = Fusio(self.params.get("url"))
-        resp = fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
-        fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
+        logging.getLogger(__name__).debug('DO RUSPELL')
         return self.context

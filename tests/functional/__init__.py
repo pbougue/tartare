@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,8 +26,3 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.contributor.compute_directions import ComputeDirections
-from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
-from tartare.processes.contributor.headsign_short_name import HeadsignShortName
-from tartare.processes.contributor.compute_external_settings import ComputeExternalSettings
-from tartare.processes.contributor.ruspell import Ruspell

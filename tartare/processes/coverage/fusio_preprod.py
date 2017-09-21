@@ -27,10 +27,15 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import requests
+
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractProcess, AbstractFusioProcess
+from tartare.processes.fusio import Fusio
 
 
-class HeadsignShortName(AbstractProcess):
+class FusioPreProd(AbstractFusioProcess):
     def do(self) -> Context:
+        resp = self.fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})
+        self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context

@@ -87,7 +87,6 @@ class CallbackTask(tartare.ContextTask):
             with tartare.app.app_context():
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
-
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
@@ -281,7 +280,9 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
 
     for p in sorted_preprocesses[1:]:
         actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
-    return chain(actions).apply_async().get(disable_sync_subtasks=False)
+
+    return chain(*actions).apply_async().get(disable_sync_subtasks=False)
+
 
 @celery.task
 def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:

@@ -115,7 +115,7 @@ def setdefault_ids(collections: List[dict]) -> None:
         c.setdefault('id', str(uuid.uuid4()))
 
 
-def download_zip_file(url_file: str, dest: str) -> None:
+def download_file(url_file: str, dest: str, data_format: str) -> None:
     logger = logging.getLogger(__name__)
     try:
         urllib.request.urlretrieve(url_file, dest)
@@ -128,7 +128,7 @@ def download_zip_file(url_file: str, dest: str) -> None:
     except URLError as e:
         logger.error('error during download of file: {}'.format(str(e)))
         raise
-    if not zipfile.is_zipfile(dest):
+    if data_format == 'gtfs' and not zipfile.is_zipfile(dest):
         raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
 
 

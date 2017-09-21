@@ -36,6 +36,8 @@ from tartare.core.context import Context
 from tartare.core import contributor_export_functions, coverage_export_functions
 import pytest
 
+from tartare.core.models import Input
+
 fixtures_path = os.path.realpath('tests/fixtures/gtfs/some_archive.zip')
 start_date, end_date = (date(2017, 1, 1), date(2018, 12, 31))
 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
@@ -49,11 +51,11 @@ class TestHistorical():
             contributor = models.Contributor(id='contrib_id', name='AAA', data_prefix='AAA')
             contributor.save()
 
-            data_source = models.DataSource(id='data_source_gtfs', name='EEEEE', data_format='gtfs')
+            data_source = models.DataSource(id='data_source_gtfs', name='EEEEE', data_format='gtfs', input=Input('manual'))
             data_source.save(contributor_id=contributor.id)
 
             data_source = models.DataSource(id='data_source_direction_config',
-                                            name='direction_config', data_format='direction_config')
+                                            name='direction_config', data_format='direction_config', input=Input('manual'))
 
             data_source.save(contributor_id=contributor.id)
             coverage = models.Coverage('c1', 'c1', contributors=[contributor.id])

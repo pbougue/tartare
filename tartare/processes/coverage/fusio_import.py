@@ -34,12 +34,12 @@ from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod
 from tartare.core.models import ValidityPeriodContainer
 from tartare.exceptions import IntegrityException, ValidityPeriodException
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 
-class FusioImport(AbstractProcess):
+class FusioImport(AbstractFusioProcess):
     def get_validity_period(self) -> ValidityPeriod:
         contributor_contexts_with_validity = [ceds for ceds in self.context.contributor_contexts if
                                               ceds.validity_period]  # type: List[ValidityPeriodContainer]
@@ -50,13 +50,12 @@ class FusioImport(AbstractProcess):
         return validity_period_union
 
     def do(self) -> Context:
-        fusio = Fusio(self.params.get("url"))
         validity_period = self.get_validity_period()
-        resp = fusio.call(requests.post, api='api',
+        resp = self.fusio.call(requests.post, api='api',
                           data={
                               'DateDebut': Fusio.format_date(validity_period.start_date),
                               'DateFin': Fusio.format_date(validity_period.end_date),
                               'action': 'regionalimport',
                           })
-        fusio.wait_for_action_terminated(fusio.get_action_id(resp.content))
+        self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context
