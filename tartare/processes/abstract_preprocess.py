@@ -68,10 +68,8 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
 
-    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str, backup_files: List[str] = [],
+    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
                                               computed_file_name: str = 'gtfs-processed') -> str:
-        for backup_file in backup_files:
-            os.remove(backup_file)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
             new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_dir_name)

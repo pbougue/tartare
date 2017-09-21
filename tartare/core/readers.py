@@ -117,3 +117,6 @@ class CsvReader(AbstractPandaReader):
             self.data = pd.read_csv(csv_full_filename, sep=sep, usecols=usecols, **kwargs)
         except ValueError as e:
             raise InvalidFile('Impossible to parse file {}, Error {}'.format(filename, str(e)))
+
+    def save_as_csv(self, csv_full_filename: str) -> None:
+        self.data.to_csv(csv_full_filename, index=False)

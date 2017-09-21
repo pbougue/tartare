@@ -26,15 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import csv
 import json
 import logging
 import os
-import shutil
 import tempfile
 import zipfile
 from collections import defaultdict
-from typing import Dict, TextIO
+from typing import Dict
 from typing import List
 
 from tartare.core.context import Context
@@ -111,19 +109,12 @@ class ComputeDirections(AbstractContributorProcess):
                 logging.getLogger(__name__).error(str(e))
         return trips_to_fix
 
-    def __apply_rules(self, trips_file_name: str, trips_file_read: TextIO, trips_to_fix: Dict[str, str]) -> None:
-        with open(trips_file_name, 'w') as trips_file_write:
-            reader = csv.DictReader(trips_file_read)
-            fieldnames = sorted(reader.fieldnames)
-            if 'direction_id' not in fieldnames:
-                fieldnames.append('direction_id')
-            writer = csv.DictWriter(trips_file_write, fieldnames=fieldnames, delimiter=',',
-                                    quoting=csv.QUOTE_MINIMAL)
-            writer.writeheader()
-            for row in reader:
-                if row['trip_id'] in trips_to_fix:
-                    row['direction_id'] = trips_to_fix[row['trip_id']]
-                writer.writerow(row)
+    def __apply_rules(self, trips_reader: CsvReader, trips_file_name: str, trips_to_fix: Dict[str, str]) -> None:
+        trips_reader.data['direction_id'] = trips_reader.data \
+            .apply(lambda row, trips=trips_to_fix:
+                   trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'], axis=1) \
+            .fillna('')
+        trips_reader.save_as_csv(trips_file_name)
 
     def __get_stop_sequence_by_trip(self, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
         trip_stop_sequences = defaultdict(list)  # type: Dict[str, List[str]]
@@ -146,18 +137,13 @@ class ComputeDirections(AbstractContributorProcess):
         with zipfile.ZipFile(self.file_to_process, 'r') as files_zip:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 trips_file_name = os.path.join(tmp_dir_name, 'trips.txt')
-                trips_backup_file = trips_file_name + '.bak'
                 files_zip.extractall(tmp_dir_name)
-                shutil.copyfile(trips_file_name, trips_backup_file)
-                with open(trips_backup_file, 'r') as trips_file_read:
-                    trips_reader = CsvReader()
-                    trips_reader.load_csv_data_from_zip_file(self.file_to_process, "trips.txt",
-                                                             usecols=['trip_id', 'route_id'])
-                    trips_dict = trips_reader.data[trips_reader.data['route_id'].isin(config.keys())].to_dict('records')
-                    trip_to_route = {trip['trip_id']: trip['route_id'] for trip in trips_dict}
-                    trip_stop_sequences = self.__get_stop_sequence_by_trip(trip_to_route)
-                    rules = self.__get_rules(trip_to_route, trip_stop_sequences, config)
-                    self.__apply_rules(trips_file_name, trips_file_read, rules)
+                trips_reader = CsvReader()
+                trips_reader.load_csv_data_from_zip_file(self.file_to_process, 'trips.txt', dtype={'direction_id': str}, keep_default_na=False)
+                trips_dict = trips_reader.data[trips_reader.data['route_id'].isin(config.keys())].to_dict('records')
+                trip_to_route = {trip['trip_id']: trip['route_id'] for trip in trips_dict}
+                trip_stop_sequences = self.__get_stop_sequence_by_trip(trip_to_route)
+                rules = self.__get_rules(trip_to_route, trip_stop_sequences, config)
+                self.__apply_rules(trips_reader, trips_file_name, rules)
 
-                return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name,
-                                                                  [trips_backup_file])
+                return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
