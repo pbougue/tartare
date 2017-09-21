@@ -49,50 +49,75 @@ from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert
     assert_zip_contains_only_files_with_extensions
 
 
-class TestGtfsAgencyProcess:
-    preprocess = PreProcess(sequence=0, data_source_ids=["id2"], type="GtfsAgencyFile", params={
-        "data": {
-            "agency_id": "112",
-            "agency_name": "stif",
-            "agency_url": "http://stif.com"
-        }
-    }
-                            )
-
+class TestGtfsAgencyProcess(TartareFixture):
     excepted_headers = ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang",
                         "agency_phone", "agency_fare_url", "agency_email"]
     excepted_headers.sort()
 
-    def get_gridfs_id(self, filename, contributor_id='contrib_id'):
-        with open(_get_file_fixture_full_path('gtfs/{filename}'.format(filename=filename)), 'rb') as file:
-            return GridFsHandler().save_file_in_gridfs(file, filename=filename, contributor_id=contributor_id)
+    def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
+        contrib_payload = {
+            "id": contrib_id,
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "input": {
+                        "type": "url",
+                        "url": data_set_url
+                    },
+                    "id": data_source_id,
+                    "name": "data_source_to_process_name",
+                    "data_format": "gtfs"
+                }
+            ],
+            "preprocesses": [
+                {
+                    "sequence": 0,
+                    "data_source_ids": [data_source_id],
+                    "type": "GtfsAgencyFile",
+                    "params": {
+                        "data": {
+                            "agency_id": "112",
+                            "agency_name": "stif",
+                            "agency_url": "http://stif.com"
+                        }
+                    }
+                }
+            ]
+        }
+        return contrib_payload
 
-    def manage_gtfs_and_get_context(self, gridfs_id, context, data_source_id='id2', contributor_preprocess=None):
-        contributor = Contributor('123', 'ABC', 'abc')
-        validity_period = ValidityPeriod(date(2018, 7, 1), date(2018, 7, 1))
-        data_source_context = DataSourceContext(data_source_id, gridfs_id, validity_period)
-        contributor_context = ContributorContext(contributor, [data_source_context], validity_period)
-        context.contributor_contexts.append(contributor_context)
-        pr = contributor_preprocess if contributor_preprocess else self.preprocess
-        gtfs_agency_file = GtfsAgencyFile(context, pr)
-        gtfs_agency_file.do()
+    @freeze_time("2015-08-23")
+    def test_gtfs_without_agency_file(self, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
+        contrib_payload = self.__contributor_creator(url)
 
-    def test_gtfs_without_agency_file(self):
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+        preprocesses = r["contributors"][0]["preprocesses"]
+        assert len(preprocesses) == 1
+
+
+        raw = self.post('/contributors/contrib_id/actions/export')
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+
+
+        job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        self.assert_sucessful_call(job)
+        r = self.to_json(job)
+        assert r["jobs"][0]['state'] == 'done', print(job)
+
+        exports = self.get('/contributors/contrib_id/exports')
+        self.assert_sucessful_call(exports)
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 1
+        gridfs_id = r["exports"][0]["gridfs_id"]
+
         with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="some_archive.zip")
-            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context)
-            assert len(context.contributor_contexts) == 1
-            assert len(context.contributor_contexts[0].data_source_contexts) == 1
-            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
-
-            assert gridfs_id != new_gridfs_id
-
-            with pytest.raises(NoFile) as excinfo:
-                GridFsHandler().get_file_from_gridfs(gridfs_id)
-            assert str(excinfo.value).startswith('no file in gridfs collection')
-
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
@@ -102,44 +127,75 @@ class TestGtfsAgencyProcess:
                 keys = list(data[0].keys())
                 keys.sort()
                 assert keys == self.excepted_headers
-
-                for key, value in self.preprocess.params.get("data").items():
+                conf = preprocesses[0].get('params').get("data")
+                for key, value in conf.items():
                     assert value == data[0][key]
 
-    def test_gtfs_with_agency_file(self):
+    @freeze_time("2017-03-30")
+    def test_gtfs_with_agency_file(self, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="gtfs_valid.zip")
+        contrib_payload = self.__contributor_creator(url)
+
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+        preprocesses = r["contributors"][0]["preprocesses"]
+        assert len(preprocesses) == 1
+
+        raw = self.post('/contributors/contrib_id/actions/export')
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+
+        job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        self.assert_sucessful_call(job)
+        r = self.to_json(job)
+        assert r["jobs"][0]['state'] == 'done', print(job)
+
+        exports = self.get('/contributors/contrib_id/exports')
+        self.assert_sucessful_call(exports)
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 1
+        gridfs_id = r["exports"][0]["gridfs_id"]
+
         with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="gtfs_valid.zip")
-            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context)
-            assert len(context.contributor_contexts) == 1
-            assert len(context.contributor_contexts[0].data_source_contexts) == 1
-            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
-
-            assert gridfs_id == new_gridfs_id
-
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 2
 
-    def test_gtfs_with_empty_agency_file(self):
+    @freeze_time("2017-03-30")
+    def test_gtfs_with_empty_agency_file(self, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
+                                              data_set="gtfs_empty_agency_file.zip")
+        contrib_payload = self.__contributor_creator(url)
+
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+        preprocesses = r["contributors"][0]["preprocesses"]
+        assert len(preprocesses) == 1
+
+        raw = self.post('/contributors/contrib_id/actions/export')
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+
+        job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        self.assert_sucessful_call(job)
+        r = self.to_json(job)
+        assert r["jobs"][0]['state'] == 'done', print(job)
+
+        exports = self.get('/contributors/contrib_id/exports')
+        self.assert_sucessful_call(exports)
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 1
+        gridfs_id = r["exports"][0]["gridfs_id"]
+
         with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="gtfs_empty_agency_file.zip")
-            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context)
-            assert len(context.contributor_contexts) == 1
-            assert len(context.contributor_contexts[0].data_source_contexts) == 1
-            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
-
-            assert gridfs_id != new_gridfs_id
-
-            with pytest.raises(NoFile) as excinfo:
-                GridFsHandler().get_file_from_gridfs(gridfs_id)
-            assert str(excinfo.value).startswith('no file in gridfs collection')
-
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
@@ -149,78 +205,42 @@ class TestGtfsAgencyProcess:
                 keys = list(data[0].keys())
                 keys.sort()
                 assert keys == self.excepted_headers
-                for key, value in self.preprocess.params.get("data").items():
+                conf = preprocesses[0].get('params').get("data")
+                for key, value in conf.items():
                     assert value == data[0][key]
 
-    def test_gtfs_with_data_source_not_in_context(self):
+    @freeze_time("2017-03-30")
+    def test_gtfs_header_only_in_agency_file(self, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
+                                              data_set="gtfs_header_only_in_agency_file.zip")
+        contrib_payload = self.__contributor_creator(url)
+
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+        preprocesses = r["contributors"][0]["preprocesses"]
+        assert len(preprocesses) == 1
+
+        raw = self.post('/contributors/contrib_id/actions/export')
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+
+
+        job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        self.assert_sucessful_call(job)
+        r = self.to_json(job)
+        assert r["jobs"][0]['state'] == 'done', print(job)
+
+        exports = self.get('/contributors/contrib_id/exports')
+        self.assert_sucessful_call(exports)
+        r = self.to_json(exports)
+        assert len(r["exports"]) == 1
+        gridfs_id = r["exports"][0]["gridfs_id"]
+
         with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="gtfs_empty_agency_file.zip")
-            with pytest.raises(ParameterException) as excinfo:
-                self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context, data_source_id='id15')
-            assert str(excinfo.value).startswith('impossible to build preprocess GtfsAgencyFile : '
-                                                 'data source id2 not exist for contributor 123')
 
-    def test_gtfs_with_empty_agency_file_default_values(self):
-        with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="gtfs_empty_agency_file.zip")
-            contributor_preprocess = PreProcess(data_source_ids=["id2"])
-
-            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context,
-                                             contributor_preprocess=contributor_preprocess)
-            assert len(context.contributor_contexts) == 1
-            assert len(context.contributor_contexts[0].data_source_contexts) == 1
-            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
-
-            assert gridfs_id != new_gridfs_id
-
-            with pytest.raises(NoFile) as excinfo:
-                GridFsHandler().get_file_from_gridfs(gridfs_id)
-            assert str(excinfo.value).startswith('no file in gridfs collection')
-
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
-            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
-                assert_zip_contains_only_txt_files(gtfs_zip)
-                assert 'agency.txt' in gtfs_zip.namelist()
-                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
-                assert len(data) == 1
-
-                keys = list(data[0].keys())
-                keys.sort()
-                assert keys == self.excepted_headers
-                default_agency_data = {
-                    "agency_id": '42',
-                    "agency_name": "",
-                    "agency_url": "",
-                    "agency_timezone": "",
-                    "agency_lang": "",
-                    "agency_phone": "",
-                    "agency_fare_url": "",
-                    "agency_email": ""
-                }
-                for key, value in default_agency_data.items():
-                    assert value == data[0][key]
-
-    def test_gtfs_header_only_in_agency_file(self):
-        with app.app_context():
-            context = Context()
-            gridfs_id = self.get_gridfs_id(filename="gtfs_header_only_in_agency_file.zip")
-            contributor_preprocess = PreProcess(data_source_ids=["id2"])
-
-            self.manage_gtfs_and_get_context(gridfs_id=gridfs_id, context=context,
-                                             contributor_preprocess=contributor_preprocess)
-            assert len(context.contributor_contexts) == 1
-            assert len(context.contributor_contexts[0].data_source_contexts) == 1
-            new_gridfs_id = context.contributor_contexts[0].data_source_contexts[0].gridfs_id
-
-            assert gridfs_id != new_gridfs_id
-
-            with pytest.raises(NoFile) as excinfo:
-                GridFsHandler().get_file_from_gridfs(gridfs_id)
-            assert str(excinfo.value).startswith('no file in gridfs collection')
-
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(new_gridfs_id)
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
                 assert 'agency.txt' in gtfs_zip.namelist()
@@ -231,9 +251,9 @@ class TestGtfsAgencyProcess:
                 keys.sort()
                 assert keys == self.excepted_headers
                 default_agency_data = {
-                    "agency_id": '42',
-                    "agency_name": "",
-                    "agency_url": "",
+                    "agency_id": '112',
+                    "agency_name": "stif",
+                    "agency_url": "http://stif.com",
                     "agency_timezone": "",
                     "agency_lang": "",
                     "agency_phone": "",
@@ -242,6 +262,7 @@ class TestGtfsAgencyProcess:
                 }
                 for key, value in default_agency_data.items():
                     assert value == data[0][key]
+
 
 class TestComputeDirectionsProcess(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, add_data_source_config=True,
