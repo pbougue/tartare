@@ -1,6 +1,10 @@
 # Preprocesses
 
-## Compute Directions
+[Compute Directions](#ComputeDirection)  
+[GtfsAgencyFile](#GtfsAgencyFile)  
+
+
+## <a id="ComputeDirection" name="computeDirection"></a>Compute Directions
 
 ### Use case  
 GTFS have a *trips.txt* file that may have no **direction_id** column, an empty column or each line having the same **direction_id** if it is of low quality.  
@@ -32,6 +36,25 @@ If there is no **direction_id** column, it will be made from scratch. **Directio
 This is a case where we use a data source as a tool (the **direction_config** format *data_source*) to do a preprocess on a **gtfs** format *data_source*.  
 
 http://www.kisiodigital.com/Blog/Entry/id/132  
+
+
+## <a id="GtfsAgencyFile" name="GtfsAgencyFile"></a>GTFS Agency file
+
+### Use case
+This preprocess is used to create the required *agency.txt* file in a GTFS where there is none or to fill an empty existing one.  
+
+### How does it work
+If there is no *agency.txt*, the agency file will be created.  
+If there is already an *agency.txt*, but with only the column titles, infos from the preprocess'params will be add.  
+If there is already an *agency.txt* and there is at least one line (+ column titles) in it, it will NOT be overwrite.  
+
+### How to use it?
+1. Add the GtfsAgencyFile preprocess to the *contributor* ***(/contributors/{contributor_id}/preprocesses)***
+2. Fill its param with the data you wish to add.  
+
+### Notes
+Since Tartare is currently only mono contributor, an export coverage with two or more contributors will not have a merged *agency.txt*. Files generated through GtfsAgencyFile preprocess can only contain 1 agency. 
+
 
 
 
