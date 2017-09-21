@@ -65,6 +65,9 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
 
 class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
+        context = args[0]  # type: Context
+        if isinstance(context, Context):
+            context.cleanup()
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -87,6 +90,7 @@ class CallbackTask(tartare.ContextTask):
             with tartare.app.app_context():
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
+
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
@@ -106,7 +110,7 @@ def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type:
         logging.exception('error')
 
 
-def _get_publisher(platform: Platform, job: Job) -> AbstractPublisher:
+def _get_publisher(platform: Platform) -> AbstractPublisher:
     from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
         "navitia": navitia_publisher,
@@ -143,7 +147,7 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
     try:
-        publisher = _get_publisher(platform, job)
+        publisher = _get_publisher(platform)
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
@@ -185,9 +189,9 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> Context:
+def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
+                       check_for_update: bool = True) -> Context:
     try:
-        context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         logger.info('contributor_export')
         # Launch fetch all dataset for contributor
@@ -298,4 +302,4 @@ def automatic_update() -> None:
         # launch contributor export
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
-        chain(contributor_export.s(contributor, job), finish_job.s(job.id)).delay()
+        chain(contributor_export.s(Context(), contributor, job), finish_job.s(job.id)).delay()
