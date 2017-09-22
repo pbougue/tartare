@@ -45,7 +45,7 @@ class CoverageExportResource(flask_restful.Resource):
     def _export(coverage: Coverage) -> Job:
         job = Job(coverage_id=coverage.id, action_type="coverage_export")
         job.save()
-        chain(coverage_export.s(Context('coverage'), coverage, job), finish_job.s(job.id)).delay()
+        chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
         return job
 
     def post(self, coverage_id: str) -> Response:

@@ -65,9 +65,6 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
 
 class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
-        context = args[0]  # type: Context
-        if isinstance(context, Context):
-            context.cleanup()
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -159,9 +156,8 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
 
 
 @celery.task()
-def finish_job(context: Context, job_id: str) -> None:
+def finish_job(job_id: str) -> None:
     models.Job.update(job_id=job_id, state="done")
-    context.cleanup()
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -302,4 +298,4 @@ def automatic_update() -> None:
         # launch contributor export
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
-        chain(contributor_export.s(Context(), contributor, job), finish_job.s(job.id)).delay()
+        chain(contributor_export.si(Context(), contributor, job), finish_job.si(job.id)).delay()

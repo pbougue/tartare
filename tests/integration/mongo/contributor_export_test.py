@@ -30,7 +30,9 @@
 # www.navitia.io
 from freezegun import freeze_time
 
-from tests.utils import to_json, post
+from tartare import app
+from tartare.core.gridfs_handler import GridFsHandler
+from tests.utils import to_json
 import pytest
 
 from tests.integration.test_mechanism import TartareFixture
@@ -146,3 +148,34 @@ class TestContributorExport(TartareFixture):
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
         job = to_json(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
+
+    @freeze_time("2015-08-10")
+    def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        assert raw.status_code == 201
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 3, print(grid_fs_list)
+
+    @freeze_time("2015-08-10")
+    def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+        raw = self.post('/coverages',
+                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        assert raw.status_code == 201
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 5, print(grid_fs_list)

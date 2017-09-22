@@ -50,8 +50,8 @@ class AbstractRequestClient:
     def delete(self, uri):
         return requests.delete(self.get_url() + uri)
 
-    def post(self, uri, payload=None):
-        return requests.post(self.get_url() + uri, json=payload)
+    def post(self, uri, payload=None, files=None, headers={}):
+        return requests.post(self.get_url() + uri, json=payload, files=files, headers={})
 
     def get_dict_from_response(self, response):
         return json.loads(response.content)

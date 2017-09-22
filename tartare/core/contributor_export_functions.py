@@ -63,7 +63,7 @@ def save_export(contributor: Contributor, context: Context) -> Context:
             continue
         contrib_export_data_sources.append(
             ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
-                                        gridfs_id=GridFsHandler().copy_file(data_source_context.gridfs_id),
+                                        gridfs_id=data_source_context.gridfs_id,
                                         validity_period=data_source_context.validity_period)
         )
 
@@ -78,7 +78,7 @@ def save_export(contributor: Contributor, context: Context) -> Context:
         contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
             contrib_export_data_sources_with_validity)
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=grid_fs_id,
+                                   gridfs_id=GridFsHandler().copy_file(grid_fs_id),
                                    validity_period=contributor_export_validity_period,
                                    data_sources=contrib_export_data_sources)
         export.save()

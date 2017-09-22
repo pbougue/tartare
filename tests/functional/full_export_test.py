@@ -27,6 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+import os
 
 import pytest
 import requests
@@ -45,7 +46,7 @@ class TestFullExport(AbstractRequestClient):
         with open(self.fixture_path('compute_directions/config.json'), 'rb') as file:
             raw = requests.post(
                 self.get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
-                files={'file': file}, headers={})
+                files={'file': file})
             assert raw.status_code == 201, print(self.get_dict_from_response(raw))
 
         raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
@@ -100,21 +101,21 @@ class TestFullExport(AbstractRequestClient):
             ]
         }
 
-        raw = self.__post('contributors', contributor)
+        raw = self.post('contributors', contributor)
         assert raw.status_code == 201, print(raw.content)
 
         # post config ruspell
-        with open(self.__fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
-            raw = requests.post(
-                self.__get_url() + '/contributors/AMI/data_sources/ruspell-config/data_sets',
-                files={'file': file}, headers={})
+        with open(self.fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
+            raw = self.post(
+                '/contributors/AMI/data_sources/ruspell-config/data_sets',
+                files={'file': file})
             assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
 
         # post bano data
-        with open(self.__fixture_path('ruspell//bano-75.csv'), 'rb') as file:
-            raw = requests.post(
-                self.__get_url() + '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
-                files={'file': file}, headers={})
+        with open(self.fixture_path('ruspell//bano-75.csv'), 'rb') as file:
+            raw = self.post(
+                '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
+                files={'file': file})
             assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
 
         # launch ruspell preprocess
