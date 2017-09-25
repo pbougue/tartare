@@ -40,7 +40,7 @@ from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
 from tartare import mongo
-from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, INPUT_TYPE_MANUAL, DATA_FORMAT_DEFAULT, \
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
@@ -87,6 +87,15 @@ class InputType(ChoiceField):
         super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
+class SequenceContainer(metaclass=ABCMeta):
+    def __init__(self, sequence: int) -> None:
+        self.sequence = sequence
+
+    @classmethod
+    def sort_by_sequence(cls, list_to_sort: List['SequenceContainer']) -> List['SequenceContainer']:
+        return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
+
+
 class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
@@ -108,13 +117,13 @@ class Platform(object):
         self.sequence = sequence
 
 
-class Environment(object):
+class Environment(SequenceContainer):
     def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None,
                  sequence: Optional[int] = 0) -> None:
+        super().__init__(sequence)
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
-        self.sequence = sequence
 
 
 class ValidityPeriod(object):
