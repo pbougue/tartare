@@ -349,3 +349,24 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
 
+    def test_patch_with_invalid_data_format(self, contributor):
+        data_source = {
+            "id": "issues_257",
+            "data_format": "gtfs",
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+        response_payload = self.to_json(response)
+        assert response.status_code == 201, print(response_payload)
+        assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
+
+        pacth = {
+            "id": "issues_257",
+            "data_format": "issues 257"
+        }
+        response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
+                              self.dict_to_json(pacth))
+        response_payload = self.to_json(response)
+        assert response.status_code == 400, print(response_payload)
+        assert response_payload['error'].startswith("Invalid data,")
