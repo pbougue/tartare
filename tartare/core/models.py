@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
 
 import pymongo
 from gridfs import GridOut
@@ -87,12 +87,15 @@ class InputType(ChoiceField):
         super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
+SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
+
+
 class SequenceContainer(metaclass=ABCMeta):
     def __init__(self, sequence: int) -> None:
         self.sequence = sequence
 
     @classmethod
-    def sort_by_sequence(cls, list_to_sort: List['SequenceContainer']) -> List['SequenceContainer']:
+    def sort_by_sequence(cls, list_to_sort: List[SequenceContainerType]) -> List[SequenceContainerType]:
         return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
 
 
@@ -108,13 +111,13 @@ class PreProcessContainer(metaclass=ABCMeta):
         pass
 
 
-class Platform(object):
+class Platform(SequenceContainer):
     def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0) -> None:
+        super().__init__(sequence)
         self.type = type
         self.protocol = protocol
         self.url = url
         self.options = {} if options is None else options
-        self.sequence = sequence
 
 
 class Environment(SequenceContainer):
@@ -252,11 +255,11 @@ class DataSource(object):
             return data_sources[0].data_format == data_format
 
 
-class GenericPreProcess(object):
+class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
                  sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None) -> None:
+        super().__init__(sequence)
         self.id = str(uuid.uuid4()) if not id else id
-        self.sequence = sequence
         self.data_source_ids = data_source_ids if data_source_ids else []
         self.params = params if params else {}
         self.type = type

@@ -246,7 +246,14 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
         coverage_export_functions.save_export(coverage, context)
         actions = []
         # launch publish for all environment
-        sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
+        sorted_environments = {}
+        # flip env: object in object: env
+        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+        # sort envs
+        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+        # restore mapping
+        for environment in raw_sorted_environments:
+            sorted_environments[flipped_environments[environment]] = environment
         for env in sorted_environments:
             environment = coverage.get_environment(env)
             sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
