@@ -275,7 +275,7 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
 def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
     actions = []
 
     # Do better
