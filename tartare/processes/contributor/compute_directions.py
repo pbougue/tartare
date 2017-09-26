@@ -28,9 +28,7 @@
 # www.navitia.io
 import json
 import logging
-import os
 import tempfile
-import zipfile
 from collections import defaultdict
 from typing import Dict
 from typing import List
@@ -41,6 +39,7 @@ from tartare.core.readers import CsvReader
 from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
+from tartare.core import zip
 
 
 class ComputeDirections(AbstractContributorProcess):
@@ -132,18 +131,22 @@ class ComputeDirections(AbstractContributorProcess):
             trip_stop_sequences[trip['trip_id']].append(trip['stop_id'])
         return trip_stop_sequences
 
+    def do_compute_directions(self, trips_file_name: str, config: tuple) -> None:
+
+        trips_reader = CsvReader()
+        trips_reader.load_csv_data(trips_file_name, dtype={'direction_id': str}, keep_default_na=False, sep=',')
+
+        trips_dict = trips_reader.data[trips_reader.data['route_id'].isin(config[1].keys())].to_dict('records')
+        trip_to_route = {trip['trip_id']: trip['route_id'] for trip in trips_dict}
+        trip_stop_sequences = self.__get_stop_sequence_by_trip(trip_to_route)
+        rules = self.__get_rules(trip_to_route, trip_stop_sequences, config[1])
+        self.__apply_rules(trips_reader, trips_file_name, rules)
+
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str, config: Dict[str, List[str]]) -> str:
         self.file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
-        with zipfile.ZipFile(self.file_to_process, 'r') as files_zip:
-            with tempfile.TemporaryDirectory() as tmp_dir_name:
-                trips_file_name = os.path.join(tmp_dir_name, 'trips.txt')
-                files_zip.extractall(tmp_dir_name)
-                trips_reader = CsvReader()
-                trips_reader.load_csv_data_from_zip_file(self.file_to_process, 'trips.txt', dtype={'direction_id': str}, keep_default_na=False)
-                trips_dict = trips_reader.data[trips_reader.data['route_id'].isin(config.keys())].to_dict('records')
-                trip_to_route = {trip['trip_id']: trip['route_id'] for trip in trips_dict}
-                trip_stop_sequences = self.__get_stop_sequence_by_trip(trip_to_route)
-                rules = self.__get_rules(trip_to_route, trip_stop_sequences, config)
-                self.__apply_rules(trips_reader, trips_file_name, rules)
+        with tempfile.TemporaryDirectory() as tmp_dir_name, tempfile.TemporaryDirectory() as new_tmp_dir_name:
+            gtfs_computed_path = zip.edit_file_in_zip_file(self.file_to_process, 'trips.txt', tmp_dir_name,
+                                                           new_tmp_dir_name, self.do_compute_directions,
+                                                           ("compute-direction", config))
 
-                return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, tmp_dir_name)
+            return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, gtfs_computed_path)

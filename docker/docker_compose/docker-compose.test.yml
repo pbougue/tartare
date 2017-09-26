@@ -1,0 +1,49 @@
+version: '2'
+
+services:
+  tartare_worker:
+    image: tartare_functional_tests
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks.celery worker -Q tartare
+    links:
+      - rabbitmq
+      - mongo-server
+
+  ruspell_worker:
+    image: tartare_ruspell_functional_tests
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks worker -Q process_ruspell
+    links:
+      - rabbitmq
+      - mongo-server
+
+  tartare_beat:
+    image: tartare_functional_tests
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+    command: celery -A tartare.tasks.celery beat
+    links:
+      - rabbitmq
+
+  tartare_webservice:
+    image: tartare_functional_tests
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: uwsgi --mount /=tartare:app --http 0.0.0.0:5666 --add-header Access-Control-Allow-Origin:*
+    links:
+      - rabbitmq
+      - mongo-server
+
+  mongo-server:
+    image: mongo
+
+  rabbitmq:
+    image: rabbitmq:management
+
+  http_download_server:
+    image: visity/webdav

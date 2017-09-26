@@ -60,3 +60,9 @@ class IntegrityException(Exception):
 
 class ParameterException(Exception):
     pass
+
+
+class CommandRuntimeException(Exception):
+    def __init__(self, command: str, message: Optional[str]='') -> None:
+        message = '{}: {}'.format(command, message)
+        super(CommandRuntimeException, self).__init__(message)

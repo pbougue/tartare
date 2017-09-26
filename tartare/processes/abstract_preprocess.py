@@ -35,6 +35,8 @@ from typing import List
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
+from zipfile import is_zipfile
+from typing import Any
 from tartare.exceptions import ParameterException
 from tartare.processes.fusio import Fusio
 
@@ -48,6 +50,13 @@ class AbstractProcess(metaclass=ABCMeta):
     @abstractmethod
     def do(self) -> Context:
         pass
+
+    def get_link(self, key: str) -> Any:
+        if not self.params.get('links') or key not in self.params.get('links'):
+            raise ParameterException('{} missing in preprocess links'.format(key))
+
+        return self.params.get('links')[key]
+
 
 class AbstractFusioProcess(AbstractProcess):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
@@ -68,12 +77,17 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
 
-    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, tmp_dir_name: str,
-                                              computed_file_name: str = 'gtfs-processed') -> str:
+    def __replace_in_grid_fs(self, old_gridfs_id: str,  zip_file: str, computed_file_name: str) -> str:
+        with open(zip_file, 'rb') as new_archive_file:
+            new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
+            self.gfs.delete_file_from_gridfs(old_gridfs_id)
+            return new_gridfs_id
+
+    def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, files: str,
+                                              computed_file_name: str='gtfs-processed') -> str:
+        if is_zipfile(files):
+            return self.__replace_in_grid_fs(old_gridfs_id, files, computed_file_name)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
             new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
-            new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_dir_name)
-            with open(new_archive_file_name, 'rb') as new_archive_file:
-                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
-                self.gfs.delete_file_from_gridfs(old_gridfs_id)
-                return new_gridfs_id
+            new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', files)
+            return self.__replace_in_grid_fs(old_gridfs_id, new_archive_file_name, computed_file_name)
