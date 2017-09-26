@@ -47,7 +47,7 @@ from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
@@ -249,7 +249,7 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
         sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
         for env in sorted_environments:
             environment = coverage.get_environment(env)
-            sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
+            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
                 # remove temporary gridfs after the last publication
