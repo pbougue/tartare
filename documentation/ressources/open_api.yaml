@@ -470,7 +470,7 @@ paths:
 
   /coverages/{coverage_id}/exports/{export_id}/files/{file_id}:
     get:
-      summary: Retrieve data file of the specified file_id
+      summary: returns the file {file_id} of the coverage export identified by {coverage_id} and [export_id}
       tags:
         - coverages
       produces:
@@ -505,7 +505,7 @@ paths:
 
   /coverages/{coverage_id}/environments/{environment_id}/files/{file_id}:
     get:
-      summary: Retrieve data file of the specified file_id
+      summary: returns the file {file_id} of the environment identified by {coverage_id} and [environment_id}
       tags:
         - coverages
       produces:
@@ -1139,7 +1139,7 @@ paths:
 
   /contributors/{contributor_id}/exports/{export_id}/files/{file_id}:
     get:
-      summary: Retrieve data file of the specified file_id
+      summary: returns the file {file_id} of the contributor export identified by {contributor_id} and [export_id}
       tags:
         - contributors
       produces:
