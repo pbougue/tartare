@@ -29,21 +29,15 @@
 import json
 import os
 import tempfile
-from datetime import date
 from zipfile import ZipFile
-
 import pytest
 from freezegun import freeze_time
-from gridfs.errors import NoFile
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
-from tartare.core.context import Context, DataSourceContext, ContributorContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Contributor, ValidityPeriod, PreProcess, ContributorExport
-from tartare.exceptions import ParameterException
+from tartare.core.models import ContributorExport
 from tartare.helper import get_dict_from_zip
-from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
     assert_zip_contains_only_files_with_extensions
