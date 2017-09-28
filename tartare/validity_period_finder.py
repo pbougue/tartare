@@ -27,18 +27,19 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from zipfile import is_zipfile
 import logging
 from datetime import timedelta, date, datetime
 from typing import Tuple, List
+from zipfile import is_zipfile
+
 import numpy as np
+import pandas as pd
 from pandas._libs.tslib import NaTType
 
+from tartare.core.models import ValidityPeriod
 from tartare.core.readers import CsvReader
-import pandas as pd
-
-from tartare.core.models import ValidityPeriod, ValidityPeriodContainer
 from tartare.exceptions import InvalidFile, ValidityPeriodException
+
 
 class ValidityPeriodFinder(object):
     feed_info_filename = 'feed_info.txt'
@@ -46,7 +47,7 @@ class ValidityPeriodFinder(object):
     calendar_dates_filename = 'calendar_dates.txt'
 
     # TODO Management of case where the period exceeds one year
-    def __init__(self, date_format: str='%Y%m%d') -> None:
+    def __init__(self, date_format: str = '%Y%m%d') -> None:
         self.start_date = date.max
         self.end_date = date.min
         self.date_format = date_format
@@ -61,7 +62,8 @@ class ValidityPeriodFinder(object):
 
     def _parse_calendar(self, files_zip: str) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_filename,
-                                                usecols=['start_date', 'end_date'], parse_dates=['start_date', 'end_date'],
+                                                usecols=['start_date', 'end_date'],
+                                                parse_dates=['start_date', 'end_date'],
                                                 date_parser=self.date_parser)
 
         if self.reader.count_rows():
@@ -124,10 +126,10 @@ class ValidityPeriodFinder(object):
 
         if not self.reader.file_in_zip_files(file, self.calendar_filename) and \
                 not self.reader.file_in_zip_files(file, self.calendar_dates_filename):
-                msg = 'file zip {} without at least one of {}'.format(file, ','.join(
-                    [self.calendar_filename, self.calendar_dates_filename]))
-                logging.getLogger(__name__).error(msg)
-                raise InvalidFile(msg)
+            msg = 'file zip {} without at least one of {}'.format(file, ','.join(
+                [self.calendar_filename, self.calendar_dates_filename]))
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
         if self.reader.file_in_zip_files(file, self.feed_info_filename):
             self._parse_feed_info(file)
             if self.is_start_date_valid() and self.is_end_date_valid():
@@ -147,9 +149,9 @@ class ValidityPeriodFinder(object):
 
     def _parse_feed_info(self, files_zip: str) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
-                              usecols=['feed_start_date', 'feed_end_date'],
-                              parse_dates=['feed_start_date', 'feed_end_date'],
-                              date_parser=self.date_parser)
+                                                usecols=['feed_start_date', 'feed_end_date'],
+                                                parse_dates=['feed_start_date', 'feed_end_date'],
+                                                date_parser=self.date_parser)
         if self.reader.count_rows() > 1:
             msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
             logging.getLogger(__name__).error(msg)
@@ -162,17 +164,12 @@ class ValidityPeriodFinder(object):
         self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
 
     @classmethod
-    def get_validity_period_union(self,
-                                  validity_period_container_list: List[ValidityPeriodContainer]) -> ValidityPeriod:
-        if not validity_period_container_list:
+    def get_validity_period_union(cls, validity_period_list: List[ValidityPeriod]) -> ValidityPeriod:
+        if not validity_period_list:
             raise ValidityPeriodException('empty validity period list given to calculate union')
-        container_with_min_start_date = min(validity_period_container_list,
-                                            key=lambda container: container.validity_period.start_date)
 
-        container_with_max_end_date = max(validity_period_container_list,
-                                          key=lambda container: container.validity_period.end_date)
-        begin_date = container_with_min_start_date.validity_period.start_date
-        end_date = container_with_max_end_date.validity_period.end_date
+        begin_date = min([d.start_date for d in validity_period_list])
+        end_date = max([d.end_date for d in validity_period_list])
         now_date = datetime.now().date()
         if end_date < now_date:
             raise ValidityPeriodException(

@@ -26,12 +26,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare import app
-from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource
+from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
+    ValidityPeriodContainer
 import logging
 from typing import List, Optional
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.validity_period_finder import ValidityPeriodContainer
 
 
 class DataSourceContext:

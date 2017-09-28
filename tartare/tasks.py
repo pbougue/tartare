@@ -47,7 +47,7 @@ from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
@@ -252,10 +252,17 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
         coverage_export_functions.save_export(coverage, context)
         actions = []
         # launch publish for all environment
-        sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
+        sorted_environments = {}
+        # flip env: object in object: env
+        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+        # sort envs
+        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+        # restore mapping
+        for environment in raw_sorted_environments:
+            sorted_environments[flipped_environments[environment]] = environment
         for env in sorted_environments:
             environment = coverage.get_environment(env)
-            sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
+            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
         if actions:
@@ -270,7 +277,7 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
 def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
     actions = []
 
     # Do better
