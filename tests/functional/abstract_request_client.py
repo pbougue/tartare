@@ -36,13 +36,17 @@ class AbstractRequestClient:
     def get_url(self):
         return 'http://{host}:5666/'.format(host=os.getenv('TARTARE_HOST_IP'))
 
-    def path_in_functional_folder(self, rel_path):
-        return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'functional'),
-                              rel_path)
+    def get_test_relative_path(self, relative_path):
+        return '{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), relative_path)
 
-    def fixture_path(self, rel_path):
-        return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'fixtures'),
-                              rel_path)
+    def get_functional_relative_path(self, relative_path):
+        return self.get_test_relative_path(os.path.join('functional', relative_path))
+
+    def get_fixtures_relative_path(self, relative_path):
+        return self.get_test_relative_path(os.path.join('fixtures', relative_path))
+
+    def get_api_fixture_path(self, relative_path):
+        return self.get_fixtures_relative_path(os.path.join('api', relative_path))
 
     def get(self, uri):
         return requests.get(self.get_url() + uri)
@@ -51,7 +55,7 @@ class AbstractRequestClient:
         return requests.delete(self.get_url() + uri)
 
     def post(self, uri, payload=None, files=None, headers={}):
-        return requests.post(self.get_url() + uri, json=payload, files=files, headers={})
+        return requests.post(self.get_url() + uri, json=payload, files=files, headers=headers)
 
     def get_dict_from_response(self, response):
         return json.loads(response.content)
@@ -66,7 +70,7 @@ class AbstractRequestClient:
                 assert raw.status_code == 204, print(raw.content)
 
     def replace_server_id_in_input_data_source_fixture(self, fixture_path):
-        with open(self.path_in_functional_folder(fixture_path), 'rb') as file:
+        with open(self.get_api_fixture_path(fixture_path), 'rb') as file:
             json_file = json.load(file)
             for data_source in json_file['data_sources']:
                 if data_source['input'] and 'url' in data_source['input']:
@@ -90,3 +94,9 @@ class AbstractRequestClient:
         job = self.get_dict_from_response(raw)['jobs'][0]
         assert job['state'] == 'done'
         assert job['step'] == step
+
+    def assert_sucessful_call(self, raw):
+        assert raw.status_code == 200, print(self.get_dict_from_response(raw))
+
+    def assert_sucessful_create(self, raw):
+        assert raw.status_code == 201, print(self.get_dict_from_response(raw))

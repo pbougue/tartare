@@ -27,7 +27,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-import os
 
 import pytest
 import requests
@@ -38,121 +37,75 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
     def test_contrib_export_with_compute_directions(self):
-        self.reset_api()
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor.json')
         raw = self.post('contributors', json_file)
-        assert raw.status_code == 201, print(raw.content)
 
-        with open(self.fixture_path('compute_directions/config.json'), 'rb') as file:
+        self.assert_sucessful_create(raw)
+
+        with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
             raw = requests.post(
                 self.get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
                 files={'file': file})
             assert raw.status_code == 201, print(self.get_dict_from_response(raw))
 
         raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
+        self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_contrib_export_with_ruspell(self):
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
-        contributor = {
-            "data_prefix": "bob",
-            "data_sources": [
-                {
-                    "data_format": "gtfs",
-                    "id": "Google-1",
-                    "input": {
-                        "type": "url",
-                        "url": "http://{HTTP_SERVER_IP}/ruspell/gtfs.zip".format(
-                            HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
-                    },
-                    "name": "données gtfs"
-                },
-                {
-                    "data_format": "ruspell_config",
-                    "id": "ruspell-config",
-                    "input": {},
-                    "name": "Configuration Ruspell"
-                },
-                {
-                    "data_format": "bano_file",
-                    "id": "ruspell-bano_file",
-                    "input": {},
-                    "name": "Bano Ruspell"
-                }
-            ],
-            "id": "AMI",
-            "name": "AMI",
-            "preprocesses": [
-                {
-                    "id": "ruspell_id",
-                    "type": "Ruspell",
-                    "sequence": 1,
-                    "data_source_ids": ["Google-1"],
-                    "params": {
-                        "links": {
-                            "config": "ruspell-config",
-                            "bano": [
-                                "ruspell-bano_file"
-                            ]
-                        }
-                    }
-                }
-            ]
-        }
-
-        raw = self.post('contributors', contributor)
-        assert raw.status_code == 201, print(raw.content)
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_ruspell.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
 
         # post config ruspell
-        with open(self.fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
+        with open(self.get_fixtures_relative_path('ruspell/config-fr_idf.yml'), 'rb') as file:
             raw = self.post(
                 '/contributors/AMI/data_sources/ruspell-config/data_sets',
                 files={'file': file})
-            assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
+            self.assert_sucessful_create(raw)
 
         # post bano data
-        with open(self.fixture_path('ruspell//bano-75.csv'), 'rb') as file:
+        with open(self.get_fixtures_relative_path('ruspell//bano-75.csv'), 'rb') as file:
             raw = self.post(
                 '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
                 files={'file': file})
-            assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
+            self.assert_sucessful_create(raw)
 
         # launch ruspell preprocess
-        raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
+        raw = self.post('contributors/AMI/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_exports_combined(self):
-        self.reset_api()
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
         raw = self.post('contributors', json_file)
         assert raw.status_code == 201, print(raw.content)
 
-        with open(self.path_in_functional_folder('coverage.json'), 'rb') as file:
+        with open(self.get_api_fixture_path('coverage.json'), 'rb') as file:
             json_file = json.load(file)
             raw = self.post('coverages', json_file)
-            assert raw.status_code == 201, print(raw.content)
+            self.assert_sucessful_create(raw)
 
         raw = self.post('contributors/contributor_id/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
 
     def test_exports_combined_two_coverages(self):
-        self.reset_api()
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
         raw = self.post('contributors', json_file)
-        assert raw.status_code == 201, print(raw.content)
+        self.assert_sucessful_create(raw)
 
-        with open(self.path_in_functional_folder('coverage.json'), 'rb') as file:
+        with open(self.get_api_fixture_path('coverage.json'), 'rb') as file:
             json_file = json.load(file)
             raw = self.post('coverages', json_file)
-            assert raw.status_code == 201, print(raw.content)
+            self.assert_sucessful_create(raw)
 
-        with open(self.path_in_functional_folder('other_coverage.json'), 'rb') as file:
+        with open(self.get_api_fixture_path('other_coverage.json'), 'rb') as file:
             json_file = json.load(file)
             raw = self.post('coverages', json_file)
-            assert raw.status_code == 201, print(raw.content)
+            self.assert_sucessful_create(raw)
 
         raw = self.post('contributors/contributor_id/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']

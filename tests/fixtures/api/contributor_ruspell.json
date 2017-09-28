@@ -1,0 +1,46 @@
+{
+  "data_prefix": "bob",
+  "data_sources": [
+    {
+      "data_format": "gtfs",
+      "id": "Google-1",
+      "input": {
+        "type": "url",
+        "url": "http://{HTTP_SERVER_IP}/ruspell/gtfs.zip"
+      },
+      "name": "données gtfs"
+    },
+    {
+      "data_format": "ruspell_config",
+      "id": "ruspell-config",
+      "input": {},
+      "name": "Configuration Ruspell"
+    },
+    {
+      "data_format": "bano_file",
+      "id": "ruspell-bano_file",
+      "input": {},
+      "name": "Bano Ruspell"
+    }
+  ],
+  "id": "AMI",
+  "name": "AMI",
+  "preprocesses": [
+    {
+      "id": "ruspell_id",
+      "type": "Ruspell",
+      "sequence": 1,
+      "data_source_ids": [
+        "Google-1"
+      ],
+      "params": {
+        "links": {
+          "config": "ruspell-config",
+          "bano": [
+            "ruspell-bano_file"
+          ]
+        }
+      }
+    }
+  ]
+}
