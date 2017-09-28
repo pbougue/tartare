@@ -27,18 +27,19 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
-from tartare.core import models
 from datetime import date
-from tartare import app, mongo
-from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.context import Context
-from tartare.core import contributor_export_functions, coverage_export_functions
+
 import pytest
 
+from tartare import app, mongo
+from tartare.core import contributor_export_functions, coverage_export_functions
+from tartare.core import models
+from tartare.core.context import Context
+from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Input
+from tests.utils import _get_file_fixture_full_path
 
-fixtures_path = os.path.realpath('tests/fixtures/gtfs/some_archive.zip')
+fixtures_path = _get_file_fixture_full_path('gtfs/some_archive.zip')
 start_date, end_date = (date(2017, 1, 1), date(2018, 12, 31))
 validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
 
@@ -51,11 +52,13 @@ class TestHistorical():
             contributor = models.Contributor(id='contrib_id', name='AAA', data_prefix='AAA')
             contributor.save()
 
-            data_source = models.DataSource(id='data_source_gtfs', name='EEEEE', data_format='gtfs', input=Input('manual'))
+            data_source = models.DataSource(id='data_source_gtfs', name='EEEEE', data_format='gtfs',
+                                            input=Input('manual'))
             data_source.save(contributor_id=contributor.id)
 
             data_source = models.DataSource(id='data_source_direction_config',
-                                            name='direction_config', data_format='direction_config', input=Input('manual'))
+                                            name='direction_config', data_format='direction_config',
+                                            input=Input('manual'))
 
             data_source.save(contributor_id=contributor.id)
             coverage = models.Coverage('c1', 'c1', contributors=[contributor.id])
@@ -98,7 +101,7 @@ class TestHistorical():
             data_source_fetched.save_dataset(fixtures_path, 'gtfs.zip')
             data_source_fetched.save()
             data_source_gtfs_list_ids.append(data_source_fetched.id)
-        #Config File
+        # Config File
         for i in range(1, 6):
             data_source_fetched = models.DataSourceFetched(contributor_id='contrib_id',
                                                            data_source_id='data_source_direction_config')
@@ -191,7 +194,6 @@ class TestHistorical():
         context = Context()
         context = self.populate_data_fetched(context, contributor)
         contributor_export_functions.save_export(contributor, context)
-        context.cleanup()
 
     def test_data_source_fetched_historical_use_context(self):
         list_ids = []
@@ -200,7 +202,6 @@ class TestHistorical():
         for i in range(1, 6):
             context = Context()
             self.populate_data_fetched(context, contributor)
-            context.cleanup()
         # test that there are only 3 data sources
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
             'contributor_id': contributor.id,
@@ -211,16 +212,17 @@ class TestHistorical():
         # Test the 3 last objects saved are not deleted
         assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
-        # test that there are only 3 gridfs
+        # test that there are only 8 gridfs
+        # 3 DataSourceFecthed
+        # 3 5 in context (one for each)
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 3
+        assert raw.count() == 8
 
     def coverage_save_export(self, coverage):
         context = Context('coverage', coverage)
         context.fill_contributor_contexts(coverage)
-        coverage_export_functions.postprocess(coverage,context)
+        coverage_export_functions.merge(coverage, context)
         coverage_export_functions.save_export(coverage, context)
-        context.cleanup()
 
     def test_data_source_fetched_historical_and_save_export_use_context(self):
         list_ids = []
@@ -244,11 +246,11 @@ class TestHistorical():
         # Test the 3 last objects saved are not deleted
         assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
-        # test that there are only 6 gridfs :
+        # test that there are only 9 gridfs :
         # 3 in DataSourceFetched
-        # 3 in ContributorExport
+        # 6 in ContributorExport
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 6
+        assert raw.count() == 9
 
     def test_data_source_fetched_historical_and_save_export_save_coverage_export_use_context(self):
         list_ids = []
@@ -274,7 +276,6 @@ class TestHistorical():
         # Test the 3 last objects saved are not deleted
         assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
-
         raw = mongo.db[models.CoverageExport.mongo_collection].find({
             'coverage_id': 'c1'
         })
@@ -282,9 +283,9 @@ class TestHistorical():
         # Test the 3 last objects saved are not deleted
         assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
 
-        # test that there are only 6 gridfs :
+        # test that there are only 15 gridfs :
         # 3 in DataSourceFetched
-        # 3 in ContributorExport
+        # 6 in ContributorExport
         # 6 in CoverageExport
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 12
+        assert raw.count() == 15

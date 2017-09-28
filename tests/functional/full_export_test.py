@@ -28,78 +28,30 @@
 # www.navitia.io
 import json
 import os
-from time import sleep
 
 import pytest
 import requests
 
+from tests.functional.abstract_request_client import AbstractRequestClient
+
 
 @pytest.mark.functional
-class TestFullExport:
-    def __get_url(self):
-        return 'http://{host}:5666/'.format(host=os.getenv('TARTARE_HOST_IP'))
-
-    def __path_in_functional_folder(self, rel_path):
-        return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'functional'),
-                              rel_path)
-
-    def __fixture_path(self, rel_path):
-        return '{}/{}'.format('{}/{}'.format(os.path.dirname(os.path.dirname(__file__)), 'fixtures'),
-                              rel_path)
-
-    def __get(self, uri):
-        return requests.get(self.__get_url() + uri)
-
-    def __delete(self, uri):
-        return requests.delete(self.__get_url() + uri)
-
-    def __post(self, uri, payload=None):
-        return requests.post(self.__get_url() + uri, json=payload)
-
-    def __get_dict_from_response(self, response):
-        return json.loads(response.content)
-
+class TestFullExport(AbstractRequestClient):
     def test_contrib_export_with_compute_directions(self):
-        raw = self.__get('contributors')
-        contributors = self.__get_dict_from_response(raw)['contributors']
+        self.reset_api()
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor.json')
+        raw = self.post('contributors', json_file)
+        assert raw.status_code == 201, print(raw.content)
 
-        for contributor in contributors:
-            raw = self.__delete('contributors/' + contributor['id'])
-            assert raw.status_code == 204, print(raw.content)
-
-        with open(self.__path_in_functional_folder('contributor.json'), 'rb') as file:
-            json_file = json.load(file)
-            for data_source in json_file['data_sources']:
-                if data_source['input'] and 'url' in data_source['input']:
-                    data_source['input']['url'] = data_source['input']['url'].format(
-                        HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
-            raw = self.__post('contributors', json_file)
-            assert raw.status_code == 201, print(raw.content)
-
-        with open(self.__fixture_path('compute_directions/config.json'), 'rb') as file:
+        with open(self.fixture_path('compute_directions/config.json'), 'rb') as file:
             raw = requests.post(
-                self.__get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
-                files={'file': file}, headers={})
-            assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
+                self.get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
+                files={'file': file})
+            assert raw.status_code == 201, print(self.get_dict_from_response(raw))
 
-        raw = self.__post('contributors/contributor_with_preprocess_id/actions/export')
-        job_id = self.__get_dict_from_response(raw)['job']['id']
-        nb_retries_max = 10
-        retry = 0
-        while retry < nb_retries_max:
-            raw = self.__get('jobs/' + job_id)
-            job = self.__get_dict_from_response(raw)['jobs'][0]
-            status = job['state']
-            assert status != 'failed', print(job)
-            if status != 'done':
-                sleep(1)
-                retry += 1
-            else:
-                break
-        raw = self.__get('jobs/' + job_id)
-        job = self.__get_dict_from_response(raw)['jobs'][0]
-        assert job['state'] == 'done'
-        assert job['step'] == 'save_contributor_export'
+        raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_contrib_export_with_ruspell(self):
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
@@ -149,40 +101,59 @@ class TestFullExport:
             ]
         }
 
-        raw = self.__post('contributors', contributor)
+        raw = self.post('contributors', contributor)
         assert raw.status_code == 201, print(raw.content)
 
         # post config ruspell
-        with open(self.__fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
-            raw = requests.post(
-                self.__get_url() + '/contributors/AMI/data_sources/ruspell-config/data_sets',
-                files={'file': file}, headers={})
+        with open(self.fixture_path('ruspell/config-fr_idf.yml'), 'rb') as file:
+            raw = self.post(
+                '/contributors/AMI/data_sources/ruspell-config/data_sets',
+                files={'file': file})
             assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
 
         # post bano data
-        with open(self.__fixture_path('ruspell//bano-75.csv'), 'rb') as file:
-            raw = requests.post(
-                self.__get_url() + '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
-                files={'file': file}, headers={})
+        with open(self.fixture_path('ruspell//bano-75.csv'), 'rb') as file:
+            raw = self.post(
+                '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
+                files={'file': file})
             assert raw.status_code == 201, print(self.__get_dict_from_response(raw))
 
         # launch ruspell preprocess
-        raw = self.__post('contributors/AMI/actions/export')
-        job_id = self.__get_dict_from_response(raw)['job']['id']
-        nb_retries_max = 30
-        retry = 4
-        while retry < nb_retries_max:
-            raw = self.__get('jobs/' + job_id)
-            job = self.__get_dict_from_response(raw)['jobs'][0]
-            status = job['state']
-            assert status != 'failed', print(job)
-            if status != 'done':
-                sleep(1)
-                retry += 1
-            else:
-                break
-        raw = self.__get('jobs/' + job_id)
-        job = self.__get_dict_from_response(raw)['jobs'][0]
-        assert job['state'] == 'done'
-        assert job['step'] == 'save_contributor_export'
+        raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
+    def test_exports_combined(self):
+        self.reset_api()
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
+        raw = self.post('contributors', json_file)
+        assert raw.status_code == 201, print(raw.content)
+
+        with open(self.path_in_functional_folder('coverage.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            assert raw.status_code == 201, print(raw.content)
+
+        raw = self.post('contributors/contributor_id/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+
+    def test_exports_combined_two_coverages(self):
+        self.reset_api()
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
+        raw = self.post('contributors', json_file)
+        assert raw.status_code == 201, print(raw.content)
+
+        with open(self.path_in_functional_folder('coverage.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            assert raw.status_code == 201, print(raw.content)
+
+        with open(self.path_in_functional_folder('other_coverage.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            assert raw.status_code == 201, print(raw.content)
+
+        raw = self.post('contributors/contributor_id/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
