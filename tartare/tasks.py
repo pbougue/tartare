@@ -65,6 +65,9 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
 
 class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
+        # if contributor_export or coverage_export is failing we clean the context
+        if isinstance(args[0], Context):
+            args[0].cleanup()
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
