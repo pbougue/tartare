@@ -64,7 +64,7 @@ class GtfsAgencyFile(AbstractContributorProcess):
     def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str, zip_destination: str) -> str:
         new_data = self._get_agency_data()
         files_zip.extractall(tmp_dir_name)
-        with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'a') as agency:
+        with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'w') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
             writer.writeheader()
             writer.writerow(new_data)
