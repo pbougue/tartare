@@ -54,8 +54,15 @@ class AbstractRequestClient:
     def delete(self, uri):
         return requests.delete(self.get_url() + uri)
 
-    def post(self, uri, payload=None, files=None, headers={}):
+    def post(self, uri, payload=None, files=None, headers=None):
         return requests.post(self.get_url() + uri, json=payload, files=files, headers=headers)
+
+    def patch(self, url, params=None, headers={'Content-Type': 'application/json'}):
+        data = params if params else {}
+        return requests.patch(url, data=data, headers=headers)
+
+    def get_json_from_dict(self, dict):
+        return json.dumps(dict)
 
     def get_dict_from_response(self, response):
         return json.loads(response.content)
@@ -95,8 +102,11 @@ class AbstractRequestClient:
         assert job['state'] == 'done'
         assert job['step'] == step
 
+    def assert_status_is(self, raw, status):
+        assert raw.status_code == status, print(self.get_dict_from_response(raw))
+
     def assert_sucessful_call(self, raw):
-        assert raw.status_code == 200, print(self.get_dict_from_response(raw))
+        self.assert_status_is(raw, 200)
 
     def assert_sucessful_create(self, raw):
-        assert raw.status_code == 201, print(self.get_dict_from_response(raw))
+        self.assert_status_is(raw, 201)

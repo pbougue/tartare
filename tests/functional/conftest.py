@@ -34,7 +34,6 @@ import docker
 
 @pytest.fixture(scope="function", autouse=True)
 def empty_mongo():
-    logging.getLogger(__name__).info('clearing database')
     client = docker.from_env()
     mongo_server = client.containers(filters={"name": "mongo-server"})
     if not len(mongo_server) == 1:

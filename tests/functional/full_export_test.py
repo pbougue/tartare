@@ -46,7 +46,7 @@ class TestFullExport(AbstractRequestClient):
             raw = requests.post(
                 self.get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
                 files={'file': file})
-            assert raw.status_code == 201, print(self.get_dict_from_response(raw))
+            self.assert_sucessful_create(raw)
 
         raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
         self.assert_sucessful_create(raw)
@@ -81,7 +81,7 @@ class TestFullExport(AbstractRequestClient):
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
         raw = self.post('contributors', json_file)
-        assert raw.status_code == 201, print(raw.content)
+        self.assert_sucessful_create(raw)
 
         with open(self.get_api_fixture_path('coverage.json'), 'rb') as file:
             json_file = json.load(file)
