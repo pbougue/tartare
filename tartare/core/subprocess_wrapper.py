@@ -42,6 +42,8 @@ class SubProcessWrapper(object):
         logger.info('Running command: {}'.format(command))
         popen = subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = popen.communicate()
-        if err:
+        if popen.returncode != 0:
             logger.error("Error on command : {}, message {}".format(command, str(err)))
+            raise CommandRuntimeException(self.name, str(err))
+
         logger.info('Command result: {}'.format(out))
