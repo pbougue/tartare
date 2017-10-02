@@ -27,6 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+from time import sleep
 
 import pytest
 import requests
@@ -36,6 +37,20 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
+    def test_contrib_export_with_invalid_dates(self):
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_invalid_dates.json')
+        raw = self.post('contributors', json_file)
+
+        self.assert_sucessful_create(raw)
+
+        raw = self.post('contributors/contributor_id/actions/export')
+        self.assert_sucessful_create(raw)
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        sleep(2)
+        raw = self.get('jobs/' + job_id)
+        job = self.get_dict_from_response(raw)['jobs'][0]
+        assert job['state'] == 'failed'
+
     def test_contrib_export_with_compute_directions(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor.json')
         raw = self.post('contributors', json_file)

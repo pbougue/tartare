@@ -4,6 +4,7 @@ services:
   tartare_worker:
     image: tartare_functional_tests
     environment:
+      - RETRY_NUMBER_WHEN_FAILED_TASK=0
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
     command: celery -A tartare.tasks.celery worker -Q tartare
