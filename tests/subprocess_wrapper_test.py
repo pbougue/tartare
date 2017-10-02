@@ -30,15 +30,22 @@
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import CommandRuntimeException
 import pytest
+import mock
 
 
-def test_subprocess_wrapper_invalid_command():
+@mock.patch('subprocess.Popen')
+def test_subprocess_wrapper_invalid_command(mocked_popen):
     subp = SubProcessWrapper('Test')
+    mocked_popen.return_value.returncode = 1
+    mocked_popen.return_value.communicate.return_value = ("aa", "bb")
     with pytest.raises(CommandRuntimeException) as excinfo:
         subp.run_cmd("abcd")
-    assert str(excinfo.value) == "Test: b'/bin/sh: 1: abcd: not found\\n'"
+    assert str(excinfo.value) == "Test: bb"
 
 
-def test_subprocess_wrapper_valid_command():
+@mock.patch('subprocess.Popen')
+def test_subprocess_wrapper_valid_command(mocked_popen):
     subp = SubProcessWrapper('Test')
-    assert not subp.run_cmd("ls")
+    mocked_popen.return_value.returncode = 0
+    mocked_popen.return_value.communicate.return_value = ("aa", "bb")
+    assert not subp.run_cmd("abcd")
