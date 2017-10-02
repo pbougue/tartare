@@ -7,7 +7,7 @@ HTTP_SERVER_ID=$(docker-compose -f docker/docker_compose/docker-compose.test.yml
 export TARTARE_HOST_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker-compose -f docker/docker_compose/docker-compose.test.yml ps -q tartare_webservice))
 export HTTP_SERVER_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'  $HTTP_SERVER_ID)
 docker cp tests/fixtures/. $HTTP_SERVER_ID:/var/www
-py.test -vv  tests/functional
+py.test -vv tests/functional
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
     echo "Tests passed"

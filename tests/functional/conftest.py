@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -26,20 +25,20 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core import models
+import logging
+
+import pytest
+
+import docker
 
 
-def test_coverage_fetch(get_app_context):
-    """
-    basic use of mnogo, we create a Coverage and persist it, we should be able to get it back
-    """
-    assert len(models.Coverage.all()) == 0
-    coverage = models.Coverage(id='id_of_the_coverage',
-                               name='name of the coverage')
-    coverage.save()
-
-    persisted_coverages = list(models.Coverage.all())
-    assert len(persisted_coverages) == 1
-
-    assert persisted_coverages[0].id == 'id_of_the_coverage'
-    assert persisted_coverages[0].name == 'name of the coverage'
+@pytest.fixture(scope="function", autouse=True)
+def empty_mongo():
+    client = docker.from_env()
+    mongo_server = client.containers(filters={"name": "mongo-server"})
+    if not len(mongo_server) == 1:
+        exit('expect one and only one mongo instance')
+    mongo_server = mongo_server[0]
+    """Empty mongo db before each tests"""
+    client.exec_start(client.exec_create(container=mongo_server['Id'],
+                       cmd='mongo tartare --eval "db.dropDatabase();"'))

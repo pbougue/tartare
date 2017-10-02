@@ -67,7 +67,8 @@ class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
         # if contributor_export or coverage_export is failing we clean the context
         if isinstance(args[0], Context):
-            args[0].cleanup()
+            with tartare.app.app_context():
+                args[0].cleanup()
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -187,7 +188,8 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
         raise self.retry()
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
+@celery.task(bind=True, default_retry_delay=180, max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+             base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
                        check_for_update: bool = True) -> Context:
     try:
@@ -230,7 +232,8 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         raise self.retry(exc=exc)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
+@celery.task(bind=True, default_retry_delay=180, max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+             base=CallbackTask)
 def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
     logger.info('coverage_export')
     try:
