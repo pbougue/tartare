@@ -142,6 +142,8 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
 def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
+    step = "publish_data {env} {platform}".format(env=environment_id, platform=platform.type)
+    models.Job.update(job_id=job.id, state="running", step=step)
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
@@ -154,7 +156,9 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
-        msg = 'publish data on  platform failed, error {}'.format(str(exc))
+        models.Job.update(job_id=job.id, state="failed", step=step)
+        msg = 'publish data on platform "{type}" failed, error: {error}'.format(
+            error=str(exc), url=platform.url, type=platform.type)
         logger.error(msg)
         self.retry(exc=exc)
 
