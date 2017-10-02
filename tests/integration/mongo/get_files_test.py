@@ -30,25 +30,17 @@
 # www.navitia.io
 from freezegun import freeze_time
 
-import tempfile
+
 import os
 import json
 from tests.integration.test_mechanism import TartareFixture
-from tartare.helper import get_md5_content_file
+from tests.utils import assert_files_equals
 
 file_used = "some_archive.zip"
 fixtures_file = os.path.realpath('tests/fixtures/gtfs/{}'.format(file_used))
 
 
 class TestGetFiles(TartareFixture):
-
-    def _assert_files(self, file):
-        with tempfile.TemporaryDirectory() as path_tmp:
-            dest_zip = '{}/gtfs.zip'.format(path_tmp)
-            f = open(dest_zip, 'wb')
-            f.write(file)
-            f.close()
-            assert get_md5_content_file(dest_zip) == get_md5_content_file(fixtures_file)
 
     def test_get_files_invalid_file_id(self):
         resp = self.get('/contributors/AA/exports/BB/files/aa', follow_redirects=True)
@@ -142,7 +134,7 @@ class TestGetFiles(TartareFixture):
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
 
-        self._assert_files(resp.data)
+        assert_files_equals(resp.data, fixtures_file)
 
         # Get file for contributor export
         raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
@@ -155,7 +147,7 @@ class TestGetFiles(TartareFixture):
                         format(contrib_id=contributor['id'], export_id=exports[0]['id'],
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        self._assert_files(resp.data)
+        assert_files_equals(resp.data, fixtures_file)
 
 
         raw = self.get('coverages/{coverage_id}/exports'.format(coverage_id=coverage['id']))
@@ -168,7 +160,7 @@ class TestGetFiles(TartareFixture):
                         format(coverage_id=coverage['id'], export_id=exports[0]['id'],
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        self._assert_files(resp.data)
+        assert_files_equals(resp.data, fixtures_file)
 
         resp = self.get('/coverages/{coverage_id}'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
@@ -179,4 +171,4 @@ class TestGetFiles(TartareFixture):
                         format(coverage_id=coverage['id'], environment_id='production',
                                gridfs_id=environments['production']['current_ntfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        self._assert_files(resp.data)
+        assert_files_equals(resp.data, fixtures_file)

@@ -37,6 +37,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from mock import MagicMock
 from requests import Response
+from tartare.helper import get_md5_content_file
 
 
 def to_json(response):
@@ -112,15 +113,11 @@ def assert_zip_contains_only_files_with_extensions(zip_file, extensions):
         assert zip_info.filename[-3:] in extensions, print(
             'file {filename} should not be in zip archive (only {extensions} files allowed)'.format(filename=zip_info.filename, extensions=','.join(extensions)))
 
+
 def assert_zip_contains_only_txt_files(zip_file):
     assert_zip_contains_only_files_with_extensions(zip_file, ['txt'])
 
 
 def assert_files_equals(result_file_name, expected_file_name):
-    with open(result_file_name, 'r') as result, open(expected_file_name, 'r') as expected:
-        result_content = result.read()
-        expected_content = expected.read()
-        assert result_content == expected_content, print(
-            "{res_content}\n(len={res_len})<========>\n{exp_content}\n(len={exp_len})".format(
-                res_content=result_content, res_len=len(result_content), exp_content=expected_content,
-                exp_len=len(expected_content)))
+    assert get_md5_content_file(result_file_name) == get_md5_content_file(expected_file_name)
+

@@ -34,7 +34,6 @@ import requests
 
 from tests.functional.abstract_request_client import AbstractRequestClient
 
-
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
     def test_contrib_export_with_invalid_dates(self):
