@@ -156,8 +156,7 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
-        models.Job.update(job_id=job.id, state="failed", step=step)
-        msg = 'publish data on platform "{type}" failed, error: {error}'.format(
+        msg = 'publish data on platform "{type}" failed, {error}'.format(
             error=str(exc), url=platform.url, type=platform.type)
         logger.error(msg)
         self.retry(exc=exc)
@@ -273,7 +272,8 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
         if actions:
-            chain(*actions).apply()
+            # "get" method forces to check for publish statuses
+            chain(*actions).apply().get()
         return context
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))

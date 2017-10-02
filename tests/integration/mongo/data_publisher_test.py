@@ -523,3 +523,4 @@ class TestDataPublisher(TartareFixture):
         assert job['step'] == 'publish_data preproduction navitia', print(job)
         assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
             job)
+        assert job['state'] == 'failed'
