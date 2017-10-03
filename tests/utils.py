@@ -118,6 +118,16 @@ def assert_zip_contains_only_txt_files(zip_file):
     assert_zip_contains_only_files_with_extensions(zip_file, ['txt'])
 
 
+def display_files_content(result_file_name, expected_file_name):
+    with open(result_file_name, 'r') as result, open(expected_file_name, 'r') as expected:
+        result_content = result.read()
+        expected_content = expected.read()
+        print("{res_content}\n(len={res_len})<========>\n{exp_content}\n(len={exp_len})".format(
+            res_content=result_content, res_len=len(result_content), exp_content=expected_content,
+            exp_len=len(expected_content)))
+
+
 def assert_files_equals(result_file_name, expected_file_name):
-    assert get_md5_content_file(result_file_name) == get_md5_content_file(expected_file_name)
+    assert get_md5_content_file(result_file_name) == get_md5_content_file(expected_file_name), \
+        display_files_content(result_file_name, expected_file_name)
 
