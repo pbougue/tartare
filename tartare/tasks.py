@@ -191,7 +191,8 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
         raise self.retry()
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+@celery.task(bind=True, default_retry_delay=180,
+             max_retries=int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
                        check_for_update: bool = True) -> Context:
@@ -201,8 +202,8 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
             contributor)
-        logger.info('number of data_sources updated for contributor {cid}: {number}'.format(cid=contributor.id,
-                                                                                            number=nb_updated_data_sources_fetched))
+        logger.info('number of data_sources updated for contributor {cid}: {number}'.
+                    format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
@@ -235,7 +236,8 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         raise self.retry(exc=exc)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+@celery.task(bind=True, default_retry_delay=180,
+             max_retries=int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')),
              base=CallbackTask)
 def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
     logger.info('coverage_export')
