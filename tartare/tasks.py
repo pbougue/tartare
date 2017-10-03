@@ -192,7 +192,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 
 
 @celery.task(bind=True, default_retry_delay=180,
-             max_retries=int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')),
+             max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
                        check_for_update: bool = True) -> Context:
@@ -237,7 +237,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
 
 
 @celery.task(bind=True, default_retry_delay=180,
-             max_retries=int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')),
+             max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
     logger.info('coverage_export')

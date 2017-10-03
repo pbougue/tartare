@@ -36,7 +36,7 @@ CELERYBEAT_SCHEDULE = {
     }
 }
 
-RETRY_NUMBER_WHEN_FAILED_TASK = os.getenv('RETRY_NUMBER_WHEN_FAILED_TASK', 1)
+RETRY_NUMBER_WHEN_FAILED_TASK = int(os.getenv('RETRY_NUMBER_WHEN_FAILED_TASK', '1'))
 CELERY_TIMEZONE = 'UTC'
 
 # http://docs.celeryproject.org/en/master/configuration.html#std:setting-CELERYBEAT_SCHEDULE_FILENAME
