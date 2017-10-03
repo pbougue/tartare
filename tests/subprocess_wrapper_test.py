@@ -26,24 +26,26 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
-import subprocess
 
+from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import CommandRuntimeException
+import pytest
+import mock
 
-logger = logging.getLogger(__name__)
+
+@mock.patch('subprocess.Popen')
+def test_subprocess_wrapper_invalid_command(mocked_popen):
+    subp = SubProcessWrapper('Test')
+    mocked_popen.return_value.returncode = 1
+    mocked_popen.return_value.communicate.return_value = ("aa", "bb")
+    with pytest.raises(CommandRuntimeException) as excinfo:
+        subp.run_cmd("abcd")
+    assert str(excinfo.value) == "Test: bb"
 
 
-class SubProcessWrapper(object):
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def run_cmd(self, command: str) -> None:
-        logger.info('Running command: {}'.format(command))
-        popen = subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (out, err) = popen.communicate()
-        if popen.returncode != 0:
-            logger.error("Error on command : {}, message {}".format(command, str(err)))
-            raise CommandRuntimeException(self.name, str(err))
-
-        logger.info('Command result: {}'.format(out))
+@mock.patch('subprocess.Popen')
+def test_subprocess_wrapper_valid_command(mocked_popen):
+    subp = SubProcessWrapper('Test')
+    mocked_popen.return_value.returncode = 0
+    mocked_popen.return_value.communicate.return_value = ("aa", "bb")
+    subp.run_cmd("abcd")

@@ -85,21 +85,21 @@ class AbstractRequestClient:
                         HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         return json_file
 
-    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=10):
+    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=10, break_if='done'):
         retry = 0
         while retry < nb_retries_max:
             raw = self.get('jobs/' + job_id)
             job = self.get_dict_from_response(raw)['jobs'][0]
             status = job['state']
-            assert status != 'failed', print(job)
-            if status != 'done':
+            if status == break_if:
+                break
+            else:
                 sleep(1)
                 retry += 1
-            else:
-                break
+
         raw = self.get('jobs/' + job_id)
         job = self.get_dict_from_response(raw)['jobs'][0]
-        assert job['state'] == 'done'
+        assert job['state'] == break_if
         assert job['step'] == step
 
     def assert_status_is(self, raw, status):

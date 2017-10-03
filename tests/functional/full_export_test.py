@@ -46,7 +46,7 @@ class TestFullExport(AbstractRequestClient):
         raw = self.post('contributors/contributor_id/actions/export')
         self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
-        sleep(2)
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', break_if='failed')
         raw = self.get('jobs/' + job_id)
         job = self.get_dict_from_response(raw)['jobs'][0]
         assert job['state'] == 'failed'
