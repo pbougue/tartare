@@ -480,3 +480,47 @@ class TestDataPublisher(TartareFixture):
         # and check that the post on url is made in the sequence order (asc)
         for idx in range(5):
             assert url.format(seq=idx) == mock_post.call_args_list[idx][0][0]
+
+    @freeze_time("2015-08-10")
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(500)])
+    def test_publish_platform_failed(self, mock_post, init_http_download_server):
+        contributor_id = 'contrib-pub-failed'
+        publication_envs = ['integration', 'preproduction']
+        url = "http://whatever.fr/pub"
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+        coverage = {
+            "contributors": [
+                contributor_id
+            ],
+            "environments": {},
+            "id": 'cov-sequence',
+            "name": 'cov-sequence'
+        }
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": url
+        }
+        for idx, environment in enumerate(publication_envs):
+            coverage['environments'][environment] = {
+                "name": environment,
+                "sequence": idx,
+                "publication_platforms": [
+                    publication_platform
+                ]
+            }
+
+        resp = self.post("/coverages", json.dumps(coverage))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data preproduction navitia', print(job)
+        assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
+            job)
+        assert job['state'] == 'failed'
