@@ -219,7 +219,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
@@ -261,7 +261,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": ftp_username,
@@ -296,7 +296,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
@@ -369,7 +369,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "stop_area",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
