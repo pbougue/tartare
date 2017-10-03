@@ -1,0 +1,32 @@
+[
+  {
+    "weight": 70,
+    "height": 180,
+    "name": "Bob"
+  },
+  {
+    "weight": 72,
+    "height": 155,
+    "name": "Kenny"
+  },
+  {
+    "weight": 74,
+    "height": 190,
+    "name": "Stan"
+  },
+  {
+    "weight": 80,
+    "height": 215,
+    "name": "Cartman"
+  },
+  {
+    "weight": 66,
+    "height": 177,
+    "name": "Chef"
+  },
+  {
+    "weight": 52,
+    "height": 180,
+    "name": "Kyle"
+  }
+]
