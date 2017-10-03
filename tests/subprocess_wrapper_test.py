@@ -48,4 +48,4 @@ def test_subprocess_wrapper_valid_command(mocked_popen):
     subp = SubProcessWrapper('Test')
     mocked_popen.return_value.returncode = 0
     mocked_popen.return_value.communicate.return_value = ("aa", "bb")
-    assert not subp.run_cmd("abcd")
+    subp.run_cmd("abcd")
