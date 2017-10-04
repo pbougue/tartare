@@ -32,7 +32,6 @@ from freezegun import freeze_time
 
 from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
-from tests.utils import to_json
 import pytest
 
 from tests.integration.test_mechanism import TartareFixture
@@ -119,11 +118,11 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
         assert raw.status_code == 201
-        job = to_json(raw).get('job')
+        job = self.to_json(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = to_json(raw_job)['jobs'][0]
+        job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == state
         assert job['step'] == step
         if error_message:
@@ -142,11 +141,11 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
         assert raw.status_code == 201
-        job = to_json(raw).get('job')
+        job = self.to_json(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = to_json(raw_job)['jobs'][0]
+        job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
 
     @freeze_time("2015-08-10")

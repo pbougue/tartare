@@ -104,6 +104,9 @@ def get_filename(url: str, data_source_id: str) -> str:
 
 def get_md5_content_file(file: Union[str, bytes, int]) -> str:
     hasher = md5()
+    if isinstance(file, bytes):
+        hasher.update(file)
+        return hasher.hexdigest()
     with open(file, "rb") as f:
         data = f.read()
         hasher.update(data)

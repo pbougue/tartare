@@ -149,7 +149,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
             new_archive_file_name = os.path.join(tmp_out_dir_name, DATA_FORMAT_PT_EXTERNAL_SETTINGS)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', tmp_csv_workspace)
             with open(new_archive_file_name, 'rb') as new_archive_file:
-                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=DATA_FORMAT_PT_EXTERNAL_SETTINGS + '.zip')
+                new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file,
+                                                             filename=DATA_FORMAT_PT_EXTERNAL_SETTINGS + '.zip')
                 return new_gridfs_id
 
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str) -> str:
@@ -163,9 +164,11 @@ class ComputeExternalSettings(AbstractContributorProcess):
             csv_properties = os.path.join(tmp_csv_workspace, self.objects_properties_file_name)
             with open(csv_codes, 'w') as rules_csv_codes_file, \
                     open(csv_properties, 'w') as rules_csv_properties_file:
-                writer_codes = csv.DictWriter(rules_csv_codes_file, fieldnames=self.fieldnames_codes)
+                writer_codes = csv.DictWriter(rules_csv_codes_file, fieldnames=self.fieldnames_codes,
+                                              lineterminator='\n')
                 writer_codes.writeheader()
-                writer_properties = csv.DictWriter(rules_csv_properties_file, fieldnames=self.fieldnames_properties)
+                writer_properties = csv.DictWriter(rules_csv_properties_file, fieldnames=self.fieldnames_properties,
+                                                   lineterminator='\n')
                 writer_properties.writeheader()
                 self.__create_rules_from_tr_perimeter(writer_codes, writer_properties)
                 self.__create_rules_from_codif_ligne(writer_codes)

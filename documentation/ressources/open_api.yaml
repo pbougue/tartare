@@ -468,6 +468,76 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /coverages/{coverage_id}/exports/{export_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the coverage export identified by {coverage_id} and [export_id}
+      tags:
+        - coverages
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+        - in: path
+          name: export_id
+          type: string
+          description: Identifier of the export
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+  /coverages/{coverage_id}/environments/{environment_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the environment identified by {coverage_id} and [environment_id}
+      tags:
+        - coverages
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+        - in: path
+          name: environment_id
+          type: string
+          description: Identifier of the environment
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+            
   /contributors:
     get:
       summary: Display available contributors
@@ -1062,6 +1132,41 @@ paths:
           description: Requested contributor exports
           schema:
             $ref: '#/definitions/contributor_export_list'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+  /contributors/{contributor_id}/exports/{export_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the contributor export identified by {contributor_id} and [export_id}
+      tags:
+        - contributors
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: path
+          name: export_id
+          type: string
+          description: Identifier of the export
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
         404:
           description: Resource not found
           schema :

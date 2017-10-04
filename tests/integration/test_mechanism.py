@@ -42,8 +42,8 @@ class TartareFixture(object):
                                 headers=headers,
                                 data=data)
 
-    def get(self, url):
-        return self.tester.get(url)
+    def get(self, url, **kwargs):
+        return self.tester.get(url, **kwargs)
 
     def dict_to_json(self, dict):
         return json.dumps(dict)
