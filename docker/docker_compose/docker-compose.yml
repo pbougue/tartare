@@ -30,7 +30,7 @@ services:
         TARTARE_VERSION: ${TARTARE_VERSION}
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
-    command: uwsgi --mount /=tartare:app --http 0.0.0.0:5000
+    command: uwsgi --mount /=tartare:app --http 0.0.0.0:5000 --wsgi-disable-file-wrapper
     links:
       - rabbitmq
     ports:

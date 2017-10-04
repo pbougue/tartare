@@ -109,10 +109,8 @@ class ComputeDirections(AbstractContributorProcess):
         return trips_to_fix
 
     def __apply_rules(self, trips_reader: CsvReader, trips_file_name: str, trips_to_fix: Dict[str, str]) -> None:
-        trips_reader.data['direction_id'] = trips_reader.data \
-            .apply(lambda row, trips=trips_to_fix:
-                   trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'], axis=1) \
-            .fillna('')
+        trips_reader.apply(column_name='direction_id', callback=lambda row, trips=trips_to_fix:
+                   trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
         trips_reader.save_as_csv(trips_file_name)
 
     def __get_stop_sequence_by_trip(self, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
