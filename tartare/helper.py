@@ -46,6 +46,9 @@ from requests import Response
 
 
 # monkey patching of gridfs file for exposing the size in a "standard" way
+from tartare.core.constants import DATA_FORMAT_GTFS
+
+
 def grid_out_len(self: GridOut) -> int:
     return self.length
 
@@ -118,7 +121,7 @@ def setdefault_ids(collections: List[dict]) -> None:
         c.setdefault('id', str(uuid.uuid4()))
 
 
-def download_file(url_file: str, dest: str, data_format: str) -> None:
+def download_file(url_file: str, dest: str=None, data_format: str=DATA_FORMAT_GTFS) -> str:
     logger = logging.getLogger(__name__)
     try:
         urllib.request.urlretrieve(url_file, dest)
