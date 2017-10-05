@@ -370,3 +370,26 @@ class TestDataSources(TartareFixture):
         response_payload = self.to_json(response)
         assert response.status_code == 400, print(response_payload)
         assert response_payload['error'].startswith("Invalid data,")
+
+    def test_manage_data_source_expected_file_name(self, contributor):
+        expected_file_name = 'config.json'
+        data_source = {
+            "input": {'type': 'url', 'expected_file_name': expected_file_name},
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+        self.assert_sucessful_call(response, 201)
+        data_source = self.to_json(response)['data_sources'][0]
+        assert data_source['input']['expected_file_name'] == expected_file_name, print(data_source)
+
+        new_expected_file_name = 'config_new.json'
+        data_source['input']['expected_file_name'] = new_expected_file_name
+        response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
+                             self.dict_to_json(data_source))
+
+        self.assert_sucessful_call(response)
+        data_source = self.to_json(response)['data_sources'][0]
+        assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
+
+
