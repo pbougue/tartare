@@ -1,6 +1,8 @@
 ---
 swagger: '2.0'
-host: "127.0.0.1:5000"
+host: "mut-dev-tartare2.canaltp.local"
+schemes:
+  - http
 info:
   description: |
     API managing data integration.
@@ -10,16 +12,13 @@ info:
 
     You can help on [Tartare's github page](https://github.com/CanalTP/tartare).
 
-  version: 0.1.0
+  version: 1.3.0
   title: Tartare API
   contact:
     name: www.navitia.io
   license:
     name: AGPLv3
     url: http://www.gnu.org/licenses/
-schemes:
-  - http
-  - https
 # format of bodies a client can send (Content-Type)
 consumes:
   - application/json
@@ -27,6 +26,7 @@ consumes:
 # format of the responses to the client (Accepts)
 produces:
   - application/json
+  - multipart/form-data
 
 tags:
   -
@@ -494,6 +494,8 @@ paths:
       responses:
         200:
           description: Requested file
+          schema:
+            type: file
         400:
           description: invalid arguments
           schema :
@@ -529,6 +531,8 @@ paths:
       responses:
         200:
           description: Requested file
+          schema:
+            type: file
         400:
           description: invalid arguments
           schema :
@@ -1163,6 +1167,8 @@ paths:
       responses:
         200:
           description: Requested file
+          schema:
+            type: file
         400:
           description: invalid arguments
           schema :
@@ -1451,7 +1457,9 @@ definitions:
         example: Ruspell
       data_source_ids:
         type: array
-        example: [datasource_stif]
+        items:
+          type: string
+          example: datasource_stif_id
       sequence:
         type: integer
         example: 1
