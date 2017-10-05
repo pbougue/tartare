@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import flask_restful
+from flask_restful import Resource, reqparse
 from flask import Response
 
 from tartare.core.context import Context
@@ -37,9 +37,15 @@ from tartare.core.models import Contributor, Job, ContributorExport
 from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
+from datetime import date
 
 
-class ContributorExportResource(flask_restful.Resource):
+class ContributorExportResource(Resource):
+    def __init__(self):
+        self.parsers = dict
+        self.parsers["get"] = reqparse.RequestParser()
+        parser_get = self.parsers["get"]
+        parser_get.add_argument("start_page", type=date, default=date.today())
 
     @staticmethod
     def _export(contributor: Contributor) -> Job:
