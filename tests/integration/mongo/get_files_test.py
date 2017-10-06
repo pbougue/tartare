@@ -37,7 +37,6 @@ from tests.utils import assert_files_equals
 
 file_used = "some_archive.zip"
 fixtures_file = os.path.realpath('tests/fixtures/gtfs/{}'.format(file_used))
-fixtures_file = '/home/azime/Navitia/tartare/tests/fixtures/gtfs/{}'.format(file_used)
 
 
 class TestGetFiles(TartareFixture):
