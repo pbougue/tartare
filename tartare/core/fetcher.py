@@ -51,36 +51,6 @@ class AbstractFetcher(metaclass=ABCMeta):
     @abstractmethod
     def fetch(self, url: str, destination_path: str, data_format: str = DATA_FORMAT_GTFS,
               expected_file_name: str = None) -> Tuple[str, str]:
-        pass
-
-
-class FetcherSelector:
-    @classmethod
-    def http_matches_url(cls, url: str) -> bool:
-        return url.startswith(http_scheme_start) or url.startswith(https_scheme_start)
-
-    @classmethod
-    def select_from_url(cls, url: str) -> AbstractFetcher:
-        if cls.http_matches_url(url):
-            return HttpFetcher()
-        elif url.startswith(ftp_scheme_start):
-            raise ParameterException('url "{}" is not supported to fetch data from')
-        raise ParameterException('url "{}" is not supported to fetch data from')
-
-
-class HttpFetcher(AbstractFetcher):
-    def guess_file_name_from_url(self, url: str) -> str:
-        if FetcherSelector.http_matches_url(url):
-            parsed = urlparse(url)
-            if parsed.path:
-                last_part = os.path.basename(parsed.path)
-                filename, file_extension = os.path.splitext(last_part)
-                if filename and file_extension:
-                    return last_part
-        raise GuessFileNameFromUrlException('unable to guess file name from url {}'.format(url))
-
-    def fetch(self, url: str, destination_path: str, data_format: str = DATA_FORMAT_GTFS,
-              expected_file_name: str = None) -> Tuple[str, str]:
         """
         :param url: url to fetch from
         :param destination_path: the existing directory to use as destination path
@@ -90,8 +60,9 @@ class HttpFetcher(AbstractFetcher):
           - dest_full_file_name is full destination file name (/tmp/tmp123/config.json)
           - expected_file_name is destination file name (config.json)
         """
-        expected_file_name = self.guess_file_name_from_url(url) if not expected_file_name else expected_file_name
-        dest_full_file_name = os.path.join(destination_path, expected_file_name)
+        pass
+
+    def fetch_to_target(self, url: str, dest_full_file_name: str, data_format: str = DATA_FORMAT_GTFS) -> None:
         try:
             urllib.request.urlretrieve(url, dest_full_file_name)
         except HTTPError as e:
@@ -100,6 +71,51 @@ class HttpFetcher(AbstractFetcher):
             raise FetcherException('downloaded file size was shorter than exepected for url {}'.format(url))
         except URLError as e:
             raise FetcherException('error during download of file: {}'.format(str(e)))
-        if data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(expected_file_name):
+        if data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
             raise FetcherException('downloaded file from url {} is not a zip file'.format(url))
+
+    def guess_file_name_from_url(self, url: str) -> str:
+        if FetcherSelector.http_matches_url(url) or FetcherSelector.ftp_matches_url(url):
+            parsed = urlparse(url)
+            if parsed.path:
+                last_part = os.path.basename(parsed.path)
+                filename, file_extension = os.path.splitext(last_part)
+                if filename and file_extension:
+                    return last_part
+        raise GuessFileNameFromUrlException('unable to guess file name from url {}'.format(url))
+
+
+class FetcherSelector:
+    @classmethod
+    def http_matches_url(cls, url: str) -> bool:
+        return url.startswith(http_scheme_start) or url.startswith(https_scheme_start)
+
+    @classmethod
+    def ftp_matches_url(cls, url: str) -> bool:
+        return url.startswith(ftp_scheme_start)
+
+    @classmethod
+    def select_from_url(cls, url: str) -> AbstractFetcher:
+        if cls.http_matches_url(url):
+            return HttpFetcher()
+        elif cls.ftp_matches_url(url):
+            return FtpFetcher()
+        raise ParameterException('url "{}" is not supported to fetch data from'.format(url))
+
+
+class FtpFetcher(AbstractFetcher):
+    def fetch(self, url: str, destination_path: str, data_format: str = DATA_FORMAT_GTFS,
+              expected_file_name: str = None) -> Tuple[str, str]:
+        expected_file_name = self.guess_file_name_from_url(url)
+        dest_full_file_name = os.path.join(destination_path, expected_file_name)
+        self.fetch_to_target(url, dest_full_file_name, data_format)
+        return dest_full_file_name, expected_file_name
+
+
+class HttpFetcher(AbstractFetcher):
+    def fetch(self, url: str, destination_path: str, data_format: str = DATA_FORMAT_GTFS,
+              expected_file_name: str = None) -> Tuple[str, str]:
+        expected_file_name = self.guess_file_name_from_url(url) if not expected_file_name else expected_file_name
+        dest_full_file_name = os.path.join(destination_path, expected_file_name)
+        self.fetch_to_target(url, dest_full_file_name, data_format)
         return dest_full_file_name, expected_file_name
