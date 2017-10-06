@@ -219,7 +219,8 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            # url without ftp:// works as well
+            "url": init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
