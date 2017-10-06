@@ -43,6 +43,7 @@ from urllib.error import ContentTooShortError, HTTPError, URLError
 import requests
 from gridfs.grid_file import GridOut
 from requests import Response
+from datetime import datetime
 
 
 # monkey patching of gridfs file for exposing the size in a "standard" way
@@ -144,3 +145,16 @@ def get_content_file_from_grid_out_file(zip_file: GridOut, filename: str) -> Lis
             logging.getLogger(__name__).warning('impossible during download of file: {}'.format(str(e)))
             pass
         return []
+
+
+def date_from_string(value, name):
+    """
+        Convert string to date
+        :param value: string to convert
+        :param name: attribute name
+        :return: Date format '2014-04-31'
+    """
+    try:
+        return datetime.strptime(value, '%Y-%m-%d')
+    except:
+        raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))

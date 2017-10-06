@@ -38,21 +38,29 @@ from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
 from datetime import date
+from tartare.helper import date_from_string
 
 
-class ContributorExportResource(Resource):
+class Common(object):
     def __init__(self):
-        self.parsers = dict
+        self.parsers = {}
         self.parsers["get"] = reqparse.RequestParser()
-        parser_get = self.parsers["get"]
-        parser_get.add_argument("start_page", type=date, default=date.today())
+        self.parsers["get"].add_argument('current_date', type=date_from_string, default=date.today())
+
+    def get_current_date(self):
+        args = self.parsers["get"].parse_args()
+        return args.get('current_date')
+
+
+class ContributorExportResource(Resource, Common):
 
     @staticmethod
-    def _export(contributor: Contributor) -> Job:
+    def _export(contributor: Contributor, current_date) -> Job:
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
         try:
-            chain(contributor_export.si(Context(), contributor, job, False), finish_job.si(job.id)).delay()
+            chain(contributor_export.si(Context(), contributor, job, current_date, False),
+                  finish_job.si(job.id)).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
@@ -65,7 +73,7 @@ class ContributorExportResource(Resource):
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 
-        job = self._export(contributor)
+        job = self._export(contributor, self.get_current_date())
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 

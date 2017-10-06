@@ -194,7 +194,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 @celery.task(bind=True, default_retry_delay=180,
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
-def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
+def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date,
                        check_for_update: bool = True) -> Context:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
@@ -219,7 +219,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
 
             # insert export in mongo db
             models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
-            contributor_export_functions.save_export(contributor, context)
+            contributor_export_functions.save_export(contributor, context, current_date)
             coverages = [coverage for coverage in models.Coverage.all() if coverage.has_contributor(contributor)]
             actions = []
             if coverages:

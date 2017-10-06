@@ -164,17 +164,18 @@ class ValidityPeriodFinder(object):
         self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
 
     @classmethod
-    def get_validity_period_union(cls, validity_period_list: List[ValidityPeriod]) -> ValidityPeriod:
+    def get_validity_period_union(cls, validity_period_list: List[ValidityPeriod],
+                                  current_date=None) -> ValidityPeriod:
         if not validity_period_list:
             raise ValidityPeriodException('empty validity period list given to calculate union')
 
         begin_date = min([d.start_date for d in validity_period_list])
         end_date = max([d.end_date for d in validity_period_list])
-        now_date = datetime.now().date()
+        now_date = current_date if current_date else datetime.today()
         if end_date < now_date:
             raise ValidityPeriodException(
                 'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
-                    end=end_date.strftime('%d/%m/%Y'), now=now_date.strftime('%d/%m/%Y')))
+                    end=end_date.strftime('%d/%m/%Y'), now=current_date.strftime('%d/%m/%Y')))
         if abs(begin_date - end_date).days > 365:
             logging.getLogger(__name__).warning(
                 'period bounds for union of validity periods exceed one year')
