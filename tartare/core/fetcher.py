@@ -33,50 +33,63 @@ import urllib.request
 import zipfile
 from abc import ABCMeta, abstractmethod
 from urllib.error import ContentTooShortError, URLError
+from urllib.parse import urlparse
 
 from requests import HTTPError
 
 from tartare.core.constants import DATA_FORMAT_GTFS
-from tartare.exceptions import ParameterException
+from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 
 logger = logging.getLogger(__name__)
 
+http_scheme_start = 'http://'
+https_scheme_start = 'https://'
+ftp_scheme_start = 'ftp://'
+
 
 class AbstractFetcher(metaclass=ABCMeta):
-    def guess_file_name_from_url(self, url: str) -> str:
-        pass
-
     @abstractmethod
     def fetch(self, url: str, data_format: str, expected_file_name: str = None) -> str:
         pass
 
 
+class FetcherSelecter:
+    @classmethod
+    def http_matches_url(cls, url: str) -> bool:
+        return url.startswith(http_scheme_start) or url.startswith(https_scheme_start)
+
+    @classmethod
+    def select_from_url(cls, url: str) -> AbstractFetcher:
+        if cls.http_matches_url(url):
+            return HttpFetcher()
+        elif url.startswith(ftp_scheme_start):
+            raise ParameterException('url "{}" is not supported to fetch data from')
+        raise ParameterException('url "{}" is not supported to fetch data from')
+
+
 class HttpFetcher(AbstractFetcher):
-    def fetch(self, url: str, data_format: str, expected_file_name: str = None) -> str:
+    def guess_file_name_from_url(self, url: str) -> str:
+        if FetcherSelecter.http_matches_url(url):
+            parsed = urlparse(url)
+            if parsed.path:
+                last_part = os.path.basename(parsed.path)
+                filename, file_extension = os.path.splitext(last_part)
+                if filename and file_extension:
+                    return last_part
+        raise GuessFileNameFromUrlException('unable to guess file name from url {}'.format(url))
+
+    def fetch(self, url: str, data_format: str = DATA_FORMAT_GTFS, expected_file_name: str = None) -> str:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             expected_file_name = self.guess_file_name_from_url(url) if not expected_file_name else expected_file_name
             tmp_file_name = os.path.join(tmp_dir_name, expected_file_name)
             try:
                 urllib.request.urlretrieve(url, tmp_file_name)
             except HTTPError as e:
-                logger.error('error during download of file: {}'.format(str(e)))
-                raise
+                raise FetcherException('error during download of file: {}'.format(str(e)))
             except ContentTooShortError:
-                logger.error('downloaded file size was shorter than exepected for url {}'.format(url))
-                raise
+                raise FetcherException('downloaded file size was shorter than exepected for url {}'.format(url))
             except URLError as e:
-                logger.error('error during download of file: {}'.format(str(e)))
-                raise
+                raise FetcherException('error during download of file: {}'.format(str(e)))
             if data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(expected_file_name):
-                raise Exception('downloaded file from url {} is not a zip file'.format(url))
+                raise FetcherException('downloaded file from url {} is not a zip file'.format(url))
         return tmp_file_name
-
-
-class FetcherSelecter:
-    @classmethod
-    def select_from_url(cls, url: str) -> AbstractFetcher:
-        if url.startswith('http://'):
-            return HttpFetcher()
-        elif url.startswith('ftp://'):
-            raise ParameterException('url "{}" is not supported to fetch data from')
-        raise ParameterException('url "{}" is not supported to fetch data from')
