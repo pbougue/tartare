@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
 from flask import Response
 
 from tartare.core.context import Context
@@ -37,25 +37,14 @@ from tartare.core.models import Contributor, Job, ContributorExport
 from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
+from tartare.interfaces.common_argrs import CommonArgs
 from datetime import date
-from tartare.helper import date_from_string
 
 
-class Common(object):
-    def __init__(self):
-        self.parsers = {}
-        self.parsers["get"] = reqparse.RequestParser()
-        self.parsers["get"].add_argument('current_date', type=date_from_string, default=date.today())
-
-    def get_current_date(self):
-        args = self.parsers["get"].parse_args()
-        return args.get('current_date')
-
-
-class ContributorExportResource(Resource, Common):
+class ContributorExportResource(Resource, CommonArgs):
 
     @staticmethod
-    def _export(contributor: Contributor, current_date) -> Job:
+    def _export(contributor: Contributor, current_date: date) -> Job:
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
         try:

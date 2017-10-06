@@ -29,10 +29,7 @@
 from datetime import date
 
 import pytest
-from freezegun import freeze_time
-
-from tartare.core.context import ContributorContext
-from tartare.core.models import ValidityPeriod, Contributor
+from tartare.core.models import ValidityPeriod
 from tartare.exceptions import InvalidFile, ValidityPeriodException
 from tartare.validity_period_finder import ValidityPeriodFinder
 from tests.utils import _get_file_fixture_full_path

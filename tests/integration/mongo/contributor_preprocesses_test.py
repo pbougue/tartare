@@ -30,12 +30,11 @@ import json
 import os
 import tempfile
 from zipfile import ZipFile
-
 import pytest
-from freezegun import freeze_time
+
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_URL
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
 from tartare.helper import get_dict_from_zip
@@ -82,7 +81,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         }
         return contrib_payload
 
-    @freeze_time("2015-08-23")
     def test_gtfs_without_agency_file(self, init_http_download_server):
         url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
         contrib_payload = self.__contributor_creator(url)
@@ -94,9 +92,11 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-        raw = self.post('/contributors/contrib_id/actions/export')
+
+        raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
+
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
@@ -124,7 +124,6 @@ class TestGtfsAgencyProcess(TartareFixture):
                 for key, value in conf.items():
                     assert value == data[0][key]
 
-    @freeze_time("2017-03-30")
     def test_gtfs_with_agency_file(self, init_http_download_server):
         url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="gtfs_valid.zip")
         contrib_payload = self.__contributor_creator(url)
@@ -136,7 +135,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-        raw = self.post('/contributors/contrib_id/actions/export')
+        raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
 
@@ -159,7 +158,6 @@ class TestGtfsAgencyProcess(TartareFixture):
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 2
 
-    @freeze_time("2017-03-30")
     def test_gtfs_with_empty_agency_file(self, init_http_download_server):
         url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
                                               data_set="gtfs_empty_agency_file.zip")
@@ -172,7 +170,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-        raw = self.post('/contributors/contrib_id/actions/export')
+        raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
 
@@ -202,7 +200,6 @@ class TestGtfsAgencyProcess(TartareFixture):
                 for key, value in conf.items():
                     assert value == data[0][key]
 
-    @freeze_time("2017-03-30")
     def test_gtfs_header_only_in_agency_file(self, init_http_download_server):
         url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
                                               data_set="gtfs_header_only_in_agency_file.zip")
@@ -215,9 +212,10 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-        raw = self.post('/contributors/contrib_id/actions/export')
+        raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
+
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
@@ -231,6 +229,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         gridfs_id = r["exports"][0]["gridfs_id"]
 
         with app.app_context():
+
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
@@ -257,7 +256,7 @@ class TestGtfsAgencyProcess(TartareFixture):
 
 class TestComputeDirectionsProcess(TartareFixture):
     def __do_export(self):
-        raw = self.post('/contributors/id_test/actions/export')
+        raw = self.post('/contributors/id_test/actions/export?current_date=2017-01-15')
         r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
 
@@ -342,7 +341,6 @@ class TestComputeDirectionsProcess(TartareFixture):
     # - 0 is normal direction and 1 is reverse
     # - if not enough stops found to determine direction_id from config and stop_times, nothing is done
     #
-    @freeze_time("2017-01-15")
     @pytest.mark.parametrize(
         "data_set_filename, expected_trips_file_name", [
             # stop_sequence not in order
@@ -422,7 +420,7 @@ class TestComputeExternalSettings(TartareFixture):
                                 headers={})
                 self.assert_sucessful_call(raw, 201)
 
-        raw = self.post('/contributors/id_test/actions/export')
+        raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
         r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
 
@@ -468,7 +466,6 @@ class TestComputeExternalSettings(TartareFixture):
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
-    @freeze_time("2017-09-11")
     def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
         params = {'target_data_source_id': 'ds-target',
                   'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
@@ -495,3 +492,46 @@ class TestComputeExternalSettings(TartareFixture):
                     assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.csv'),
                                         _get_file_fixture_full_path(
                                             'prepare_external_settings/expected_fusio_object_properties.csv'))
+
+
+class TestHeadsignShortNameProcess(TartareFixture):
+    def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
+        contrib_payload = {
+            "id": contrib_id,
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "input": {
+                        "type": "url",
+                        "url": data_set_url
+                    },
+                    "id": data_source_id,
+                    "name": "data_source_to_process_name",
+                    "data_format": "gtfs"
+                }
+            ],
+            "preprocesses": [
+                {
+                    "sequence": 0,
+                    "data_source_ids": [data_source_id],
+                    "type": "HeadsignShortName"
+                }
+            ]
+        }
+        return contrib_payload
+
+    def test_headsign_short_name(self, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="headsign_short_name.zip")
+        contrib_payload = self.__contributor_creator(url)
+
+        raw = self.post('/contributors', json.dumps(contrib_payload))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)
+        assert len(r["contributors"]) == 1
+        preprocesses = r["contributors"][0]["preprocesses"]
+        assert len(preprocesses) == 1
+
+        raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)

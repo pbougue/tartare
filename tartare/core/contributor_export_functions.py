@@ -39,6 +39,7 @@ from tartare.core.models import ContributorExport, ContributorExportDataSource, 
 from tartare.exceptions import ParameterException
 from tartare.helper import get_md5_content_file
 from tartare.validity_period_finder import ValidityPeriodFinder
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
     return context
 
 
-def save_export(contributor: Contributor, context: Context, current_date) -> Context:
+def save_export(contributor: Contributor, context: Context, current_date: date) -> Context:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):

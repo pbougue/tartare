@@ -194,7 +194,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 @celery.task(bind=True, default_retry_delay=180,
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
-def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date,
+def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date: datetime.date,
                        check_for_update: bool = True) -> Context:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")

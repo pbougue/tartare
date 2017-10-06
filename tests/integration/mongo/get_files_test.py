@@ -28,7 +28,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from freezegun import freeze_time
 
 
 import os
@@ -38,6 +37,7 @@ from tests.utils import assert_files_equals
 
 file_used = "some_archive.zip"
 fixtures_file = os.path.realpath('tests/fixtures/gtfs/{}'.format(file_used))
+fixtures_file = '/home/azime/Navitia/tartare/tests/fixtures/gtfs/{}'.format(file_used)
 
 
 class TestGetFiles(TartareFixture):
@@ -68,7 +68,6 @@ class TestGetFiles(TartareFixture):
         json_resp = self.to_json(resp)
         assert json_resp.get('error') == 'Coverage not found.'
 
-    @freeze_time("2015-08-10")
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename=file_used)
@@ -112,7 +111,7 @@ class TestGetFiles(TartareFixture):
         assert len(json_coverage['coverages']) == 1
 
 
-        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        raw = self.post('/contributors/{}/actions/export?current_date=2015-08-10'.format(contributor['id']), {})
         assert raw.status_code == 201
         job = self.to_json(raw).get('job')
 
@@ -172,3 +171,8 @@ class TestGetFiles(TartareFixture):
                                gridfs_id=environments['production']['current_ntfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
+
+        # current date invalid
+        raw = self.post('/contributors/{}/actions/export?current_date=abcd'.format(contributor['id']), {})
+        assert raw.status_code == 400
+

@@ -28,11 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import pytest
-from freezegun import freeze_time
 
 from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
+import pytest
+
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -93,7 +93,6 @@ class TestContributorExport(TartareFixture):
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
-    @freeze_time("2015-08-10")
     @pytest.mark.parametrize("method,filename,state,step,error_message", [
         ('http', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('http', 'unexisting_file.zip', 'failed', 'fetching data',
@@ -127,7 +126,6 @@ class TestContributorExport(TartareFixture):
         if error_message:
             assert job['error_message'] == error_message
 
-    @freeze_time("2015-08-10")
     def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='some_archive.zip')
@@ -147,7 +145,6 @@ class TestContributorExport(TartareFixture):
         job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
 
-    @freeze_time("2015-08-10")
     def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
@@ -161,7 +158,6 @@ class TestContributorExport(TartareFixture):
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 3, print(grid_fs_list)
 
-    @freeze_time("2015-08-10")
     def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')

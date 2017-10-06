@@ -208,7 +208,6 @@ class TestDataPublisher(TartareFixture):
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
 
-    @freeze_time("2015-08-10")
     def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -230,7 +229,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        resp = self.post("/contributors/{}/actions/export?current_date=2015-08-10".format(contributor_id))
         assert resp.status_code == 201
 
         # check if the file was successfully uploaded
@@ -359,7 +358,6 @@ class TestDataPublisher(TartareFixture):
         assert 'username' in pub_platform['options']['authent']
         assert user_to_set == pub_platform['options']['authent']['username']
 
-    @freeze_time("2015-08-10")
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -380,7 +378,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        resp = self.post("/contributors/{}/actions/export?current_date=2015-08-10".format(contributor_id))
         assert resp.status_code == 201
 
         # check if the file was successfully uploaded
