@@ -90,7 +90,7 @@ class TestFullExport(AbstractRequestClient):
         # launch ruspell preprocess
         raw = self.post('contributors/AMI/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
 
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
