@@ -27,12 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-from time import sleep
-
 import pytest
 import requests
 
 from tests.functional.abstract_request_client import AbstractRequestClient
+
 
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
@@ -58,7 +57,8 @@ class TestFullExport(AbstractRequestClient):
 
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
             raw = requests.post(
-                self.get_url() + '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
+                self.get_url() +
+                '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
                 files={'file': file})
             self.assert_sucessful_create(raw)
 
@@ -66,6 +66,9 @@ class TestFullExport(AbstractRequestClient):
         self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+
+        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
+                                                ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
@@ -92,6 +95,8 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
+        self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip')
+
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
         raw = self.post('contributors', json_file)
@@ -105,6 +110,9 @@ class TestFullExport(AbstractRequestClient):
         raw = self.post('contributors/contributor_id/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+
+        self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
+                                                ref_file='compute_directions/functional.zip')
 
     def test_exports_combined_two_coverages(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
@@ -124,3 +132,16 @@ class TestFullExport(AbstractRequestClient):
         raw = self.post('contributors/contributor_id/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+
+    def test_contrib_export_with_headsign_short_name(self):
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_headsign_short_name.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        # launch HeadsignShortName preprocess
+        raw = self.post('contributors/AMI/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+
+        self.assert_export_file_equals_ref_file(contributor_id='AMI',
+                                                ref_file='headsign_short_name/ref_headsign_short_name.zip')

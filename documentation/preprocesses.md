@@ -26,7 +26,16 @@ curl -i -X POST \
  'http://{tartare_host}/contributors/{cid}/data_sources/data-source-id-config/data_sets'
 ```
 ### HeadsignShortName
-...
+This preprocess allows to modify trip_short_name and trip_headsign by "route_type".
+
+```json
+{
+    "id": "headsign_short_name",
+    "type": "HeadsignShortName",
+    "sequence": 1,
+    "data_source_ids": ["id1", "id2"]
+}
+```
 
 ### GtfsAgencyFile
 This preprocess allows to add "agency.txt" file if it does not exist.

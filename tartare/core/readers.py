@@ -72,6 +72,9 @@ class AbstractPandaReader(metaclass=ABCMeta):
         for key, value in self.data.iterrows():
             yield {value[key_column]: value_apply_function(value)}
 
+    def apply(self, column_name: str, callback: Callable[..., Any], fillna: str='') -> None:
+        self.data[column_name] = self.data.apply(callback, axis=1).fillna(fillna)
+
 
 class JsonReader(AbstractPandaReader):
     def load_json_data_from_io(self, json_file: GridOut, usecols: Optional[List[str]] = None) -> None:
