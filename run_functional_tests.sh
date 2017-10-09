@@ -16,5 +16,5 @@ else
     docker logs $(docker-compose -f docker/docker_compose/docker-compose.test.yml ps -q tartare_worker)
     docker logs $(docker-compose -f docker/docker_compose/docker-compose.test.yml ps -q ruspell_worker)
 fi
-docker-compose -f docker/docker_compose/docker-compose.test.yml down
+docker-compose -f docker/docker_compose/docker-compose.test.yml down -v
 exit $RESULT
