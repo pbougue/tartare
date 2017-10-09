@@ -5,10 +5,10 @@
 ### Use case
 At the end of this preprocess, we want in the *trips.txt* :
 
-**trip_headsign** field : 
+**trip_headsign** field: 
    * And empty field or the trip's terminus.
    
-**trip_short_name field** : 
+**trip_short_name** field: 
    * Transilien with a mission code : mission code
    * Train with a number : the train number
    * If other modes : empty field.
