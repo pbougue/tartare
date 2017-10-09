@@ -40,14 +40,16 @@ from pandas.core.series import Series
 
 
 class HeadsignShortName(AbstractContributorProcess):
-
+    # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
+    METRO = 1
+    RAIL = 2
     def get_trip_short_name(self, row: Series, map_route_modes: dict) -> str:
-        # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
+
         # Metro
-        if map_route_modes.get(row['route_id']) == 1:
+        if map_route_modes.get(row['route_id']) == self.METRO:
             return ''
         # Train Ter
-        if map_route_modes.get(row['route_id']) == 2 and row["route_id"].startswith("800:TER"):
+        if map_route_modes.get(row['route_id']) == self.RAIL and row["route_id"].startswith("800:TER"):
             return row['trip_headsign']
         return row['trip_short_name']
 
