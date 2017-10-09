@@ -121,23 +121,6 @@ def setdefault_ids(collections: List[dict]) -> None:
         c.setdefault('id', str(uuid.uuid4()))
 
 
-def download_file(url_file: str, dest: str=None, data_format: str=DATA_FORMAT_GTFS) -> str:
-    logger = logging.getLogger(__name__)
-    try:
-        urllib.request.urlretrieve(url_file, dest)
-    except HTTPError as e:
-        logger.error('error during download of file: {}'.format(str(e)))
-        raise
-    except ContentTooShortError:
-        logger.error('downloaded file size was shorter than exepected for url {}'.format(url_file))
-        raise
-    except URLError as e:
-        logger.error('error during download of file: {}'.format(str(e)))
-        raise
-    if data_format == 'gtfs' and not zipfile.is_zipfile(dest):
-        raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
-
-
 def get_values_by_key(values: Union[List, dict], out: List[str], key: str = 'gridfs_id') -> None:
     my_list = values.items() if isinstance(values, dict) else enumerate(values)
     for k, v in my_list:

@@ -33,7 +33,7 @@ import tempfile
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY
 from tartare.core.context import Context
-from tartare.core.fetcher import FetcherSelector
+from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException
@@ -104,7 +104,7 @@ def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
         if data_source.input.type == INPUT_TYPE_URL and data_source.input.url:
             url = data_source.input.url
             logger.info("fetching data from url {}".format(url))
-            fetcher = FetcherSelector.select_from_url(url)
+            fetcher = FetcherManager.select_from_url(url)
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
                                                                         data_source.input.expected_file_name)

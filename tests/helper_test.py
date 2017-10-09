@@ -27,9 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename, get_values_by_key
-import requests_mock
 from io import StringIO
+
+import requests_mock
+
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_values_by_key
 
 
 def test_to_doted_notation_flat():
@@ -53,8 +55,8 @@ def test_to_doted_notation_two():
 
 
 def test_to_doted_notation_array():
-    data = {'a': [{'b':1}, {'c':2}]}
-    assert to_doted_notation(data) == {'a.0.b': 1, 'a.1.c':2}
+    data = {'a': [{'b': 1}, {'c': 2}]}
+    assert to_doted_notation(data) == {'a.0.b': 1, 'a.1.c': 2}
 
 
 def test_to_doted_notation_with_list_of_scalars():
@@ -79,23 +81,7 @@ def test_upload_file():
         request = m.request_history[0]
         assert request.method == 'POST'
         assert request.url == 'http://test.com/'
-        #we can't really check the upload: we can only check how it's implemented in requests
-
-
-def test_get_filename_without_url():
-    assert get_filename(None, "1234") == "gtfs-1234.zip"
-
-
-def test_get_filename_url_without_zip():
-    assert get_filename('http://bob.com/filename', "1234") == "gtfs-1234.zip"
-
-
-def test_get_filename_url_ok():
-    assert get_filename('http://bob.com/filename.zip', "1234") == "filename.zip"
-
-
-def test_get_filename_ok():
-    assert get_filename('filename.zip', "1234") == "filename.zip"
+        # we can't really check the upload: we can only check how it's implemented in requests
 
 
 def test_get_values_by_key_list():
