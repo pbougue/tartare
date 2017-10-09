@@ -1396,7 +1396,7 @@ definitions:
         example: ftp
       url:
         type: string
-        example: ods.fr
+        example: ftp.ods.com
       sequence:
         type: integer
         example: 0

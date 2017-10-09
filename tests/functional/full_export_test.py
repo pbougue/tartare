@@ -93,7 +93,7 @@ class TestFullExport(AbstractRequestClient):
         # launch ruspell preprocess
         raw = self.post('contributors/AMI/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip')
 
