@@ -6,7 +6,7 @@
 At the end of this preprocess, we want in the *trips.txt* :
 
 **trip_headsign** field:
-   * And empty field.
+   * An empty field.
 
 **trip_short_name** field:
    * Transilien with a mission code : mission code
@@ -15,29 +15,42 @@ At the end of this preprocess, we want in the *trips.txt* :
 
 ## Actions
 
-METRO : Empty the **trip_short_name**.
-BUS : Empty the **trip_headsign**.
-TRANSILIEN : No change.
-TER and route_id start with 800:TER : Move **trip_headsig**n to **trip_short_name**. **Trip_headsign** should be empty afterward.  
-TRAMWAY : Empty the **trip_headsign**.
+ METRO : Empty the **trip_short_name**.
+ BUS : Empty the **trip_headsign**.
+ TRANSILIEN : No change.
+ TER and route_id start with 800:TER : Move **trip_headsign** to **trip_short_name**. **Trip_headsign** should be empty afterward.
+ TRAMWAY : Empty the **trip_headsign**.
 
  ### Examples
+
+Content routes.txt: 
+
+| route_id      | route_short_name        | route_long_name      | route_type |
+|---------------| ----------------------- | -------------------- | ---------- | 
+| 100110001:1   |   Château de Vincennes  | Château de Vincennes |   1        |            
+| 800:N:Bus     |  N                      | N                    |   3        |
+| 800:N145      |  N145                   | N145                 |   3        |
+| 800:N         |  N                      | N                    |   2        |
+| 800:TER       |  TER                    | TER                  |   2        |
+| 800:TER:Bus   |  TER                    | TER                  |   3        |
+|800:T4:Tramway |  T4                     | T4                   |   0        |
+
 
  #### Metro
 
  GTFS Input examples :
 
-| route_id | service_id | trip_id | trip_headsign | trip_short_name | direction_id | block_id |
-|----------| ---------- | ------- | ------------- | --------------- | ------------ | ---------| 
-| 100110001:1 |  2566 |        82423801-1_124170 |   Château de Vincennes     |   82423801  |   1 | |            
-| 100110001:1 |  2566   |      82423771-1_124146 |  Château de Vincennes      |  82423771   |       1 | |
+| route_id     | service_id | trip_id           | trip_headsign          | trip_short_name | direction_id | block_id |
+|--------------| ---------- | ----------------- | ---------------------- | --------------- | ------------ | ---------| 
+| 100110001:1  |  2566      | 82423801-1_124170 |   Château de Vincennes |   82423801      |   1          | |            
+| 100110001:1  |  2566      | 82423771-1_124146 |  Château de Vincennes  |  82423771       |   1          | |
 
 GTFS output examples :
 
-| route_id | service_id | trip_id | trip_headsign | trip_short_name | direction_id | block_id |
-|----------| ---------- | ------- | ------------- | --------------- | ------------ | ---------|
-| 100110001:1 |  2566 |        82423801-1_124170 |        |     |   1 | |            
-| 100110001:1 |  2566   |      82423771-1_124146 |        |     |       1 | |
+| route_id    | service_id | trip_id           | trip_headsign | trip_short_name | direction_id | block_id |
+|-------------| ---------- | ----------------- | ------------- | --------------- | ------------ | ---------|
+| 100110001:1 |  2566      | 82423801-1_124170 |               |                 |   1          | |            
+| 100110001:1 |  2566      | 82423771-1_124146 |               |                 |   1          | |
 
 #### Bus
  GTFS Input examples :
@@ -46,7 +59,7 @@ GTFS output examples :
 |----------| ---------- | ------- | ------------- | --------------- | ------------ | ---------| 
 | 800:N:Bus|   7189 |        83394375-1_293257|   96907 |   |                 0 |    |         
 | 800:N145 |   8369 |        83375778-1_283200 |  10101 | |                                        0   | |              
-| 800:N145|    8369 |        83375776-1_283198 |  10105 | |                                        0   | |          
+| 800:N145 |    8369 |        83375776-1_283198 |  10105 | |                                        0   | |          
 
 
 GTFS output examples :
@@ -81,16 +94,16 @@ GTFS Input examples :
 
 | route_id | service_id | trip_id | trip_headsign | trip_short_name | direction_id | block_id |
 |----------| ---------- | ------- | ------------- | --------------- | ------------ | ---------|
-|800:TER:TER|  8297|        83396027-1_293996|  16788   ||                        0  ||          
-|800:TER:TER|  7094 |       83397561-1_294628|  47812||                           0  ||          
+|800:TER|  8297|        83396027-1_293996|  16788   ||                        0  ||          
+|800:TER:Bus|  7094 |       83397561-1_294628|  47812||                           0  ||          
 
 
 GTFS output examples :
 
 | route_id | service_id | trip_id | trip_headsign | trip_short_name | direction_id | block_id |
 |----------| ---------- | ------- | ------------- | --------------- | ------------ | ---------|
-|800:TER:TER|  8297|        83396027-1_293996|     |16788|                        0  ||          
-|800:TER:TER|  7094 |       83397561-1_294628|  ||                           0  ||
+|800:TER   |  8297|        83396027-1_293996|     |16788|                        0  ||          
+|800:TER:Bus|  7094 |       83397561-1_294628|  ||                           0  ||
 
 
  # TRAMWAY
