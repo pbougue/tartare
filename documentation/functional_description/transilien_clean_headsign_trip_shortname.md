@@ -15,11 +15,11 @@ At the end of this preprocess, we want in the *trips.txt* :
 
 ## Actions
 
- METRO : Empty the **trip_short_name**.
- BUS : Empty the **trip_headsign**.
- TRANSILIEN : No change.
- TER and route_id start with 800:TER : Move **trip_headsign** to **trip_short_name**. **Trip_headsign** should be empty afterward.
- TRAMWAY : Empty the **trip_headsign**.
+   * METRO : Empty the **trip_short_name**.
+   * BUS : Empty the **trip_headsign**.
+   * TRANSILIEN : No change.
+   * TER and route_id start with 800:TER : Move **trip_headsign** to **trip_short_name**. **Trip_headsign** should be empty afterward.
+   * TRAMWAY : Empty the **trip_headsign**.
 
  ### Examples
 
