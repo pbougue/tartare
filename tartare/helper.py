@@ -46,6 +46,9 @@ from requests import Response
 
 
 # monkey patching of gridfs file for exposing the size in a "standard" way
+from tartare.core.constants import DATA_FORMAT_GTFS
+
+
 def grid_out_len(self: GridOut) -> int:
     return self.length
 
@@ -116,23 +119,6 @@ def get_md5_content_file(file: Union[str, bytes, int]) -> str:
 def setdefault_ids(collections: List[dict]) -> None:
     for c in collections:
         c.setdefault('id', str(uuid.uuid4()))
-
-
-def download_file(url_file: str, dest: str, data_format: str) -> None:
-    logger = logging.getLogger(__name__)
-    try:
-        urllib.request.urlretrieve(url_file, dest)
-    except HTTPError as e:
-        logger.error('error during download of file: {}'.format(str(e)))
-        raise
-    except ContentTooShortError:
-        logger.error('downloaded file size was shorter than exepected for url {}'.format(url_file))
-        raise
-    except URLError as e:
-        logger.error('error during download of file: {}'.format(str(e)))
-        raise
-    if data_format == 'gtfs' and not zipfile.is_zipfile(dest):
-        raise Exception('downloaded file from url {} is not a zip file'.format(url_file))
 
 
 def get_values_by_key(values: Union[List, dict], out: List[str], key: str = 'gridfs_id') -> None:

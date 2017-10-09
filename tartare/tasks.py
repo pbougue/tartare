@@ -32,7 +32,6 @@ import logging
 import os
 import tempfile
 from typing import Optional, List
-from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
 
 from billiard.einfo import ExceptionInfo
@@ -49,6 +48,7 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
+from tartare.exceptions import FetcherException
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
 
@@ -230,8 +230,11 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
                 context = chain(*actions).apply().get()
             return context
 
-    except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
-        msg = 'Contributor export failed, error {}'.format(str(exc))
+    except FetcherException as exc:
+        msg = 'Contributor export failed{retry_or_not}, error {error}'.format(
+            error=str(exc),
+            retry_or_not=' (retrying)' if int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')) else ''
+        )
         logger.error(msg)
         raise self.retry(exc=exc)
 
@@ -243,7 +246,7 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
     logger.info('coverage_export')
     try:
         context.instance = 'coverage'
-        models.Job.update(job_id=job.id, state="running", step="fetching data")
+        models.Job.update(job_id=job.id, state="running", step="fetching context")
         context.fill_contributor_contexts(coverage)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")

@@ -162,9 +162,10 @@ class License(object):
 
 
 class Input(object):
-    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None) -> None:
+    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None, expected_file_name: str=None) -> None:
         self.type = type
         self.url = url
+        self.expected_file_name = expected_file_name
 
 
 class DataSource(object):
@@ -706,6 +707,7 @@ class MongoDataSourceFetchedSchema(Schema):
 class MongoDataSourceInputSchema(Schema):
     type = InputType(required=False, allow_none=True)
     url = fields.String(required=False, allow_none=True)
+    expected_file_name = fields.String(required=False, allow_none=True)
 
     @post_load
     def make_input(self, data: dict) -> Input:

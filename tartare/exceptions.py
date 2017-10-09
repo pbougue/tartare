@@ -30,17 +30,17 @@ from typing import Optional
 
 
 class ColumnNotFound(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
+    def __init__(self, message: Optional[str] = '') -> None:
         self.message = message
 
 
 class FileNotFound(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
+    def __init__(self, message: Optional[str] = '') -> None:
         self.message = message
 
 
 class InvalidFile(Exception):
-    def __init__(self, message: Optional[str]='') -> None:
+    def __init__(self, message: Optional[str] = '') -> None:
         self.message = message
 
 
@@ -48,11 +48,21 @@ class ProtocolException(Exception):
     pass
 
 
+class GuessFileNameFromUrlException(Exception):
+    pass
+
+
+class FetcherException(Exception):
+    pass
+
+
 class FusioException(Exception):
     pass
 
+
 class ValidityPeriodException(Exception):
     pass
+
 
 class IntegrityException(Exception):
     pass
@@ -63,6 +73,6 @@ class ParameterException(Exception):
 
 
 class CommandRuntimeException(Exception):
-    def __init__(self, command: str, message: Optional[str]='') -> None:
+    def __init__(self, command: str, message: Optional[str] = '') -> None:
         message = '{}: {}'.format(command, message)
         super(CommandRuntimeException, self).__init__(message)

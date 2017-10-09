@@ -30,11 +30,12 @@ import json
 import os
 import tempfile
 from zipfile import ZipFile
+
 import pytest
 from freezegun import freeze_time
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_URL
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
 from tartare.helper import get_dict_from_zip
@@ -93,11 +94,9 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-
         raw = self.post('/contributors/contrib_id/actions/export')
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
-
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
@@ -220,7 +219,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         r = self.to_json(raw)
 
-
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
         r = self.to_json(job)
@@ -233,7 +231,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         gridfs_id = r["exports"][0]["gridfs_id"]
 
         with app.app_context():
-
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
@@ -259,9 +256,19 @@ class TestGtfsAgencyProcess(TartareFixture):
 
 
 class TestComputeDirectionsProcess(TartareFixture):
+    def __do_export(self):
+        raw = self.post('/contributors/id_test/actions/export')
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw, 201)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        return r['jobs'][0]
     def __setup_contributor_export_environment(self, init_http_download_server, params, add_data_source_config=True,
                                                add_data_source_target=True,
-                                               data_set_filename='unsorted_stop_sequences.zip'):
+                                               data_set_filename='unsorted_stop_sequences.zip',
+                                               do_export=True):
         url = "http://{ip}/compute_directions/{data_set}".format(ip=init_http_download_server.ip_addr,
                                                                  data_set=data_set_filename)
         contrib_payload = {
@@ -302,14 +309,8 @@ class TestComputeDirectionsProcess(TartareFixture):
                                 headers={})
                 self.assert_sucessful_call(raw, 201)
 
-        raw = self.post('/contributors/id_test/actions/export')
-        r = self.to_json(raw)
-        self.assert_sucessful_call(raw, 201)
-
-        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
-        r = self.to_json(raw)
-        self.assert_sucessful_call(raw)
-        return r['jobs'][0]
+        if do_export:
+            return self.__do_export()
 
     @pytest.mark.parametrize(
         "params", [
@@ -439,8 +440,9 @@ class TestComputeExternalSettings(TartareFixture):
             ({'target_data_source_id': 'ds-target', 'links': {'lines_referential': 'something'}},
              'tr_perimeter missing in preprocess links'),
             (
-            {'target_data_source_id': 'ds-target', 'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
-            'link whatever is not a data_source id present in contributor'),
+                    {'target_data_source_id': 'ds-target',
+                     'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
+                    'link whatever is not a data_source id present in contributor'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
                                                       expected_message):
@@ -480,8 +482,8 @@ class TestComputeExternalSettings(TartareFixture):
         with app.app_context():
             export = ContributorExport.get_last('id_test')
             target_grid_fs_id = next((data_source.gridfs_id
-                               for data_source in export.data_sources
-                               if data_source.data_source_id == 'ds-target'), None)
+                                      for data_source in export.data_sources
+                                      if data_source.data_source_id == 'ds-target'), None)
             fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
             with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:

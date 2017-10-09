@@ -28,12 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import pytest
 from freezegun import freeze_time
 
 from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
-import pytest
-
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -97,12 +96,12 @@ class TestContributorExport(TartareFixture):
     @freeze_time("2015-08-10")
     @pytest.mark.parametrize("method,filename,state,step,error_message", [
         ('http', 'some_archive.zip', 'done', 'save_contributor_export', None),
-        ('http', 'unexisting_file.zip', 'failed', 'fetching data', 'HTTP Error 404: Not Found'),
+        ('http', 'unexisting_file.zip', 'failed', 'fetching data',
+         'error during download of file: HTTP Error 404: Not Found'),
         ('http', 'not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file'),
         ('ftp', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('ftp', 'unexisting_file.zip', 'failed', 'fetching data',
-         """<urlopen error ftp error: URLError('ftp error: error_perm("550 Can\\'t change directory to unexisting_file.zip: No such file or directory",)',)>"""
-         ),
+         """error during download of file: <urlopen error ftp error: URLError('ftp error: error_perm("550 Can\\'t change directory to unexisting_file.zip: No such file or directory",)',)>"""),
         ('ftp', 'not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file')
     ])
     def test_contributor_export_with_http_download(self, init_http_download_server, init_ftp_download_server,

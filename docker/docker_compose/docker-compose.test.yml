@@ -11,6 +11,8 @@ services:
     links:
       - rabbitmq
       - mongo-server
+    depends_on:
+      - rabbitmq
 
   ruspell_worker:
     image: tartare_ruspell_functional_tests
@@ -21,6 +23,8 @@ services:
     links:
       - rabbitmq
       - mongo-server
+    depends_on:
+      - rabbitmq
 
   tartare_beat:
     image: tartare_functional_tests

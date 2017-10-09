@@ -1619,6 +1619,9 @@ definitions:
       url:
         type: string
         example: "http://stif.com/od.zip"
+      expected_file_name:
+        type: string
+        example: "config.json"
 
   license:
     type: object

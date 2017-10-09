@@ -76,20 +76,6 @@ class TestFullExport(AbstractRequestClient):
         raw = self.post('contributors', json_file)
         self.assert_sucessful_create(raw)
 
-        # post config ruspell
-        with open(self.get_fixtures_relative_path('ruspell/config-fr_idf.yml'), 'rb') as file:
-            raw = self.post(
-                '/contributors/AMI/data_sources/ruspell-config/data_sets',
-                files={'file': file})
-            self.assert_sucessful_create(raw)
-
-        # post bano data
-        with open(self.get_fixtures_relative_path('ruspell//bano-75.csv'), 'rb') as file:
-            raw = self.post(
-                '/contributors/AMI/data_sources/ruspell-bano_file/data_sets',
-                files={'file': file})
-            self.assert_sucessful_create(raw)
-
         # launch ruspell preprocess
         raw = self.post('contributors/AMI/actions/export')
         job_id = self.get_dict_from_response(raw)['job']['id']

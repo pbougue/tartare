@@ -120,7 +120,7 @@ class TestDataPublisher(TartareFixture):
                    'message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage default without export.'
 
-    def _create_contributor(self, id, url='bob'):
+    def _create_contributor(self, id, url='http://canaltp.fr/gtfs.zip'):
         contributor = {
             "id": id,
             "name": "fr idf",
