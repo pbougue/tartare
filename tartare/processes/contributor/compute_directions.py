@@ -40,8 +40,9 @@ from tartare.exceptions import IntegrityException
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.core import zip
+from tartare.processes.utils import preprocess_registry
 
-
+@preprocess_registry()
 class ComputeDirections(AbstractContributorProcess):
     direction_id_normal = '0'
     direction_id_return = '1'

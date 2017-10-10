@@ -27,24 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import requests
-
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
-from tartare.core.context import Context
-from tartare.core.models import DataSource
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
-from tartare.processes.utils import preprocess_registry
+from flask import Response
+from flask_restful import Resource
+from tartare.core.constants import PREPROCESSES_POSSIBLE
 
 
-@preprocess_registry('coverage')
-class FusioSendPtExternalSettings(AbstractFusioProcess):
-    def do(self) -> Context:
-        for contributor_context in self.context.contributor_contexts:
-            for data_source_context in contributor_context.data_source_contexts:
-                if data_source_context.gridfs_id and DataSource.is_type_data_format(data_source_context.data_source_id,
-                                                                                    DATA_FORMAT_PT_EXTERNAL_SETTINGS):
-                    resp = self.fusio.call(requests.post, api='api',
-                                           data={'action': 'externalstgupdate'},
-                                           files=self.get_files_from_gridfs(data_source_context.gridfs_id))
-                    self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
-        return self.context
+class PreProcesses(Resource):
+    def get(self) -> Response:
+        return {'preprocesses': PREPROCESSES_POSSIBLE}, 200

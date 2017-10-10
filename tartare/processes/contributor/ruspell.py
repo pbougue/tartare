@@ -36,10 +36,12 @@ from tartare.exceptions import ParameterException
 import tempfile
 from tartare.core import zip
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
+from tartare.processes.utils import preprocess_registry
 
 logger = logging.getLogger(__name__)
 
 
+@preprocess_registry()
 class Ruspell(AbstractContributorProcess):
     stops_filename = 'stops.txt'
     rules_filename = 'rules.csv'

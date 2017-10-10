@@ -37,8 +37,10 @@ from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import FusioException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry('coverage')
 class FusioExport(AbstractFusioProcess):
     def get_export_type(self) -> int:
         export_type = self.params.get('export_type', "ntfs")

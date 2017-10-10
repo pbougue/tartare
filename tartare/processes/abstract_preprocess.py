@@ -30,7 +30,6 @@ import os
 import shutil
 import tempfile
 from abc import ABCMeta, abstractmethod
-from typing import List
 
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler

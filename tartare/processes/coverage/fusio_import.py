@@ -26,7 +26,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import List
 
 import requests
 
@@ -36,8 +35,10 @@ from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.validity_period_finder import ValidityPeriodFinder
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry('coverage')
 class FusioImport(AbstractFusioProcess):
     def get_validity_period(self) -> ValidityPeriod:
         validity_periods = [ceds.validity_period for ceds in self.context.contributor_contexts if

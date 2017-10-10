@@ -46,6 +46,7 @@ from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
 from tartare.interfaces.data_publisher import DataPublisher
 from tartare.interfaces.files import File
+from tartare.interfaces.preprocesses import PreProcesses
 
 api = Api(app)
 
@@ -140,3 +141,5 @@ api.add_resource(CoverageExportResource,
 
 api.add_resource(DataPublisher,
                  coverage_and_id + environment_and_id + '/actions/publish')
+
+api.add_resource(PreProcesses, '/preprocesses')
