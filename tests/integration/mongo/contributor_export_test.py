@@ -114,7 +114,7 @@ class TestContributorExport(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
         job = self.to_json(raw).get('job')
 
@@ -136,7 +136,7 @@ class TestContributorExport(TartareFixture):
                         params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],"params":{"data":{"agency_id":"112","agency_name":"stif","agency_url":"http://stif.com"}}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
         job = self.to_json(raw).get('job')
 
@@ -152,7 +152,7 @@ class TestContributorExport(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
@@ -168,7 +168,7 @@ class TestContributorExport(TartareFixture):
                         params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
