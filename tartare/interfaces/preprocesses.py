@@ -28,10 +28,19 @@
 # www.navitia.io
 
 from flask import Response
-from flask_restful import Resource
+from flask_restful import Resource, reqparse
 from tartare.core.constants import PREPROCESSES_POSSIBLE
+from tartare.helper import option_value
 
 
 class PreProcesses(Resource):
+    def __init__(self) -> None:
+        self.parsers = reqparse.RequestParser()
+        self.parsers.add_argument('owner', type=option_value(list(PREPROCESSES_POSSIBLE.keys())), default='', location='args')
+
     def get(self) -> Response:
-        return {'preprocesses': PREPROCESSES_POSSIBLE}, 200
+        args = self.parsers.parse_args()
+        owner = args.get('owner')
+        if not owner:
+            return {'preprocesses': PREPROCESSES_POSSIBLE}, 200
+        return {'preprocesses': {owner: PREPROCESSES_POSSIBLE[owner]}}, 200

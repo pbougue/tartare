@@ -27,8 +27,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename, get_values_by_key, \
-    date_from_string
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_values_by_key, date_from_string, \
+    option_value
 import requests_mock
 from io import StringIO
 from datetime import date
@@ -128,3 +128,21 @@ def test_date_from_string_invalid():
     with pytest.raises(ValueError) as exec_value:
         date_from_string('ee', 'current_date')
     assert str(exec_value.value) == 'The current_date argument value is not valid, you gave: ee'
+
+
+def test_option_value_invalid():
+    with pytest.raises(ValueError) as exec_value:
+        option_value(['a', 'b'])('k', 'owner')
+    assert str(exec_value.value) == "The owner argument must be in list ['a', 'b'], you gave k"
+
+
+def test_option_value_None_Value():
+    assert not option_value(['a', 'b'])(None, 'owner')
+
+
+def test_option_value_empty_Value():
+    assert not option_value(['a', 'b'])('', 'owner')
+
+
+def test_option_value_valid():
+    assert option_value(['a', 'b'])('a', 'owner') == 'a'

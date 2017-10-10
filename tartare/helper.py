@@ -30,24 +30,19 @@
 import csv
 import logging
 import logging.config
-import urllib.request
 import uuid
 import zipfile
 from collections.abc import Mapping
 from hashlib import md5
 from io import IOBase
 from io import TextIOWrapper
-from typing import Union, Any, Optional, List
-from urllib.error import ContentTooShortError, HTTPError, URLError
+from typing import Union, Any, List
 
 import requests
 from gridfs.grid_file import GridOut
 from requests import Response
 from datetime import datetime, date
-
-
-# monkey patching of gridfs file for exposing the size in a "standard" way
-from tartare.core.constants import DATA_FORMAT_GTFS
+from typing import Optional
 
 
 def grid_out_len(self: GridOut) -> int:
@@ -158,3 +153,14 @@ def date_from_string(value: str, name: str) -> date:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except:
         raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))
+
+
+def option_value(values: List[str]) ->Optional[str]:
+    def to_return(value, name):
+        if not value:
+            return None
+        if value not in values:
+            error = "The {} argument must be in list {}, you gave {}".format(name, values, value)
+            raise ValueError(error)
+        return value
+    return to_return
