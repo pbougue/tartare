@@ -1595,6 +1595,7 @@ definitions:
 
   data_source_type:
     type: object
+    required: [name]
     properties:
       id:
         type: string
