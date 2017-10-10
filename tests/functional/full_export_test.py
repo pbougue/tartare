@@ -28,7 +28,6 @@
 # www.navitia.io
 import json
 import pytest
-import requests
 
 from tests.functional.abstract_request_client import AbstractRequestClient
 
@@ -56,8 +55,7 @@ class TestFullExport(AbstractRequestClient):
         self.assert_sucessful_create(raw)
 
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
-            raw = requests.post(
-                self.get_url() +
+            raw = self.post(
                 '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
                 files={'file': file})
             self.assert_sucessful_create(raw)

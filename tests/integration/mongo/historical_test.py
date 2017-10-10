@@ -26,266 +26,90 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from datetime import date
+import json
 
 import pytest
+from freezegun import freeze_time
 
+import tartare
 from tartare import app, mongo
-from tartare.core import contributor_export_functions, coverage_export_functions
 from tartare.core import models
-from tartare.core.context import Context
-from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Input
-from tests.utils import _get_file_fixture_full_path
-
-fixtures_path = _get_file_fixture_full_path('gtfs/some_archive.zip')
-start_date, end_date = (date(2017, 1, 1), date(2018, 12, 31))
-validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_DIRECTION_CONFIG
+from tests.integration.test_mechanism import TartareFixture
 
 
-class TestHistorical():
-    @classmethod
-    @pytest.yield_fixture(scope='function', autouse=True)
-    def my_method_setup(cls):
+class TestHistorical(TartareFixture):
+    def __init_contributor_config(self):
+        data_source_gtfs = {
+            "id": "data_source_gtfs",
+            "name": "data_source_gtfs",
+            "input": {
+                "type": "url",
+                "url": ""
+            }
+        }
+        data_source_config = {
+            "id": "data_source_config",
+            "name": "data_source_config",
+            "data_format": "direction_config",
+            "input": {
+                "type": "url",
+                "url": ""
+            }
+        }
+        raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_gtfs))
+        self.assert_sucessful_call(raw, 201)
+        raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_config))
+        self.assert_sucessful_call(raw, 201)
+    def __init_coverage_config(self):
+        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}
+        raw = self.post('/coverages', json.dumps(coverage))
+        self.assert_sucessful_call(raw, 201)
+
+    @freeze_time("2017-08-10")
+    @pytest.mark.parametrize("exports_number", [1, 2, 3, 4, 5])
+    def test_historisation(self, contributor, init_http_download_server, exports_number):
+        self.__init_contributor_config()
+        self.__init_coverage_config()
+
+        url_gtfs = 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
+        url_config = 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='historisation/config-{number}.json')
+
+        for i in range(1, exports_number + 1):
+            raw = self.patch('/contributors/id_test/data_sources/data_source_gtfs', json.dumps(
+                {"input": {"url": url_gtfs.format(number=i)}}
+            ))
+            self.assert_sucessful_call(raw)
+            raw = self.patch('/contributors/id_test/data_sources/data_source_config', json.dumps(
+                {"input": {"url": url_config.format(number=i)}}
+            ))
+            self.assert_sucessful_call(raw)
+            raw = self.post('/contributors/id_test/actions/export')
+            self.assert_sucessful_call(raw, 201)
+
         with app.app_context():
-            contributor = models.Contributor(id='contrib_id', name='AAA', data_prefix='AAA')
-            contributor.save()
+            self.assert_data_source_fetched_number('data_source_gtfs', exports_number, DATA_FORMAT_GTFS)
+            self.assert_data_source_fetched_number('data_source_config', exports_number, DATA_FORMAT_DIRECTION_CONFIG)
+            self.assert_contributor_exports_number(exports_number)
+            self.assert_coverage_exports_number(exports_number)
 
-            data_source = models.DataSource(id='data_source_gtfs', name='EEEEE', data_format='gtfs',
-                                            input=Input('manual'))
-            data_source.save(contributor_id=contributor.id)
-
-            data_source = models.DataSource(id='data_source_direction_config',
-                                            name='direction_config', data_format='direction_config',
-                                            input=Input('manual'))
-
-            data_source.save(contributor_id=contributor.id)
-            coverage = models.Coverage('c1', 'c1', contributors=[contributor.id])
-            coverage.save()
-            yield
-
-    def test_data_source_fetched_gtfs_historical(self):
-        list_ids = []
-
-        for i in range(1, 6):
-            data_source_fetched = models.DataSourceFetched(contributor_id='contrib_id',
-                                                           data_source_id='data_source_gtfs',
-                                                           validity_period=validity_period)
-            data_source_fetched.save_dataset(fixtures_path, 'gtfs.zip')
-            data_source_fetched.save()
-            list_ids.append(data_source_fetched.id)
-
-        # test that there are only 3 data sources
+    def assert_data_source_fetched_number(self, data_source_id, exports_number, data_format):
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': 'contrib_id',
-            'data_source_id': 'data_source_gtfs'
+            'contributor_id': 'id_test',
+            'data_source_id': data_source_id
         })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[data_format])
 
-        # test that there are only 3 gridfs
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 3
-
-    def test_data_source_fetched_gtfs_config_file_historical(self):
-        data_source_gtfs_list_ids = []
-        direction_config_list_ids = []
-
-        # GTFS
-        for i in range(1, 6):
-            data_source_fetched = models.DataSourceFetched(contributor_id='contrib_id',
-                                                           data_source_id='data_source_gtfs',
-                                                           validity_period=validity_period)
-            data_source_fetched.save_dataset(fixtures_path, 'gtfs.zip')
-            data_source_fetched.save()
-            data_source_gtfs_list_ids.append(data_source_fetched.id)
-        # Config File
-        for i in range(1, 6):
-            data_source_fetched = models.DataSourceFetched(contributor_id='contrib_id',
-                                                           data_source_id='data_source_direction_config')
-            data_source_fetched.save_dataset(fixtures_path, 'gtfs.zip')
-            data_source_fetched.save()
-            direction_config_list_ids.append(data_source_fetched.id)
-        # test that there are only 3 data sources
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': 'contrib_id',
-            'data_source_id': 'data_source_gtfs'
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (data_source_gtfs_list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': 'contrib_id',
-            'data_source_id': 'data_source_direction_config'
-        })
-        assert raw.count() == 2
-        # Test the 3 last objects saved are not deleted
-        assert (direction_config_list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        # test that there are only 5 gridfs
-        # 3 gtfs data format
-        # 2 direction config
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 5
-
-    def test_data_contrib_export_historical(self):
-        list_ids = []
-        for i in range(1, 6):
-            with open(fixtures_path, 'rb') as file:
-                gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename='gtfs.zip', contributor_id='contrib_id')
-
-            contrib_export = models.ContributorExport(contributor_id='contrib_id',
-                                                      gridfs_id=gridfs_id,
-                                                      validity_period=validity_period,
-                                                      data_sources=[])
-            contrib_export.save()
-            list_ids.append(contrib_export.id)
-
-        # test that there are only 3 contributor exports
+    def assert_contributor_exports_number(self, exports_number):
         raw = mongo.db[models.ContributorExport.mongo_collection].find({
-            'contributor_id': 'contrib_id',
+            'contributor_id': 'id_test'
         })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[DATA_FORMAT_GTFS])
 
-        # test that there are only 3 gridfs
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 3
-
-    def test_data_coverage_export_historical(self):
-        list_ids = []
-        for i in range(1, 6):
-            with open(fixtures_path, 'rb') as file:
-                gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename='gtfs.zip', contributor_id='contrib_id')
-
-            coverage_export = models.CoverageExport(coverage_id='id_test', gridfs_id=gridfs_id,
-                                                    validity_period=validity_period,
-                                                    contributors=[])
-            coverage_export.save()
-            list_ids.append(coverage_export.id)
-
-        # test that there are only 3 coverage exports
+    def assert_coverage_exports_number(self, exports_number):
         raw = mongo.db[models.CoverageExport.mongo_collection].find({
-            'coverage_id': 'id_test',
+            'coverage_id': 'jdr'
         })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        # test that there are only 3 gridfs
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 3
-
-    def populate_data_fetched(self, context, contributor):
-        context.add_contributor_context(contributor)
-        contributor_export_functions.save_data_fetched_and_get_context(context=context,
-                                                                       file=fixtures_path,
-                                                                       filename='gtfs.zip',
-                                                                       contributor_id='contrib_id',
-                                                                       data_source_id='data_source_gtfs',
-                                                                       validity_period=validity_period)
-        return context
-
-    def populate_data_fetched_and_save_export(self, contributor):
-        context = Context()
-        context = self.populate_data_fetched(context, contributor)
-        contributor_export_functions.save_export(contributor, context, date.today())
-
-    def test_data_source_fetched_historical_use_context(self):
-        list_ids = []
-        contributor = models.Contributor.get('contrib_id')
-        data_sources = models.DataSource.get(data_source_id='data_source_gtfs')
-        for i in range(1, 6):
-            context = Context()
-            self.populate_data_fetched(context, contributor)
-        # test that there are only 3 data sources
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': contributor.id,
-            'data_source_id': data_sources[0].id
-        })
-
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        # test that there are only 8 gridfs
-        # 3 DataSourceFecthed
-        # 3 5 in context (one for each)
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 8
-
-    def coverage_save_export(self, coverage):
-        context = Context('coverage', coverage)
-        context.fill_contributor_contexts(coverage)
-        coverage_export_functions.merge(coverage, context)
-        coverage_export_functions.save_export(coverage, context)
-
-    def test_data_source_fetched_historical_and_save_export_use_context(self):
-        list_ids = []
-        contributor = models.Contributor.get('contrib_id')
-        data_sources = models.DataSource.get(data_source_id='data_source_gtfs')
-        for i in range(1, 6):
-            self.populate_data_fetched_and_save_export(contributor)
-        # test that there are only 3 data sources
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': contributor.id,
-            'data_source_id': data_sources[0].id
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        raw = mongo.db[models.ContributorExport.mongo_collection].find({
-            'contributor_id': contributor.id
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        # test that there are only 9 gridfs :
-        # 3 in DataSourceFetched
-        # 6 in ContributorExport
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 9
-
-    def test_data_source_fetched_historical_and_save_export_save_coverage_export_use_context(self):
-        list_ids = []
-        contributor = models.Contributor.get('contrib_id')
-        data_sources = models.DataSource.get(data_source_id='data_source_gtfs')
-        coverage = models.Coverage.get('c1')
-        for i in range(1, 6):
-            self.populate_data_fetched_and_save_export(contributor)
-            self.coverage_save_export(coverage)
-        # test that there are only 3 data sources
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': contributor.id,
-            'data_source_id': data_sources[0].id
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        raw = mongo.db[models.ContributorExport.mongo_collection].find({
-            'contributor_id': contributor.id
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        raw = mongo.db[models.CoverageExport.mongo_collection].find({
-            'coverage_id': 'c1'
-        })
-        assert raw.count() == 3
-        # Test the 3 last objects saved are not deleted
-        assert (list_ids[2:].sort() == [row.get('_id') for row in raw].sort())
-
-        # test that there are only 15 gridfs :
-        # 3 in DataSourceFetched
-        # 6 in ContributorExport
-        # 6 in CoverageExport
-        raw = mongo.db['fs.files'].find({})
-        assert raw.count() == 15
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[DATA_FORMAT_GTFS])
