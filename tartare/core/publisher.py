@@ -71,6 +71,10 @@ class HttpProtocol(AbstractProtocol):
 
 
 class FtpProtocol(AbstractProtocol):
+    def __init__(self, url: str, options: dict) -> None:
+        super().__init__(url, options)
+        self.url = self.url.replace('ftp://', '') if self.url.startswith('ftp://') else self.url
+
     def publish(self, file: BinaryIO, filename: str) -> None:
         directory = None
         if 'directory' in self.options and self.options['directory']:

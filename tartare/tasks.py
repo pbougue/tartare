@@ -32,7 +32,6 @@ import logging
 import os
 import tempfile
 from typing import Optional, List
-from urllib.error import ContentTooShortError, HTTPError, URLError
 from zipfile import ZipFile
 
 from billiard.einfo import ExceptionInfo
@@ -47,8 +46,9 @@ from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
+from tartare.exceptions import FetcherException
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
 
@@ -65,6 +65,10 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
 
 class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
+        # if contributor_export or coverage_export is failing we clean the context
+        if isinstance(args[0], Context):
+            with tartare.app.app_context():
+                args[0].cleanup()
         self.update_job(args, exc)
         self.send_mail(args)
         super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -87,6 +91,7 @@ class CallbackTask(tartare.ContextTask):
             with tartare.app.app_context():
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
+
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
 def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
     coverage = models.Coverage.get(coverage_id)
@@ -106,7 +111,7 @@ def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type:
         logging.exception('error')
 
 
-def _get_publisher(platform: Platform, job: Job) -> AbstractPublisher:
+def _get_publisher(platform: Platform) -> AbstractPublisher:
     from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
         "navitia": navitia_publisher,
@@ -137,19 +142,22 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 @celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
 def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
+    step = "publish_data {env} {platform}".format(env=environment_id, platform=platform.type)
+    models.Job.update(job_id=job.id, state="running", step=step)
     logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
     try:
-        publisher = _get_publisher(platform, job)
+        publisher = _get_publisher(platform)
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
         current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
-        msg = 'publish data on  platform failed, error {}'.format(str(exc))
+        msg = 'publish data on platform "{type}" failed, {error}'.format(
+            error=str(exc), url=platform.url, type=platform.type)
         logger.error(msg)
         self.retry(exc=exc)
 
@@ -183,17 +191,19 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
         raise self.retry()
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def contributor_export(self: Task, contributor: Contributor, job: Job, check_for_update: bool = True) -> None:
+@celery.task(bind=True, default_retry_delay=180,
+             max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+             base=CallbackTask)
+def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job,
+                       check_for_update: bool = True) -> Context:
     try:
-        context = Context()
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         logger.info('contributor_export')
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
             contributor)
-        logger.info('number of data_sources updated for contributor {cid}: {number}'.format(cid=contributor.id,
-                                                                                            number=nb_updated_data_sources_fetched))
+        logger.info('number of data_sources updated for contributor {cid}: {number}'.
+                    format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
@@ -211,25 +221,32 @@ def contributor_export(self: Task, contributor: Contributor, job: Job, check_for
             models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
             contributor_export_functions.save_export(contributor, context)
             coverages = [coverage for coverage in models.Coverage.all() if coverage.has_contributor(contributor)]
+            actions = []
             if coverages:
-                for coverage in coverages:
+                actions.append(coverage_export.s(context, coverages[0], job))
+                for coverage in coverages[1:]:
                     # Launch coverage export
-                    coverage_export.delay(coverage, job)
-            # remove temporary gridfs if export is a success
-            context.cleanup()
+                    actions.append(coverage_export.s(coverage, job))
+                context = chain(*actions).apply().get()
+            return context
 
-    except (HTTPError, ContentTooShortError, URLError, Exception) as exc:
-        msg = 'Contributor export failed, error {}'.format(str(exc))
+    except FetcherException as exc:
+        msg = 'Contributor export failed{retry_or_not}, error {error}'.format(
+            error=str(exc),
+            retry_or_not=' (retrying)' if int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')) else ''
+        )
         logger.error(msg)
         raise self.retry(exc=exc)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=1, base=CallbackTask)
-def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
+@celery.task(bind=True, default_retry_delay=180,
+             max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
+             base=CallbackTask)
+def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
     logger.info('coverage_export')
     try:
-        context = Context('coverage')
-        models.Job.update(job_id=job.id, state="running", step="fetching data")
+        context.instance = 'coverage'
+        models.Job.update(job_id=job.id, state="running", step="fetching context")
         context.fill_contributor_contexts(coverage)
 
         models.Job.update(job_id=job.id, state="running", step="preprocess")
@@ -246,19 +263,23 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
         coverage_export_functions.save_export(coverage, context)
         actions = []
         # launch publish for all environment
-        sorted_environments = sorted(coverage.environments, key=lambda x: ['sequence'])
+        sorted_environments = {}
+        # flip env: object in object: env
+        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+        # sort envs
+        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+        # restore mapping
+        for environment in raw_sorted_environments:
+            sorted_environments[flipped_environments[environment]] = environment
         for env in sorted_environments:
             environment = coverage.get_environment(env)
-            sorted_publication_platforms = sorted(environment.publication_platforms, key=lambda x: ['sequence'])
+            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
             for platform in sorted_publication_platforms:
                 actions.append(publish_data_on_platform.si(platform, coverage, env, job))
-                # remove temporary gridfs after the last publication
-                actions.append(cleanup_context.si(context))
         if actions:
-            chain(*actions).delay()
-        # if no publications, cleanup separately
-        else:
-            context.cleanup()
+            # "get" method forces to check for publish statuses
+            chain(*actions).apply().get()
+        return context
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))
         logger.error(msg)
@@ -268,7 +289,7 @@ def coverage_export(self: Task, coverage: Coverage, job: Job) -> None:
 def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         return context
-    sorted_preprocesses = sorted(processes, key=lambda preprocess: preprocess.sequence)
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
     actions = []
 
     # Do better
@@ -292,11 +313,6 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def cleanup_context(context: Context) -> None:
-    context.cleanup()
-
-
-@celery.task()
 def automatic_update() -> None:
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
@@ -304,4 +320,4 @@ def automatic_update() -> None:
         # launch contributor export
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
         job.save()
-        chain(contributor_export.si(contributor, job), finish_job.si(job.id)).delay()
+        chain(contributor_export.si(Context(), contributor, job), finish_job.si(job.id)).delay()

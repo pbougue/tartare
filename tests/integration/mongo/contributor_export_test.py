@@ -28,11 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import pytest
 from freezegun import freeze_time
 
-from tests.utils import to_json, post
-import pytest
-
+from tartare import app
+from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -96,12 +96,12 @@ class TestContributorExport(TartareFixture):
     @freeze_time("2015-08-10")
     @pytest.mark.parametrize("method,filename,state,step,error_message", [
         ('http', 'some_archive.zip', 'done', 'save_contributor_export', None),
-        ('http', 'unexisting_file.zip', 'failed', 'fetching data', 'HTTP Error 404: Not Found'),
+        ('http', 'unexisting_file.zip', 'failed', 'fetching data',
+         'error during download of file: HTTP Error 404: Not Found'),
         ('http', 'not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file'),
         ('ftp', 'some_archive.zip', 'done', 'save_contributor_export', None),
         ('ftp', 'unexisting_file.zip', 'failed', 'fetching data',
-         """<urlopen error ftp error: URLError('ftp error: error_perm("550 Can\\'t change directory to unexisting_file.zip: No such file or directory",)',)>"""
-         ),
+         """error during download of file: <urlopen error ftp error: URLError('ftp error: error_perm("550 Can\\'t change directory to unexisting_file.zip: No such file or directory",)',)>"""),
         ('ftp', 'not_a_zip_file.zip', 'failed', 'fetching data', 'downloaded file from url %url% is not a zip file')
     ])
     def test_contributor_export_with_http_download(self, init_http_download_server, init_ftp_download_server,
@@ -117,11 +117,11 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
         assert raw.status_code == 201
-        job = to_json(raw).get('job')
+        job = self.to_json(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = to_json(raw_job)['jobs'][0]
+        job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == state
         assert job['step'] == step
         if error_message:
@@ -140,9 +140,40 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
         assert raw.status_code == 201
-        job = to_json(raw).get('job')
+        job = self.to_json(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = to_json(raw_job)['jobs'][0]
+        job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
+
+    @freeze_time("2015-08-10")
+    def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        assert raw.status_code == 201
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 3, print(grid_fs_list)
+
+    @freeze_time("2015-08-10")
+    def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+        raw = self.post('/coverages',
+                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export'.format(contributor['id']), {})
+        assert raw.status_code == 201
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 5, print(grid_fs_list)

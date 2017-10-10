@@ -222,20 +222,18 @@ def test_gtfs_feed_info_with_2_rows():
         finder.get_validity_period(file)
     assert str(excinfo.value) == 'Impossible to find validity period, invalid file feed_info.txt.'
 
-dummy_contrib = Contributor('cid', 'cname', 'pref')
-
 
 @freeze_time("2017-01-15")
 @pytest.mark.parametrize(
     "validity_periods,expected_message", [
-        ([ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14)))],
+        ([ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14))],
          "calculating validity period union on past periods (end_date: 14/07/2015 < now: 15/01/2017)"),
-        ([ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14))),
-          ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2016, 2, 20), date(2016, 11, 14)))],
+        ([ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14)),
+          ValidityPeriod(date(2016, 2, 20), date(2016, 11, 14))],
          "calculating validity period union on past periods (end_date: 14/11/2016 < now: 15/01/2017)"),
-        ([ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2016, 12, 10), date(2017, 1, 1))),
-          ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14))),
-          ContributorContext(dummy_contrib, validity_period=ValidityPeriod(date(2016, 2, 20), date(2016, 11, 14)))],
+        ([ValidityPeriod(date(2016, 12, 10), date(2017, 1, 1)),
+          ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14)),
+          ValidityPeriod(date(2016, 2, 20), date(2016, 11, 14))],
          "calculating validity period union on past periods (end_date: 01/01/2017 < now: 15/01/2017)")
     ])
 def test_get_validity_period_union_past(validity_periods, expected_message):
@@ -287,9 +285,7 @@ def test_get_validity_period_union_empty():
 def test_get_validity_period_union_valid(validity_period_dates, expected_period):
     validity_period_containers = []
     for contrib_begin_date, contrib_end_date in validity_period_dates:
-        validity_period_containers.append(ContributorContext(contributor=dummy_contrib,
-                                                             validity_period=ValidityPeriod(contrib_begin_date,
-                                                                                            contrib_end_date)))
+        validity_period_containers.append(ValidityPeriod(contrib_begin_date, contrib_end_date))
     result_period = ValidityPeriodFinder.get_validity_period_union(validity_period_containers)
     assert expected_period.start_date == result_period.start_date
     assert expected_period.end_date == result_period.end_date

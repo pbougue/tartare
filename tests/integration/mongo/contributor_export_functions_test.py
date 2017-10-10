@@ -29,16 +29,17 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
-from tartare.core.models import DataSource, Contributor, Input, InputType
-import mock
-from tests.utils import mock_urlretrieve, mock_zip_file
-from tartare import app
-import pytest
 from urllib.error import ContentTooShortError
-from tartare.exceptions import InvalidFile, ParameterException
-from datetime import date
+
+import mock
+import pytest
+
+from tartare import app
 from tartare.core.context import Context
+from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
+from tartare.core.models import DataSource, Contributor, Input
+from tartare.exceptions import InvalidFile, ParameterException, FetcherException
+from tests.utils import mock_urlretrieve, mock_zip_file
 
 
 def test_fetch_data_from_input_failed(mocker):
@@ -50,7 +51,7 @@ def test_fetch_data_from_input_failed(mocker):
     mock_check = mocker.patch('zipfile.is_zipfile', autospec=True)
     mock_check.return_value = True
 
-    #following test needs to be improved to handle file creation on local drive
+    # following test needs to be improved to handle file creation on local drive
     with pytest.raises(InvalidFile) as excinfo:
         with app.app_context():
             fetch_datasets_and_return_updated_number(contrib)
@@ -68,20 +69,21 @@ class TestFetcher():
                 build_context(contrib, context)
             assert str(excinfo.value) == 'data source 666 has no data set'
 
-    @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com", "bib"))
+    @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com/config.json", "bib"))
     def test_fetcher_raises_url_not_found(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com"))
+        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         with app.app_context():
-            with pytest.raises(ContentTooShortError) as excinfo:
+            with pytest.raises(FetcherException) as excinfo:
                 fetch_datasets_and_return_updated_number(contrib)
-            assert str(excinfo.value) == "<urlopen error http://bob.com>"
+            assert str(
+                excinfo.value) == "downloaded file size was shorter than exepected for url http://bob.com/config.json"
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_zip_file)
     def test_fetcher_raises_not_zip_file(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com"))
-        contrib = Contributor('contribId', 'contribName', 'http://bob.com', [data_source])
+        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
+        contrib = Contributor('contribId', 'contribName', 'http://bob.com/config.json', [data_source])
         with app.app_context():
-            with pytest.raises(Exception) as excinfo:
+            with pytest.raises(FetcherException) as excinfo:
                 fetch_datasets_and_return_updated_number(contrib)
-            assert str(excinfo.value) == 'downloaded file from url http://bob.com is not a zip file'
+            assert str(excinfo.value) == 'downloaded file from url http://bob.com/config.json is not a zip file'

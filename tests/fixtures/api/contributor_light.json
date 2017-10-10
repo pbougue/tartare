@@ -1,0 +1,17 @@
+{
+    "id" : "contributor_id",
+    "preprocesses" : [],
+    "name" : "contributor_name",
+    "data_sources" : [
+        {
+            "input" : {
+                "type" : "url",
+                "url" : "http://{HTTP_SERVER_IP}/compute_directions/functional.zip"
+            },
+            "id" : "data_source_to_process_id",
+            "name" : "data_source_to_process_name",
+            "data_format" : "gtfs"
+        }
+    ],
+    "data_prefix" : "contributor_prefix"
+}

@@ -10,7 +10,7 @@ There are three environments available : integration, preproduction and producti
 Each environment contains :  
 **Name** : Usualy "integration", "preproduction" or "production".  
 **current_ntfs_id** : The id of the data to send.  
-**publication_platforms** : Technical informations (Type of data, protocol used, where to push the data and password / username if ftp).  
+**publication_platforms** : Technical informations (Type of data, protocol used, where to push the data (url like "protocol://...") and password / username if ftp).  
 
 
 ## Doable actions on a coverage

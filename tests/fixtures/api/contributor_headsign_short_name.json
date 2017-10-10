@@ -1,0 +1,26 @@
+{
+  "data_prefix": "bob",
+  "data_sources": [
+    {
+      "data_format": "gtfs",
+      "id": "Google-1",
+      "input": {
+        "type": "url",
+        "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name.zip"
+      },
+      "name": "données gtfs"
+    }
+  ],
+  "id": "AMI",
+  "name": "AMI",
+  "preprocesses": [
+    {
+      "id": "id",
+      "type": "HeadsignShortName",
+      "sequence": 1,
+      "data_source_ids": [
+        "Google-1"
+      ]
+    }
+  ]
+}

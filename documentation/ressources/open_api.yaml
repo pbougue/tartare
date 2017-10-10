@@ -1,6 +1,8 @@
 ---
 swagger: '2.0'
-host: "127.0.0.1:5000"
+host: "mut-dev-tartare2.canaltp.local"
+schemes:
+  - http
 info:
   description: |
     API managing data integration.
@@ -10,16 +12,13 @@ info:
 
     You can help on [Tartare's github page](https://github.com/CanalTP/tartare).
 
-  version: 0.1.0
+  version: 1.3.0
   title: Tartare API
   contact:
     name: www.navitia.io
   license:
     name: AGPLv3
     url: http://www.gnu.org/licenses/
-schemes:
-  - http
-  - https
 # format of bodies a client can send (Content-Type)
 consumes:
   - application/json
@@ -27,6 +26,7 @@ consumes:
 # format of the responses to the client (Accepts)
 produces:
   - application/json
+  - multipart/form-data
 
 tags:
   -
@@ -468,6 +468,80 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /coverages/{coverage_id}/exports/{export_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the coverage export identified by {coverage_id} and [export_id}
+      tags:
+        - coverages
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+        - in: path
+          name: export_id
+          type: string
+          description: Identifier of the export
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+          schema:
+            type: file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
+  /coverages/{coverage_id}/environments/{environment_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the environment identified by {coverage_id} and [environment_id}
+      tags:
+        - coverages
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage
+          required: true
+        - in: path
+          name: environment_id
+          type: string
+          description: Identifier of the environment
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+          schema:
+            type: file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+            
   /contributors:
     get:
       summary: Display available contributors
@@ -1067,6 +1141,43 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
+  /contributors/{contributor_id}/exports/{export_id}/files/{file_id}:
+    get:
+      summary: returns the file {file_id} of the contributor export identified by {contributor_id} and [export_id}
+      tags:
+        - contributors
+      produces:
+        - multipart/form-data
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: path
+          name: export_id
+          type: string
+          description: Identifier of the export
+          required: true
+        - in: path
+          name: file_id
+          type: string
+          description: Identifier of the file
+          required: true
+      responses:
+        200:
+          description: Requested file
+          schema:
+            type: file
+        400:
+          description: invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+
   /jobs:
     get:
       summary: Display list of jobs
@@ -1285,7 +1396,7 @@ definitions:
         example: ftp
       url:
         type: string
-        example: ods.fr
+        example: ftp.ods.com
       sequence:
         type: integer
         example: 0
@@ -1346,7 +1457,9 @@ definitions:
         example: Ruspell
       data_source_ids:
         type: array
-        example: [datasource_stif]
+        items:
+          type: string
+          example: datasource_stif_id
       sequence:
         type: integer
         example: 1
@@ -1506,6 +1619,9 @@ definitions:
       url:
         type: string
         example: "http://stif.com/od.zip"
+      expected_file_name:
+        type: string
+        example: "config.json"
 
   license:
     type: object

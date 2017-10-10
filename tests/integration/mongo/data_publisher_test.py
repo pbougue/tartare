@@ -28,17 +28,19 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+import copy
+import ftplib
+import json
 import os
 import tempfile
 from zipfile import ZipFile
+
 import mock
 import pytest
-import ftplib
 from freezegun import freeze_time
-from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals
+
 from tests.integration.test_mechanism import TartareFixture
-import json
+from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals, get_response
 
 
 class TestDataPublisher(TartareFixture):
@@ -46,7 +48,8 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
+        assert r[
+                   'message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage not found: default'
 
     def test_publish_unknwon_environment(self, contributor):
@@ -79,7 +82,8 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages/default/environments/bob/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/bob/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
+        assert r[
+                   'message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/bob/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Environment not found: bob'
 
     def test_publish_coverage_without_export(self, contributor):
@@ -104,18 +108,19 @@ class TestDataPublisher(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        #Create Coverage
+        # Create Coverage
         resp = self.post("/coverages", json.dumps(coverage))
         assert resp.status_code == 201
 
-        #Launch data update
+        # Launch data update
         resp = self.post("/coverages/default/environments/production/actions/publish")
         assert resp.status_code == 404
         r = self.to_json(resp)
-        assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
+        assert r[
+                   'message'] == 'Object Not Found. You have requested this URI [/coverages/default/environments/production/actions/publish] but did you mean /coverages/<string:coverage_id>/environments/<string:environment_id>/actions/publish ?'
         assert r['error'] == 'Coverage default without export.'
 
-    def _create_contributor(self, id, url='bob'):
+    def _create_contributor(self, id, url='http://canaltp.fr/gtfs.zip'):
         contributor = {
             "id": id,
             "name": "fr idf",
@@ -214,6 +219,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
+            # url without ftp:// works as well
             "url": init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
@@ -256,7 +262,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": ftp_username,
@@ -291,7 +297,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "ods",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
@@ -332,7 +338,6 @@ class TestDataPublisher(TartareFixture):
 
     def test_config_user_password(self, contributor):
         user_to_set = 'user'
-        contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
             "sequence": 0,
@@ -365,7 +370,7 @@ class TestDataPublisher(TartareFixture):
             "sequence": 0,
             "type": "stop_area",
             "protocol": "ftp",
-            "url": init_ftp_upload_server.ip_addr,
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
@@ -386,3 +391,137 @@ class TestDataPublisher(TartareFixture):
         assert '{coverage_id}_stops.txt'.format(coverage_id=coverage_id) in directory_content
         session.delete('{coverage_id}_stops.txt'.format(coverage_id=coverage_id))
         session.quit()
+
+    @freeze_time("2015-08-10")
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
+    def test_publish_environment_respect_sequence_order(self, mock_post, init_http_download_server):
+        contributor_id = 'contrib-seq'
+        publication_envs = ['integration', 'production', 'preproduction']
+        url = "http://whatever.{env}/v0/jobs/il"
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+        coverage = {
+            "contributors": [
+                contributor_id
+            ],
+            "environments": {},
+            "id": 'cov-sequence',
+            "name": 'cov-sequence'
+        }
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": url
+        }
+        for idx, environment in enumerate(publication_envs):
+            temp_platform = copy.copy(publication_platform)
+            temp_platform['url'] = temp_platform['url'].format(env=environment)
+            coverage['environments'][environment] = {
+                "name": environment,
+                "sequence": idx,
+                "publication_platforms": [
+                    temp_platform
+                ]
+            }
+
+        resp = self.post("/coverages", json.dumps(coverage))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        self.assert_sucessful_call(resp, 201)
+
+        for idx, environment in enumerate(publication_envs):
+            assert url.format(env=environment) == mock_post.call_args_list[idx][0][0]
+
+    @freeze_time("2015-08-10")
+    @mock.patch('requests.post', side_effect=[get_response(200),
+                                              get_response(200),
+                                              get_response(200),
+                                              get_response(200),
+                                              get_response(200),
+                                              ])
+    def test_publish_platform_respect_sequence_order(self, mock_post, init_http_download_server):
+        contributor_id = 'contrib-seq'
+        # we will create 5 platform for prod env with different sequences
+        sequences = [4, 0, 3, 2, 1]
+        url = "http://whatever.sequence.{seq}/v0/jobs/il"
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+
+        publication_platforms = []
+        for idx in sequences:
+            # trick: url of platform contains sequence number
+            publication_platforms.append({
+                "type": "navitia",
+                "sequence": idx,
+                "protocol": "http",
+                "url": url.format(seq=idx)
+            })
+        coverage = {
+            "contributors": [
+                contributor_id
+            ],
+            "environments": {
+                "production": {
+                    "name": 'production',
+                    "sequence": 0,
+                    "publication_platforms": publication_platforms
+                }
+            },
+            "id": 'cov-sequence',
+            "name": 'cov-sequence'
+        }
+        resp = self.post("/coverages", json.dumps(coverage))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        self.assert_sucessful_call(resp, 201)
+
+        # and check that the post on url is made in the sequence order (asc)
+        for idx in range(5):
+            assert url.format(seq=idx) == mock_post.call_args_list[idx][0][0]
+
+    @freeze_time("2015-08-10")
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(500)])
+    def test_publish_platform_failed(self, mock_post, init_http_download_server):
+        contributor_id = 'contrib-pub-failed'
+        publication_envs = ['integration', 'preproduction']
+        url = "http://whatever.fr/pub"
+        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
+            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+        coverage = {
+            "contributors": [
+                contributor_id
+            ],
+            "environments": {},
+            "id": 'cov-sequence',
+            "name": 'cov-sequence'
+        }
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": url
+        }
+        for idx, environment in enumerate(publication_envs):
+            coverage['environments'][environment] = {
+                "name": environment,
+                "sequence": idx,
+                "publication_platforms": [
+                    publication_platform
+                ]
+            }
+
+        resp = self.post("/coverages", json.dumps(coverage))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data preproduction navitia', print(job)
+        assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
+            job)
+        assert job['state'] == 'failed'

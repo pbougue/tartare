@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
 
 import pymongo
 from gridfs import GridOut
@@ -40,7 +40,7 @@ from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
 from tartare import mongo
-from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, INPUT_TYPE_MANUAL, DATA_FORMAT_DEFAULT, \
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
@@ -87,6 +87,18 @@ class InputType(ChoiceField):
         super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
+SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
+
+
+class SequenceContainer(metaclass=ABCMeta):
+    def __init__(self, sequence: int) -> None:
+        self.sequence = sequence
+
+    @classmethod
+    def sort_by_sequence(cls, list_to_sort: List[SequenceContainerType]) -> List[SequenceContainerType]:
+        return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
+
+
 class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
@@ -99,22 +111,22 @@ class PreProcessContainer(metaclass=ABCMeta):
         pass
 
 
-class Platform(object):
+class Platform(SequenceContainer):
     def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0) -> None:
+        super().__init__(sequence)
         self.type = type
         self.protocol = protocol
         self.url = url
         self.options = {} if options is None else options
-        self.sequence = sequence
 
 
-class Environment(object):
+class Environment(SequenceContainer):
     def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None,
                  sequence: Optional[int] = 0) -> None:
+        super().__init__(sequence)
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
-        self.sequence = sequence
 
 
 class ValidityPeriod(object):
@@ -150,9 +162,10 @@ class License(object):
 
 
 class Input(object):
-    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None) -> None:
+    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None, expected_file_name: str=None) -> None:
         self.type = type
         self.url = url
+        self.expected_file_name = expected_file_name
 
 
 class DataSource(object):
@@ -243,11 +256,11 @@ class DataSource(object):
             return data_sources[0].data_format == data_format
 
 
-class GenericPreProcess(object):
+class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
                  sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None) -> None:
+        super().__init__(sequence)
         self.id = str(uuid.uuid4()) if not id else id
-        self.sequence = sequence
         self.data_source_ids = data_source_ids if data_source_ids else []
         self.params = params if params else {}
         self.type = type
@@ -473,7 +486,7 @@ class Coverage(PreProcessContainer):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str = None) -> 'Coverage':
+    def get(cls, coverage_id: str=None) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
             return None
@@ -694,6 +707,7 @@ class MongoDataSourceFetchedSchema(Schema):
 class MongoDataSourceInputSchema(Schema):
     type = InputType(required=False, allow_none=True)
     url = fields.String(required=False, allow_none=True)
+    expected_file_name = fields.String(required=False, allow_none=True)
 
     @post_load
     def make_input(self, data: dict) -> Input:
@@ -925,7 +939,7 @@ class CoverageExport(Historisable):
         self.keep_historical(3, {'coverage_id': self.coverage_id})
 
     @classmethod
-    def get(cls, coverage_id: str) -> Optional['CoverageExport']:
+    def get(cls, coverage_id: str) -> Optional[List['CoverageExport']]:
         if not coverage_id:
             return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1)

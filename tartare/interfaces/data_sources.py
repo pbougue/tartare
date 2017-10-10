@@ -86,7 +86,7 @@ class DataSource(flask_restful.Resource):
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)
         if errors:
-            raise ObjectNotFound("Data source '{}' not found.".format(contributor_id))
+            raise InvalidArguments("Invalid data, {}".format(errors))
 
         if 'id' in request.json and ds[0].id != request.json['id']:
             raise InvalidArguments('The modification of the id is not possible')

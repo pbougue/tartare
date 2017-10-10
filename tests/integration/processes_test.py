@@ -26,8 +26,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from mock import mock
+
 from tartare import app
 from tartare.core.models import PreProcess
+from tartare.processes.contributor import ComputeDirections
 from tartare.processes.coverage import FusioPreProd
 from tartare.processes.processes import PreProcessManager
 from tartare.processes import contributor
@@ -35,6 +38,7 @@ from tartare.processes import coverage
 from tartare.http_exceptions import InvalidArguments
 import pytest
 from tartare.core.context import Context
+from tartare.tasks import launch
 
 
 def test_contributor_preprocess():
@@ -46,15 +50,16 @@ def test_contributor_preprocess():
         "ComputeDirections": contributor.ComputeDirections,
     }
 
-    # Contributor Preprocess
-    for key, value in map_test.items():
-        with app.app_context():
+    with app.app_context():
+        # Contributor Preprocess
+        for key, value in map_test.items():
             assert isinstance(PreProcessManager.get_preprocess(Context('contributor'), PreProcess(type=key)), value)
     # Coverage Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
             PreProcessManager.get_preprocess(Context('coverage'), PreProcess(type=key))
         assert str(excinfo.typename) == "InvalidArguments"
+
 
 def test_coverage_preprocess():
     map_test = {
@@ -91,3 +96,12 @@ def test_preprocess_invalid_instance():
     with pytest.raises(InvalidArguments) as excinfo:
         PreProcessManager.get_preprocess(Context('bob'), PreProcess(type='FusioPreProd'))
     assert str(excinfo.typename) == "InvalidArguments"
+
+@mock.patch('tartare.tasks.run_contributor_preprocess.s')
+def test_launch_in_sequence(mock_run_contributor_preprocess):
+    preprocesses = [PreProcess(id='bob', sequence=1), PreProcess(id='toto', sequence=0), PreProcess(id='tata', sequence=2)]
+    launch(preprocesses, Context())
+    calls = mock_run_contributor_preprocess.call_args_list
+    assert 'toto' == calls[0][0][1].id
+    assert 'bob' == calls[1][0][0].id
+    assert 'tata' == calls[2][0][0].id
