@@ -193,7 +193,7 @@ class TestHistorical():
     def populate_data_fetched_and_save_export(self, contributor):
         context = Context()
         context = self.populate_data_fetched(context, contributor)
-        contributor_export_functions.save_export(contributor, context)
+        contributor_export_functions.save_export(contributor, context, date.today())
 
     def test_data_source_fetched_historical_use_context(self):
         list_ids = []

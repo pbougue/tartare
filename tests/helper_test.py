@@ -27,11 +27,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from io import StringIO
-
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename, get_values_by_key, \
+    date_from_string
 import requests_mock
-
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_values_by_key
+from io import StringIO
+from datetime import date
+import pytest
 
 
 def test_to_doted_notation_flat():
@@ -117,3 +118,13 @@ def test_get_values_by_key_dict_doublon():
     out = []
     get_values_by_key(t, out)
     assert len(out) == 1
+
+
+def test_date_from_string():
+    assert date_from_string('2017-02-02', 'aa') == date(year=2017, month=2, day=2)
+
+
+def test_date_from_string_invalid():
+    with pytest.raises(ValueError) as exec_value:
+        date_from_string('ee', 'current_date')
+    assert str(exec_value.value) == 'The current_date argument value is not valid, you gave: ee'
