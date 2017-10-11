@@ -26,12 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from typing import Callable
+from abc import ABCMeta
 from tartare.core.constants import PREPROCESSES_POSSIBLE
 
 
-def preprocess_registry(filter: str='contributor'):
-    def deco(cls):
+def preprocess_registry(filter: str='contributor') -> Callable:
+    def deco(cls: ABCMeta) -> ABCMeta:
         if filter not in PREPROCESSES_POSSIBLE:
             PREPROCESSES_POSSIBLE[filter] = []
         PREPROCESSES_POSSIBLE[filter].append(cls.__name__)

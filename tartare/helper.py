@@ -42,7 +42,7 @@ import requests
 from gridfs.grid_file import GridOut
 from requests import Response
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, Callable
 
 
 def grid_out_len(self: GridOut) -> int:
@@ -155,8 +155,8 @@ def date_from_string(value: str, name: str) -> date:
         raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))
 
 
-def option_value(values: List[str]) ->Optional[str]:
-    def to_return(value, name):
+def option_value(values: List[str]) ->Callable:
+    def to_return(value: str, name: str) -> str:
         if not value:
             return None
         if value not in values:
