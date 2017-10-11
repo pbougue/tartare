@@ -71,3 +71,6 @@ class TestPreProcesses(TartareFixture):
     def test_preprocesses_owner_invalid(self):
         raw = self.get('/preprocesses?owner=abcd')
         assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'message' in r
+        assert r['error'] == "The owner argument must be in list ['contributor', 'coverage'], you gave abcd"

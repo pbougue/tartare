@@ -153,14 +153,3 @@ def date_from_string(value: str, name: str) -> date:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except:
         raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))
-
-
-def option_value(values: List[str]) ->Callable:
-    def to_return(value: str, name: str) -> str:
-        if not value:
-            return None
-        if value not in values:
-            error = "The {} argument must be in list {}, you gave {}".format(name, values, value)
-            raise ValueError(error)
-        return value
-    return to_return
