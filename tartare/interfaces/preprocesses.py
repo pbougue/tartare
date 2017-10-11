@@ -29,7 +29,7 @@
 
 from flask import Response
 from flask_restful import Resource, reqparse
-from tartare.core.constants import PREPROCESSES_POSSIBLE
+from tartare.processes.utils import PREPROCESSES_POSSIBLE
 from tartare.http_exceptions import InvalidArguments
 
 

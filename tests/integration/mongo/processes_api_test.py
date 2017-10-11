@@ -30,7 +30,7 @@
 # www.navitia.io
 
 from tests.integration.test_mechanism import TartareFixture
-from tartare.core.constants import PREPROCESSES_POSSIBLE
+from tartare.processes.utils import  PREPROCESSES_POSSIBLE
 
 
 class TestPreProcesses(TartareFixture):
