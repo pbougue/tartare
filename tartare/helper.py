@@ -30,24 +30,19 @@
 import csv
 import logging
 import logging.config
-import urllib.request
 import uuid
 import zipfile
 from collections.abc import Mapping
 from hashlib import md5
 from io import IOBase
 from io import TextIOWrapper
-from typing import Union, Any, Optional, List
-from urllib.error import ContentTooShortError, HTTPError, URLError
+from typing import Union, Any, List
 
 import requests
 from gridfs.grid_file import GridOut
 from requests import Response
 from datetime import datetime, date
-
-
-# monkey patching of gridfs file for exposing the size in a "standard" way
-from tartare.core.constants import DATA_FORMAT_GTFS
+from typing import Optional, Callable
 
 
 def grid_out_len(self: GridOut) -> int:

@@ -37,8 +37,10 @@ from tartare.core.readers import CsvReader
 from tartare.core import zip
 from gridfs import GridOut
 from pandas.core.series import Series
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry()
 class HeadsignShortName(AbstractContributorProcess):
     # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
     METRO = 1

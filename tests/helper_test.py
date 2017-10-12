@@ -27,8 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_filename, get_values_by_key, \
-    date_from_string
+from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_values_by_key, date_from_string
 import requests_mock
 from io import StringIO
 from datetime import date

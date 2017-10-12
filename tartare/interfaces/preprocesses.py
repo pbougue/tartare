@@ -27,24 +27,25 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import requests
-
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
-from tartare.core.context import Context
-from tartare.core.models import DataSource
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
-from tartare.processes.utils import preprocess_registry
+from flask import Response
+from flask_restful import Resource, reqparse
+from tartare.processes.utils import PREPROCESSES_POSSIBLE
+from tartare.http_exceptions import InvalidArguments
 
 
-@preprocess_registry('coverage')
-class FusioSendPtExternalSettings(AbstractFusioProcess):
-    def do(self) -> Context:
-        for contributor_context in self.context.contributor_contexts:
-            for data_source_context in contributor_context.data_source_contexts:
-                if data_source_context.gridfs_id and DataSource.is_type_data_format(data_source_context.data_source_id,
-                                                                                    DATA_FORMAT_PT_EXTERNAL_SETTINGS):
-                    resp = self.fusio.call(requests.post, api='api',
-                                           data={'action': 'externalstgupdate'},
-                                           files=self.get_files_from_gridfs(data_source_context.gridfs_id))
-                    self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
-        return self.context
+class PreProcesses(Resource):
+
+    def __init__(self) -> None:
+        self.parsers = reqparse.RequestParser()
+        self.parsers.add_argument('owner', type=str, default='', location='args')
+
+    def get(self) -> Response:
+        args = self.parsers.parse_args()
+        owner = args.get('owner')
+
+        if not owner:
+            return {'preprocesses': PREPROCESSES_POSSIBLE}, 200
+        if owner not in PREPROCESSES_POSSIBLE:
+            raise InvalidArguments("The owner argument must be in list {}, you gave {}".format(
+                list(PREPROCESSES_POSSIBLE.keys()), owner))
+        return {'preprocesses': {owner: PREPROCESSES_POSSIBLE[owner]}}, 200

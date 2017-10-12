@@ -41,8 +41,10 @@ from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry()
 class ComputeExternalSettings(AbstractContributorProcess):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
