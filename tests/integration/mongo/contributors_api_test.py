@@ -74,6 +74,28 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["id"] == "id_test"
         assert r["contributors"][0]["name"] == "name_test"
         assert r["contributors"][0]["data_prefix"] == "AAA"
+        assert r["contributors"][0]["data_type"] == "public_transport"
+
+    def test_add_contributor_with_data_type_geographic(self):
+
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
+                                         '"data_prefix":"AAA", "data_type": "geographic"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+
+        assert len(r["contributors"]) == 1
+        assert isinstance(r["contributors"], list)
+        assert r["contributors"][0]["id"] == "id_test"
+        assert r["contributors"][0]["name"] == "name_test"
+        assert r["contributors"][0]["data_prefix"] == "AAA"
+        assert r["contributors"][0]["data_type"] == "geographic"
+
+    def test_add_contributor_with_invalid_data_type(self):
+
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
+                                         '"data_prefix":"AAA", "data_type": "bob"}')
+        assert raw.status_code == 400
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')
