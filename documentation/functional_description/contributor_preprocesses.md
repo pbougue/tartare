@@ -63,9 +63,9 @@ Since Tartare is currently only mono contributor, an export coverage with two or
 This preprocess is used to modify **stop_name** from *stops.txt*, such as adding accents (Metro > Métro), shortened words as full words (Av. > Avenue), upper case words to snake case, with exceptions.  
 
 ## How does it work?
-The ***Ruspell*** preprocess is associated to the contributor and will be use only on specific data sources found in **data_source_ids**.  
+The ***Ruspell*** preprocess is associated to the contributor and will be used only on specific data sources found in **data_source_ids**.  
 This preprocess will use a **ruspell_config** format data source, containing all rules to apply to the data sources being peprocessed.  
-After that, all **bano_file** format data sources will be used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
+After that, all data sources of **bano_file** format will be used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
 At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name**.  
 
 ## How to use it?
@@ -86,3 +86,4 @@ At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name
 ## Notes
 
 Ruspell is a third party application : https://github.com/CanalTP/ruspell  
+Ruspell technical documentation in Tartare can be found there : https://github.com/CanalTP/tartare/blob/master/documentation/preprocesses.md#ruspell-1
