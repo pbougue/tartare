@@ -39,7 +39,7 @@ class TestCsvReader:
 
     def test_reader_load(self):
         reader = CsvReader()
-        reader.load_csv_data(_get_file_fixture_full_path('prepare_external_settings/expected_fusio_objects_codes.csv'))
+        reader.load_csv_data(_get_file_fixture_full_path('prepare_external_settings/expected_fusio_object_codes.txt'))
         assert reader.count_rows() == 25
 
     def test_reader_count(self):
