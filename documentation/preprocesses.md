@@ -149,10 +149,10 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
    "data_source_ids": ["your-gtfs-id"],
    "id":"compute_ext_settings",
    "params":{
-      "target_data_source_id": "my_external_settings_data_source_id"
+      "target_data_source_id": "my_external_settings_data_source_id",
       "links": {
         "tr_perimeter": "my-data-source-of-perimeter-json-id",
-        "lines_referential": "my-data-source-of-lines-json-id",
+        "lines_referential": "my-data-source-of-lines-json-id"
       }
    },
    "type":"ComputeExternalSettings",
@@ -179,9 +179,10 @@ curl -i -X POST \
  'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-lines-json-id/data_sets'
 ```
 
-You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.
-The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source is configured as "computed".
+You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  
+The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source type is configured as "computed".  
 If the data source is configured as "manual" or "url", the preprocess will be skipped. 
+__my_external_settings_data_source_id__ must have the "pt_external_settings" **data_format**.  
 
 
 #### FusioSendPtExternalSettings (Coverage preprocess)
@@ -197,5 +198,5 @@ If the data source is configured as "manual" or "url", the preprocess will be sk
 }
 ```
 
-This preprocess will use the "computed" data source from contributor export and send the csv files to fusio
-For now the multi-contributor coverage is not supported so no merge will be done
+This preprocess will use the "computed" data source from contributor export and send the txt files to fusio.  
+For now the multi-contributor coverage is not supported so no merge will be done.  
