@@ -61,6 +61,8 @@ class FusioDataUpdate(AbstractFusioProcess):
         previous_coverage_contributor = next(
             (coverage_export_contributor for coverage_export_contributor in coverage_export.contributors if
              coverage_export_contributor.contributor_id == contributor_id), None)
+        if not previous_coverage_contributor:
+            return True
         previous_contributor_data_source_grid_fs_id = next(
             (data_source.gridfs_id for data_source in previous_coverage_contributor.data_sources if
              data_source.data_source_id == data_source_context.data_source_id), None)
