@@ -722,6 +722,14 @@ class DataSourceFetched(Historisable):
         )
         return raw.matched_count == 1
 
+    @classmethod
+    def get(cls, data_set_id: str = None) -> 'DataSourceFetched':
+        raw = mongo.db[cls.mongo_collection].find_one({'_id': data_set_id})
+        if raw is None:
+            return None
+
+        return MongoDataSourceFetchedSchema(strict=True).load(raw).data
+
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
@@ -741,6 +749,21 @@ class DataSourceFetched(Historisable):
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
+
+    @classmethod
+    def get_all(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
+        if not contributor_id:
+            return None
+        where = {
+            'contributor_id': contributor_id,
+            'data_source_id': data_source_id
+        }
+        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1)
+        return MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
     def get_md5(self) -> str:
         if not self.gridfs_id:

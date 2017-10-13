@@ -419,7 +419,7 @@ class TestFusioExportPreprocess(TartareFixture):
         exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
-        resp = self.get('/coverages/{coverage_id}/exports/{export_id}/files/{gridfs_id}'.
+        resp = self.get('/files/{gridfs_id}/actions/download'.
                         format(coverage_id=coverage['id'], export_id=exports[0]['id'],
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         self.assert_sucessful_call(raw)

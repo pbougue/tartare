@@ -91,3 +91,28 @@ class TestDatasetApi(TartareFixture):
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
         assert ds['validity_period'] is not None
+
+    def test_get_datasets_of_unknown_contributor(self):
+        raw = self.get('/contributors/unknown/data_sources/unknown/data_sets')
+        assert raw.status_code == 404
+        r = self.json_to_dict(raw)
+        assert r["error"] == "bad contributor unknown"
+
+    def test_get_dataset_with_unknown_data_source(self, contributor):
+        raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
+        assert raw.status_code == 404
+        r = self.json_to_dict(raw)
+        assert r["error"] == "data source unknown not found for contributor id_test"
+
+    def test_get_datasets(self, data_source):
+        raw = self.post_manual_data_set('id_test', data_source.get('id'), 'gtfs/some_archive.zip')
+        r = self.json_to_dict(raw)
+        assert len(r["data_sets"]) == 1
+        assert 'id' in r['data_sets'][0]
+
+        raw = self.get('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
+        self.assert_sucessful_call(raw)
+        ds = self.json_to_dict(raw)
+
+        assert len(ds["data_sets"]) == 1
+        assert ds['data_sets'][0]['gridfs_id'] == r["data_sets"][0]["gridfs_id"]
