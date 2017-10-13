@@ -484,14 +484,14 @@ class TestComputeExternalSettings(TartareFixture):
             fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
             with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['csv'])
+                    assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['txt'])
                     fusio_settings_zip_file.extractall(tmp_dir_name)
-                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_objects_codes.csv'),
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
                                         _get_file_fixture_full_path(
-                                            'prepare_external_settings/expected_fusio_objects_codes.csv'))
-                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.csv'),
+                                            'prepare_external_settings/expected_fusio_object_codes.txt'))
+                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
                                         _get_file_fixture_full_path(
-                                            'prepare_external_settings/expected_fusio_object_properties.csv'))
+                                            'prepare_external_settings/expected_fusio_object_properties.txt'))
 
 
 class TestHeadsignShortNameProcess(TartareFixture):
