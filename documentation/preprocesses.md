@@ -146,7 +146,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
 #### ComputeExternalSettings (Contributor preprocess)
 ```json
 {
-   "data_source_ids": ["your-gtfs-id"]
+   "data_source_ids": ["your-gtfs-id"],
    "id":"compute_ext_settings",
    "params":{
       "target_data_source_id": "my_external_settings_data_source_id"
