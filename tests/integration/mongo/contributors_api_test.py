@@ -681,7 +681,135 @@ class TestContributors(TartareFixture):
         raw = self.patch('/contributors/id_test', json.dumps(payload))
         assert raw.status_code == 400
         r = self.to_json(raw)
-        assert r[
-                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
-            missing_id=missing_id)
+        assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' " \
+                             "not found in contributor".format(missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
+
+    def test_post_contrib_geographic_with_gtfs_data_format(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_type": 'geographic',
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'gtfs',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 400, print(self.to_json(raw))
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == 'data source format gtfs is incompatible with contributor data_type geographic'
+
+    def test_post_contrib_public_transport_with_osm_data_format(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_type": 'public_transport',
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'osm_file',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 400, print(self.to_json(raw))
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == 'data source format osm_file is incompatible with contributor data_type public_transport'
+
+    def test_patch_contrib_public_transport_with_osm_data_format(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_type": 'public_transport',
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'gtfs',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 201)
+
+        post_data = {
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'osm_file',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.patch('/contributors/id_test', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 400)
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == 'data source format osm_file is incompatible with contributor data_type public_transport'
+
+    def test_patch_contrib_geographic_with_gtfs_data_format(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_type": 'geographic',
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'osm_file',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 201)
+
+        post_data = {
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    'id': '123',
+                    'data_format': 'gtfs',
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.patch('/contributors/id_test', json.dumps(post_data))
+        self.assert_sucessful_call(raw, 400)
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == 'data source format gtfs is incompatible with contributor data_type geographic'

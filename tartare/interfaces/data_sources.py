@@ -28,6 +28,7 @@
 # www.navitia.io
 from typing import Optional, List
 
+from flask_restful import abort, request
 import flask_restful
 from flask import Response
 from flask_restful import abort, request
@@ -38,10 +39,14 @@ from tartare.core import models
 from tartare.decorators import json_data_validate
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
+from marshmallow import ValidationError
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.decorators import json_data_validate, check_data_source_integrity
 
 
 class DataSource(flask_restful.Resource):
     @json_data_validate()
+    @check_data_source_integrity()
     def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
         try:
@@ -69,7 +74,7 @@ class DataSource(flask_restful.Resource):
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
-    def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
+    def delete(self, contributor_id: str, data_source_id:Optional[str]=None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
@@ -80,10 +85,9 @@ class DataSource(flask_restful.Resource):
         return {'data_sources': []}, 204
 
     @json_data_validate()
-    def patch(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
+    @check_data_source_integrity()
+    def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         ds = models.DataSource.get(contributor_id, data_source_id)
-        if len(ds) != 1:
-            abort(404)
 
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)

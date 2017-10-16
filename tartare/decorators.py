@@ -38,6 +38,8 @@ from tartare.core import models
 from tartare.core.models import Coverage, CoverageExport
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 from tartare.processes.processes import PreProcessManager
+from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, EXCEPTED_DATA_SOURCES, DATA_FORMAT_DEFAULT, \
+    DATA_FORMAT_VALUES
 
 
 id_format_text = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -119,6 +121,84 @@ class validate_contributor_prepocesses_data_source_ids(object):
         return wrapper
 
 
+class check_contributor_integrity(object):
+
+    def __init__(self, contributor_id_required=False):
+            self.contributor_id_required = contributor_id_required
+
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            post_data = request.json
+            contributor_id = kwargs.get('contributor_id', None)
+
+            if self.contributor_id_required and not contributor_id:
+                msg = "Contributor '{}' not found.".format(contributor_id)
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
+
+            if contributor_id:
+                contributor = models.Contributor.get(contributor_id)
+                if not contributor:
+                    msg = "Contributor '{}' not found.".format(contributor_id)
+                    logging.getLogger(__name__).error(msg)
+                    raise ObjectNotFound(msg)
+                data_type = contributor.data_type
+            else:
+                data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
+
+            for data_source in post_data.get('data_sources', []):
+                data_format = data_source.get('data_format', DATA_FORMAT_DEFAULT)
+                if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
+                    msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
+                                                                                                       data_type)
+                    logging.getLogger(__name__).error(msg)
+                    raise InvalidArguments(msg)
+            return func(*args, **kwargs)
+        return wrapper
+
+
+class check_data_source_integrity(object):
+
+    def __init__(self, data_source_id_required=False):
+            self.data_source_id_required = data_source_id_required
+
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            post_data = request.json
+            contributor_id = kwargs.get('contributor_id', None)
+            data_source_id = kwargs.get('data_source_id', None)
+            contributor = models.Contributor.get(contributor_id)
+            if not contributor:
+                msg = "Contributor '{}' not found.".format(contributor_id)
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
+            data_type = contributor.data_type
+
+            if self.data_source_id_required:
+                data_source = models.DataSource.get(contributor_id, data_source_id)
+                if data_source != 1:
+                    msg = "data source '{}' not found.".format(data_source_id)
+                    logging.getLogger(__name__).error(msg)
+                    raise ObjectNotFound(msg)
+
+            data_format = post_data.get('data_format', DATA_FORMAT_DEFAULT)
+            if data_format not in DATA_FORMAT_VALUES:
+                msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+
+            if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
+                msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
+                                                                                                   data_type)
+                logging.getLogger(__name__).error(msg)
+                raise InvalidArguments(msg)
+
+            return func(*args, **kwargs)
+        return wrapper
+
+
 class validate_patch_coverages(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
@@ -128,7 +208,7 @@ class validate_patch_coverages(object):
                 for environment_name in post_data.get("environments"):
                     environment = post_data.get("environments").get(environment_name)
                     if environment is not None and "publication_platforms" in environment:
-                        msg = "'publication_platforms' field can't be updated"
+                        msg = "publication_platforms' field can't be updated"
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)

@@ -35,7 +35,7 @@ import tartare
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
     DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, \
-    DATA_SOURCE_STATUS_UNCHANGED
+    DATA_SOURCE_STATUS_UNCHANGED, EXCEPTED_DATA_SOURCES, DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
@@ -373,9 +373,10 @@ class TestDataSources(TartareFixture):
         }
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
                               self.dict_to_json(pacth))
+        assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
-        assert response.status_code == 400, print(response_payload)
-        assert response_payload['error'].startswith("Invalid data,")
+        assert 'error' in response_payload
+        assert response_payload['error'] == 'choice "issues 257" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
     def test_manage_data_source_expected_file_name(self, contributor):
         expected_file_name = 'config.json'
@@ -390,6 +391,7 @@ class TestDataSources(TartareFixture):
         assert data_source['input']['expected_file_name'] == expected_file_name, print(data_source)
 
         new_expected_file_name = 'config_new.json'
+        data_source['input']['expected_file_name'] = new_expected_file_name
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
                               self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
 
