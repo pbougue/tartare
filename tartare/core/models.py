@@ -41,7 +41,7 @@ from marshmallow import Schema, post_load, utils, fields
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
-    INPUT_TYPE_DEFAULT
+    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
 
@@ -64,7 +64,7 @@ class ChoiceField(fields.Field):
         'invalid': 'choice "{current_value}" not in possible values {possible_values}.'
     }
 
-    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
+    def _serialize(self, value: str, attr: str, _: Any ) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
@@ -80,6 +80,11 @@ class ChoiceField(fields.Field):
 class DataFormat(ChoiceField):
     def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_FORMAT_VALUES, **metadata)
+
+
+class DataType(ChoiceField):
+    def __init__(self, **metadata: dict) -> None:
+        super().__init__(DATA_TYPE_VALUES, **metadata)
 
 
 class InputType(ChoiceField):
@@ -393,13 +398,14 @@ class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
-    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
-                 preprocesses: List[PreProcess] = None) -> None:
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
+                 preprocesses: List[PreProcess]=None, data_type: str=DATA_TYPE_DEFAULT) -> None:
         super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
         self.data_sources = [] if data_sources is None else data_sources
+        self.data_type = data_type
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -430,7 +436,7 @@ class Contributor(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
+    def update(cls, contributor_id: str=None, dataset: dict=None) -> Optional['Contributor']:
         tmp_dataset = dataset if dataset else {}
         raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
         if raw.matched_count == 0:
@@ -762,6 +768,7 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
     data_prefix = fields.String(required=True)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
+    data_type = DataType()
 
     @post_load
     def make_contributor(self, data: dict) -> Contributor:
@@ -771,9 +778,9 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
-                 step: str = None, id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
-                 error_message: str = "") -> None:
+    def __init__(self, action_type: str, contributor_id: str=None, coverage_id: str=None, state: str='pending',
+                 step: str=None, id: str=None, started_at: datetime=None, updated_at: Optional[datetime]=None,
+                 error_message: str="") -> None:
         self.id = id if id else str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
@@ -795,7 +802,7 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get_some(cls, contributor_id: str = None, coverage_id: str = None) -> List['Job']:
+    def get_some(cls, contributor_id: str=None, coverage_id: str=None) -> List['Job']:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
@@ -857,9 +864,9 @@ class ContributorExport(Historisable):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource] = None,
-                 id: str = None,
-                 created_at: datetime = None) -> None:
+                 data_sources: List[ContributorExportDataSource]=None,
+                 id: str=None,
+                 created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id

@@ -1460,6 +1460,13 @@ definitions:
       data_prefix:
         type: string
         example: AAA
+      data_type:
+        type: string
+        enum:
+            - public_transport
+            - geographic
+
+
       preprocesses:
         type: array
         items:
@@ -1498,7 +1505,6 @@ definitions:
       params:
         type: object
         example: {config_file: conf_yml, bano_data_ids: [bano_75, bano_91]}
-
 
   coverage_preprocess_list:
     type: object
