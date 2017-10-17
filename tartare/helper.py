@@ -30,23 +30,19 @@
 import csv
 import logging
 import logging.config
-import urllib.request
 import uuid
 import zipfile
 from collections.abc import Mapping
 from hashlib import md5
 from io import IOBase
 from io import TextIOWrapper
-from typing import Union, Any, Optional, List
-from urllib.error import ContentTooShortError, HTTPError, URLError
+from typing import Union, Any, List
 
 import requests
 from gridfs.grid_file import GridOut
 from requests import Response
-
-
-# monkey patching of gridfs file for exposing the size in a "standard" way
-from tartare.core.constants import DATA_FORMAT_GTFS
+from datetime import datetime, date
+from typing import Optional, Callable
 
 
 def grid_out_len(self: GridOut) -> int:
@@ -144,3 +140,16 @@ def get_content_file_from_grid_out_file(zip_file: GridOut, filename: str) -> Lis
             logging.getLogger(__name__).warning('impossible during download of file: {}'.format(str(e)))
             pass
         return []
+
+
+def date_from_string(value: str, name: str) -> date:
+    """
+        Convert string to date
+        :param value: string to convert
+        :param name: attribute name
+        :return: Date format '2014-04-31'
+    """
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except:
+        raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))

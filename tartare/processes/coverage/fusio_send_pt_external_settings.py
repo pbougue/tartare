@@ -33,8 +33,10 @@ from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tartare.core.context import Context
 from tartare.core.models import DataSource
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry('coverage')
 class FusioSendPtExternalSettings(AbstractFusioProcess):
     def do(self) -> Context:
         for contributor_context in self.context.contributor_contexts:

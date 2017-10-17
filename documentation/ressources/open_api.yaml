@@ -41,6 +41,9 @@ tags:
   -
     name: "jobs"
     description: "Display job informations"
+  -
+    name: "preprocesses"
+    description: "Display preprocesses"
 
 paths:
   /:
@@ -1210,7 +1213,36 @@ paths:
           schema:
             $ref: '#/definitions/job_list'
 
+  /preprocesses:
+    get:
+      summary: Display list of preprocesses
+      tags:
+        - preprocesses
+      parameters:
+        - in: query
+          name: owner
+          type: string
+          enum: [coverage, contributor]
+      produces:
+        - application/json
+      responses:
+        200:
+          description: List of preprocesses
+          schema:
+            $ref: '#/definitions/preprocesses_list'
+        400:
+          description: List of preprocesses
+          schema:
+            $ref: '#/definitions/error_400'
+
 definitions:
+  preprocesses_list:
+    type: object
+    properties:
+      preprocesses:
+        type: object
+        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport']}
+
   job_list:
     type: object
     properties:
@@ -1595,6 +1627,7 @@ definitions:
 
   data_source_type:
     type: object
+    required: [name]
     properties:
       id:
         type: string

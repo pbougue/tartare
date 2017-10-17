@@ -29,10 +29,7 @@
 from datetime import date
 
 import pytest
-from freezegun import freeze_time
-
-from tartare.core.context import ContributorContext
-from tartare.core.models import ValidityPeriod, Contributor
+from tartare.core.models import ValidityPeriod
 from tartare.exceptions import InvalidFile, ValidityPeriodException
 from tartare.validity_period_finder import ValidityPeriodFinder
 from tests.utils import _get_file_fixture_full_path
@@ -223,7 +220,6 @@ def test_gtfs_feed_info_with_2_rows():
     assert str(excinfo.value) == 'Impossible to find validity period, invalid file feed_info.txt.'
 
 
-@freeze_time("2017-01-15")
 @pytest.mark.parametrize(
     "validity_periods,expected_message", [
         ([ValidityPeriod(date(2015, 1, 20), date(2015, 7, 14))],
@@ -238,7 +234,7 @@ def test_gtfs_feed_info_with_2_rows():
     ])
 def test_get_validity_period_union_past(validity_periods, expected_message):
     with pytest.raises(ValidityPeriodException) as excinfo:
-        ValidityPeriodFinder.get_validity_period_union(validity_periods)
+        ValidityPeriodFinder.get_validity_period_union(validity_periods, current_date=date(year=2017, month=1, day=15))
     assert str(excinfo.value) == expected_message
 
 
@@ -247,7 +243,7 @@ def test_get_validity_period_union_empty():
         ValidityPeriodFinder.get_validity_period_union([])
     assert str(excinfo.value) == 'empty validity period list given to calculate union'
 
-@freeze_time("2017-01-15")
+
 @pytest.mark.parametrize(
     "validity_period_dates,expected_period", [
         # one contributor
@@ -286,6 +282,7 @@ def test_get_validity_period_union_valid(validity_period_dates, expected_period)
     validity_period_containers = []
     for contrib_begin_date, contrib_end_date in validity_period_dates:
         validity_period_containers.append(ValidityPeriod(contrib_begin_date, contrib_end_date))
-    result_period = ValidityPeriodFinder.get_validity_period_union(validity_period_containers)
+    result_period = ValidityPeriodFinder.get_validity_period_union(validity_period_containers,
+                                                                   current_date=date(year=2017, month=1, day=15))
     assert expected_period.start_date == result_period.start_date
     assert expected_period.end_date == result_period.end_date

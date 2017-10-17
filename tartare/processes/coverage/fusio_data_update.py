@@ -31,13 +31,16 @@ import requests
 
 from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
-from tartare.core.models import Contributor, DataSource
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import Contributor, DataSource, CoverageExport
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry('coverage')
 class FusioDataUpdate(AbstractFusioProcess):
-    def _get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
+    def __get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
         validity_period = data_source_context.validity_period
         return {
             'action': 'dataupdate',
@@ -51,6 +54,22 @@ class FusioDataUpdate(AbstractFusioProcess):
             'content-type': 'multipart/form-data',
         }
 
+    def __is_update_needed(self, contributor_id: str, data_source_context: DataSourceContext) -> bool:
+        coverage_export = CoverageExport.get_last(self.context.coverage.id)
+        if not coverage_export:
+            return True
+        previous_coverage_contributor = next(
+            (coverage_export_contributor for coverage_export_contributor in coverage_export.contributors if
+             coverage_export_contributor.contributor_id == contributor_id), None)
+        if not previous_coverage_contributor:
+            return True
+        previous_contributor_data_source_grid_fs_id = next(
+            (data_source.gridfs_id for data_source in previous_coverage_contributor.data_sources if
+             data_source.data_source_id == data_source_context.data_source_id), None)
+        previous_gtfs = GridFsHandler().get_file_from_gridfs(previous_contributor_data_source_grid_fs_id)
+        current_gtfs = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
+        return previous_gtfs.md5 != current_gtfs.md5
+
     def do(self) -> Context:
         for contributor_context in self.context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
@@ -58,9 +77,9 @@ class FusioDataUpdate(AbstractFusioProcess):
                     continue
                 if not DataSource.is_type_data_format(data_source_context.data_source_id, DATA_FORMAT_GTFS):
                     continue
-
-                resp = self.fusio.call(requests.post, api='api',
-                                       data=self._get_data(contributor_context.contributor, data_source_context),
-                                       files=self.get_files_from_gridfs(data_source_context.gridfs_id))
-                self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+                if self.__is_update_needed(contributor_context.contributor.id, data_source_context):
+                    resp = self.fusio.call(requests.post, api='api',
+                                           data=self.__get_data(contributor_context.contributor, data_source_context),
+                                           files=self.get_files_from_gridfs(data_source_context.gridfs_id))
+                    self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context

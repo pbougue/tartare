@@ -39,6 +39,7 @@ from tartare.core.models import ContributorExport, ContributorExportDataSource, 
 from tartare.exceptions import ParameterException
 from tartare.helper import get_md5_content_file
 from tartare.validity_period_finder import ValidityPeriodFinder
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
     return context
 
 
-def save_export(contributor: Contributor, context: Context) -> Context:
+def save_export(contributor: Contributor, context: Context, current_date: date) -> Context:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -74,7 +75,8 @@ def save_export(contributor: Contributor, context: Context) -> Context:
         grid_fs_id = next((data_source.gridfs_id
                            for data_source in contrib_export_data_sources
                            if data_source.validity_period), None)
-        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods)
+        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
+                                                                                            current_date)
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=GridFsHandler().copy_file(grid_fs_id),
                                    validity_period=contributor_export_validity_period,

@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from functools import partial
 
 from tartare.core.context import Context
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
@@ -37,8 +38,10 @@ from tartare.core.readers import CsvReader
 from tartare.core import zip
 from gridfs import GridOut
 from pandas.core.series import Series
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry()
 class HeadsignShortName(AbstractContributorProcess):
     # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
     METRO = 1
@@ -87,7 +90,9 @@ class HeadsignShortName(AbstractContributorProcess):
 
             with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
                 gtfs_computed_path = zip.edit_file_in_zip_file(grid_out, 'trips.txt', extract_zip_path, new_zip_path,
-                                                               self.do_manage_headsign_short_name, map_route_modes)
+                                                               callback=partial(self.do_manage_headsign_short_name,
+                                                                                map_route_modes=map_route_modes)
+                                                               )
                 data_source_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                     data_source_context.gridfs_id, gtfs_computed_path, computed_file_name=grid_out.filename)
         return self.context

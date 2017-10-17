@@ -26,30 +26,15 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Callable
+from abc import ABCMeta
 
-import logging
-from functools import partial
+PREPROCESSES_POSSIBLE = {}#type: dict
 
-import os
-import shutil
-from typing import Callable, Any, Union
-from zipfile import is_zipfile, ZipFile
-from tartare.exceptions import InvalidFile
-
-logger = logging.getLogger(__name__)
-
-
-def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
-                          new_zip_path: str, callback: Union[partial, Callable[[str], None]],
-                          computed_file_name: str='gtfs-processed') -> str:
-    if not is_zipfile(zip_file):
-        msg = '{} is not a zip file or does not exist.'.format(zip_file)
-        logger.error(msg)
-        raise InvalidFile(msg)
-    with ZipFile(zip_file, 'r') as files_zip:
-        files_zip.extractall(extract_zip_path)
-        file_path = '{}/{}'.format(extract_zip_path, filename)
-        callback(file_path)
-        new_archive_file_name = os.path.join(new_zip_path, computed_file_name)
-
-        return shutil.make_archive(new_archive_file_name, 'zip', extract_zip_path)
+def preprocess_registry(filter: str='contributor') -> Callable:
+    def deco(cls: ABCMeta) -> ABCMeta:
+        if filter not in PREPROCESSES_POSSIBLE:
+            PREPROCESSES_POSSIBLE[filter] = []
+        PREPROCESSES_POSSIBLE[filter].append(cls.__name__)
+        return cls
+    return deco

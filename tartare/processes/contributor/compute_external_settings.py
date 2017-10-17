@@ -41,8 +41,10 @@ from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
+from tartare.processes.utils import preprocess_registry
 
 
+@preprocess_registry()
 class ComputeExternalSettings(AbstractContributorProcess):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
@@ -51,8 +53,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
     fieldnames_codes = ['object_system', 'object_type', 'object_id', 'object_code']
     fieldnames_properties = ['object_type', 'object_id', 'object_property_name', 'object_property_value']
-    objects_codes_file_name = 'fusio_objects_codes.csv'
-    objects_properties_file_name = 'fusio_object_properties.csv'
+    objects_codes_file_name = 'fusio_object_codes.txt'
+    objects_properties_file_name = 'fusio_object_properties.txt'
     siri_stif_object_system = 'SIRI_STIF'
     stop_extensions_object_code_column = 'ZDEr_ID_REF_A'
 

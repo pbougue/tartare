@@ -32,7 +32,7 @@ import logging
 from tartare.processes.abstract_preprocess import AbstractProcess
 from tartare.processes import contributor
 from tartare.processes import coverage
-from typing import Optional, List, Dict
+from typing import List, Dict
 
 from tartare.core.context import Context
 from tartare.core.models import PreProcess

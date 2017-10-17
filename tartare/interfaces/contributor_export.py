@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import flask_restful
+from flask_restful import Resource
 from flask import Response
 
 from tartare.core.context import Context
@@ -37,16 +37,19 @@ from tartare.core.models import Contributor, Job, ContributorExport
 from tartare.http_exceptions import ObjectNotFound
 import logging
 from celery import chain
+from tartare.interfaces.common_argrs import CommonArgs
+from datetime import date
 
 
-class ContributorExportResource(flask_restful.Resource):
+class ContributorExportResource(Resource, CommonArgs):
 
     @staticmethod
-    def _export(contributor: Contributor) -> Job:
+    def _export(contributor: Contributor, current_date: date) -> Job:
         job = Job(contributor_id=contributor.id, action_type="contributor_export")
         job.save()
         try:
-            chain(contributor_export.si(Context(), contributor, job, False), finish_job.si(job.id)).delay()
+            chain(contributor_export.si(Context(), contributor, job, current_date, False),
+                  finish_job.si(job.id)).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
@@ -59,7 +62,7 @@ class ContributorExportResource(flask_restful.Resource):
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 
-        job = self._export(contributor)
+        job = self._export(contributor, self.get_current_date())
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
