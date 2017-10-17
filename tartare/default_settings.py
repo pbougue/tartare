@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 import os
-from datetime import timedelta
+from celery.schedules import crontab
 from kombu import Exchange, Queue
 
 # URL for the brokker, by default it's the local rabbitmq
@@ -28,10 +28,11 @@ CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'pickle'
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
+# Automatic update every Monday, Tuesday, Wednesday, Thursday at 8pm
 CELERYBEAT_SCHEDULE = {
-    'automatic-update-every-6-hours': {
+    'automatic-update': {
         'task': 'tartare.tasks.automatic_update',
-        'schedule': timedelta(hours=6),
+        'schedule': crontab(minute=0, hour=20, day_of_week='1-4'),
         'options': {'expires': 25}
     }
 }
