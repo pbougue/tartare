@@ -28,6 +28,8 @@
 # www.navitia.io
 import json
 import logging
+from functools import partial
+
 import tempfile
 from collections import defaultdict
 from typing import Dict
@@ -131,7 +133,6 @@ class ComputeDirections(AbstractContributorProcess):
         return trip_stop_sequences
 
     def do_compute_directions(self, trips_file_name: str, config: tuple) -> None:
-
         trips_reader = CsvReader()
         trips_reader.load_csv_data(trips_file_name, dtype={'direction_id': str}, keep_default_na=False, sep=',')
 
@@ -145,7 +146,9 @@ class ComputeDirections(AbstractContributorProcess):
         self.file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         with tempfile.TemporaryDirectory() as tmp_dir_name, tempfile.TemporaryDirectory() as new_tmp_dir_name:
             gtfs_computed_path = zip.edit_file_in_zip_file(self.file_to_process, 'trips.txt', tmp_dir_name,
-                                                           new_tmp_dir_name, self.do_compute_directions,
-                                                           ("compute-direction", config))
+                                                           new_tmp_dir_name,
+                                                           callback=partial(self.do_compute_directions,
+                                                                            config=("compute-direction", config))
+                                                           )
 
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, gtfs_computed_path)
