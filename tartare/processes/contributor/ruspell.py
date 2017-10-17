@@ -27,6 +27,10 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+import shutil
+
+from functools import partial
+
 import os
 
 from tartare.core.context import Context
@@ -44,8 +48,9 @@ logger = logging.getLogger(__name__)
 @preprocess_registry()
 class Ruspell(AbstractContributorProcess):
     stops_filename = 'stops.txt'
+    stops_output_filename = 'stops_output.txt'
     rules_filename = 'rules.csv'
-    command_pattern = '{binary_path} -c {config} -i {input} -o {output} -r {rules}'
+    command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
 
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
@@ -70,23 +75,25 @@ class Ruspell(AbstractContributorProcess):
 
         return file_path
 
-    def do_ruspell(self, data_source_path: str, output_path: str, rules_path: str, config_path: str) -> None:
+    def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
         command = self.command_pattern.format(binary_path=self._binary_path,
                                               config=config_path,
-                                              input=data_source_path,
-                                              output=output_path,
-                                              rules=rules_path)
+                                              input=file_path,
+                                              output=stops_output_path)
         subprocess_wrapper = SubProcessWrapper('ruspell')
         subprocess_wrapper.run_cmd(command)
 
+        shutil.copy(stops_output_path, file_path)
+
     def do(self) -> Context:
-        with tempfile.TemporaryDirectory() as extract_dir_name, tempfile.TemporaryDirectory() as ruspell_dir_name:
+        with tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as ruspell_dir_path:
+            stops_output_path = os.path.join(ruspell_dir_path, self.stops_output_filename)
             # Get config
-            config_path = self.__extract_data_source_from_gridfs(self.get_link('config'), ruspell_dir_name)
+            config_path = self.__extract_data_source_from_gridfs(self.get_link('config'), ruspell_dir_path)
 
             # Get Banos
             for data_source_id in self.get_link('bano'):
-                self.__extract_data_source_from_gridfs(data_source_id, ruspell_dir_name)
+                self.__extract_data_source_from_gridfs(data_source_id, ruspell_dir_path)
 
             for data_source_id_to_process in self.data_source_ids:
                 data_source_to_process_context = self.context.get_contributor_data_source_context(
@@ -94,18 +101,14 @@ class Ruspell(AbstractContributorProcess):
                     data_source_id=data_source_id_to_process)
 
                 data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
-
-                output_path = os.path.join(extract_dir_name, self.stops_filename)
-                rules_path = os.path.join(ruspell_dir_name, self.rules_filename)
-
                 gtfs_computed_path = zip.edit_file_in_zip_file(data_source_gridout,
                                                                self.stops_filename,
-                                                               extract_dir_name,
-                                                               ruspell_dir_name,
-                                                               self.do_ruspell,
-                                                               output_path,
-                                                               rules_path,
-                                                               config_path)
+                                                               extract_dir_path,
+                                                               ruspell_dir_path,
+                                                               callback=partial(self.do_ruspell,
+                                                                                stops_output_path=stops_output_path,
+                                                                                config_path=config_path)
+                                                               )
 
                 data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                     old_gridfs_id=data_source_to_process_context.gridfs_id,
