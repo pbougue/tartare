@@ -1465,6 +1465,10 @@ definitions:
         enum:
             - public_transport
             - geographic
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/data_source_type"
 
 
       preprocesses:
