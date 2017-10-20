@@ -200,3 +200,4 @@ __my_external_settings_data_source_id__ must have the "pt_external_settings" **d
 
 This preprocess will use the "computed" data source from contributor export and send the txt files to fusio.  
 For now the multi-contributor coverage is not supported so no merge will be done.  
+The usual Fusio coverage preprocesses (DataUpdate,FusioImport,FusioPreprod,FusioExport) are needed for Fusio to use these txt files generated through ComputeExternalSettings.  
