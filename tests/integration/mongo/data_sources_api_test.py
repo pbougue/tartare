@@ -28,11 +28,18 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import os
+import tempfile
+
 import pytest
 
 import tartare
+from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT
+from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
+from tartare import app, mongo
+from tests.utils import _get_file_fixture_full_path, assert_files_equals
 
 
 class TestDataSources(TartareFixture):
@@ -392,4 +399,36 @@ class TestDataSources(TartareFixture):
         data_source = self.to_json(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
 
+    def test_post_data_source_and_fetch(self, init_http_download_server, contributor):
+        ip = init_http_download_server.ip_addr
+        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        raw = self.post('/contributors/id_test/data_sources',
+                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
 
+        data_source = {
+            "data_format": 'gtfs',
+            "input": {'type': 'url', 'url': url},
+            "name": "gtfs"
+        }
+        response = self.post('/contributors/{}/data_sources?fetch=1'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+
+        json_response = self.to_json(response)
+        assert response.status_code == 201, print(self.to_json(response))
+
+        with app.app_context():
+            raw = mongo.db[models.DataSourceFetched.mongo_collection].find_one({
+                'contributor_id': contributor['id'],
+                'data_source_id': json_response['data_sources'][0]['id']
+            })
+
+            # Test that source file and saved file are the same
+            gridout = GridFsHandler().get_file_from_gridfs(raw['gridfs_id'])
+            expected_path = _get_file_fixture_full_path('gtfs/sample_1.zip')
+
+            with tempfile.TemporaryDirectory() as path:
+                gridout_path = os.path.join(path, gridout.filename)
+                with open(gridout_path, 'wb+') as f:
+                    f.write(gridout.read())
+                    assert_files_equals(gridout_path, expected_path)

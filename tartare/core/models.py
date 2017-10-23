@@ -260,6 +260,9 @@ class DataSource(object):
         else:
             return data_sources[0].data_format == data_format
 
+    def is_type(self, type: str) -> bool:
+        return self.input.type == type
+
 
 class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
