@@ -31,7 +31,8 @@
 import pytest
 
 import tartare
-from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT
+from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
+    DATA_SOURCE_STATUS_NEVER_FETCHED
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -349,6 +350,17 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
 
+    def test_data_source_input_type_default_value(self, contributor):
+        data_source = {
+            "data_format": "gtfs",
+            "name": "ds-name"
+        }
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json(data_source))
+        response_payload = self.to_json(response)
+        assert response.status_code == 201, print(response_payload)
+        assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
+
     def test_patch_with_invalid_data_format(self, contributor):
         data_source = {
             "id": "issues_257",
@@ -384,10 +396,22 @@ class TestDataSources(TartareFixture):
         assert data_source['input']['expected_file_name'] == expected_file_name, print(data_source)
 
         new_expected_file_name = 'config_new.json'
-        data_source['input']['expected_file_name'] = new_expected_file_name
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
-                             self.dict_to_json(data_source))
+                             self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
 
         self.assert_sucessful_call(response)
         data_source = self.to_json(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
+
+
+    def test_data_source_calculated_fields_values(self, contributor):
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json({"name": "ds-name"}))
+        response_payload = self.to_json(response)
+        assert response.status_code == 201, print(response_payload)
+        ds = response_payload['data_sources'][0]
+        assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+        assert ds['fetch_started_at'] == None
+        assert ds['updated_at'] == None
+
+

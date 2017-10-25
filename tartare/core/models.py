@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tuple
 
 import pymongo
 from gridfs import GridOut
@@ -41,7 +41,8 @@ from marshmallow import Schema, post_load, utils, fields
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
-    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES
+    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UNKNOWN, DATA_SOURCE_STATUS_UPDATED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
 
@@ -262,6 +263,27 @@ class DataSource(object):
 
     def is_type(self, type: str) -> bool:
         return self.input.type == type
+
+    @classmethod
+    def get_calculated_attributes(self, contributor_id: str, data_source_id: str) \
+            -> Tuple[str, Optional[datetime], Optional[datetime]]:
+        """
+        :return: a tuple with (status, fetch_started_at, updated_at) attributes:
+            - status: status of the last try on fetching data
+            - fetch_started_at: datetime at which the last try on fetching data started
+            - updated_at: datetime at which the last fetched data set was valid and inserted in database
+        """
+        last_data_set = DataSourceFetched.get_last(contributor_id, data_source_id, None)
+        status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
+        fetch_started_at = last_data_set.fetch_started_at if last_data_set else None
+        if status == DATA_SOURCE_STATUS_UPDATED:
+            updated_at = last_data_set.updated_at
+        elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
+            updated_at = None
+        else:
+            last_data_set_updated = DataSourceFetched.get_last(contributor_id, data_source_id)
+            updated_at = last_data_set_updated.updated_at if last_data_set_updated else None
+        return status, fetch_started_at, updated_at
 
 
 class GenericPreProcess(SequenceContainer):
@@ -649,13 +671,15 @@ class DataSourceFetched(Historisable):
 
     def __init__(self, contributor_id: str, data_source_id: str,
                  validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None) -> None:
+                 fetch_started_at: datetime = None, id: str = None, status: str=DATA_SOURCE_STATUS_FETCHING) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
-        self.created_at = created_at if created_at else datetime.utcnow()
+        self.fetch_started_at = fetch_started_at if fetch_started_at else datetime.utcnow()
         self.validity_period = validity_period
+        self.status = status
+        self.updated_at = None  # type: datetime
 
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
@@ -665,16 +689,31 @@ class DataSourceFetched(Historisable):
                              {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
     @classmethod
-    def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
+    def get_last(cls, contributor_id: str, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
+            -> Optional['DataSourceFetched']:
         if not contributor_id:
             return None
         where = {
             'contributor_id': contributor_id,
             'data_source_id': data_source_id
         }
-        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
+        if status:
+            where['status'] = status
+        raw = mongo.db[cls.mongo_collection].find(where).sort("updated_at", -1).limit(1)
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
+
+    @classmethod
+    def get_before_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
+        if not contributor_id:
+            return None
+        where = {
+            'contributor_id': contributor_id,
+            'data_source_id': data_source_id
+        }
+        raw = mongo.db[cls.mongo_collection].find(where)
+        raw = raw.sort("fetch_started_at", -1).skip(1).limit(1)
+        return MongoDataSourceFetchedSchema(strict=True).load(raw).data
 
     def get_md5(self) -> str:
         if not self.gridfs_id:
@@ -689,6 +728,7 @@ class DataSourceFetched(Historisable):
     def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
         self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
                                                              contributor_id=self.contributor_id)
+        self.updated_at = datetime.utcnow()
 
 
 class MongoDataSourceLicenseSchema(Schema):

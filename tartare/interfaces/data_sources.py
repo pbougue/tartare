@@ -26,12 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Optional
+from typing import Optional, List
 
 from flask_restful import abort, request
 import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError
+from marshmallow import MarshalResult
 from tartare.core import models
 from tartare.interfaces import schema
 from marshmallow import ValidationError
@@ -40,6 +41,12 @@ from tartare.decorators import json_data_validate
 
 
 class DataSource(flask_restful.Resource):
+    def __add_calculated_fields_for_data_sources(self, contributor_id: str, data_sources: List[dict]) -> List[dict]:
+        for data_source in data_sources:
+            data_source['status'], data_source['fetch_started_at'], data_source['updated_at'] = \
+                models.DataSource.get_calculated_attributes(contributor_id, data_source['id'])
+        return data_sources
+
     @json_data_validate()
     def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
@@ -51,8 +58,8 @@ class DataSource(flask_restful.Resource):
 
         try:
             data_source.save(contributor_id)
-
-            return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
+            response, status = self.get(contributor_id, data_source.id)
+            return response, 201
         except PyMongoError:
             raise InternalServerError('Impossible to add data source.')
         except ValueError as e:
@@ -66,9 +73,11 @@ class DataSource(flask_restful.Resource):
         except ValueError as e:
             raise InvalidArguments(str(e))
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
+        result = schema.DataSourceSchema(many=True).dump(ds)
+        result = MarshalResult(data=self.__add_calculated_fields_for_data_sources(contributor_id, result.data), errors=result.errors)
+        return {'data_sources': result.data}, 200
 
-    def delete(self, contributor_id: str, data_source_id:Optional[str]=None) -> Response:
+    def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
