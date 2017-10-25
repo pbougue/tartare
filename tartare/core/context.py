@@ -31,10 +31,12 @@ from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, 
 import logging
 from typing import List, Optional
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.constants import DATA_FORMAT_DEFAULT
 
 
 class DataSourceContext:
-    def __init__(self, data_source_id: str, gridfs_id: Optional[str], validity_period: Optional[ValidityPeriod]=None) -> None:
+    def __init__(self, data_source_id: str, gridfs_id: Optional[str],
+                 validity_period: Optional[ValidityPeriod]=None) -> None:
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
@@ -44,8 +46,8 @@ class DataSourceContext:
 
 
 class ContributorContext(ValidityPeriodContainer):
-    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]] = None,
-                 validity_period: ValidityPeriod = None) -> None:
+    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]]=None,
+                 validity_period: ValidityPeriod=None) -> None:
         super().__init__(validity_period)
         self.contributor = contributor
         self.data_source_contexts = data_source_contexts if data_source_contexts else []
@@ -63,23 +65,47 @@ class Context:
         self.validity_period = validity_period
         self.global_gridfs_id = ''
 
+    def get_data_source_context_by_links(self, links: List[dict],
+                                         data_format: Optional[List[str]]=None) -> Optional[DataSourceContext]:
+        for link in links:
+            contributor_id = link.get('contributor_id')
+            data_source_id = link.get('data_source_id')
+            data_source_context = self.get_contributor_data_source_context(contributor_id, data_source_id, data_format)
+            if data_source_context:
+                return data_source_context
+        return None
+
     def contributor_has_datasources(self, contributor_id: str) -> bool:
         return len(self.get_contributor_data_source_contexts(contributor_id=contributor_id)) > 0
 
     def add_contributor_context(self, contributor: Contributor) -> None:
-        self.contributor_contexts.append(ContributorContext(contributor))
+        contributor_context = next((contributor_context
+                                    for contributor_context in self.contributor_contexts
+                                    if contributor_context.contributor.id == contributor.id), None)
+        if not contributor_context:
+            self.contributor_contexts.append(ContributorContext(contributor))
 
     def get_contributor_data_sources(self, contributor_id: str) -> Optional[List[DataSource]]:
         return next((contributor_context.contributor.data_sources for contributor_context in self.contributor_contexts
                      if contributor_context.contributor.id == contributor_id), None)
 
-    def get_contributor_data_source_contexts(self, contributor_id: str) -> Optional[List[DataSourceContext]]:
-        return next((contributor_context.data_source_contexts
-                     for contributor_context in self.contributor_contexts
-                     if contributor_context.contributor.id == contributor_id), None)
+    def get_contributor_data_source_contexts(self, contributor_id: str,
+                                             data_format: Optional[List[str]]=None) -> Optional[List[DataSourceContext]]:
+        result = []   # type: List[DataSourceContext]
+        for contributor_context in self.contributor_contexts:
+            if contributor_context.contributor.id == contributor_id:
+                if not data_format:
+                    result += contributor_context.data_source_contexts
+                    continue
+                for data_source_context in contributor_context.data_source_contexts:
+                    data_source = DataSource.get(contributor_id, data_source_context.data_source_id)
+                    if data_source and data_source[0].data_format in data_format:
+                        result.append(data_source_context)
+        return result if result else None
 
-    def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str) -> Optional[DataSourceContext]:
-        data_source_contexts = self.get_contributor_data_source_contexts(contributor_id)
+    def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
+                                            data_format: Optional[List[str]]=None) -> Optional[DataSourceContext]:
+        data_source_contexts = self.get_contributor_data_source_contexts(contributor_id, data_format)
         if not data_source_contexts:
             return None
         return next((data_source_context

@@ -36,9 +36,10 @@ from typing import List
 
 from gridfs import GridOut
 
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
+    DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context
-from tartare.core.models import PreProcess
+from tartare.core.models import PreProcess, DataSource
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
@@ -117,8 +118,9 @@ class ComputeExternalSettings(AbstractContributorProcess):
                                        'STIF:StopPoint:Q:{}:'.format(row[self.stop_extensions_object_code_column]))
 
     def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter) -> None:
-        lines_referential_data_source_context = self.context.get_contributor_data_source_context(
-            self.contributor_id, self.params['links'].get('lines_referential'))
+        links = self.params.get('links')
+        lines_referential_data_source_context = self.context.get_data_source_context_by_links(links,
+                                                                                              [DATA_FORMAT_LINES_REFERENTIAL])
         reader = JsonReader()
         reader.load_json_data_from_io(
             self.gfs.get_file_from_gridfs(lines_referential_data_source_context.gridfs_id),
@@ -136,8 +138,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 '{nb} lines in Codifligne are not in the GTFS'.format(nb=nb_lines_not_in_gtfs))
 
     def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter) -> None:
-        tr_perimeter_data_source_context = self.context.get_contributor_data_source_context(
-            self.contributor_id, self.params['links'].get('tr_perimeter'))
+        links = self.params.get('links')
+        tr_perimeter_data_source_context = self.context.get_data_source_context_by_links(links, [DATA_FORMAT_TR_PERIMETER])
         reader = JsonReader()
         reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])
@@ -188,16 +190,41 @@ class ComputeExternalSettings(AbstractContributorProcess):
     def __check_config(self) -> None:
         if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
             raise ParameterException('target_data_source_id missing in preprocess config')
-        links_to_check = ['tr_perimeter', 'lines_referential']
+        data_format_exists = set()
+        links = self.params.get("links")
+        if isinstance(links, list) and not links:
+            raise ParameterException('empty links in preprocess')
+        if not links:
+            raise ParameterException('links missing in preprocess')
+        data_format_possible = [DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL]
+        #for data_format in data_format_possible:
+        for link in links:
+            contributor_id = link.get('contributor_id')
+            if not contributor_id:
+                msg = "Invalid argument, required argument contributor_id"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
 
-        for param in links_to_check:
-            data_source_id = self.get_link(param)
-            data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
-                                                                                          data_source_id)
+            data_source_id = link.get('data_source_id')
+            if not data_source_id:
+                msg = "Invalid argument, required argument data_source_id"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
+
+            data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
+                                                                                          data_source_id,
+                                                                                          data_format_possible)
             if not data_source_config_context:
                 raise ParameterException(
-                    'link {data_source_id} is not a data_source id present in contributor'.format(
-                        data_source_id=data_source_id))
+                    'link {data_source} is not a data_source id present in contributor {contributor}'.format(
+                        data_source=data_source_id, contributor=contributor_id))
+            data_source = DataSource.get(contributor_id, data_source_id)
+            data_format_exists.add(data_source[0].data_format)
+        diff = set([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL]) - data_format_exists
+
+        if diff:
+            raise ParameterException('data type {} missing in preprocess links'.format(diff))
+
         if not self.context.get_contributor_data_source_context(self.contributor_id,
                                                                 self.params['target_data_source_id']):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(

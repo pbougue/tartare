@@ -69,13 +69,22 @@ class TestFullExport(AbstractRequestClient):
                                                 ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
+        # create contributor with data_type : geographic
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_geographic.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        raw = self.post('contributors/geo/actions/export?current_date=2017-10-02')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
+
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_ruspell.json')
         raw = self.post('contributors', json_file)
         self.assert_sucessful_create(raw)
 
         # launch ruspell preprocess
-        raw = self.post('contributors/AMI/actions/export')
+        raw = self.post('contributors/AMI/actions/export?current_date=2017-10-02')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
 

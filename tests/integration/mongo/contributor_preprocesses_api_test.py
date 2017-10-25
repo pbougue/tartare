@@ -43,8 +43,11 @@ class TestContributorPreProcesses(TartareFixture):
             "sequence": 1,
             "data_source_ids": ["datasource_stif"],
             "params": {
-                "bano_data_ids": ["bano_75", "bano_91"],
-                "config_file": "conf_yml"
+                "links": [
+                    {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                    {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                    {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                ]
             }
         }
 
@@ -102,8 +105,11 @@ class TestContributorPreProcesses(TartareFixture):
                 "sequence": 1,
                 "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
+                    "links": [
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                        {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                    ]
                 }
             }]
         }
@@ -135,8 +141,11 @@ class TestContributorPreProcesses(TartareFixture):
                 "sequence": 1,
                 "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
+                    "links": [
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                        {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                    ]
                 }
             }]
         }
@@ -151,7 +160,11 @@ class TestContributorPreProcesses(TartareFixture):
             "type": "ComputeDirections",
             "sequence": 1,
             "params": {
-                "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
+            "params": {
+                "links": [
+                    {"contributor_id": "id_test", "data_source_id": "compute-direction-config"}
+                ]
+            }
             }
         }
 
@@ -182,8 +195,11 @@ class TestContributorPreProcesses(TartareFixture):
                 "sequence": 1,
                 "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
+                    "links": [
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                        {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                    ]
                 }
             }]
         }
@@ -211,8 +227,11 @@ class TestContributorPreProcesses(TartareFixture):
             "type": "bob",
             "sequence": 1,
             "params": {
-                "tc_data": {"key": "data_sources.id", "value": "datasource_stif"},
-                "bano_data": {"key": "data_sources.id", "value": "bano_75"}
+                "links": [
+                    {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                    {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                    {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                ]
             }
         }
         raw = self.post('/contributors/id_test/preprocesses', json.dumps(post_ps))
@@ -242,8 +261,11 @@ class TestContributorPreProcesses(TartareFixture):
                 "sequence": 1,
                 "data_source_ids": ["datasource_stif"],
                 "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
+                    "links": [
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                        {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                        {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                    ]
                 }
             }]
         }
@@ -286,8 +308,11 @@ class TestContributorPreProcesses(TartareFixture):
                     "sequence": 1,
                     "data_source_ids": ["datasource_stif"],
                     "params": {
-                        "bano_data_ids": ["bano_75", "bano_91"],
-                        "config_file": "conf_yml"
+                        "links": [
+                            {"contributor_id": "geographic_id", "data_source_id": "bano_75"},
+                            {"contributor_id": "geographic_id", "data_source_id": "bano_91"},
+                            {"contributor_id": "id_test", "data_source_id": "conf_yml"},
+                        ]
                     }
                 },
                 {

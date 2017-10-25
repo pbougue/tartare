@@ -152,7 +152,7 @@ class DownloadHttpServerDocker(AbstractDocker):
     @property
     def volumes_bindings(self):
         return {
-            os.path.join(self.fixtures_directory, 'gtfs'): {
+            self.fixtures_directory: {
                 'bind': self.working_dir,
                 'mode': 'rw',
             },
@@ -185,7 +185,7 @@ class DownloadFtpServerDocker(AbstractDocker):
     @property
     def volumes_bindings(self):
         return {
-            os.path.join(self.fixtures_directory, 'gtfs'): {
+            self.fixtures_directory: {
                 'bind': self.working_dir,
                 'mode': 'rw',
             },

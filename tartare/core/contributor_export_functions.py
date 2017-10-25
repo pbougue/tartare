@@ -40,6 +40,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 from tartare.validity_period_finder import ValidityPeriodFinder
+from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,9 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
         grid_fs_id = next((data_source.gridfs_id
                            for data_source in contrib_export_data_sources
                            if data_source.validity_period), None)
-        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
+
+        if grid_fs_id:
+            contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
                                                                                             current_date)
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=GridFsHandler().copy_file(grid_fs_id),
@@ -153,4 +156,16 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                                                         GridFsHandler().copy_file(data_set.gridfs_id))
         else:
             context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
+    # geographic data added
+    if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
+        for p in contributor.preprocesses:
+            for l in p.params.get('links', []):
+                contributor_id = l.get('contributor_id')
+                data_source_id = l.get('data_source_id')
+                if contributor_id and data_source_id and contributor_id != contributor.id:
+                    tmp_contributor = Contributor.get(contributor_id)
+                    context.add_contributor_context(tmp_contributor)
+                    data_set = DataSourceFetched.get_last(contributor_id, data_source_id)
+                    context.add_contributor_data_source_context(contributor_id, data_source_id, None,
+                                                                GridFsHandler().copy_file(data_set.gridfs_id))
     return context

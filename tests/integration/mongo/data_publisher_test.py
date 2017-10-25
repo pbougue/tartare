@@ -212,8 +212,8 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         filename = 'some_archive.zip'
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self._create_contributor(contributor_id, url)
         publication_platform = {
             "sequence": 0,
             "type": "ods",
@@ -254,8 +254,8 @@ class TestDataPublisher(TartareFixture):
         # Create a directory in the ftp
         session.mkd(directory)
 
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self._create_contributor(contributor_id, url)
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "sequence": 0,
@@ -290,8 +290,8 @@ class TestDataPublisher(TartareFixture):
     def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, fixture_dir,
                                            license_url, license_name, sample_data, coverage_id):
         contributor_id = 'whatever'
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename=sample_data))
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
+        self._create_contributor(contributor_id, url)
         publication_platform = {
             "sequence": 0,
             "type": "ods",
@@ -362,8 +362,8 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         filename = 'some_archive.zip'
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename=filename))
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self._create_contributor(contributor_id, url)
         publication_platform = {
             "sequence": 0,
             "type": "stop_area",
@@ -396,8 +396,9 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'contrib-seq'
         publication_envs = ['integration', 'production', 'preproduction']
         url = "http://whatever.{env}/v0/jobs/il"
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+
+        self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
+                                                                 filename='sample_1.zip'))
         coverage = {
             "contributors": [
                 contributor_id
@@ -444,8 +445,9 @@ class TestDataPublisher(TartareFixture):
         # we will create 5 platform for prod env with different sequences
         sequences = [4, 0, 3, 2, 1]
         url = "http://whatever.sequence.{seq}/v0/jobs/il"
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+
+        self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
+                                                                 filename='sample_1.zip'))
 
         publication_platforms = []
         for idx in sequences:
@@ -486,8 +488,8 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'contrib-pub-failed'
         publication_envs = ['integration', 'preproduction']
         url = "http://whatever.fr/pub"
-        self._create_contributor(contributor_id, 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename='sample_1.zip'))
+        self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
+                                                                 filename='sample_1.zip'))
         coverage = {
             "contributors": [
                 contributor_id

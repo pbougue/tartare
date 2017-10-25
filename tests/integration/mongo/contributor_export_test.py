@@ -107,11 +107,12 @@ class TestContributorExport(TartareFixture):
                                                    contributor, method, filename, state, step,
                                                    error_message):
         ip = init_http_download_server.ip_addr if method == 'http' else init_ftp_download_server.ip_addr
-        url = "{method}://{ip}/{filename}".format(method=method, ip=ip, filename=filename)
+        url = self.format_url(method=method, ip=ip, filename=filename)
         if error_message and '%url%' in error_message:
             error_message = error_message.replace('%url%', url)
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+                        params='{"name": "bobette", "data_format": "gtfs", '
+                               '"input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
@@ -127,13 +128,16 @@ class TestContributorExport(TartareFixture):
             assert job['error_message'] == error_message
 
     def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
-        ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename='some_archive.zip')
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
+
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", '
+                               '"input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
         raw = self.post('/contributors/id_test/preprocesses',
-                        params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],"params":{"data":{"agency_id":"112","agency_name":"stif","agency_url":"http://stif.com"}}}')
+                        params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],'
+                               '"params":{"data":{"agency_id":"112","agency_name":"stif",'
+                               '"agency_url":"http://stif.com"}}}')
         assert raw.status_code == 201
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
@@ -146,8 +150,7 @@ class TestContributorExport(TartareFixture):
         assert job['state'] == 'done', print(job)
 
     def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
-        ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
@@ -159,8 +162,7 @@ class TestContributorExport(TartareFixture):
             assert grid_fs_list.count() == 3, print(grid_fs_list)
 
     def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
-        ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
@@ -173,3 +175,45 @@ class TestContributorExport(TartareFixture):
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 5, print(grid_fs_list)
+
+    def test_contributor_export_geographic_bano(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
+        raw = self.post('/contributors', '{"id": "bano", "name":"geographic", '
+                                         '"data_prefix":"BBB", "data_type": "geographic"}')
+        assert raw.status_code == 201
+        raw = self.post('/contributors/bano/data_sources',
+                        params='{"name": "bobette", "data_format": "bano_file", '
+                               '"input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format('bano', "2015-08-10"), {})
+        assert raw.status_code == 201
+        job = self.to_json(raw).get('job')
+        raw_job = self.get(
+            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id='bano', job_id=job['id']))
+        job = self.to_json(raw_job)['jobs'][0]
+        assert job['state'] == 'done', print(job)
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 2, print(grid_fs_list)
+
+    def test_contributor_export_geographic_osm(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='empty_pbf.osm.pbf', path='geo_data')
+        raw = self.post('/contributors', '{"id": "osm", "name":"geographic", '
+                                         '"data_prefix":"BBB", "data_type": "geographic"}')
+        assert raw.status_code == 201
+        raw = self.post('/contributors/osm/data_sources',
+                        params='{"name": "bobette", "data_format": "osm_file", '
+                               '"input": {"type": "url", "url": "' + url + '"}}')
+        assert raw.status_code == 201
+
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format('osm', "2015-08-10"), {})
+        assert raw.status_code == 201
+        job = self.to_json(raw).get('job')
+        raw_job = self.get(
+            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id='osm', job_id=job['id']))
+        job = self.to_json(raw_job)['jobs'][0]
+        assert job['state'] == 'done', print(job)
+        with app.app_context():
+            grid_fs_list = GridFsHandler().gridfs.find()
+            assert grid_fs_list.count() == 2, print(grid_fs_list)

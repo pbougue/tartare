@@ -83,9 +83,13 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # Then  I can see that Fusio has been called 2 time(s) in total
     def test_data_update_called_if_data_source_updated(self, fusio_call, wait_for_action_terminated,
                                                        init_http_download_server):
-        url = "http://{ip}/{filename}".format(ip=init_http_download_server.ip_addr,
-                                              filename='historisation/gtfs-{number}.zip')
-        self.__init_contributor("id_test", "my_gtfs",  url.format(number=1))
+        filename = 'gtfs-{number}.zip'
+
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=1),
+                              path='gtfs/historisation')
+
+        self.__init_contributor("id_test", "my_gtfs",  url)
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -97,8 +101,12 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
         self.assert_sucessful_call(raw, 201)
 
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=2),
+                              path='gtfs/historisation')
+
         raw = self.patch('/contributors/id_test/data_sources/my_gtfs',
-                         json.dumps({"input": {"url": url.format(number=2)}}))
+                         json.dumps({"input": {"url": url}}))
         self.assert_sucessful_call(raw)
 
         raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
@@ -115,9 +123,11 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # Then  I can see that Fusio has been called 1 time(s) in total
     def test_data_update_called_if_data_source_not_updated(self, fusio_call, wait_for_action_terminated,
                                                            init_http_download_server, contributor):
-        url = "http://{ip}/{filename}".format(ip=init_http_download_server.ip_addr,
-                                              filename='historisation/gtfs-{number}.zip')
-        self.__init_contributor("id_test", "my_gtfs",  url.format(number=1))
+        filename = 'gtfs-{number}.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=1),
+                              path='gtfs/historisation')
+        self.__init_contributor("id_test", "my_gtfs",  url)
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -139,10 +149,12 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.call')
     def test_data_update_called_if_data_source_not_updated(self, fusio_call, wait_for_action_terminated,
                                                            init_http_download_server):
-        url = "http://{ip}/{filename}".format(ip=init_http_download_server.ip_addr,
-                                              filename='historisation/gtfs-{number}.zip')
-        self.__init_contributor("contrib_a", "gtfs_a",  url.format(number=1), 'AAA')
-        self.__init_contributor("contrib_b", "gtfs_b",  url.format(number=1), 'BBB')
+        filename = 'gtfs-{number}.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=1),
+                              path='gtfs/historisation')
+        self.__init_contributor("contrib_a", "gtfs_a",  url, 'AAA')
+        self.__init_contributor("contrib_b", "gtfs_b",  url, 'BBB')
         self.__init_coverage("jdr", ["contrib_a", "contrib_b"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -155,8 +167,12 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         assert fusio_call.call_count == 1
 
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=2),
+                              path='gtfs/historisation')
+
         raw = self.patch('/contributors/contrib_a/data_sources/gtfs_a',
-                         json.dumps({"input": {"url": url.format(number=2)}}))
+                         json.dumps({"input": {"url": url}}))
         self.assert_sucessful_call(raw)
 
         raw = self.post('/contributors/contrib_b/actions/export?current_date={}'.format("2017-09-10"))

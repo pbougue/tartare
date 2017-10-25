@@ -68,8 +68,7 @@ class TestGetFiles(TartareFixture):
         assert json_resp.get('error') == 'Coverage not found.'
 
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
-        ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename=file_used)
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)
 
         coverage = {
             "contributors": [contributor['id']],
@@ -174,4 +173,3 @@ class TestGetFiles(TartareFixture):
         # current date invalid
         raw = self.post('/contributors/{}/actions/export?current_date=abcd'.format(contributor['id']), {})
         assert raw.status_code == 400
-

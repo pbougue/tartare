@@ -61,6 +61,7 @@ class TestHistorical(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_config))
         self.assert_sucessful_call(raw, 201)
+
     def __init_coverage_config(self):
         coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}
         raw = self.post('/coverages', json.dumps(coverage))
@@ -71,11 +72,9 @@ class TestHistorical(TartareFixture):
     def test_historisation(self, contributor, init_http_download_server, exports_number):
         self.__init_contributor_config()
         self.__init_coverage_config()
-
-        url_gtfs = 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
-        url_config = 'http://{ip_http_download}/{filename}'.format(
-            ip_http_download=init_http_download_server.ip_addr, filename='historisation/config-{number}.json')
+        url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
+        url_config = self.format_url(ip=init_http_download_server.ip_addr,
+                                     filename='historisation/config-{number}.json')
 
         for i in range(1, exports_number + 1):
             raw = self.patch('/contributors/id_test/data_sources/data_source_gtfs', json.dumps(

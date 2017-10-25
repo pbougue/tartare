@@ -49,6 +49,19 @@ id_gridfs_text = '^[0-9a-f]{24}$'
 id_gridfs = re.compile(id_gridfs_text)
 
 
+def check_excepted_data_format(data_format: str, data_type: str) -> None:
+        if data_format not in DATA_FORMAT_VALUES:
+            msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
+
+        if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
+            msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
+                                                                                               data_type)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
+
+
 class publish_params_validate(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
@@ -123,7 +136,7 @@ class validate_contributor_prepocesses_data_source_ids(object):
 
 class check_contributor_integrity(object):
 
-    def __init__(self, contributor_id_required=False):
+    def __init__(self, contributor_id_required: bool=False) -> None:
             self.contributor_id_required = contributor_id_required
 
     def __call__(self, func: Callable) -> Any:
@@ -148,19 +161,15 @@ class check_contributor_integrity(object):
                 data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
 
             for data_source in post_data.get('data_sources', []):
-                data_format = data_source.get('data_format', DATA_FORMAT_DEFAULT)
-                if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
-                    msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
-                                                                                                       data_type)
-                    logging.getLogger(__name__).error(msg)
-                    raise InvalidArguments(msg)
+                check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
             return func(*args, **kwargs)
+
         return wrapper
 
 
 class check_data_source_integrity(object):
 
-    def __init__(self, data_source_id_required=False):
+    def __init__(self, data_source_id_required: bool=False) -> None:
             self.data_source_id_required = data_source_id_required
 
     def __call__(self, func: Callable) -> Any:
@@ -182,18 +191,7 @@ class check_data_source_integrity(object):
                     msg = "data source '{}' not found.".format(data_source_id)
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
-
-            data_format = post_data.get('data_format', DATA_FORMAT_DEFAULT)
-            if data_format not in DATA_FORMAT_VALUES:
-                msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
-                logging.getLogger(__name__).error(msg)
-                raise InvalidArguments(msg)
-
-            if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
-                msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
-                                                                                                   data_type)
-                logging.getLogger(__name__).error(msg)
-                raise InvalidArguments(msg)
+            check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
 
             return func(*args, **kwargs)
         return wrapper
