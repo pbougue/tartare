@@ -852,36 +852,6 @@ paths:
       required: true
       type: "string"
 
-  /contributors/{contributor_id}/data_sets:
-    get:
-      summary: Display contributor data sets
-      tags:
-        - contributors
-      produces:
-        - application/json
-      parameters:
-        - name: "contributor_id"
-          in: "path"
-          required: true
-          type: "string"
-        - in: query
-          name: history
-          type: integer
-          description: Data set history (Ex history=1 means the last data set of each data source)
-      responses:
-        200:
-          description: Requested contributor data sets
-          schema:
-            $ref: '#/definitions/data_sets'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
   /contributors/{contributor_id}/preprocesses:
     get:
       summary: Display contributor preprocesses
@@ -1693,6 +1663,21 @@ definitions:
           pt_external_settings
         ]
         default: gtfs
+      fetch_started_at:
+        type: "string"
+        description: "Date when the data source fetch is starting"
+        example: "2017-08-08T13:43:53.601089+00:00"
+        format: date-time
+      updated_at:
+        type: "string"
+        description: "UTC Date when the data source is updated"
+        example: "2017-08-08T13:45:00.601089+00:00"
+        format: date-time
+      status:
+        type: "string"
+        description: "UTC Data source fetching status"
+        enum: [never_fetched, fetching, failed, unchanged, updated]
+        example: "done"
       input:
         $ref: "#/definitions/input"
       license:
@@ -1794,19 +1779,6 @@ definitions:
               type: "string"
               description: "Contributor id"
               example: "fr-idf"
-            checked_at:
-              type: "string"
-              description: "Date when the data source is checked"
-              example: "2017-08-08T13:43:53.601089+00:00"
-            fetched_at:
-              type: "string"
-              description: "Date when the data source is fetched"
-              example: "2017-08-08T13:45:00.601089+00:00"
-            status:
-              type: "string"
-              description: "Data source fetching status"
-              enum: [running, failed, skipped, done]
-              example: "done"
     description: "Data source "
   validity_period:
     type: "object"
