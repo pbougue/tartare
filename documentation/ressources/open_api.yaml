@@ -725,10 +725,6 @@ paths:
           required: true
           schema:
             $ref: "#/definitions/data_source_type"
-        - in: query
-          name: fetch
-          type: int|string
-          descripton: When fetch query is parameter present, data source is downloaded and saved to database. Could be any value.
       produces:
         - application/json
       consumes:

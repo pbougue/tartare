@@ -28,12 +28,11 @@
 # www.navitia.io
 from typing import Optional
 
-from flask_restful import abort, request, reqparse
+from flask_restful import abort, request
 import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
-from tartare.core.contributor_export_functions import fetch_and_save_dataset
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
@@ -41,9 +40,6 @@ from tartare.decorators import json_data_validate
 
 
 class DataSource(flask_restful.Resource):
-    reg_parsers = reqparse.RequestParser()
-    reg_parsers.add_argument('fetch', type=bool, default=False, location='args')
-
     @json_data_validate()
     def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
@@ -53,13 +49,8 @@ class DataSource(flask_restful.Resource):
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
-        args = self.reg_parsers.parse_args()
-        fetch = args.get('fetch')
-
         try:
             data_source.save(contributor_id)
-            if fetch:
-                fetch_and_save_dataset(contributor_id, data_source)
 
             return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
         except PyMongoError:
