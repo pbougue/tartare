@@ -1538,7 +1538,13 @@ definitions:
         example: 1
       params:
         type: object
-        example: {config_file: conf_yml, bano_data_ids: [bano_75, bano_91]}
+        properties:
+            links:
+              type: array
+              items:
+                type: string
+                example: {"contributor_id": "stif", "data_source_id": "datasource_stif_id"}
+
 
   coverage_preprocess_list:
     type: object

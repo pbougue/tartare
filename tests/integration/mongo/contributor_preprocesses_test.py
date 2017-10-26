@@ -312,25 +312,27 @@ class TestComputeDirectionsProcess(TartareFixture):
             return self.__do_export()
 
     @pytest.mark.parametrize(
-        "params", [
-            ({}),
-            ({"config": {}}),
-            ({"config": {"something": "bob"}}),
+        "params, expected_error_message", [
+            ({}, "links missing in preprocess"),
+            ({"links": []}, "empty links in preprocess"),
+            ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
+             "link bob is not a data_source id present in contributor something")
         ])
-    def test_compute_directions_invalid_params(self, params, init_http_download_server_global_fixtures):
+    def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server_global_fixtures):
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
-        assert job['error_message'] == 'data_source_id missing in preprocess config', print(job)
+        assert job['error_message'] == expected_error_message, print(job)
 
     def test_compute_directions_missing_ds_config(self, init_http_download_server_global_fixtures):
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
-                                                          {"config": {"data_source_id": "ds-config"}},
+                                                          {"links": [{"contributor_id": "id_test",
+                                                                      "data_source_id": "ds-config"}]},
                                                           add_data_source_config=False)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == \
-               'data_source_id "ds-config" in preprocess config does not belong to contributor', print(job)
+               'link ds-config is not a data_source id present in contributor id_test', print(job)
 
     #
     # Test that:
@@ -351,7 +353,8 @@ class TestComputeDirectionsProcess(TartareFixture):
     def test_compute_directions(self, init_http_download_server_global_fixtures, data_set_filename,
                                 expected_trips_file_name):
         job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
-                                                          {"config": {"data_source_id": "ds-config"}},
+                                                          {"links": [{"contributor_id": "id_test",
+                                                                      "data_source_id": "ds-config"}]},
                                                           data_set_filename=data_set_filename)
 
         assert job['state'] == 'done', print(job)

@@ -187,51 +187,17 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
             return self.__save_csv_files_as_data_set(tmp_csv_workspace)
 
-    def __check_config(self) -> None:
+    def __check_target_data_source(self) -> None:
         if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
             raise ParameterException('target_data_source_id missing in preprocess config')
-        data_format_exists = set()
-        links = self.params.get("links")
-        if isinstance(links, list) and not links:
-            raise ParameterException('empty links in preprocess')
-        if not links:
-            raise ParameterException('links missing in preprocess')
-        data_format_possible = [DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL]
-        #for data_format in data_format_possible:
-        for link in links:
-            contributor_id = link.get('contributor_id')
-            if not contributor_id:
-                msg = "Invalid argument, required argument contributor_id"
-                logging.getLogger(__name__).error(msg)
-                raise ParameterException(msg)
-
-            data_source_id = link.get('data_source_id')
-            if not data_source_id:
-                msg = "Invalid argument, required argument data_source_id"
-                logging.getLogger(__name__).error(msg)
-                raise ParameterException(msg)
-
-            data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
-                                                                                          data_source_id,
-                                                                                          data_format_possible)
-            if not data_source_config_context:
-                raise ParameterException(
-                    'link {data_source} is not a data_source id present in contributor {contributor}'.format(
-                        data_source=data_source_id, contributor=contributor_id))
-            data_source = DataSource.get(contributor_id, data_source_id)
-            data_format_exists.add(data_source[0].data_format)
-        diff = set([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL]) - data_format_exists
-
-        if diff:
-            raise ParameterException('data type {} missing in preprocess links'.format(diff))
-
         if not self.context.get_contributor_data_source_context(self.contributor_id,
                                                                 self.params['target_data_source_id']):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
                 self.params['target_data_source_id']))
 
     def do(self) -> Context:
-        self.__check_config()
+        self.__check_target_data_source()
+        self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,

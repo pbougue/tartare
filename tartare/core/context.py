@@ -117,9 +117,9 @@ class Context:
         contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
                                     if contributor_context.contributor.id == contributor_id), None)
         if contributor_context:
-            contributor_context.data_source_contexts.append(DataSourceContext(data_source_id=data_source_id,
-                                                                              gridfs_id=gridfs_id,
-                                                                              validity_period=validity_period))
+            contributor_context.data_source_contexts.append(
+                DataSourceContext(data_source_id=data_source_id,
+                                  gridfs_id=GridFsHandler().copy_file(gridfs_id), validity_period=validity_period))
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
         self.contributor_contexts = []

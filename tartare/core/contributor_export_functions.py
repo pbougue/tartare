@@ -156,7 +156,7 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                                                         GridFsHandler().copy_file(data_set.gridfs_id))
         else:
             context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
-    # geographic data added
+    # links data added
     if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
         for p in contributor.preprocesses:
             for l in p.params.get('links', []):
@@ -164,8 +164,12 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                 data_source_id = l.get('data_source_id')
                 if contributor_id and data_source_id and contributor_id != contributor.id:
                     tmp_contributor = Contributor.get(contributor_id)
-                    context.add_contributor_context(tmp_contributor)
+                    if not tmp_contributor:
+                        continue
                     data_set = DataSourceFetched.get_last(contributor_id, data_source_id)
+                    if not data_set:
+                        continue
+                    context.add_contributor_context(tmp_contributor)
                     context.add_contributor_data_source_context(contributor_id, data_source_id, None,
-                                                                GridFsHandler().copy_file(data_set.gridfs_id))
+                                                                data_set.gridfs_id)
     return context

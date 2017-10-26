@@ -33,11 +33,12 @@ from abc import ABCMeta, abstractmethod
 
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess
+from tartare.core.models import PreProcess, DataSource
 from zipfile import is_zipfile
-from typing import Any
+from typing import Any, List
 from tartare.exceptions import ParameterException
 from tartare.processes.fusio import Fusio
+import logging
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -90,3 +91,39 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', files)
             return self.__replace_in_grid_fs(old_gridfs_id, new_archive_file_name, computed_file_name)
+
+    def check_links(self, data_format_required: List[str]) -> None:
+        data_format_exists = set()
+        links = self.params.get("links")
+        if isinstance(links, list) and not links:
+            raise ParameterException('empty links in preprocess')
+        if not links:
+            raise ParameterException('links missing in preprocess')
+
+        #for data_format in data_format_possible:
+        for link in links:
+            contributor_id = link.get('contributor_id')
+            if not contributor_id:
+                msg = "Invalid argument, required argument contributor_id"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
+
+            data_source_id = link.get('data_source_id')
+            if not data_source_id:
+                msg = "Invalid argument, required argument data_source_id"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
+
+            data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
+                                                                                          data_source_id,
+                                                                                          data_format_required)
+            if not data_source_config_context:
+                raise ParameterException(
+                    'link {data_source} is not a data_source id present in contributor {contributor}'.format(
+                        data_source=data_source_id, contributor=contributor_id))
+            data_source = DataSource.get(contributor_id, data_source_id)
+            data_format_exists.add(data_source[0].data_format)
+        diff = set(data_format_required) - data_format_exists
+
+        if diff:
+            raise ParameterException('data type {} missing in preprocess links'.format(diff))
