@@ -391,5 +391,3 @@ class TestDataSources(TartareFixture):
         self.assert_sucessful_call(response)
         data_source = self.to_json(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
-
-

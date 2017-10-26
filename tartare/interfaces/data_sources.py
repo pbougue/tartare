@@ -51,6 +51,7 @@ class DataSource(flask_restful.Resource):
 
         try:
             data_source.save(contributor_id)
+
             return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 201
         except PyMongoError:
             raise InternalServerError('Impossible to add data source.')
