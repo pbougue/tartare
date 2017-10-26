@@ -153,7 +153,7 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                 raise ParameterException(
                     'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
             context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                        GridFsHandler().copy_file(data_set.gridfs_id))
+                                                        data_set.gridfs_id)
         else:
             context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
     # links data added
