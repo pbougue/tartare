@@ -294,9 +294,8 @@ class TestDataSources(TartareFixture):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
-        assert {'error': {'data_format': [
-            'choice "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
-                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+        assert 'error' in response_payload
+        assert response_payload['error'] == 'choice "failed" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
     def test_post_data_source_wrong_input_type(self, contributor):
         data_source = {
@@ -312,7 +311,7 @@ class TestDataSources(TartareFixture):
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
 
     def test_post_data_source_valid_data_format(self, contributor):
-        for data_format in DATA_FORMAT_VALUES:
+        for data_format in EXCEPTED_DATA_SOURCES[DATA_TYPE_PUBLIC_TRANSPORT]:
             data_source = {
                 "data_format": data_format,
                 "input": {'type': 'manual'},
