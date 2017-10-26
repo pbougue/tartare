@@ -44,7 +44,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.helper import to_doted_notation, get_values_by_key
+from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
 @app.before_first_request
@@ -221,6 +221,15 @@ class DataSource(object):
             if not data_sources:
                 return None
         return data_sources
+
+    @classmethod
+    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> Optional['DataSource']:
+        data_sources = DataSource.get(contributor_id, data_source_id)
+
+        if data_sources is None:
+            raise ValueError("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+
+        return data_sources[0]
 
     @classmethod
     def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
@@ -734,6 +743,9 @@ class DataSourceFetched(Historisable):
         self.update()
         self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
                              {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+
+    def is_identical_to(self, file_path: str) -> bool:
+        return self.get_md5() == get_md5_content_file(file_path)
 
 
 class MongoDataSourceLicenseSchema(Schema):

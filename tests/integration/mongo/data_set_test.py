@@ -28,8 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from tartare.core.constants import DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_NEVER_FETCHED
+from tartare.core.constants import DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
 from bson.objectid import ObjectId

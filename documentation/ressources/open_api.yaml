@@ -829,6 +829,14 @@ paths:
         required: true
         type: "file"
         description: "File to upload"
+      - name: "contributor_id"
+        in: "path"
+        required: true
+        type: "string"
+      - name: "data_source_id"
+        in: "path"
+        required: true
+        type: "string"
       responses:
         201:
           description: "Data set created"
@@ -842,15 +850,35 @@ paths:
           description: "Object not found"
           schema:
             $ref: "#/definitions/error_404"
-    parameters:
-    - name: "contributor_id"
-      in: "path"
-      required: true
-      type: "string"
-    - name: "data_source_id"
-      in: "path"
-      required: true
-      type: "string"
+
+
+  /contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch:
+    post:
+      summary: Fetch data source and save to database
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - name: contributor_id
+          in: path
+          required: true
+          type: string
+        - name: data_source_id
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Data source is fetched (and saved to database if it has changed)
+        400:
+          description: "Invalid arguments"
+          schema:
+            $ref: "#/definitions/error_400"
+        500:
+          description: "Internal Server Error"
+          schema:
+            $ref: "#/definitions/error_500"
 
   /contributors/{contributor_id}/preprocesses:
     get:
@@ -1747,6 +1775,16 @@ definitions:
       error:
         type: string
         example: Detailed message
+
+  error_500:
+    type: object
+    properties:
+      message:
+        type: string
+        example: Internal Server Error
+      error:
+        type: string
+        example: An error occured
 
   data_sets:
     type: "object"

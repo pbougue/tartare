@@ -264,6 +264,7 @@ class TestComputeDirectionsProcess(TartareFixture):
         r = self.to_json(raw)
         self.assert_sucessful_call(raw)
         return r['jobs'][0]
+
     def __setup_contributor_export_environment(self, init_http_download_server, params, add_data_source_config=True,
                                                add_data_source_target=True,
                                                data_set_filename='unsorted_stop_sequences.zip',
