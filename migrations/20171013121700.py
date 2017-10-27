@@ -13,4 +13,4 @@ class Migration(BaseMigration):
         all_contributors = self.db['contributors'].find()
         for contributor in all_contributors:
             contributor['data_type'] = DATA_TYPE_DEFAULT
-        self.db['contributors'].save(contributor)
+            self.db['contributors'].save(contributor)
