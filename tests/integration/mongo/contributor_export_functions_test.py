@@ -38,27 +38,11 @@ from tartare import app
 from tartare.core.context import Context
 from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
 from tartare.core.models import DataSource, Contributor, Input
-from tartare.exceptions import InvalidFile, ParameterException, FetcherException
+from tartare.exceptions import ParameterException, FetcherException
 from tests.utils import mock_urlretrieve, mock_zip_file
 
 
-def test_fetch_data_from_input_failed(mocker):
-    url = "http://whatever.com/gtfs.zip"
-    data_source = DataSource('myDSId', 'myDS', 'gtfs', Input('url', url))
-    contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
-
-    mock_dl = mocker.patch('urllib.request.urlretrieve', autospec=True)
-    mock_check = mocker.patch('zipfile.is_zipfile', autospec=True)
-    mock_check.return_value = True
-
-    # following test needs to be improved to handle file creation on local drive
-    with pytest.raises(InvalidFile) as excinfo:
-        with app.app_context():
-            fetch_datasets_and_return_updated_number(contrib)
-    assert str(excinfo.typename) == 'InvalidFile'
-
-
-class TestFetcher():
+class TestFetcher:
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_build_no_data_set(self, urlretrieve_func):
         data_source = DataSource(666, 'Bib', 'gtfs', Input('url', 'bob'))
@@ -74,6 +58,7 @@ class TestFetcher():
         data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
         with app.app_context():
+            contrib.save()
             with pytest.raises(FetcherException) as excinfo:
                 fetch_datasets_and_return_updated_number(contrib)
             assert str(
@@ -84,6 +69,7 @@ class TestFetcher():
         data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
         contrib = Contributor('contribId', 'contribName', 'http://bob.com/config.json', [data_source])
         with app.app_context():
+            contrib.save()
             with pytest.raises(FetcherException) as excinfo:
                 fetch_datasets_and_return_updated_number(contrib)
             assert str(excinfo.value) == 'downloaded file from url http://bob.com/config.json is not a zip file'
