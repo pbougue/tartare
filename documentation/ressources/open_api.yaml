@@ -1272,9 +1272,11 @@ definitions:
         example: fetching data
       started_at:
         type: string
+        format: date-time
         example: "2017-05-29T13:37:55.967795+00:00"
       updated_at:
         type: string
+        format: date-time
         example: "2017-05-29T13:37:55.967795+00:00"
       contributor_id:
         type: string
@@ -1564,6 +1566,7 @@ definitions:
         example: fr-idf
       created_at:
         type: string
+        format: date-time
         example: "2017-06-14T13:05:30.008401+00:00"
       contributors:
         type: array
@@ -1607,6 +1610,7 @@ definitions:
         example: contributor_stif
       created_at:
         type: string
+        format: date-time
         example: "2017-06-14T12:46:21.119813+00:00"
       data_sources:
         type: array
@@ -1730,6 +1734,7 @@ definitions:
               example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
             created_at:
               type: "string"
+              format: date-time
               description: "Creation date"
               example: "2017-08-08T13:43:53.601089+00:00"
             gridfs_id:
@@ -1752,10 +1757,12 @@ definitions:
     properties:
       start_date:
         type: "string"
+        format: date
         description: "Start date"
         example: "2017-06-14"
       end_date:
         type: "string"
+        format: date
         description: "End date"
         example: "2017-06-20"
     description: "Validity period"
