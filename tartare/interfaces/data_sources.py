@@ -28,23 +28,26 @@
 # www.navitia.io
 from typing import Optional, List
 
-from flask_restful import abort, request
 import flask_restful
 from flask import Response
-from pymongo.errors import PyMongoError
+from flask_restful import abort, request
 from marshmallow import MarshalResult
-from tartare.core import models
-from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from pymongo.errors import PyMongoError
+
+from tartare.core import models
 from tartare.decorators import json_data_validate
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.interfaces import schema
 
 
 class DataSource(flask_restful.Resource):
     def __add_calculated_fields_for_data_sources(self, contributor_id: str, data_sources: List[dict]) -> List[dict]:
         for data_source in data_sources:
             data_source['status'], data_source['fetch_started_at'], data_source['updated_at'] = \
-                models.DataSource.get_calculated_attributes(contributor_id, data_source['id'])
+                models.DataSource.format_calculated_attributes(
+                    models.DataSource.get_calculated_attributes(contributor_id, data_source['id'])
+                )
         return data_sources
 
     @json_data_validate()
@@ -74,10 +77,11 @@ class DataSource(flask_restful.Resource):
             raise InvalidArguments(str(e))
 
         result = schema.DataSourceSchema(many=True).dump(ds)
-        result = MarshalResult(data=self.__add_calculated_fields_for_data_sources(contributor_id, result.data), errors=result.errors)
+        result = MarshalResult(data=self.__add_calculated_fields_for_data_sources(contributor_id, result.data),
+                               errors=result.errors)
         return {'data_sources': result.data}, 200
 
-    def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
+    def delete(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
@@ -88,7 +92,7 @@ class DataSource(flask_restful.Resource):
         return {'data_sources': []}, 204
 
     @json_data_validate()
-    def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
+    def patch(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         ds = models.DataSource.get(contributor_id, data_source_id)
         if len(ds) != 1:
             abort(404)

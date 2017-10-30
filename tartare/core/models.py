@@ -266,7 +266,7 @@ class DataSource(object):
         return self.input.type == type
 
     @classmethod
-    def get_calculated_attributes(self, contributor_id: str, data_source_id: str) \
+    def get_calculated_attributes(cls, contributor_id: str, data_source_id: str) \
             -> Tuple[str, Optional[datetime], Optional[datetime]]:
         """
         :return: a tuple with (status, fetch_started_at, updated_at) attributes:
@@ -285,6 +285,16 @@ class DataSource(object):
             last_data_set_updated = DataSourceFetched.get_last(contributor_id, data_source_id)
             updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
         return status, fetch_started_at, updated_at
+
+    @classmethod
+    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
+            -> Tuple[str, Optional[str], Optional[str]]:
+        status, fetch_started_at, updated_at = calculated_attributes
+        return status, \
+        str(fetch_started_at) if fetch_started_at else None, \
+        str(updated_at) if updated_at else None
+
+
 
 
 class GenericPreProcess(SequenceContainer):
@@ -691,7 +701,7 @@ class DataSourceFetched(Historisable):
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-    def set_status(self, new_status: str):
+    def set_status(self, new_status: str) -> 'DataSourceFetched':
         self.status = new_status
         return self
 
@@ -756,7 +766,7 @@ class MongoDataSourceFetchedSchema(Schema):
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
     gridfs_id = fields.String(required=False)
-    created_at = fields.DateTime(required=True)
+    created_at = fields.DateTime(required=False, allow_none=True)
     saved_at = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
