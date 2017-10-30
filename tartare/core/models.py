@@ -720,18 +720,6 @@ class DataSourceFetched(Historisable):
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
-    @classmethod
-    def get_before_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
-        if not contributor_id:
-            return None
-        where = {
-            'contributor_id': contributor_id,
-            'data_source_id': data_source_id
-        }
-        raw = mongo.db[cls.mongo_collection].find(where)
-        raw = raw.sort("saved_at", -1).skip(1).limit(1)
-        return MongoDataSourceFetchedSchema(strict=True).load(raw).data
-
     def get_md5(self) -> str:
         if not self.gridfs_id:
             return None
