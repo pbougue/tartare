@@ -38,11 +38,15 @@ services:
       - rabbitmq
 
   tartare_webservice:
-    image: tartare_functional_tests
+    build:
+      context: .
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
-    command: uwsgi --mount /=tartare:app --http 0.0.0.0:5000 --wsgi-disable-file-wrapper --add-header Access-Control-Allow-Origin:*
+    command: >
+              uwsgi --mount /=tartare:app --http 0.0.0.0:5000 --wsgi-disable-file-wrapper
+              --add-header Access-Control-Allow-Origin:*
+              --add-header Access-Control-Allow-Headers:Content-Type
     ports:
       - 5000:5000
     links:
@@ -52,10 +56,13 @@ services:
   mongo-server:
     image: mongo
     volumes:
-      - ~/tartare/mongo:/data/db
+      - mongo_data:/data/db
 
   rabbitmq:
     image: rabbitmq:management
 
   http_download_server:
     image: visity/webdav
+
+volumes:
+  mongo_data:
