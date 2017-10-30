@@ -29,10 +29,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import pytest
+from mock import mock
 
 import tartare
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
-    DATA_SOURCE_STATUS_NEVER_FETCHED
+    DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED
+from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -350,17 +352,6 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
 
-    def test_data_source_input_type_default_value(self, contributor):
-        data_source = {
-            "data_format": "gtfs",
-            "name": "ds-name"
-        }
-        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
-                             self.dict_to_json(data_source))
-        response_payload = self.to_json(response)
-        assert response.status_code == 201, print(response_payload)
-        assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
-
     def test_patch_with_invalid_data_format(self, contributor):
         data_source = {
             "id": "issues_257",
@@ -397,21 +388,50 @@ class TestDataSources(TartareFixture):
 
         new_expected_file_name = 'config_new.json'
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
-                             self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
+                              self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
 
         self.assert_sucessful_call(response)
         data_source = self.to_json(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
 
-
     def test_data_source_calculated_fields_values(self, contributor):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json({"name": "ds-name"}))
         response_payload = self.to_json(response)
-        assert response.status_code == 201, print(response_payload)
+        self.assert_sucessful_call(response, 201)
         ds = response_payload['data_sources'][0]
         assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
-        assert ds['fetch_started_at'] == None
-        assert ds['updated_at'] == None
+        assert ds['fetch_started_at'] is None
+        assert ds['updated_at'] is None
 
+    def __init_ds_and_export(self, contributor, init_http_download_server):
+        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
+        response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                             self.dict_to_json({"name": "ds-name", "input": {"type": "url", "url": url}}))
+        self.assert_sucessful_call(response, 201)
+        response = self.post('/contributors/{}/actions/export?current_date=2015-08-23'.format(contributor.get('id')))
+        self.assert_sucessful_call(response, 201)
 
+        job_details = self.get_job_details(self.to_json(response)['job']['id'])
+        response = self.get('/contributors/{}/data_sources'.format(contributor.get('id')))
+        self.assert_sucessful_call(response)
+        return job_details, self.to_json(response)['data_sources'][0]
+
+    def test_data_source_calculated_fields_values_after_export_ok(self, contributor, init_http_download_server):
+        job_details, ds = self.__init_ds_and_export(contributor, init_http_download_server)
+        assert job_details['step'] == 'save_contributor_export'
+        assert job_details['state'] == 'done'
+        assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
+        assert ds['fetch_started_at'] is not None
+        assert ds['updated_at'] is not None
+
+    @mock.patch('tartare.core.fetcher.HttpFetcher.fetch', side_effect=FetcherException('my_message'))
+    def test_data_source_calculated_fields_values_after_export_failed(self, fetch_mock, contributor,
+                                                                      init_http_download_server):
+        job_details, ds = self.__init_ds_and_export(contributor, init_http_download_server)
+        assert job_details['step'] == 'fetching data'
+        assert job_details['state'] == 'failed'
+        assert job_details['error_message'] == 'my_message'
+        assert ds['status'] == DATA_SOURCE_STATUS_FAILED
+        assert ds['fetch_started_at'] is not None
+        assert ds['updated_at'] is None

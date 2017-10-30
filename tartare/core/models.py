@@ -765,7 +765,7 @@ class MongoDataSourceFetchedSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=False)
+    gridfs_id = fields.String(required=False, allow_none=True)
     created_at = fields.DateTime(required=False, allow_none=True)
     saved_at = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=True)
