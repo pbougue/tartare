@@ -32,14 +32,12 @@ import os
 import shutil
 import tempfile
 import zipfile
-from typing import List
 
 from gridfs import GridOut
-
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context
-from tartare.core.models import PreProcess, DataSource
+from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess

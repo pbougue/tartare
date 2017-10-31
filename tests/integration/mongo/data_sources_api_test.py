@@ -421,7 +421,7 @@ class TestDataSources(TartareFixture):
 
     def __init_ds_and_export(self, contributor, init_http_download_server, do_init=True):
         if do_init:
-            url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
+            url = self.format_url(ip=init_http_download_server.ip_addr, filename="some_archive.zip")
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json({"name": "ds-name", "input": {"type": "url", "url": url}}))
             self.assert_sucessful_call(response, 201)

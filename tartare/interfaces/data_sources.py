@@ -26,18 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Optional, List
+from typing import Optional
 
-from flask_restful import abort, request
 import flask_restful
 from flask import Response
-from flask_restful import abort, request
-from marshmallow import ValidationError
+from flask_restful import request
 from pymongo.errors import PyMongoError, DuplicateKeyError
-
 from tartare.core import models
-from tartare.decorators import json_data_validate
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
 from marshmallow import ValidationError
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound

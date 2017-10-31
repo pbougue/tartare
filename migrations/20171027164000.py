@@ -145,44 +145,7 @@ class Migration(BaseMigration):
               "sequence": 2
             }
         """
-        # Create Geographic contributor
-
-        other_data_sources = []
-        bano_data_sources = []
-        for data_source in contributor.get('data_sources', []):
-            if data_source.get('data_format') == DATA_FORMAT_BANO_FILE:
-                geographic_contributor = self.db.contributors.find_one({'_id': 'geo'})
-                if not geographic_contributor:
-                    self.db.contributors.insert_one(
-                        {
-                            '_id': 'geo',
-                            'name': 'Données Bano',
-                            'data_prefix': 'GEO',
-                            'data_type': DATA_TYPE_GEOGRAPHIC
-                        }
-                    )
-                bano_data_sources.append(
-                    {
-                        'id': data_source.get('id'),
-                        'name': data_source.get('name'),
-                        'data_format': data_source.get('data_format'),
-                        'input': {
-                            'type': data_source.get('input', {}).get('type'),
-                            'url': data_source.get('input', {}).get('url'),
-                            'expected_file_name': data_source.get('input', {}).get('expected_file_name'),
-                        },
-                        'license': data_source.get('license')
-                    }
-                )
-            else:
-                other_data_sources.append(data_source)
         geographic_contributor = self.db.contributors.find_one({'_id': 'geo'})
-        if geographic_contributor:
-            contributor['data_sources'] = other_data_sources
-            self.db.contributors.save(contributor)
-            if 'data_sources' not in geographic_contributor:
-                geographic_contributor['data_sources'] = bano_data_sources
-            self.db.contributors.save(geographic_contributor)
 
         params = p.get('params')
 
@@ -200,17 +163,63 @@ class Migration(BaseMigration):
 
         for data_source_id in links.get('bano', []):
             new_links.append({"contributor_id": geographic_contributor.get('_id'), "data_source_id": data_source_id})
-            # upgrade DataFetched
-            self.db['DataFetched'].update_one(
+
+        if new_links:
+            params['links'] = new_links
+
+    def manage_data_sources(self, contributor):
+        other_data_sources = []
+        bano_data_sources = []
+        geographic_contributor = self.db.contributors.find_one({'_id': 'geo'})
+        for data_source in contributor.get('data_sources', []):
+            if data_source.get('data_format') == DATA_FORMAT_BANO_FILE:
+                bano_data_sources.append(
+                    {
+                        'id': data_source.get('id'),
+                        'name': data_source.get('name'),
+                        'data_format': data_source.get('data_format'),
+                        'input': {
+                            'type': data_source.get('input', {}).get('type'),
+                            'url': data_source.get('input', {}).get('url'),
+                            'expected_file_name': data_source.get('input', {}).get('expected_file_name'),
+                        },
+                        'license': data_source.get('license')
+                    }
+                )
+            else:
+                other_data_sources.append(data_source)
+        contributor['data_sources'] = other_data_sources
+        self.db.contributors.save(contributor)
+        if 'data_sources' not in geographic_contributor:
+            geographic_contributor['data_sources'] = bano_data_sources
+        self.db.contributors.save(geographic_contributor)
+
+    def manage_data_source_fetched(self, contributor):
+        geographic_contributor = self.db.contributors.find_one({'_id': 'geo'})
+        for data_source in geographic_contributor.get('data_sources', []):
+            self.db.data_source_fetched.update_one(
                 {
                     "contributor_id": contributor.get('_id'),
-                    "data_source_id": data_source_id
+                    "data_source_id": data_source.get('id')
                 },
                 {'$set': {"contributor_id": geographic_contributor.get('_id')}}
             )
 
-        if new_links:
-            params['links'] = new_links
+    def manage_contributor(self, contributor):
+        for data_source in contributor.get('data_sources', []):
+            if data_source.get('data_format') == DATA_FORMAT_BANO_FILE:
+                geographic_contributor = self.db.contributors.find_one({'_id': 'geo'})
+                if geographic_contributor:
+                    break
+                else:
+                    self.db.contributors.insert_one(
+                        {
+                            '_id': 'geo',
+                            'name': 'Données Bano',
+                            'data_prefix': 'GEO',
+                            'data_type': DATA_TYPE_GEOGRAPHIC
+                        }
+                    )
 
     def upgrade(self):
         all_contributors = self.db['contributors'].find({})
@@ -220,7 +229,19 @@ class Migration(BaseMigration):
             "Ruspell": self.manage_ruspell
         }
         for contributor in all_contributors:
+
+            # Create geographical contributor
+            self.manage_contributor(contributor)
+
+            # Move Bano/Osm datas
+            self.manage_data_sources(contributor)
+
+            # Upgrade deta_source_fetched
+            self.manage_data_source_fetched(contributor)
+
+            # Change preprocess config
             for p in contributor.get('preprocesses', []):
+
                 func = map_preprocess_func.get(p.get('type'))
                 if func:
                     func(p, contributor)

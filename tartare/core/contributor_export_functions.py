@@ -80,8 +80,13 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
         if grid_fs_id:
             contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
                                                                                             current_date)
+            new_gridfs_id = GridFsHandler().copy_file(grid_fs_id)
+        else:
+            new_gridfs_id = None
+            contributor_export_validity_period = None
+
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=GridFsHandler().copy_file(grid_fs_id),
+                                   gridfs_id=new_gridfs_id,
                                    validity_period=contributor_export_validity_period,
                                    data_sources=contrib_export_data_sources)
         export.save()
@@ -143,7 +148,6 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
         return True
 
-
 def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
@@ -166,7 +170,7 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                     tmp_contributor = Contributor.get(contributor_id)
                     if not tmp_contributor:
                         continue
-                    data_set = DataSourceFetched.get_last(contributor_id, data_source_id)
+                    data_set = DataSourceFetched.get_last(data_source_id)
                     if not data_set:
                         continue
                     context.add_contributor_context(tmp_contributor)
