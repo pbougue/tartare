@@ -47,7 +47,6 @@ class Migration(BaseMigration):
         links = [{"contributor_id": contributor.get('_id'), "data_source_id": config.get("data_source_id")}]
         p['params'] = {"links": links}
 
-
     def manage_external_setting(self, p, contributor):
         """
         Old ComputeExternalSettings preprocess
@@ -201,6 +200,14 @@ class Migration(BaseMigration):
 
         for data_source_id in links.get('bano', []):
             new_links.append({"contributor_id": geographic_contributor.get('_id'), "data_source_id": data_source_id})
+            # upgrade DataFetched
+            self.db['DataFetched'].update_one(
+                {
+                    "contributor_id": contributor.get('_id'),
+                    "data_source_id": data_source_id
+                },
+                {'$set': {"contributor_id": geographic_contributor.get('_id')}}
+            )
 
         if new_links:
             params['links'] = new_links
