@@ -29,6 +29,7 @@
 
 import logging
 import tempfile
+from datetime import date
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY
@@ -39,7 +40,6 @@ from tartare.core.models import ContributorExport, ContributorExportDataSource, 
 from tartare.exceptions import ParameterException
 from tartare.helper import get_md5_content_file
 from tartare.validity_period_finder import ValidityPeriodFinder
-from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -133,12 +133,8 @@ def fetch_and_save_dataset(contributor_id: str,
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
             contributor_id, data_source.id
         ))
-        if data_source.data_format in DATA_FORMAT_WITH_VALIDITY:
-            start_date, end_date = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name)
-            validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-        else:
-            validity_period = None
-
+        validity_period = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name) \
+            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
         data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
                                                        data_source_id=data_source.id,
                                                        validity_period=validity_period)

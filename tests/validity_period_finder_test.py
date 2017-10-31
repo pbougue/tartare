@@ -38,17 +38,17 @@ from tests.utils import _get_file_fixture_full_path
 def test_zip_file_only_calendar():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('gtfs/some_archive.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2015, 3, 25)
-    assert end_date == date(2015, 8, 26)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2015, 3, 25)
+    assert validity_period.end_date == date(2015, 8, 26)
 
 
 def test_zip_file_only_feed_info():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2016, 4, 11)
-    assert end_date == date(2016, 12, 31)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2016, 4, 11)
+    assert validity_period.end_date == date(2016, 12, 31)
 
 
 def test_zip_file_only_feed_info_invalid():
@@ -62,9 +62,9 @@ def test_zip_file_only_feed_info_invalid():
 def test_zip_file_only_feed_info_missing_dates():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_missing_dates.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2016, 10, 4), print(start_date)
-    assert end_date == date(2016, 12, 24), print(end_date)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2016, 10, 4), print(validity_period.start_date)
+    assert validity_period.end_date == date(2016, 12, 24), print(validity_period.end_date)
 
 
 def test_zip_file_invalid():
@@ -102,9 +102,9 @@ def test_calendar_without_start_date_column():
 def test_gtfs_without_calendar():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_without_calendar.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2016, 10, 4)
-    assert end_date == date(2016, 12, 24)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2016, 10, 4)
+    assert validity_period.end_date == date(2016, 12, 24)
 
 
 def test_calendar_with_not_date():
@@ -143,9 +143,9 @@ def test_add_dates():
     """
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/add_dates.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 1)
-    assert end_date == date(2017, 2, 15)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 1)
+    assert validity_period.end_date == date(2017, 2, 15)
 
 
 def test_remove_dates():
@@ -159,25 +159,25 @@ def test_remove_dates():
     """
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/remove_dates.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 4)
-    assert end_date == date(2017, 1, 30)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 4)
+    assert validity_period.end_date == date(2017, 1, 30)
 
 
 def test_calendar_with_many_periods():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_many_periods.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 2)
-    assert end_date == date(2017, 7, 20)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 2)
+    assert validity_period.end_date == date(2017, 7, 20)
 
 
 def test_calendar_dates_with_headers_only():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_with_headers_only.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 2)
-    assert end_date == date(2017, 1, 20)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 2)
+    assert validity_period.end_date == date(2017, 1, 20)
 
 
 def test_calendar_with_headers_only():
@@ -191,9 +191,9 @@ def test_calendar_with_headers_only():
 def test_calendar_dates_with_empty_line():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_with_empty_line.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 2)
-    assert end_date == date(2017, 1, 20)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 2)
+    assert validity_period.end_date == date(2017, 1, 20)
 
 
 def test_calendar_with_empty_line_and_remove_date_only():
@@ -207,9 +207,9 @@ def test_calendar_with_empty_line_and_remove_date_only():
 def test_calendar_with_empty_line_and_add_date_only():
     finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_with_empty_line_add_dates_only.zip')
-    start_date, end_date = finder.get_validity_period(file)
-    assert start_date == date(2017, 1, 2)
-    assert end_date == date(2017, 1, 31)
+    validity_period = finder.get_validity_period(file)
+    assert validity_period.start_date == date(2017, 1, 2)
+    assert validity_period.end_date == date(2017, 1, 31)
 
 
 def test_gtfs_feed_info_with_2_rows():

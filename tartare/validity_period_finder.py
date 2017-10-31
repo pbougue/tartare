@@ -117,7 +117,7 @@ class ValidityPeriodFinder(object):
         dates = self.reader.data[(self.reader.data.exception_type == 2)].date.tolist()
         self.remove_dates(dates)
 
-    def get_validity_period(self, file: str) -> Tuple[date, date]:
+    def get_validity_period(self, file: str) -> ValidityPeriod:
 
         if not is_zipfile(file):
             msg = '{} is not a zip file or not exist.'.format(file)
@@ -133,7 +133,7 @@ class ValidityPeriodFinder(object):
         if self.reader.file_in_zip_files(file, self.feed_info_filename):
             self._parse_feed_info(file)
             if self.is_start_date_valid() and self.is_end_date_valid():
-                return self.start_date, self.end_date
+                return ValidityPeriod(self.start_date, self.end_date)
 
         if self.reader.file_in_zip_files(file, self.calendar_filename):
             self._parse_calendar(file)
@@ -145,7 +145,7 @@ class ValidityPeriodFinder(object):
             msg = 'Impossible to find validity period'
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
-        return self.start_date, self.end_date
+        return ValidityPeriod(self.start_date, self.end_date)
 
     def _parse_feed_info(self, files_zip: str) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
