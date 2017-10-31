@@ -115,7 +115,6 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
 
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
-    fetcher = FetcherManager.select_from_url(url)
     with tempfile.TemporaryDirectory() as tmp_dir_name:
         last_data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor_id,
                                                                      data_source_id=data_source.id)
@@ -123,6 +122,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
                                                            data_source_id=data_source.id)
         new_data_source_fetched.save()
         try:
+            fetcher = FetcherManager.select_from_url(url)
             dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
                                                                     data_source.input.expected_file_name)
         except (FetcherException, GuessFileNameFromUrlException, ParameterException) as e:
