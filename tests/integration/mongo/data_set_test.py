@@ -29,12 +29,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
+from tartare.core.constants import DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_NEVER_FETCHED
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
 from bson.objectid import ObjectId
 
-fixtures_path = os.path.realpath('tests/fixtures/gtfs/some_archive.zip')
+from tests.utils import _get_file_fixture_full_path
+
+fixtures_path = _get_file_fixture_full_path('gtfs/some_archive.zip')
 
 
 class TestDatasetApi(TartareFixture):
@@ -66,15 +68,29 @@ class TestDatasetApi(TartareFixture):
             assert r["error"] == 'File provided with bad param ("file" param expected).'
 
     def test_post_dataset(self, data_source):
+        raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
+        self.assert_sucessful_call(raw)
+        ds = self.to_json(raw)['data_sources'][0]
+        assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+        assert ds['fetch_started_at'] is None
+        assert ds['updated_at'] is None
+
         with open(fixtures_path, 'rb') as file:
             raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')),
                             params={'file': file},
                             headers={})
-            assert raw.status_code == 201
-            r = self.to_json(raw)
-            assert len(r["data_sets"]) == 1
-            assert 'id' in r['data_sets'][0]
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert len(r["data_sets"]) == 1
+        assert 'id' in r['data_sets'][0]
 
-            with app.app_context():
-                gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["data_sets"][0]["gridfs_id"])})
-                assert gridfs["filename"] == "some_archive.zip"
+        with app.app_context():
+            gridfs = mongo.db['fs.files'].find_one({'_id': ObjectId(r["data_sets"][0]["gridfs_id"])})
+            assert gridfs["filename"] == "some_archive.zip"
+
+        raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
+        self.assert_sucessful_call(raw)
+        ds = self.to_json(raw)['data_sources'][0]
+        assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
+        assert ds['fetch_started_at'] is not None
+        assert ds['updated_at'] is not None

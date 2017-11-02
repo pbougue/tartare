@@ -117,7 +117,11 @@ def data_source(app, contributor):
                            headers={'Content-Type': 'application/json'},
                            data='{"name": "bobette", "data_format": "gtfs",'
                                 '"input": {"type": "url", "url": "http://stif.com/od.zip"}}')
-    return to_json(data_source)['data_sources'][0]
+    ds = to_json(data_source)['data_sources'][0]
+    calculated_fields = ['status', 'updated_at', 'fetch_started_at']
+    for calculated_field in calculated_fields:
+        ds.pop(calculated_field, None)
+    return ds
 
 @pytest.fixture(scope="function")
 def coverage_obj(tmpdir, get_app_context):

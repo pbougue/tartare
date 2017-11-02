@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tuple
 
 import pymongo
 from gridfs import GridOut
@@ -41,7 +41,8 @@ from marshmallow import Schema, post_load, utils, fields
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
-    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES
+    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UNKNOWN, DATA_SOURCE_STATUS_UPDATED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
 
@@ -187,11 +188,12 @@ class DataSource(object):
         return str(vars(self))
 
     @classmethod
-    def get_number_of_historical(cls, data_source_id: str) -> int:
-        data_sources = cls.get(data_source_id=data_source_id)
-        if not data_sources:
+    def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
+        contributor = Contributor.get(contributor_id)
+        if not contributor.data_sources:
             raise ValueError("Unknown data source id {}.".format(data_source_id))
-        return app.config.get('HISTORICAL', {}).get(data_sources[0].data_format, 3)
+        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
+        return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
@@ -262,6 +264,37 @@ class DataSource(object):
 
     def is_type(self, type: str) -> bool:
         return self.input.type == type
+
+    @classmethod
+    def get_calculated_attributes(cls, contributor_id: str, data_source_id: str) \
+            -> Tuple[str, Optional[datetime], Optional[datetime]]:
+        """
+        :return: a tuple with (status, fetch_started_at, updated_at) attributes:
+            - status: status of the last try on fetching data
+            - fetch_started_at: datetime at which the last try on fetching data started
+            - updated_at: datetime at which the last fetched data set was valid and inserted in database
+        """
+        last_data_set = DataSourceFetched.get_last(contributor_id, data_source_id, None)
+        status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
+        fetch_started_at = last_data_set.created_at if last_data_set else None
+        if status == DATA_SOURCE_STATUS_UPDATED:
+            updated_at = last_data_set.saved_at
+        elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
+            updated_at = None
+        else:
+            last_data_set_updated = DataSourceFetched.get_last(contributor_id, data_source_id)
+            updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
+        return status, fetch_started_at, updated_at
+
+    @classmethod
+    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
+            -> Tuple[str, Optional[str], Optional[str]]:
+        status, fetch_started_at, updated_at = calculated_attributes
+        return status, \
+        str(fetch_started_at) if fetch_started_at else None, \
+        str(updated_at) if updated_at else None
+
+
 
 
 class GenericPreProcess(SequenceContainer):
@@ -649,29 +682,40 @@ class DataSourceFetched(Historisable):
 
     def __init__(self, contributor_id: str, data_source_id: str,
                  validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None) -> None:
+                 created_at: datetime = None, id: str = None, status: str=DATA_SOURCE_STATUS_FETCHING,
+                 saved_at: Optional[datetime]=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
         self.validity_period = validity_period
+        self.status = status
+        self.saved_at = saved_at
+
+    def update(self) -> bool:
+        raw = mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data})
+        return raw.matched_count == 1
 
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(DataSource.get_number_of_historical(self.data_source_id),
-                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+    def set_status(self, new_status: str) -> 'DataSourceFetched':
+        self.status = new_status
+        return self
 
     @classmethod
-    def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
+    def get_last(cls, contributor_id: str, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
+            -> Optional['DataSourceFetched']:
         if not contributor_id:
             return None
         where = {
             'contributor_id': contributor_id,
             'data_source_id': data_source_id
         }
+        if status:
+            where['status'] = status
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
@@ -682,13 +726,18 @@ class DataSourceFetched(Historisable):
         file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
         return file.md5
 
-    def save_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
+    def update_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
         with open(tmp_file, 'rb') as file:
-            self.save_dataset_from_io(file, filename)
+            self.update_dataset_from_io(file, filename)
 
-    def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
+    def update_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
         self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
                                                              contributor_id=self.contributor_id)
+        self.set_status(DATA_SOURCE_STATUS_UPDATED)
+        self.saved_at = datetime.utcnow()
+        self.update()
+        self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
+                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -704,8 +753,10 @@ class MongoDataSourceFetchedSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=False)
-    created_at = fields.DateTime(required=False)
+    gridfs_id = fields.String(required=False, allow_none=True)
+    created_at = fields.DateTime(required=False, allow_none=True)
+    saved_at = fields.DateTime(required=False, allow_none=True)
+    status = fields.String(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
