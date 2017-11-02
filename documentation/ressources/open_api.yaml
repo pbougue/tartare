@@ -1663,6 +1663,7 @@ definitions:
       type:
         type: string
         example: "url"
+        enum: [url, manual, computed]
       url:
         type: string
         example: "http://stif.com/od.zip"
