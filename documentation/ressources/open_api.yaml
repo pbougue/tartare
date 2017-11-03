@@ -1652,6 +1652,17 @@ definitions:
       data_format:
         type: string
         example: "gtfs"
+        enum: [
+          gtfs,
+          bano_file,
+          osm_file,
+          direction_config,
+          ruspell_config,
+          lines_referential,
+          tr_perimeter,
+          pt_external_settings
+        ]
+        default: gtfs
       input:
         $ref: "#/definitions/input"
       license:
@@ -1664,6 +1675,7 @@ definitions:
         type: string
         example: "url"
         enum: [url, manual, computed]
+        default: manual
       url:
         type: string
         example: "http://stif.com/od.zip"
