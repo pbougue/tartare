@@ -36,13 +36,13 @@ from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tu
 
 import pymongo
 from gridfs import GridOut
-from marshmallow import Schema, post_load, utils, fields
+from marshmallow import Schema, post_load, utils, fields, post_dump
 
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UNKNOWN, DATA_SOURCE_STATUS_UPDATED
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key
 
@@ -198,7 +198,7 @@ class DataSource(object):
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
-            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+            raise ValueError("Duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
         raw_contrib = MongoContributorSchema().dump(contributor).data
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
@@ -266,15 +266,16 @@ class DataSource(object):
         return self.input.type == type
 
     @classmethod
-    def get_calculated_attributes(cls, contributor_id: str, data_source_id: str) \
+    def get_calculated_attributes(cls, data_source_id: str) \
             -> Tuple[str, Optional[datetime], Optional[datetime]]:
+
         """
         :return: a tuple with (status, fetch_started_at, updated_at) attributes:
             - status: status of the last try on fetching data
             - fetch_started_at: datetime at which the last try on fetching data started
             - updated_at: datetime at which the last fetched data set was valid and inserted in database
         """
-        last_data_set = DataSourceFetched.get_last(contributor_id, data_source_id, None)
+        last_data_set = DataSourceFetched.get_last(data_source_id, None)
         status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
         fetch_started_at = last_data_set.created_at if last_data_set else None
         if status == DATA_SOURCE_STATUS_UPDATED:
@@ -282,7 +283,7 @@ class DataSource(object):
         elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
             updated_at = None
         else:
-            last_data_set_updated = DataSourceFetched.get_last(contributor_id, data_source_id)
+            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
             updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
         return status, fetch_started_at, updated_at
 
@@ -293,8 +294,6 @@ class DataSource(object):
         return status, \
         str(fetch_started_at) if fetch_started_at else None, \
         str(updated_at) if updated_at else None
-
-
 
 
 class GenericPreProcess(SequenceContainer):
@@ -706,12 +705,9 @@ class DataSourceFetched(Historisable):
         return self
 
     @classmethod
-    def get_last(cls, contributor_id: str, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
+    def get_last(cls, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
             -> Optional['DataSourceFetched']:
-        if not contributor_id:
-            return None
         where = {
-            'contributor_id': contributor_id,
             'data_source_id': data_source_id
         }
         if status:
@@ -784,6 +780,14 @@ class MongoDataSourceSchema(Schema):
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
         return DataSource(**data)
+
+    @post_dump()
+    def add_calculated_fields_for_data_source(self, data: dict) -> dict:
+        data['status'], data['fetch_started_at'], data['updated_at'] = DataSource.format_calculated_attributes(
+            DataSource.get_calculated_attributes(data['id'])
+        )
+
+        return data
 
 
 class MongoPreProcessSchema(Schema):

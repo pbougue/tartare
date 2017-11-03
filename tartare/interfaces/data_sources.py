@@ -31,9 +31,8 @@ from typing import Optional, List
 import flask_restful
 from flask import Response
 from flask_restful import abort, request
-from marshmallow import MarshalResult
 from marshmallow import ValidationError
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
 from tartare.decorators import json_data_validate
@@ -42,14 +41,6 @@ from tartare.interfaces import schema
 
 
 class DataSource(flask_restful.Resource):
-    def __add_calculated_fields_for_data_sources(self, contributor_id: str, data_sources: List[dict]) -> List[dict]:
-        for data_source in data_sources:
-            data_source['status'], data_source['fetch_started_at'], data_source['updated_at'] = \
-                models.DataSource.format_calculated_attributes(
-                    models.DataSource.get_calculated_attributes(contributor_id, data_source['id'])
-                )
-        return data_sources
-
     @json_data_validate()
     def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
@@ -63,10 +54,10 @@ class DataSource(flask_restful.Resource):
             data_source.save(contributor_id)
             response, status = self.get(contributor_id, data_source.id)
             return response, 201
+        except (ValueError, DuplicateKeyError) as e:
+            raise DuplicateEntry(str(e))
         except PyMongoError:
             raise InternalServerError('Impossible to add data source.')
-        except ValueError as e:
-            raise DuplicateEntry(str(e))
 
     def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
@@ -76,10 +67,7 @@ class DataSource(flask_restful.Resource):
         except ValueError as e:
             raise InvalidArguments(str(e))
 
-        result = schema.DataSourceSchema(many=True).dump(ds)
-        result = MarshalResult(data=self.__add_calculated_fields_for_data_sources(contributor_id, result.data),
-                               errors=result.errors)
-        return {'data_sources': result.data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
     def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         try:
