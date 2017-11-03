@@ -1,7 +1,5 @@
 object_type,object_id,object_property_name,object_property_value
 line,OIF:800:COIF741,realtime_system,SIRI_STIF
-line,OIF:800:COIF741,realtime_system,SIRI_STIF
-line,OIF:800:DOIF741,realtime_system,SIRI_STIF
 line,OIF:800:DOIF741,realtime_system,SIRI_STIF
 route,OIF:800:C:Bus,realtime_deactivation,True
 route,OIF:800:C:Bus_R,realtime_deactivation,True
