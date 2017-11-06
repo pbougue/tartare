@@ -116,10 +116,8 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
-        last_data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor_id,
-                                                                     data_source_id=data_source.id)
-        new_data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                           data_source_id=data_source.id)
+        last_data_source_fetched = models.DataSourceFetched.get_last(data_source_id=data_source.id)
+        new_data_source_fetched = models.DataSourceFetched(data_source_id=data_source.id, contributor_id=contributor_id)
         new_data_source_fetched.save()
         try:
             fetcher = FetcherManager.select_from_url(url)
@@ -151,7 +149,7 @@ def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
         if data_source.input.type != 'computed':
-            data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
+            data_set = DataSourceFetched.get_last(data_source.id)
             if not data_set:
                 raise ParameterException(
                     'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))

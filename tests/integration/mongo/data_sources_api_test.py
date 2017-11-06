@@ -156,7 +156,7 @@ class TestDataSources(TartareFixture):
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
         payload = self.to_json(raw)
         assert raw.status_code == 409, print(payload)
-        assert payload['error'] == "Duplicate data_source id 'duplicate_id'"
+        assert payload['error'] == "Duplicate data_source id 'duplicate_id' for contributor 'id_test'"
 
     def test_patch_ds_data_source_with_full_contributor(self, data_source):
         """
@@ -470,3 +470,42 @@ class TestDataSources(TartareFixture):
         assert new_ds['status'] == DATA_SOURCE_STATUS_FAILED
         assert new_ds['fetch_started_at'] != ds['fetch_started_at']
         assert new_ds['updated_at'] == ds['updated_at']
+
+    def test_data_source_calculated_fields_values(self, contributor):
+        for ds_name in ["ds-name1", "ds-name2"]:
+            response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
+                                 self.dict_to_json({"name": ds_name}))
+            response_payload = self.to_json(response)
+            self.assert_sucessful_call(response, 201)
+            ds = response_payload['data_sources'][0]
+            assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+            assert ds['fetch_started_at'] is None
+            assert ds['updated_at'] is None
+        response = self.get('/contributors/{}'.format(contributor['id']))
+        response_payload = self.to_json(response)
+        self.assert_sucessful_call(response, 200)
+        for ds in response_payload['contributors'][0]['data_sources']:
+            assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+            assert ds['fetch_started_at'] is None
+            assert ds['updated_at'] is None
+
+    def test_data_source_calculated_fields_values_multi_contrib(self):
+        for contrib_id in ["contrib1", "contri2b"]:
+            response = self.post('/contributors',
+                                 self.dict_to_json({"id": contrib_id, "name": contrib_id, "data_prefix": contrib_id}))
+            self.assert_sucessful_call(response, 201)
+            response = self.post('/contributors/{}/data_sources'.format(contrib_id),
+                                 self.dict_to_json({"name": "ds-" + contrib_id}))
+            self.assert_sucessful_call(response, 201)
+            response_payload = self.to_json(response)
+            ds = response_payload['data_sources'][0]
+            assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+            assert ds['fetch_started_at'] is None
+            assert ds['updated_at'] is None
+        response = self.get('/contributors')
+        response_payload = self.to_json(response)
+        self.assert_sucessful_call(response, 200)
+        for contrib in response_payload['contributors']:
+            assert contrib['data_sources'][0]['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
+            assert contrib['data_sources'][0]['fetch_started_at'] is None
+            assert contrib['data_sources'][0]['updated_at'] is None
