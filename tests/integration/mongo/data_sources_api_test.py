@@ -395,7 +395,7 @@ class TestDataSources(TartareFixture):
         data_source = self.to_json(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
 
-    def test_data_source_calculated_fields_values(self, contributor):
+    def test_data_source_calculated_fields_values_after_posting(self, contributor):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json({"name": "ds-name"}))
         response_payload = self.to_json(response)
@@ -471,7 +471,7 @@ class TestDataSources(TartareFixture):
         assert new_ds['fetch_started_at'] != ds['fetch_started_at']
         assert new_ds['updated_at'] == ds['updated_at']
 
-    def test_data_source_calculated_fields_values(self, contributor):
+    def test_data_source_calculated_fields_values_after_posting_one_contributor(self, contributor):
         for ds_name in ["ds-name1", "ds-name2"]:
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json({"name": ds_name}))
@@ -489,7 +489,7 @@ class TestDataSources(TartareFixture):
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
 
-    def test_data_source_calculated_fields_values_multi_contrib(self):
+    def test_data_source_calculated_fields_values_after_posting_multi_contributors(self):
         for contrib_id in ["contrib1", "contri2b"]:
             response = self.post('/contributors',
                                  self.dict_to_json({"id": contrib_id, "name": contrib_id, "data_prefix": contrib_id}))
