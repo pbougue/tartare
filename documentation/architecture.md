@@ -23,5 +23,5 @@ tartare is still using fusio to do most of the work.
 
 All data are stored in mongodb, for files we are using gridfs.
 
-![architecture](images/archi.png)
+![architecture](images/archi_functional.png)
 
