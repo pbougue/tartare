@@ -154,6 +154,66 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 200
         assert len(r["contributors"][0]["data_sources"]) == 0
 
+    def test_post_contrib_with_existing_id(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "OOO",
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "id" in r["error"]
+        assert r["message"] == "Duplicate entry"
+
+
+    def test_post_contrib_with_existing_data_prefix(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "stif",
+            "name": "stif",
+            "data_prefix": "AAA",
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "data_prefix" in r["error"]
+        assert r["message"] == "Duplicate entry"
+
+    def test_post_contrib_with_existing_data_source_id(self, contributor, data_source):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "stif",
+            "name": "stif",
+            "data_prefix": "BBB",
+            "data_sources": [
+                {
+                    "id": data_source["id"],
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                },
+            ]
+        }
+
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "data_sources.id" in r["error"]
+        assert r["message"] == "Duplicate entry"
+
     def test_delete_contributors_returns_success(self):
         raw = self.get('/contributors/id_test')
         assert raw.status_code == 404
