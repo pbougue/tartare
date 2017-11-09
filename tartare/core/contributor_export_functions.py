@@ -39,7 +39,6 @@ from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
-from tartare.helper import get_md5_content_file
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
@@ -104,15 +103,13 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
+        if data_source.input.url and data_source.is_type(INPUT_TYPE_URL):
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
 
     return nb_updated_datasets
 
 
 def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) -> bool:
-    if not data_source.is_type(INPUT_TYPE_URL) or not data_source.input.url:
-        return False
-
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -128,8 +125,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
             raise e
 
         if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
-            if last_data_source_fetched and last_data_source_fetched.get_md5() == get_md5_content_file(
-                    dest_full_file_name):
+            if last_data_source_fetched and last_data_source_fetched.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
                              .format(expected_file_name, contributor_id))
                 new_data_source_fetched.set_status(DATA_SOURCE_STATUS_UNCHANGED).update()

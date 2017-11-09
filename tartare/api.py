@@ -31,6 +31,8 @@
 
 from tartare import app
 from flask_restful import Api
+
+from tartare.interfaces.data_source_fetch import DataSourceFetch
 from tartare.interfaces.status import Status
 from tartare.interfaces.index import Index
 from tartare.interfaces.coverages import Coverage
@@ -107,6 +109,9 @@ api.add_resource(Contributor,
 api.add_resource(DataSource,
                  contributor_and_id + '/data_sources',
                  contributor_and_id + '/data_sources/<string:data_source_id>')
+
+api.add_resource(DataSourceFetch,
+                 contributor_and_id + '/data_sources/<string:data_source_id>/actions/fetch')
 
 api.add_resource(DataSet,
                  contributor_and_id + '/data_sources/<string:data_source_id>/data_sets')
