@@ -29,8 +29,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from marshmallow import Schema, fields, post_load, validates_schema, ValidationError
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
+from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
+    DataSource
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 
@@ -65,12 +66,22 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
         return Coverage(**data)
 
 
-class ContributorSchema(MongoContributorSchema, NoUnknownFieldMixin):
+class DataSourceSchema(MongoDataSourceSchema):
     id = fields.String()
 
+    @post_dump()
+    def add_calculated_fields_for_data_source(self, data: dict) -> dict:
+        data['status'], data['fetch_started_at'], data['updated_at'] = DataSource.format_calculated_attributes(
+            DataSource.get_calculated_attributes(data['id'])
+        )
 
-class DataSourceSchema(MongoDataSourceSchema, NoUnknownFieldMixin):
+        return data
+
+
+class ContributorSchema(MongoContributorSchema):
     id = fields.String()
+
+    data_sources = fields.Nested(DataSourceSchema, many=True, required=False)
 
 
 class JobSchema(MongoJobSchema, NoUnknownFieldMixin):
