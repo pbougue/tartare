@@ -57,7 +57,7 @@ class TestDataSourceFetchAction(TartareFixture):
 
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        url = self.format_url(ip, 'sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201

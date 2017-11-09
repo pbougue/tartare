@@ -35,7 +35,7 @@ import tartare
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
     DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, \
-    DATA_SOURCE_STATUS_UNCHANGED, EXCEPTED_DATA_SOURCES, DATA_TYPE_PUBLIC_TRANSPORT
+    DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
@@ -311,7 +311,7 @@ class TestDataSources(TartareFixture):
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
 
     def test_post_data_source_valid_data_format(self, contributor):
-        for data_format in EXCEPTED_DATA_SOURCES[DATA_TYPE_PUBLIC_TRANSPORT]:
+        for data_format in DATA_FORMAT_BY_DATA_TYPE[DATA_TYPE_PUBLIC_TRANSPORT]:
             data_source = {
                 "data_format": data_format,
                 "input": {'type': 'manual'},

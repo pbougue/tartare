@@ -15,7 +15,7 @@ This preprocess fixes trips.txt files into one or more gtfs data sources (refere
   "params": {
     "links": [
       {
-        "contributor_id": "aa",
+        "contributor_id": "{cid}",
         "data_source_id": "data-source-id-config"
       }
     ]
@@ -168,14 +168,14 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
     "target_data_source_id": "my_external_settings_data_source_id",
     "links": [
       {
-        "contributor_id": "aa",
+        "contributor_id": "{cid}",
         "data_source_id": "my-data-source-of-perimeter-json-id"
       },
       {
-        "contributor_id": "cc",
+        "contributor_id": "{cid_2}",
         "data_source_id": "my-data-source-of-lines-json-id"
       }
-   },
+   ],
    "type":"ComputeExternalSettings",
    "sequence":0
 }
@@ -189,7 +189,7 @@ by doing
 ```bash
 curl -i -X POST \
   -F "file=@\"./path/to/your_tr_perimeter_file.json\"" \
- 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
+ 'http://{tartare_host}/contributors/{cid_1}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
 ```
 
 and 
@@ -197,7 +197,7 @@ and
 ```bash
 curl -i -X POST \
   -F "file=@\"./path/to/your_lines_referential_file.json\"" \
- 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-lines-json-id/data_sets'
+ 'http://{tartare_host}/contributors/{cid_2}/data_sources/my-data-source-of-lines-json-id/data_sets'
 ```
 
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  

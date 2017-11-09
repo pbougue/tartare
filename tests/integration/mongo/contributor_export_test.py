@@ -29,10 +29,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
-from tartare.core.gridfs_handler import GridFsHandler
 import pytest
 
+from tartare import app
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE
+from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -176,42 +177,25 @@ class TestContributorExport(TartareFixture):
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 5, print(grid_fs_list)
 
-    def test_contributor_export_geographic_bano(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
-        raw = self.post('/contributors', '{"id": "bano", "name":"geographic", '
-                                         '"data_prefix":"BBB", "data_type": "geographic"}')
+    @pytest.mark.parametrize("filename,path,data_format", [
+        ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),
+        ('empty_pbf.osm.pbf', 'geo_data', DATA_FORMAT_OSM_FILE),
+    ])
+    def test_contributor_export_geographic(self, init_http_download_server, filename, path, data_format):
+        cid = 'contrib-' + data_format
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename, path=path)
+        raw = self.post('/contributors',
+                        '{"id": "' + cid + '", "name":"geographic", "data_prefix":"BBB", "data_type": "geographic"}')
         assert raw.status_code == 201
-        raw = self.post('/contributors/bano/data_sources',
-                        params='{"name": "bobette", "data_format": "bano_file", '
-                               '"input": {"type": "url", "url": "' + url + '"}}')
+        raw = self.post('/contributors/{}/data_sources'.format(cid),
+                        params='{"name": "bobette", "data_format": "' + data_format + '", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format('bano', "2015-08-10"), {})
+        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(cid, "2015-08-10"), {})
         assert raw.status_code == 201
         job = self.to_json(raw).get('job')
         raw_job = self.get(
-            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id='bano', job_id=job['id']))
-        job = self.to_json(raw_job)['jobs'][0]
-        assert job['state'] == 'done', print(job)
-        with app.app_context():
-            grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 2, print(grid_fs_list)
-
-    def test_contributor_export_geographic_osm(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='empty_pbf.osm.pbf', path='geo_data')
-        raw = self.post('/contributors', '{"id": "osm", "name":"geographic", '
-                                         '"data_prefix":"BBB", "data_type": "geographic"}')
-        assert raw.status_code == 201
-        raw = self.post('/contributors/osm/data_sources',
-                        params='{"name": "bobette", "data_format": "osm_file", '
-                               '"input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
-
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format('osm', "2015-08-10"), {})
-        assert raw.status_code == 201
-        job = self.to_json(raw).get('job')
-        raw_job = self.get(
-            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id='osm', job_id=job['id']))
+            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=cid, job_id=job['id']))
         job = self.to_json(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
         with app.app_context():

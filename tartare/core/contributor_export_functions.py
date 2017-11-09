@@ -34,13 +34,13 @@ from datetime import date
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
+from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 from tartare.validity_period_finder import ValidityPeriodFinder
-from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
 
         if grid_fs_id:
             contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
-                                                                                            current_date)
+                                                                                                current_date)
             new_gridfs_id = GridFsHandler().copy_file(grid_fs_id)
         else:
             new_gridfs_id = None
@@ -148,6 +148,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
         return True
 
+
 def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
@@ -162,10 +163,10 @@ def build_context(contributor: Contributor, context: Context) -> Context:
             context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
     # links data added
     if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
-        for p in contributor.preprocesses:
-            for l in p.params.get('links', []):
-                contributor_id = l.get('contributor_id')
-                data_source_id = l.get('data_source_id')
+        for preprocess in contributor.preprocesses:
+            for link in preprocess.params.get('links', []):
+                contributor_id = link.get('contributor_id')
+                data_source_id = link.get('data_source_id')
                 if contributor_id and data_source_id and contributor_id != contributor.id:
                     tmp_contributor = Contributor.get(contributor_id)
                     if not tmp_contributor:

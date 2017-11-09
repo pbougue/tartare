@@ -130,6 +130,6 @@ class Contributor(flask_restful.Resource):
         try:
             contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError:
-            raise InternalServerError('impossible to update contributor with dataset {}'.format(request_data))
+            raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
 
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200

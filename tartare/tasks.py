@@ -207,6 +207,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
+            models.Job.update(job_id=job.id, state="running", step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)

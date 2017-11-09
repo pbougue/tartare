@@ -223,7 +223,7 @@ class DataSource(object):
         return data_sources
 
     @classmethod
-    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> Optional['DataSource']:
+    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> 'DataSource':
         data_sources = DataSource.get(contributor_id, data_source_id)
 
         if data_sources is None:

@@ -38,7 +38,7 @@ from tartare.core import models
 from tartare.core.models import Coverage, CoverageExport
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
 from tartare.processes.processes import PreProcessManager
-from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, EXCEPTED_DATA_SOURCES, DATA_FORMAT_DEFAULT, \
+from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
     DATA_FORMAT_VALUES
 
 
@@ -55,7 +55,7 @@ def check_excepted_data_format(data_format: str, data_type: str) -> None:
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
-        if data_format not in EXCEPTED_DATA_SOURCES[data_type]:
+        if data_format not in DATA_FORMAT_BY_DATA_TYPE[data_type]:
             msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
                                                                                                data_type)
             logging.getLogger(__name__).error(msg)
@@ -146,7 +146,7 @@ class check_contributor_integrity(object):
             contributor_id = kwargs.get('contributor_id', None)
 
             if self.contributor_id_required and not contributor_id:
-                msg = "Contributor '{}' not found.".format(contributor_id)
+                msg = "contributor_id not present in request."
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
 
@@ -178,6 +178,10 @@ class check_data_source_integrity(object):
             post_data = request.json
             contributor_id = kwargs.get('contributor_id', None)
             data_source_id = kwargs.get('data_source_id', None)
+            if self.data_source_id_required and not data_source_id:
+                msg = "data_source_id not present in request."
+                logging.getLogger(__name__).error(msg)
+                raise ObjectNotFound(msg)
             contributor = models.Contributor.get(contributor_id)
             if not contributor:
                 msg = "Contributor '{}' not found.".format(contributor_id)
@@ -186,11 +190,10 @@ class check_data_source_integrity(object):
             data_type = contributor.data_type
 
             if self.data_source_id_required:
-                data_source = models.DataSource.get(contributor_id, data_source_id)
-                if data_source != 1:
-                    msg = "data source '{}' not found.".format(data_source_id)
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
+                try:
+                    models.DataSource.get_one(contributor_id, data_source_id)
+                except ValueError as e:
+                    raise ObjectNotFound(str(e))
             check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
 
             return func(*args, **kwargs)
@@ -206,7 +209,7 @@ class validate_patch_coverages(object):
                 for environment_name in post_data.get("environments"):
                     environment = post_data.get("environments").get(environment_name)
                     if environment is not None and "publication_platforms" in environment:
-                        msg = "publication_platforms' field can't be updated"
+                        msg = "'publication_platforms' field can't be updated"
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)

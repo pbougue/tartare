@@ -34,6 +34,8 @@ import tempfile
 import zipfile
 
 from gridfs import GridOut
+from typing import List
+
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context
@@ -117,8 +119,9 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
     def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter) -> None:
         links = self.params.get('links')
-        lines_referential_data_source_context = self.context.get_data_source_context_by_links(links,
-                                                                                              [DATA_FORMAT_LINES_REFERENTIAL])
+        lines_referential_data_source_context = self.context.get_data_source_context_in_links(
+            links, DATA_FORMAT_LINES_REFERENTIAL
+        )
         reader = JsonReader()
         reader.load_json_data_from_io(
             self.gfs.get_file_from_gridfs(lines_referential_data_source_context.gridfs_id),
@@ -137,7 +140,9 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
     def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter) -> None:
         links = self.params.get('links')
-        tr_perimeter_data_source_context = self.context.get_data_source_context_by_links(links, [DATA_FORMAT_TR_PERIMETER])
+        tr_perimeter_data_source_context = self.context.get_data_source_context_in_links(
+            links, DATA_FORMAT_TR_PERIMETER
+        )
         reader = JsonReader()
         reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])

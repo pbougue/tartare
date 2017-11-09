@@ -54,8 +54,7 @@ class ComputeDirections(AbstractContributorProcess):
 
     def __get_config_gridfs_id_from_context(self) -> str:
         links = self.params.get('links')
-        data_source_config_context = self.context.get_data_source_context_by_links(links,
-                                                                                   [DATA_FORMAT_DIRECTION_CONFIG])
+        data_source_config_context = self.context.get_data_source_context_in_links(links, DATA_FORMAT_DIRECTION_CONFIG)
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:

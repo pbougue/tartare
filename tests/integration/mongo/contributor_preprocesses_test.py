@@ -439,7 +439,7 @@ class TestComputeExternalSettings(TartareFixture):
             ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess'),
             ({'target_data_source_id': 'ds-target', 'links': []}, 'empty links in preprocess'),
             ({'target_data_source_id': 'ds-target', 'links': [{'lines_referential': 'something'}]},
-             'Invalid argument, required argument contributor_id'),
+             'contributor_id missing in links'),
             (
                     {'target_data_source_id': 'ds-target',
                      'links': [{'contributor_id': 'id_test', 'data_source_id': 'whatever'}]},

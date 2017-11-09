@@ -77,7 +77,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_type"] == "public_transport"
 
     def test_add_contributor_with_data_type_geographic(self):
-
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
                                          '"data_prefix":"AAA", "data_type": "geographic"}')
         assert raw.status_code == 201
@@ -92,13 +91,13 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_type"] == "geographic"
 
     def test_add_contributor_with_invalid_data_type(self):
-
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
                                          '"data_prefix":"AAA", "data_type": "bob"}')
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == {'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
+        assert r['error'] == {
+            'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')
@@ -685,17 +684,21 @@ class TestContributors(TartareFixture):
                              "not found in contributor".format(missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
 
-    def test_post_contrib_geographic_with_gtfs_data_format(self):
+    @pytest.mark.parametrize("data_type,data_format", [
+        ('public_transport', 'osm_file'),
+        ('geographic', 'gtfs'),
+    ])
+    def test_post_contrib_public_transport_with_data_format(self, data_type, data_format):
         post_data = {
             "id": "id_test",
             "name": "name_test",
-            "data_type": 'geographic',
+            "data_type": data_type,
             "data_prefix": "AAA",
             "data_sources": [
                 {
                     "name": "data_source_name",
                     'id': '123',
-                    'data_format': 'gtfs',
+                    'data_format': data_format,
                     "input": {
                         "type": "url",
                         "url": "http://stif.com/od.zip"
@@ -707,43 +710,24 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 400, print(self.to_json(raw))
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == 'data source format gtfs is incompatible with contributor data_type geographic'
+        assert r['error'] == 'data source format {format} is incompatible with contributor data_type {type}'.format(
+            format=data_format, type=data_type)
 
-    def test_post_contrib_public_transport_with_osm_data_format(self):
+    @pytest.mark.parametrize("data_type,data_format,other_data_format", [
+        ('public_transport', 'gtfs', 'osm_file'),
+        ('geographic', 'bano_file', 'gtfs'),
+    ])
+    def test_patch_contrib_public_transport_with_data_format(self, data_type, data_format, other_data_format):
         post_data = {
             "id": "id_test",
             "name": "name_test",
-            "data_type": 'public_transport',
+            "data_type": data_type,
             "data_prefix": "AAA",
             "data_sources": [
                 {
                     "name": "data_source_name",
                     'id': '123',
-                    'data_format': 'osm_file',
-                    "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
-                    }
-                }
-            ]
-        }
-        raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 400, print(self.to_json(raw))
-        r = self.to_json(raw)
-        assert 'error' in r
-        assert r['error'] == 'data source format osm_file is incompatible with contributor data_type public_transport'
-
-    def test_patch_contrib_public_transport_with_osm_data_format(self):
-        post_data = {
-            "id": "id_test",
-            "name": "name_test",
-            "data_type": 'public_transport',
-            "data_prefix": "AAA",
-            "data_sources": [
-                {
-                    "name": "data_source_name",
-                    'id': '123',
-                    'data_format': 'gtfs',
+                    'data_format': data_format,
                     "input": {
                         "type": "url",
                         "url": "http://stif.com/od.zip"
@@ -759,7 +743,7 @@ class TestContributors(TartareFixture):
                 {
                     "name": "data_source_name",
                     'id': '123',
-                    'data_format': 'osm_file',
+                    'data_format': other_data_format,
                     "input": {
                         "type": "url",
                         "url": "http://stif.com/od.zip"
@@ -771,45 +755,5 @@ class TestContributors(TartareFixture):
         self.assert_sucessful_call(raw, 400)
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == 'data source format osm_file is incompatible with contributor data_type public_transport'
-
-    def test_patch_contrib_geographic_with_gtfs_data_format(self):
-        post_data = {
-            "id": "id_test",
-            "name": "name_test",
-            "data_type": 'geographic',
-            "data_prefix": "AAA",
-            "data_sources": [
-                {
-                    "name": "data_source_name",
-                    'id': '123',
-                    'data_format': 'osm_file',
-                    "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
-                    }
-                }
-            ]
-        }
-        raw = self.post('/contributors', json.dumps(post_data))
-        self.assert_sucessful_call(raw, 201)
-
-        post_data = {
-            "data_prefix": "AAA",
-            "data_sources": [
-                {
-                    "name": "data_source_name",
-                    'id': '123',
-                    'data_format': 'gtfs',
-                    "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
-                    }
-                }
-            ]
-        }
-        raw = self.patch('/contributors/id_test', json.dumps(post_data))
-        self.assert_sucessful_call(raw, 400)
-        r = self.to_json(raw)
-        assert 'error' in r
-        assert r['error'] == 'data source format gtfs is incompatible with contributor data_type geographic'
+        assert r['error'] == 'data source format {other} is incompatible with contributor data_type {data_type}'.format(
+            other=other_data_format, data_type=data_type)
