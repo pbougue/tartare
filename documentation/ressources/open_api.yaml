@@ -544,7 +544,7 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-            
+
   /contributors:
     get:
       summary: Display available contributors
@@ -829,6 +829,14 @@ paths:
         required: true
         type: "file"
         description: "File to upload"
+      - name: "contributor_id"
+        in: "path"
+        required: true
+        type: "string"
+      - name: "data_source_id"
+        in: "path"
+        required: true
+        type: "string"
       responses:
         201:
           description: "Data set created"
@@ -842,15 +850,35 @@ paths:
           description: "Object not found"
           schema:
             $ref: "#/definitions/error_404"
-    parameters:
-    - name: "contributor_id"
-      in: "path"
-      required: true
-      type: "string"
-    - name: "data_source_id"
-      in: "path"
-      required: true
-      type: "string"
+
+
+  /contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch:
+    post:
+      summary: Fetch data source and save to database
+      tags:
+        - contributors
+      produces:
+        - application/json
+      parameters:
+        - name: contributor_id
+          in: path
+          required: true
+          type: string
+        - name: data_source_id
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Data source is fetched (and saved to database if it has changed)
+        400:
+          description: "Invalid arguments"
+          schema:
+            $ref: "#/definitions/error_400"
+        500:
+          description: "Internal Server Error"
+          schema:
+            $ref: "#/definitions/error_500"
 
   /contributors/{contributor_id}/preprocesses:
     get:
@@ -1272,9 +1300,11 @@ definitions:
         example: fetching data
       started_at:
         type: string
+        format: date-time
         example: "2017-05-29T13:37:55.967795+00:00"
       updated_at:
         type: string
+        format: date-time
         example: "2017-05-29T13:37:55.967795+00:00"
       contributor_id:
         type: string
@@ -1460,6 +1490,17 @@ definitions:
       data_prefix:
         type: string
         example: AAA
+      data_type:
+        type: string
+        enum:
+            - public_transport
+            - geographic
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/data_source_type"
+
+
       preprocesses:
         type: array
         items:
@@ -1498,7 +1539,6 @@ definitions:
       params:
         type: object
         example: {config_file: conf_yml, bano_data_ids: [bano_75, bano_91]}
-
 
   coverage_preprocess_list:
     type: object
@@ -1554,6 +1594,7 @@ definitions:
         example: fr-idf
       created_at:
         type: string
+        format: date-time
         example: "2017-06-14T13:05:30.008401+00:00"
       contributors:
         type: array
@@ -1597,6 +1638,7 @@ definitions:
         example: contributor_stif
       created_at:
         type: string
+        format: date-time
         example: "2017-06-14T12:46:21.119813+00:00"
       data_sources:
         type: array
@@ -1638,6 +1680,32 @@ definitions:
       data_format:
         type: string
         example: "gtfs"
+        enum: [
+          gtfs,
+          bano_file,
+          osm_file,
+          direction_config,
+          ruspell_config,
+          lines_referential,
+          tr_perimeter,
+          pt_external_settings
+        ]
+        default: gtfs
+      fetch_started_at:
+        type: "string"
+        description: "Date when the data source fetch is starting"
+        example: "2017-08-08T13:43:53.601089+00:00"
+        format: date-time
+      updated_at:
+        type: "string"
+        description: "UTC Date when the data source is updated"
+        example: "2017-08-08T13:45:00.601089+00:00"
+        format: date-time
+      status:
+        type: "string"
+        description: "UTC Data source fetching status"
+        enum: [never_fetched, fetching, failed, unchanged, updated]
+        example: "done"
       input:
         $ref: "#/definitions/input"
       license:
@@ -1649,6 +1717,8 @@ definitions:
       type:
         type: string
         example: "url"
+        enum: [url, manual, computed]
+        default: manual
       url:
         type: string
         example: "http://stif.com/od.zip"
@@ -1706,6 +1776,16 @@ definitions:
         type: string
         example: Detailed message
 
+  error_500:
+    type: object
+    properties:
+      message:
+        type: string
+        example: Internal Server Error
+      error:
+        type: string
+        example: An error occured
+
   data_sets:
     type: "object"
     properties:
@@ -1720,6 +1800,7 @@ definitions:
               example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
             created_at:
               type: "string"
+              format: date-time
               description: "Creation date"
               example: "2017-08-08T13:43:53.601089+00:00"
             gridfs_id:
@@ -1742,10 +1823,12 @@ definitions:
     properties:
       start_date:
         type: "string"
+        format: date
         description: "Start date"
         example: "2017-06-14"
       end_date:
         type: "string"
+        format: date
         description: "End date"
         example: "2017-06-20"
     description: "Validity period"

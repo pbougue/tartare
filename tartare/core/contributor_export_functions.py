@@ -29,17 +29,17 @@
 
 import logging
 import tempfile
+from datetime import date
 
 from tartare.core import models
-from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
+    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
-from tartare.exceptions import ParameterException
-from tartare.helper import get_md5_content_file
+from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 from tartare.validity_period_finder import ValidityPeriodFinder
-from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
     data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
                                                    data_source_id=data_source_id,
                                                    validity_period=validity_period)
-    data_source_fetched.save_dataset(file, filename)
+    data_source_fetched.update_dataset(file, filename)
     data_source_fetched.save()
     context.add_contributor_data_source_context(contributor_id=contributor_id,
                                                 data_source_id=data_source_id,
@@ -103,45 +103,49 @@ def save_data_fetched_and_get_context(context: Context, file: str, filename: str
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input.type == INPUT_TYPE_URL and data_source.input.url:
-            url = data_source.input.url
-            logger.info("fetching data from url {}".format(url))
-            fetcher = FetcherManager.select_from_url(url)
-            with tempfile.TemporaryDirectory() as tmp_dir_name:
-                dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
-                                                                        data_source.input.expected_file_name)
-                data_source_fetched = models.DataSourceFetched.get_last(contributor_id=contributor.id,
-                                                                        data_source_id=data_source.id)
-                if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
-                    if data_source_fetched and data_source_fetched.get_md5() == get_md5_content_file(
-                            dest_full_file_name):
-                        logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
-                                     .format(expected_file_name, contributor.id))
-                        continue
-                    else:
-                        nb_updated_datasets += 1
-                logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
-                    contributor.id, data_source.id
-                ))
-                if data_source.data_format in DATA_FORMAT_WITH_VALIDITY:
-                    start_date, end_date = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name)
-                    validity_period = models.ValidityPeriod(start_date=start_date, end_date=end_date)
-                else:
-                    validity_period = None
+        if data_source.input.url and data_source.is_type(INPUT_TYPE_URL):
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
 
-                data_source_fetched = models.DataSourceFetched(contributor_id=contributor.id,
-                                                               data_source_id=data_source.id,
-                                                               validity_period=validity_period)
-                data_source_fetched.save_dataset(dest_full_file_name, expected_file_name)
-                data_source_fetched.save()
     return nb_updated_datasets
+
+
+def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) -> bool:
+    url = data_source.input.url
+    logger.info("fetching data from url {}".format(url))
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        last_data_source_fetched = models.DataSourceFetched.get_last(data_source_id=data_source.id)
+        new_data_source_fetched = models.DataSourceFetched(data_source_id=data_source.id, contributor_id=contributor_id)
+        new_data_source_fetched.save()
+        try:
+            fetcher = FetcherManager.select_from_url(url)
+            dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
+                                                                    data_source.input.expected_file_name)
+        except (FetcherException, GuessFileNameFromUrlException, ParameterException) as e:
+            new_data_source_fetched.set_status(DATA_SOURCE_STATUS_FAILED).update()
+            raise e
+
+        if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
+            if last_data_source_fetched and last_data_source_fetched.is_identical_to(dest_full_file_name):
+                logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
+                             .format(expected_file_name, contributor_id))
+                new_data_source_fetched.set_status(DATA_SOURCE_STATUS_UNCHANGED).update()
+                return False
+        logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
+            contributor_id, data_source.id
+        ))
+        validity_period = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name) \
+            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
+        new_data_source_fetched.validity_period = validity_period
+
+        new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
+        return True
 
 
 def build_context(contributor: Contributor, context: Context) -> Context:
     context.add_contributor_context(contributor)
     for data_source in contributor.data_sources:
         if data_source.input.type != 'computed':
-            data_set = DataSourceFetched.get_last(contributor.id, data_source.id)
+            data_set = DataSourceFetched.get_last(data_source.id)
             if not data_set:
                 raise ParameterException(
                     'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))

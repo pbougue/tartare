@@ -74,6 +74,31 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["id"] == "id_test"
         assert r["contributors"][0]["name"] == "name_test"
         assert r["contributors"][0]["data_prefix"] == "AAA"
+        assert r["contributors"][0]["data_type"] == "public_transport"
+
+    def test_add_contributor_with_data_type_geographic(self):
+
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
+                                         '"data_prefix":"AAA", "data_type": "geographic"}')
+        assert raw.status_code == 201
+        raw = self.get('/contributors')
+        r = self.to_json(raw)
+
+        assert len(r["contributors"]) == 1
+        assert isinstance(r["contributors"], list)
+        assert r["contributors"][0]["id"] == "id_test"
+        assert r["contributors"][0]["name"] == "name_test"
+        assert r["contributors"][0]["data_prefix"] == "AAA"
+        assert r["contributors"][0]["data_type"] == "geographic"
+
+    def test_add_contributor_with_invalid_data_type(self):
+
+        raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
+                                         '"data_prefix":"AAA", "data_type": "bob"}')
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'error' in r
+        assert r['error'] == {'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')
@@ -128,6 +153,66 @@ class TestContributors(TartareFixture):
         print(r)
         assert raw.status_code == 200
         assert len(r["contributors"][0]["data_sources"]) == 0
+
+    def test_post_contrib_with_existing_id(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "OOO",
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "id" in r["error"]
+        assert r["message"] == "Duplicate entry"
+
+
+    def test_post_contrib_with_existing_data_prefix(self, contributor):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "stif",
+            "name": "stif",
+            "data_prefix": "AAA",
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "data_prefix" in r["error"]
+        assert r["message"] == "Duplicate entry"
+
+    def test_post_contrib_with_existing_data_source_id(self, contributor, data_source):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "stif",
+            "name": "stif",
+            "data_prefix": "BBB",
+            "data_sources": [
+                {
+                    "id": data_source["id"],
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                },
+            ]
+        }
+
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 409
+        r = self.to_json(raw)
+        assert r["error"].startswith("duplicate entry:")
+        assert "data_sources.id" in r["error"]
+        assert r["message"] == "Duplicate entry"
 
     def test_delete_contributors_returns_success(self):
         raw = self.get('/contributors/id_test')

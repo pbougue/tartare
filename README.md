@@ -10,7 +10,7 @@ The global architecture is available in the [architecture.md](documentation/arch
 ## Installation
 
 ### With Python 3.6.2 on your workspace
-```
+```bash
 cd path/to/tartare
 mkvirtualenv tartare -p python3.6.2
 make build
@@ -21,24 +21,23 @@ make build
 * Install pyenv (see https://github.com/pyenv/pyenv-installer)
 * Install pyenv-virtualenv plugin if not present (in *~/.pyenv/plugins/pyenv-virtualenv/*) in your pyenv plugins (see https://github.com/pyenv/pyenv-virtualenv)
 
-```
+```bash
 cd path/to/tartare
 pyenv install 3.6.2
-pyenv local 3.6.2
 pyenv virtualenv 3.6.2 tartare
 pyenv activate tartare
 make build
 ```
 
-## Database migration
+## Database migration (if you already have data)
 ```
-mongodb-migrate --host [your_mongo_host] --database tartare
+PYTHONPATH=. mongodb-migrate --host [your_mongo_host] --database tartare
 ```
 
 For __workon__ occurrences within this documentation, replace it with __pyenv activate__ if you want to use pyenv instead
 
 ## Run the application (for development)
-```
+```bash
 cd path/to/tartare
 workon tartare
 honcho start
@@ -57,10 +56,17 @@ docker-compose build
 docker-compose up -d
 ```
 
+To switch off the application:
+``` bash
+docker-compose down
+```
+
 To watch logs output:
- ```
+```bash
  docker-compose logs -f
- ```
+```
+
+The data persistence will be within ~/tartare/mongo by default but u can change it in docker-compose.yml
 
 ## "Rest" Api
 

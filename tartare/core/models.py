@@ -32,18 +32,19 @@ from abc import ABCMeta
 from datetime import date
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tuple
 
 import pymongo
 from gridfs import GridOut
-from marshmallow import Schema, post_load, utils, fields
+from marshmallow import Schema, post_load, utils, fields, post_dump
 
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
-    INPUT_TYPE_DEFAULT
+    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.helper import to_doted_notation, get_values_by_key
+from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
 @app.before_first_request
@@ -64,7 +65,7 @@ class ChoiceField(fields.Field):
         'invalid': 'choice "{current_value}" not in possible values {possible_values}.'
     }
 
-    def _serialize(self, value: str, attr: str, obj: 'DataSource') -> str:
+    def _serialize(self, value: str, attr: str, _: Any ) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
@@ -80,6 +81,11 @@ class ChoiceField(fields.Field):
 class DataFormat(ChoiceField):
     def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_FORMAT_VALUES, **metadata)
+
+
+class DataType(ChoiceField):
+    def __init__(self, **metadata: dict) -> None:
+        super().__init__(DATA_TYPE_VALUES, **metadata)
 
 
 class InputType(ChoiceField):
@@ -182,16 +188,17 @@ class DataSource(object):
         return str(vars(self))
 
     @classmethod
-    def get_number_of_historical(cls, data_source_id: str) -> int:
-        data_sources = cls.get(data_source_id=data_source_id)
-        if not data_sources:
+    def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
+        contributor = Contributor.get(contributor_id)
+        if not contributor.data_sources:
             raise ValueError("Unknown data source id {}.".format(data_source_id))
-        return app.config.get('HISTORICAL', {}).get(data_sources[0].data_format, 3)
+        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
+        return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
-            raise ValueError("Duplicate data_source id '{}'".format(self.id))
+            raise ValueError("Duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
         raw_contrib = MongoContributorSchema().dump(contributor).data
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
@@ -214,6 +221,15 @@ class DataSource(object):
             if not data_sources:
                 return None
         return data_sources
+
+    @classmethod
+    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> Optional['DataSource']:
+        data_sources = DataSource.get(contributor_id, data_source_id)
+
+        if data_sources is None:
+            raise ValueError("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+
+        return data_sources[0]
 
     @classmethod
     def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
@@ -254,6 +270,39 @@ class DataSource(object):
             return False
         else:
             return data_sources[0].data_format == data_format
+
+    def is_type(self, type: str) -> bool:
+        return self.input.type == type
+
+    @classmethod
+    def get_calculated_attributes(cls, data_source_id: str) \
+            -> Tuple[str, Optional[datetime], Optional[datetime]]:
+
+        """
+        :return: a tuple with (status, fetch_started_at, updated_at) attributes:
+            - status: status of the last try on fetching data
+            - fetch_started_at: datetime at which the last try on fetching data started
+            - updated_at: datetime at which the last fetched data set was valid and inserted in database
+        """
+        last_data_set = DataSourceFetched.get_last(data_source_id, None)
+        status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
+        fetch_started_at = last_data_set.created_at if last_data_set else None
+        if status == DATA_SOURCE_STATUS_UPDATED:
+            updated_at = last_data_set.saved_at
+        elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
+            updated_at = None
+        else:
+            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
+            updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
+        return status, fetch_started_at, updated_at
+
+    @classmethod
+    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
+            -> Tuple[str, Optional[str], Optional[str]]:
+        status, fetch_started_at, updated_at = calculated_attributes
+        return status, \
+        str(fetch_started_at) if fetch_started_at else None, \
+        str(updated_at) if updated_at else None
 
 
 class GenericPreProcess(SequenceContainer):
@@ -393,13 +442,14 @@ class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
-    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
-                 preprocesses: List[PreProcess] = None) -> None:
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
+                 preprocesses: List[PreProcess]=None, data_type: str=DATA_TYPE_DEFAULT) -> None:
         super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
         self.data_sources = [] if data_sources is None else data_sources
+        self.data_type = data_type
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -430,7 +480,7 @@ class Contributor(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
+    def update(cls, contributor_id: str=None, dataset: dict=None) -> Optional['Contributor']:
         tmp_dataset = dataset if dataset else {}
         raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
         if raw.matched_count == 0:
@@ -640,29 +690,37 @@ class DataSourceFetched(Historisable):
 
     def __init__(self, contributor_id: str, data_source_id: str,
                  validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None) -> None:
+                 created_at: datetime = None, id: str = None, status: str=DATA_SOURCE_STATUS_FETCHING,
+                 saved_at: Optional[datetime]=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
         self.validity_period = validity_period
+        self.status = status
+        self.saved_at = saved_at
+
+    def update(self) -> bool:
+        raw = mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data})
+        return raw.matched_count == 1
 
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(DataSource.get_number_of_historical(self.data_source_id),
-                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+    def set_status(self, new_status: str) -> 'DataSourceFetched':
+        self.status = new_status
+        return self
 
     @classmethod
-    def get_last(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
-        if not contributor_id:
-            return None
+    def get_last(cls, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
+            -> Optional['DataSourceFetched']:
         where = {
-            'contributor_id': contributor_id,
             'data_source_id': data_source_id
         }
+        if status:
+            where['status'] = status
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
@@ -673,13 +731,21 @@ class DataSourceFetched(Historisable):
         file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
         return file.md5
 
-    def save_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
+    def update_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
         with open(tmp_file, 'rb') as file:
-            self.save_dataset_from_io(file, filename)
+            self.update_dataset_from_io(file, filename)
 
-    def save_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
+    def update_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
         self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
                                                              contributor_id=self.contributor_id)
+        self.set_status(DATA_SOURCE_STATUS_UPDATED)
+        self.saved_at = datetime.utcnow()
+        self.update()
+        self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
+                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+
+    def is_identical_to(self, file_path: str) -> bool:
+        return self.get_md5() == get_md5_content_file(file_path)
 
 
 class MongoDataSourceLicenseSchema(Schema):
@@ -695,8 +761,10 @@ class MongoDataSourceFetchedSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     data_source_id = fields.String(required=True)
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=False)
-    created_at = fields.DateTime(required=False)
+    gridfs_id = fields.String(required=False, allow_none=True)
+    created_at = fields.DateTime(required=False, allow_none=True)
+    saved_at = fields.DateTime(required=False, allow_none=True)
+    status = fields.String(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
@@ -724,6 +792,8 @@ class MongoDataSourceSchema(Schema):
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
         return DataSource(**data)
+
+
 
 
 class MongoPreProcessSchema(Schema):
@@ -762,6 +832,7 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
     data_prefix = fields.String(required=True)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
+    data_type = DataType()
 
     @post_load
     def make_contributor(self, data: dict) -> Contributor:
@@ -771,9 +842,9 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
-                 step: str = None, id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
-                 error_message: str = "") -> None:
+    def __init__(self, action_type: str, contributor_id: str=None, coverage_id: str=None, state: str='pending',
+                 step: str=None, id: str=None, started_at: datetime=None, updated_at: Optional[datetime]=None,
+                 error_message: str="") -> None:
         self.id = id if id else str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
@@ -795,7 +866,7 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get_some(cls, contributor_id: str = None, coverage_id: str = None) -> List['Job']:
+    def get_some(cls, contributor_id: str=None, coverage_id: str=None) -> List['Job']:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
@@ -857,9 +928,9 @@ class ContributorExport(Historisable):
     def __init__(self, contributor_id: str,
                  gridfs_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource] = None,
-                 id: str = None,
-                 created_at: datetime = None) -> None:
+                 data_sources: List[ContributorExportDataSource]=None,
+                 id: str=None,
+                 created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.gridfs_id = gridfs_id

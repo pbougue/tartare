@@ -29,10 +29,11 @@
 import csv
 import logging
 import os
+import shutil
 import tempfile
 import zipfile
+from typing import List
 
-import shutil
 from gridfs import GridOut
 
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
@@ -56,6 +57,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
     objects_codes_file_name = 'fusio_object_codes.txt'
     objects_properties_file_name = 'fusio_object_properties.txt'
     siri_stif_object_system = 'SIRI_STIF'
+    codif_ligne_object_system = 'codifligne'
     stop_extensions_object_code_column = 'ZDEr_ID_REF_A'
 
     def __write_row_for_codes(self, writer: csv.DictWriter, object_type: str, object_system: str, object_id: str,
@@ -127,7 +129,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
             if not object_id:
                 object_id = 'line not found'
                 nb_lines_not_in_gtfs += 1
-            self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
+            self.__write_row_for_codes(writer_codes, "line", self.codif_ligne_object_system, object_id,
                                        row['fields.id_line'])
         if nb_lines_not_in_gtfs:
             logging.getLogger(__name__).warning(
@@ -139,12 +141,16 @@ class ComputeExternalSettings(AbstractContributorProcess):
         reader = JsonReader()
         reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])
+        lines_list = []  # type: List[str]
         for row in reader.data.to_dict('records'):
             object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line not found')
             self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
                                        row['fields.lineref'])
-            self.__write_row_for_properties(writer_properties, "line", "realtime_system", self.siri_stif_object_system,
-                                            object_id)
+            if object_id not in lines_list:
+                lines_list.append(object_id)
+                self.__write_row_for_properties(
+                    writer_properties, "line", "realtime_system", self.siri_stif_object_system, object_id
+                )
 
     def __save_csv_files_as_data_set(self, tmp_csv_workspace: str) -> str:
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:

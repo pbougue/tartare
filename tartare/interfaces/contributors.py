@@ -70,9 +70,8 @@ class Contributor(flask_restful.Resource):
 
         try:
             contributor.save()
-        except DuplicateKeyError:
-            raise DuplicateEntry("Impossible to add contributor, id {} or data_prefix {} already used."
-                                 .format(request.json['id'], request.json['data_prefix']))
+        except DuplicateKeyError as e:
+            raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
             raise InternalServerError('Impossible to add contributor {}'.format(contributor))
 

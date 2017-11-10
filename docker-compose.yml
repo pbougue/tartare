@@ -1,0 +1,68 @@
+version: '2'
+
+services:
+  tartare_worker:
+    build:
+      context: .
+    environment:
+      - RETRY_NUMBER_WHEN_FAILED_TASK=0
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks.celery worker -Q tartare
+    links:
+      - rabbitmq
+      - mongo-server
+    depends_on:
+      - rabbitmq
+
+  ruspell_worker:
+    build:
+      context: .
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks worker -Q process_ruspell
+    links:
+      - rabbitmq
+      - mongo-server
+    depends_on:
+      - rabbitmq
+
+  tartare_beat:
+    build:
+      context: .
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+    command: celery -A tartare.tasks.celery beat
+    links:
+      - rabbitmq
+
+  tartare_webservice:
+    build:
+      context: .
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: >
+              uwsgi --mount /=tartare:app --http 0.0.0.0:5000 --wsgi-disable-file-wrapper
+              --add-header Access-Control-Allow-Origin:*
+              --add-header Access-Control-Allow-Headers:Content-Type
+    ports:
+      - 5000:5000
+    links:
+      - rabbitmq
+      - mongo-server
+
+  mongo-server:
+    image: mongo
+    volumes:
+      - mongo_data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:management
+
+  http_download_server:
+    image: visity/webdav
+
+volumes:
+  mongo_data:

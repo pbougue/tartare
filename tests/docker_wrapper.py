@@ -27,7 +27,7 @@
 # www.navitia.io
 import logging
 import os
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 import docker
 
@@ -59,11 +59,11 @@ class AbstractDocker(metaclass=ABCMeta):
     def _fetch_image(self):
         self.execute_manual_build()
 
-    @abstractproperty
+    @abstractmethod
     def image_name(self):
         pass
 
-    @abstractproperty
+    @abstractmethod
     def container_name(self):
         pass
 

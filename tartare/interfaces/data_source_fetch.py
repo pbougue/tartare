@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -30,22 +27,28 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import os
+import flask_restful
 from flask import Response
-from flask.globals import request
-from flask_restful import Resource
 from tartare.core import models
-from tartare.interfaces import schema
-from tartare.decorators import validate_post_data_set
+from tartare.core.constants import INPUT_TYPE_URL
+from tartare.core.contributor_export_functions import fetch_and_save_dataset
+from tartare.exceptions import FetcherException
+from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
 
 
-class DataSet(Resource):
-    @validate_post_data_set
+class DataSourceFetch(flask_restful.Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
-        file = request.files['file']
-        data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                       data_source_id=data_source_id)
-        data_source_fetched.save()
-        data_source_fetched.update_dataset_from_io(file.stream, os.path.basename(file.filename))
+        try:
+            data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
+        except ValueError as e:
+            raise ObjectNotFound(str(e))
 
-        return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
+        if not data_source.is_type(INPUT_TYPE_URL) or not data_source.input.url:
+            raise InvalidArguments('Data source type should be {}.'.format(INPUT_TYPE_URL))
+
+        try:
+            fetch_and_save_dataset(contributor_id, data_source)
+        except FetcherException as e:
+            raise InternalServerError('Fetching {} failed: {}'.format(data_source.input.url, str(e)))
+
+        return '', 204

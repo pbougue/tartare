@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 
 import requests
 
@@ -82,4 +83,9 @@ class FusioDataUpdate(AbstractFusioProcess):
                                            data=self.__get_data(contributor_context.contributor, data_source_context),
                                            files=self.get_files_from_gridfs(data_source_context.gridfs_id))
                     self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+                else:
+                    logging.getLogger(__name__).info(
+                        'data update for {dsid} is not needed since corresponding gtfs has not changed'.format(
+                            dsid=data_source_context.data_source_id)
+                    )
         return self.context
