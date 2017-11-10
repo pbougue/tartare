@@ -27,21 +27,19 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+import os
 import shutil
-
+import tempfile
 from functools import partial
 
-import os
-
+from tartare.core import zip
 from tartare.core.context import Context
+from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import ParameterException
-import tempfile
-from tartare.core import zip
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
-from tartare.core.models import DataSource
 
 logger = logging.getLogger(__name__)
 
@@ -70,24 +68,23 @@ class Ruspell(AbstractContributorProcess):
     def __extract_data_sources_from_gridfs(self, data_format: str, path: str) -> str:
         links = self.params.get("links")
         if not links:
-            raise ParameterException('missing in preprocess links')
+            raise ParameterException('links missing in preprocess')
         for contrib_ds in links:
             contributor_id = contrib_ds.get('contributor_id')
             data_source_id = contrib_ds.get('data_source_id')
-            data_source = DataSource.get(contributor_id, data_source_id)
-            if not data_source:
+            try:
+                data_source = DataSource.get_one(contributor_id, data_source_id)
+                if data_source.data_format != data_format:
+                    continue
+                gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
+                gridout = self.gfs.get_file_from_gridfs(gridfs_id)
+                file_path = os.path.join(path, gridout.filename)
+                with open(file_path, 'wb+') as f:
+                    f.write(gridout.read())
+            except ValueError:
                 raise ParameterException(
                     'data_source_id "{data_source_id}" in preprocess links does not exist'.format(
                         data_source_id=data_source_id))
-            if data_source[0].data_format != data_format:
-                continue
-
-            gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
-            gridout = self.gfs.get_file_from_gridfs(gridfs_id)
-            file_path = os.path.join(path, gridout.filename)
-            with open(file_path, 'wb+') as f:
-                f.write(gridout.read())
-
         return file_path
 
     def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
