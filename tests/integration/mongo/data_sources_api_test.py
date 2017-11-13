@@ -35,7 +35,7 @@ import tartare
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
     DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, \
-    DATA_SOURCE_STATUS_UNCHANGED
+    DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
@@ -294,9 +294,8 @@ class TestDataSources(TartareFixture):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
-        assert {'error': {'data_format': [
-            'choice "failed" not in possible values [\'' + ('\', \''.join(DATA_FORMAT_VALUES)) + '\'].']},
-                   'message': 'Invalid arguments'} == response_payload, print(response_payload)
+        assert 'error' in response_payload
+        assert response_payload['error'] == 'choice "failed" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
     def test_post_data_source_wrong_input_type(self, contributor):
         data_source = {
@@ -312,7 +311,7 @@ class TestDataSources(TartareFixture):
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
 
     def test_post_data_source_valid_data_format(self, contributor):
-        for data_format in DATA_FORMAT_VALUES:
+        for data_format in DATA_FORMAT_BY_DATA_TYPE[DATA_TYPE_PUBLIC_TRANSPORT]:
             data_source = {
                 "data_format": data_format,
                 "input": {'type': 'manual'},
@@ -373,9 +372,10 @@ class TestDataSources(TartareFixture):
         }
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
                               self.dict_to_json(pacth))
+        assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
-        assert response.status_code == 400, print(response_payload)
-        assert response_payload['error'].startswith("Invalid data,")
+        assert 'error' in response_payload
+        assert response_payload['error'] == 'choice "issues 257" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
     def test_manage_data_source_expected_file_name(self, contributor):
         expected_file_name = 'config.json'
@@ -390,6 +390,7 @@ class TestDataSources(TartareFixture):
         assert data_source['input']['expected_file_name'] == expected_file_name, print(data_source)
 
         new_expected_file_name = 'config_new.json'
+        data_source['input']['expected_file_name'] = new_expected_file_name
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
                               self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
 
@@ -420,7 +421,7 @@ class TestDataSources(TartareFixture):
 
     def __init_ds_and_export(self, contributor, init_http_download_server, do_init=True):
         if do_init:
-            url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
+            url = self.format_url(ip=init_http_download_server.ip_addr, filename="some_archive.zip")
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json({"name": "ds-name", "input": {"type": "url", "url": url}}))
             self.assert_sucessful_call(response, 201)

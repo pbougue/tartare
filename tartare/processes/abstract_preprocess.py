@@ -26,16 +26,17 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 import os
 import shutil
 import tempfile
 from abc import ABCMeta, abstractmethod
+from typing import Any, List
+from zipfile import is_zipfile
 
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess
-from zipfile import is_zipfile
-from typing import Any
+from tartare.core.models import PreProcess, DataSource
 from tartare.exceptions import ParameterException
 from tartare.processes.fusio import Fusio
 
@@ -76,17 +77,52 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
 
-    def __replace_in_grid_fs(self, old_gridfs_id: str,  zip_file: str, computed_file_name: str) -> str:
+    def __replace_in_grid_fs(self, old_gridfs_id: str, zip_file: str, computed_file_name: str) -> str:
         with open(zip_file, 'rb') as new_archive_file:
             new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
             self.gfs.delete_file_from_gridfs(old_gridfs_id)
             return new_gridfs_id
 
     def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, files: str,
-                                              computed_file_name: str='gtfs-processed') -> str:
+                                              computed_file_name: str = 'gtfs-processed') -> str:
         if is_zipfile(files):
             return self.__replace_in_grid_fs(old_gridfs_id, files, computed_file_name)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
             new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', files)
             return self.__replace_in_grid_fs(old_gridfs_id, new_archive_file_name, computed_file_name)
+
+    def check_links(self, data_format_required: List[str]) -> None:
+        data_format_exists = set()
+        links = self.params.get("links")
+        if links is None:
+            raise ParameterException('links missing in preprocess')
+        elif len(links) == 0:
+            raise ParameterException('empty links in preprocess')
+
+        for link in links:
+            contributor_id = link.get('contributor_id')
+            if not contributor_id:
+                msg = "contributor_id missing in links"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
+
+            data_source_id = link.get('data_source_id')
+            if not data_source_id:
+                msg = "data_source_id missing in links"
+                logging.getLogger(__name__).error(msg)
+                raise ParameterException(msg)
+
+            data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
+                                                                                          data_source_id,
+                                                                                          data_format_required)
+            if not data_source_config_context:
+                raise ParameterException(
+                    'link {data_source} is not a data_source id present in contributor {contributor}'.format(
+                        data_source=data_source_id, contributor=contributor_id))
+            data_source = DataSource.get_one(contributor_id, data_source_id)
+            data_format_exists.add(data_source.data_format)
+        diff = set(data_format_required) - data_format_exists
+
+        if diff:
+            raise ParameterException('data type {} missing in preprocess links'.format(diff))

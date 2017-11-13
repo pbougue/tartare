@@ -195,7 +195,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date: datetime.date,
-                       check_for_update: bool = True) -> Context:
+                       check_for_update: bool=True) -> Context:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         logger.info('contributor_export')
@@ -207,6 +207,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
+            models.Job.update(job_id=job.id, state="running", step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)

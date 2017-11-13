@@ -29,9 +29,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+import logging
 
 import pytest
 
+from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -77,7 +79,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_type"] == "public_transport"
 
     def test_add_contributor_with_data_type_geographic(self):
-
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
                                          '"data_prefix":"AAA", "data_type": "geographic"}')
         assert raw.status_code == 201
@@ -92,13 +93,13 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_type"] == "geographic"
 
     def test_add_contributor_with_invalid_data_type(self):
-
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
                                          '"data_prefix":"AAA", "data_type": "bob"}')
         assert raw.status_code == 400
         r = self.to_json(raw)
         assert 'error' in r
-        assert r['error'] == {'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
+        assert r['error'] == {
+            'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')
@@ -681,7 +682,79 @@ class TestContributors(TartareFixture):
         raw = self.patch('/contributors/id_test', json.dumps(payload))
         assert raw.status_code == 400
         r = self.to_json(raw)
-        assert r[
-                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
-            missing_id=missing_id)
+        assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' " \
+                             "not found in contributor".format(missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
+
+    def __create_contributor(self, data_type, data_format):
+        id = 'id-{}-{}'.format(data_type, data_format)
+        logging.getLogger(__name__).debug(id)
+        post_data = {
+            "id": id,
+            "name": id,
+            "data_type": data_type,
+            "data_prefix": id,
+            "data_sources": [
+                {
+                    "name": "data-source-{}".format(id),
+                    'id': id,
+                    'data_format': data_format,
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        return self.post('/contributors', json.dumps(post_data))
+
+    def __patch_contributor(self, contributor_id, data_type, data_format):
+        id = 'id-{}-{}'.format(data_type, data_format)
+        post_data = {
+            "data_sources": [
+                {
+                    "name": id,
+                    'id': id,
+                    'data_format': data_format
+                }
+            ]
+        }
+        return self.patch('/contributors/{}'.format(contributor_id), json.dumps(post_data))
+
+    def test_post_contrib_public_transport_with_data_format_invalid(self):
+        for data_type in DATA_TYPE_VALUES:
+            for data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
+                raw = self.__create_contributor(data_type, data_format)
+                assert raw.status_code == 400, print(self.to_json(raw))
+                r = self.to_json(raw)
+                assert 'error' in r
+                assert r['error'] == 'data source format {format} is incompatible with contributor data_type {type}'. \
+                    format(format=data_format, type=data_type)
+
+    def test_post_contrib_public_transport_with_data_format_valid(self):
+        for data_type in DATA_TYPE_VALUES:
+            for data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
+                raw = self.__create_contributor(data_type, data_format)
+                self.assert_sucessful_call(raw, 201)
+
+    def test_patch_contrib_public_transport_with_data_format_invalid(self):
+        for data_type in DATA_TYPE_VALUES:
+            contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+            raw = self.__create_contributor(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+            self.assert_sucessful_call(raw, 201)
+            for other_data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
+                raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
+                self.assert_sucessful_call(raw, 400)
+                r = self.to_json(raw)
+                assert 'error' in r
+                assert r['error'] == 'data source format {other} is incompatible with contributor data_type {data_type}' \
+                    .format(other=other_data_format, data_type=data_type)
+
+    def test_patch_contrib_public_transport_with_data_format_valid(self):
+        for data_type in DATA_TYPE_VALUES:
+            contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+            raw = self.__create_contributor(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+            self.assert_sucessful_call(raw, 201)
+            for other_data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
+                raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
+                self.assert_sucessful_call(raw)

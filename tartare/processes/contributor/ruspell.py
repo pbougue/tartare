@@ -27,18 +27,17 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+import os
 import shutil
-
+import tempfile
 from functools import partial
 
-import os
-
+from tartare.core import zip
 from tartare.core.context import Context
+from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import ParameterException
-import tempfile
-from tartare.core import zip
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -57,8 +56,8 @@ class Ruspell(AbstractContributorProcess):
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')
 
-    def __get_gridfs_id_from_data_source_context(self, data_source_id: str) -> str:
-        data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
+    def __get_gridfs_id_from_data_source_context(self, data_source_id: str, contributor_id: str) -> str:
+        data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
                                                                                       data_source_id)
         if not data_source_config_context:
             raise ParameterException(
@@ -66,13 +65,26 @@ class Ruspell(AbstractContributorProcess):
                     data_source_id=data_source_id))
         return data_source_config_context.gridfs_id
 
-    def __extract_data_source_from_gridfs(self, data_source_id: str, path: str) -> str:
-        gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id)
-        gridout = self.gfs.get_file_from_gridfs(gridfs_id)
-        file_path = os.path.join(path, gridout.filename)
-        with open(file_path, 'wb+') as f:
-            f.write(gridout.read())
-
+    def __extract_data_sources_from_gridfs(self, data_format: str, path: str) -> str:
+        links = self.params.get("links")
+        if not links:
+            raise ParameterException('links missing in preprocess')
+        for contrib_ds in links:
+            contributor_id = contrib_ds.get('contributor_id')
+            data_source_id = contrib_ds.get('data_source_id')
+            try:
+                data_source = DataSource.get_one(contributor_id, data_source_id)
+                if data_source.data_format != data_format:
+                    continue
+                gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
+                gridout = self.gfs.get_file_from_gridfs(gridfs_id)
+                file_path = os.path.join(path, gridout.filename)
+                with open(file_path, 'wb+') as f:
+                    f.write(gridout.read())
+            except ValueError:
+                raise ParameterException(
+                    'data_source_id "{data_source_id}" in preprocess links does not exist'.format(
+                        data_source_id=data_source_id))
         return file_path
 
     def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
@@ -88,12 +100,12 @@ class Ruspell(AbstractContributorProcess):
     def do(self) -> Context:
         with tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as ruspell_dir_path:
             stops_output_path = os.path.join(ruspell_dir_path, self.stops_output_filename)
+            from tartare.core.constants import DATA_FORMAT_BANO_FILE, DATA_FORMAT_RUSPELL_CONFIG
             # Get config
-            config_path = self.__extract_data_source_from_gridfs(self.get_link('config'), ruspell_dir_path)
+            config_path = self.__extract_data_sources_from_gridfs(DATA_FORMAT_RUSPELL_CONFIG, ruspell_dir_path)
 
             # Get Banos
-            for data_source_id in self.get_link('bano'):
-                self.__extract_data_source_from_gridfs(data_source_id, ruspell_dir_path)
+            self.__extract_data_sources_from_gridfs(DATA_FORMAT_BANO_FILE, ruspell_dir_path)
 
             for data_source_id_to_process in self.data_source_ids:
                 data_source_to_process_context = self.context.get_contributor_data_source_context(

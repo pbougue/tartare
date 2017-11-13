@@ -61,12 +61,12 @@ class HeadsignShortName(AbstractContributorProcess):
         reader.load_csv_data_from_zip_file(grid_out,
                                            'routes.txt',
                                            usecols=["route_id", "route_type"],
-                                           keep_default_na=False)
+                                           keep_default_na=False, low_memory=False)
         return reader.data.groupby('route_id')['route_type'].apply(lambda x: x.iloc[0]).to_dict()
 
     def do_manage_headsign_short_name(self, filename: str, map_route_modes: dict) -> None:
         reader = CsvReader()
-        reader.load_csv_data(filename, keep_default_na=False)
+        reader.load_csv_data(filename, keep_default_na=False, low_memory=False)
 
         reader.apply(column_name='trip_short_name',
                      callback=lambda row: self.get_trip_short_name(row, map_route_modes))

@@ -67,6 +67,9 @@ class TartareFixture(object):
             return False
         return True
 
+    def format_url(self, ip, filename, path='gtfs', method='http'):
+        return "{method}://{ip}/{path}/{filename}".format(method=method, ip=ip, filename=filename, path=path)
+
     def assert_sucessful_call(self, raw, status_code_expected=200):
         assert raw.status_code == status_code_expected, print(self.to_json(raw))
 

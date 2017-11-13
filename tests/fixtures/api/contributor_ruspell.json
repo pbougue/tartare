@@ -18,15 +18,6 @@
         "url": "http://{HTTP_SERVER_IP}/ruspell/config-fr_idf.yml"
       },
       "name": "Configuration Ruspell"
-    },
-    {
-      "data_format": "bano_file",
-      "id": "ruspell-bano_file",
-      "input": {
-        "type": "url",
-        "url": "http://{HTTP_SERVER_IP}/ruspell/bano-75.csv"
-      },
-      "name": "Bano Ruspell"
     }
   ],
   "id": "AMI",
@@ -40,12 +31,16 @@
         "Google-1"
       ],
       "params": {
-        "links": {
-          "config": "ruspell-config",
-          "bano": [
-            "ruspell-bano_file"
-          ]
-        }
+        "links": [
+          {
+            "contributor_id": "AMI",
+            "data_source_id": "ruspell-config"
+          },
+          {
+            "contributor_id": "geo",
+            "data_source_id": "ruspell_bano_file"
+          }
+        ]
       }
     }
   ]
