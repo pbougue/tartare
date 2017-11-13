@@ -76,7 +76,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     # Given I create a contributor with a data source
-    # And   I create a coverage having containing this contributor and a preprocess FusioDataUpdate
+    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
     # And   I do a contributor export on this contributor (which leads to a coverage export)
     # When  I update the data source (or the data set has changed)
     # And   I do a contributor export on this contributor (which leads to a coverage export)
@@ -117,12 +117,12 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     # Given I create a contributor with a data source
-    # And   I create a coverage having containing this contributor and a preprocess FusioDataUpdate
+    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
     # And   I do a contributor export on this contributor (which leads to a coverage export)
     # When  I do a contributor export on this contributor (which leads to a coverage export)
     # Then  I can see that Fusio has been called 1 time(s) in total
     def test_data_update_called_if_data_source_not_updated(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server, contributor):
+                                                           init_http_download_server):
         filename = 'gtfs-{number}.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
@@ -143,38 +143,3 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
         assert fusio_call.call_count == 1
-
-
-    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
-    @mock.patch('tartare.processes.fusio.Fusio.call')
-    def test_data_update_called_if_data_source_not_updated(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
-        filename = 'gtfs-{number}.zip'
-        url = self.format_url(ip=init_http_download_server.ip_addr,
-                              filename=filename.format(number=1),
-                              path='gtfs/historisation')
-        self.__init_contributor("contrib_a", "gtfs_a",  url, 'AAA')
-        self.__init_contributor("contrib_b", "gtfs_b",  url, 'BBB')
-        self.__init_coverage("jdr", ["contrib_a", "contrib_b"])
-
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>1607281547155684</ActionId>
-                        </serverfusio>"""
-        fusio_call.return_value = get_response(200, content)
-
-        raw = self.post('/contributors/contrib_a/actions/export?current_date={}'.format("2017-09-10"))
-        self.assert_sucessful_call(raw, 201)
-        assert fusio_call.call_count == 1
-
-        url = self.format_url(ip=init_http_download_server.ip_addr,
-                              filename=filename.format(number=2),
-                              path='gtfs/historisation')
-
-        raw = self.patch('/contributors/contrib_a/data_sources/gtfs_a',
-                         json.dumps({"input": {"url": url}}))
-        self.assert_sucessful_call(raw)
-
-        raw = self.post('/contributors/contrib_b/actions/export?current_date={}'.format("2017-09-10"))
-        self.assert_sucessful_call(raw, 201)
-        assert fusio_call.call_count == 2
