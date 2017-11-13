@@ -7,10 +7,16 @@ build:
 build_dev:
 	pip install -r requirements_dev.txt
 
-test: clean build_dev
-	TARTARE_CONFIG_FILE=../tests/testing_settings.py py.test -m "not functional" tests --cov=tartare --cov-report term-missing --cov-report xml
+build_static:
+	pip install mypy
 
-check: clean build_dev
+test: clean build_dev
+	./run_unit_tests.sh
+
+test_nocov: clean build_dev
+	./run_unit_tests.sh --nocov
+
+check: clean build_static
 	mypy --disallow-untyped-defs --ignore-missing-imports --no-warn-no-return tartare
 
 functional_test: clean build_dev
