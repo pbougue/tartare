@@ -76,7 +76,7 @@ class TestFullExport(AbstractRequestClient):
 
         raw = self.post('contributors/geo/actions/export?current_date=2017-10-02')
         job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_ruspell.json')
@@ -86,7 +86,7 @@ class TestFullExport(AbstractRequestClient):
         # launch ruspell preprocess
         raw = self.post('contributors/AMI/actions/export?current_date=2017-10-02')
         job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip')
 
