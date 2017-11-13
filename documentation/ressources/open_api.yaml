@@ -1537,13 +1537,16 @@ definitions:
         type: integer
         example: 1
       params:
+        description: Process parameters object.
         type: object
-        properties:
-            links:
-              type: array
-              items:
-                $ref: "#/definitions/contributor_preprocess_link"
-
+        example: {
+          links: [
+            {
+              contributor_id: "stif",
+              data_source_id: "ds_stif"
+            }
+          ]
+        }
 
   coverage_preprocess_list:
     type: object
@@ -1837,14 +1840,3 @@ definitions:
         description: "End date"
         example: "2017-06-20"
     description: "Validity period"
-  contributor_preprocess_link:
-    type: "object"
-    properties:
-      contributor_id:
-        type: "string"
-        example: "stif"
-        description: "contributor id of the data_source linked"
-      data_source_id:
-        type: "string"
-        example: "datasource_stif_id"
-        description: "data_source id of the data_source linked"
