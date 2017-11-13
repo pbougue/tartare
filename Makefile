@@ -10,6 +10,9 @@ build_dev:
 build_static:
 	pip install mypy
 
+build_tester:
+	pip install pytest
+
 test: clean build_dev
 	./run_unit_tests.sh
 
@@ -19,5 +22,5 @@ test_nocov: clean build_dev
 check: clean build_static
 	mypy --disallow-untyped-defs --ignore-missing-imports --no-warn-no-return tartare
 
-functional_test: clean build_dev
+functional_test: clean build_tester
 	./run_functional_tests.sh
