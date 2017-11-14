@@ -99,7 +99,7 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert 'error' in r
         assert r['error'] == {
-            'data_type': ['choice "bob" not in possible values [\'geographic\', \'public_transport\'].']}
+            'data_type': ['choice "bob" not in possible values (geographic, public_transport).']}
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')

@@ -1452,9 +1452,13 @@ definitions:
     properties:
       type:
         type: string
+        enum: ["navitia", "ods", "stop_area"]
+        description: This determines which treatment will be performed on the platforms
         example: ods
       protocol:
         type: string
+        enum: ["http", "ftp"]
+        description: Protocol used to send file
         example: ftp
       url:
         type: string

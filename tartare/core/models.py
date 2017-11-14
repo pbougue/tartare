@@ -42,7 +42,7 @@ from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
@@ -62,20 +62,20 @@ class ChoiceField(fields.Field):
     A Choice field.
     """
     default_error_messages = {
-        'invalid': 'choice "{current_value}" not in possible values {possible_values}.'
+        'invalid': 'choice "{current_value}" not in possible values ({possible_values}).'
     }
 
     def _serialize(self, value: str, attr: str, _: Any ) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=self.possible_values)
+            self.fail('invalid', current_value=value, possible_values=', '.join(self.possible_values))
 
     def _deserialize(self, value: str, attr: str, data: dict) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=self.possible_values)
+            self.fail('invalid', current_value=value, possible_values=', '.join(self.possible_values))
 
 
 class DataFormat(ChoiceField):
@@ -91,6 +91,16 @@ class DataType(ChoiceField):
 class InputType(ChoiceField):
     def __init__(self, **metadata: Any) -> None:
         super().__init__(INPUT_TYPE_VALUES, **metadata)
+
+
+class PlatformType(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(PLATFORM_TYPE_VALUES, **metadata)
+
+
+class PlatformProtocol(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(PLATFORM_PROTOCOL_VALUES, **metadata)
 
 
 SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
@@ -612,8 +622,8 @@ class MongoContributorExportDataSourceSchema(Schema):
 
 
 class MongoPlatformSchema(Schema):
-    type = fields.String(required=True)
-    protocol = fields.String(required=True)
+    type = PlatformType(required=True)
+    protocol = PlatformProtocol(required=True)
     sequence = fields.Integer(required=True)
     url = fields.String(required=True)
     options = fields.Dict(required=False)

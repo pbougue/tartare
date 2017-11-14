@@ -307,7 +307,7 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 400, print(response)
         response_payload = self.to_json(response)
         assert {'error': {'input': {'type': [
-            'choice "wrong" not in possible values [\'' + ('\', \''.join(INPUT_TYPE_VALUES)) + '\'].']}},
+            'choice "wrong" not in possible values (url, manual, computed).']}},
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
 
     def test_post_data_source_valid_data_format(self, contributor):

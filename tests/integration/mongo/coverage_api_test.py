@@ -143,6 +143,149 @@ class TestCoverageApi(TartareFixture):
         assert coverage['environments']['integration']['name'] == 'sim'
         assert coverage['environments']['integration']['sequence'] == 0
 
+    def test_post_coverage_with_invalid_platorm_type(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "environments": {
+                "preproduction": {
+                    "name": "preproduction",
+                    "sequence": 0,
+                    "publication_platforms": [
+                        {
+                            "type": "invalid_type",
+                            "protocol": "http",
+                            "url": "ftp.ods.com",
+                            "sequence": 0,
+                            "options": {
+                                "authent": {
+                                    "username": "test"
+                                },
+                            },
+                            "directory": "/"
+                        }
+                    ]
+                }
+            }
+        }
+
+        raw = self.post('/coverages', self.dict_to_json(post_data))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'error' in r
+        expected_error = {
+            'error': {
+                'environments': {
+                    'preproduction': {
+                        'publication_platforms': {
+                            '0': {
+                                'type': ['choice "invalid_type" not in possible values (navitia, ods, stop_area).']
+                            }
+                        }
+                    }
+                }
+            },
+            'message': 'Invalid arguments'
+        }
+        assert r == expected_error
+
+    def test_post_coverage_with_invalid_platorm_protocol(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "environments": {
+                "preproduction": {
+                    "name": "preproduction",
+                    "sequence": 0,
+                    "publication_platforms": [
+                        {
+                            "type": "navitia",
+                            "protocol": "invalid_type",
+                            "url": "ftp.ods.com",
+                            "sequence": 0,
+                            "options": {
+                                "authent": {
+                                    "username": "test"
+                                },
+                            },
+                            "directory": "/"
+                        }
+                    ]
+                }
+            }
+        }
+
+        raw = self.post('/coverages', self.dict_to_json(post_data))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert 'error' in r
+        expected_error = {
+            'error': {
+                'environments': {
+                    'preproduction': {
+                        'publication_platforms': {
+                            '0': {
+                                'protocol': ['choice "invalid_type" not in possible values (http, ftp).']
+                            }
+                        }
+                    }
+                }
+            },
+            'message': 'Invalid arguments'
+        }
+        assert r == expected_error
+
+    def test_post_coverage_with_valid_platorm_protocol_and_type(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "environments": {
+                "preproduction": {
+                    "name": "preproduction",
+                    "sequence": 0,
+                    "publication_platforms": [
+                        {
+                            "type": "navitia",
+                            "protocol": "ftp",
+                            "url": "ftp.ods.com",
+                            "sequence": 0,
+                            "options": {
+                                "authent": {
+                                    "username": "test"
+                                },
+                            },
+                            "directory": "/"
+                        }
+                    ]
+                }
+            }
+        }
+
+        raw = self.post('/coverages', self.dict_to_json(post_data))
+        assert raw.status_code == 201
+        r = self.to_json(raw)
+        assert len(r["coverages"]) == 1
+        assert isinstance(r["coverages"], list)
+        coverage = r["coverages"][0]
+        assert coverage["id"] == "id_test"
+        assert coverage["name"] == "name_test"
+        assert 'environments' in coverage
+        assert 'preproduction' in coverage['environments']
+        assert len(coverage['preprocesses']) == 0
+        assert len(coverage['contributors']) == 0
+        assert coverage['license'] == {'url': '', 'name': 'Private (unspecified)'}
+        preprod_env = coverage['environments']['preproduction']
+        assert preprod_env['name'] == 'preproduction'
+        assert preprod_env['sequence'] == 0
+        assert len(preprod_env['publication_platforms']) == 1
+        platform = preprod_env['publication_platforms'][0]
+        assert platform["sequence"] == 0
+        assert platform["options"] == {'authent': {'username': 'test'}}
+        assert platform["protocol"] == 'ftp'
+        assert platform["type"] == 'navitia'
+        assert platform["url"] == 'ftp.ods.com'
+
+
     def test_patch_simple_coverage(self):
         raw = self.post('/coverages',
                         '''{"id": "id_test", "name": "name of the coverage"}''')
