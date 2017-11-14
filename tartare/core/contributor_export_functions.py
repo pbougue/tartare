@@ -29,17 +29,18 @@
 
 import logging
 import tempfile
+import zipfile
 from datetime import date
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
-    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
+    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
-from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
+from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
@@ -128,7 +129,9 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
             fetcher = FetcherManager.select_from_url(url)
             dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
                                                                     data_source.input.expected_file_name)
-        except (FetcherException, GuessFileNameFromUrlException, ParameterException) as e:
+            if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
+                raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
+        except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
             new_data_source_fetched.set_status(DATA_SOURCE_STATUS_FAILED).update()
             raise e
 

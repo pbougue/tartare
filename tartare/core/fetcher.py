@@ -29,7 +29,6 @@
 import logging
 import os
 import urllib.request
-import zipfile
 from abc import ABCMeta, abstractmethod
 from typing import Tuple
 from urllib.error import ContentTooShortError, URLError
@@ -37,7 +36,6 @@ from urllib.parse import urlparse
 
 from requests import HTTPError
 
-from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 
 logger = logging.getLogger(__name__)
@@ -62,6 +60,7 @@ class AbstractFetcher(metaclass=ABCMeta):
         """
         pass
 
+    @classmethod
     def fetch_to_target(self, url: str, dest_full_file_name: str, data_format: str) -> None:
         try:
             urllib.request.urlretrieve(url, dest_full_file_name)
@@ -71,9 +70,8 @@ class AbstractFetcher(metaclass=ABCMeta):
             raise FetcherException('downloaded file size was shorter than exepected for url {}'.format(url))
         except URLError as e:
             raise FetcherException('error during download of file: {}'.format(str(e)))
-        if data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
-            raise FetcherException('downloaded file from url {} is not a zip file'.format(url))
 
+    @classmethod
     def guess_file_name_from_url(self, url: str) -> str:
         if FetcherManager.http_matches_url(url) or FetcherManager.ftp_matches_url(url):
             parsed = urlparse(url)
