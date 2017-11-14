@@ -124,7 +124,7 @@ class AbstractRequestClient:
                         HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         return json_file
 
-    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=10, break_if='done'):
+    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=15, break_if='done'):
         retry = 0
         while retry < nb_retries_max:
             raw = self.get('jobs/' + job_id)
