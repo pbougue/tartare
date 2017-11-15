@@ -68,11 +68,6 @@ def init_http_download_server():
         yield download_server
 
 @pytest.yield_fixture(scope="session", autouse=False)
-def init_http_download_server_global_fixtures():
-    with DownloadHttpServerGlobalDocker() as download_server:
-        yield download_server
-
-@pytest.yield_fixture(scope="session", autouse=False)
 def init_ftp_upload_server():
     with UploadFtpServerDocker() as upload_server:
         yield upload_server

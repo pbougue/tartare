@@ -318,14 +318,14 @@ class TestComputeDirectionsProcess(TartareFixture):
             ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
              "link bob is not a data_source id present in contributor something")
         ])
-    def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server_global_fixtures):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+    def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_error_message, print(job)
 
-    def test_compute_directions_missing_ds_config(self, init_http_download_server_global_fixtures):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+    def test_compute_directions_missing_ds_config(self, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           {"links": [{"contributor_id": "id_test",
                                                                       "data_source_id": "ds-config"}]},
                                                           add_data_source_config=False)
@@ -350,9 +350,9 @@ class TestComputeDirectionsProcess(TartareFixture):
             # missing column, stop_sequence in order
             ('missing_column.zip', 'compute_directions/expected_trips_missing_column.txt'),
         ])
-    def test_compute_directions(self, init_http_download_server_global_fixtures, data_set_filename,
+    def test_compute_directions(self, init_http_download_server, data_set_filename,
                                 expected_trips_file_name):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+        job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           {"links": [{"contributor_id": "id_test",
                                                                       "data_source_id": "ds-config"}]},
                                                           data_set_filename=data_set_filename)
@@ -445,9 +445,9 @@ class TestComputeExternalSettings(TartareFixture):
                      'links': [{'contributor_id': 'id_test', 'data_source_id': 'whatever'}]},
                     'link whatever is not a data_source id present in contributor id_test'),
         ])
-    def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
+    def test_prepare_external_settings_missing_config(self, init_http_download_server, params,
                                                       expected_message):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+        job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
@@ -460,26 +460,26 @@ class TestComputeExternalSettings(TartareFixture):
             ({'lines_referential': 'lines_referential_id'},
              'link tr_perimeter_id is not a data_source id present in contributor id_test'),
         ])
-    def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
+    def test_prepare_external_settings_invalid_links(self, init_http_download_server, links,
                                                      expected_message):
         params = {'target_data_source_id': 'ds-target',
                   'links': [
                       {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
                       {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
                   ]}
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
+        job = self.__setup_contributor_export_environment(init_http_download_server, params, links)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
-    def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
+    def test_prepare_external_settings(self, init_http_download_server):
         params = {'target_data_source_id': 'ds-target',
                   'links': [
                       {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
                       {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
                   ]}
         links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+        job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           params, links)
         assert job['state'] == 'done', print(job)
         assert job['step'] == 'save_contributor_export', print(job)
