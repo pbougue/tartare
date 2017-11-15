@@ -63,13 +63,3 @@ class TestFetcher:
                 fetch_datasets_and_return_updated_number(contrib)
             assert str(
                 excinfo.value) == "downloaded file size was shorter than exepected for url http://bob.com/config.json"
-
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_zip_file)
-    def test_fetcher_raises_not_zip_file(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
-        contrib = Contributor('contribId', 'contribName', 'http://bob.com/config.json', [data_source])
-        with app.app_context():
-            contrib.save()
-            with pytest.raises(FetcherException) as excinfo:
-                fetch_datasets_and_return_updated_number(contrib)
-            assert str(excinfo.value) == 'downloaded file from url http://bob.com/config.json is not a zip file'
