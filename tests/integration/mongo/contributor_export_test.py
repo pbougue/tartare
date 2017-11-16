@@ -172,7 +172,9 @@ class TestContributorExport(TartareFixture):
         assert raw.status_code == 201
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
-        assert raw.status_code == 201
+        self.assert_sucessful_call(raw, 201)
+        raw = self.post('/coverages/jdr/actions/export?current_date={}'.format("2015-08-10"), {})
+        self.assert_sucessful_call(raw, 201)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 5, print(grid_fs_list)

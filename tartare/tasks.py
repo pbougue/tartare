@@ -46,7 +46,8 @@ from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
+    ContributorExport
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.exceptions import FetcherException
 from tartare.helper import upload_file
@@ -195,7 +196,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date: datetime.date,
-                       check_for_update: bool=True) -> Context:
+                       check_for_update: bool=True) -> Optional[ContributorExport]:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         logger.info('contributor_export')
@@ -220,16 +221,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
 
             # insert export in mongo db
             models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
-            contributor_export_functions.save_export(contributor, context, current_date)
-            coverages = [coverage for coverage in models.Coverage.all() if coverage.has_contributor(contributor)]
-            actions = []
-            if coverages:
-                actions.append(coverage_export.s(context, coverages[0], job))
-                for coverage in coverages[1:]:
-                    # Launch coverage export
-                    actions.append(coverage_export.s(coverage, job))
-                context = chain(*actions).apply().get()
-            return context
+            return contributor_export_functions.save_export(contributor, context, current_date)
 
     except FetcherException as exc:
         msg = 'Contributor export failed{retry_or_not}, error {error}'.format(
@@ -261,25 +253,26 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
 
         # insert export in mongo db
         models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
-        coverage_export_functions.save_export(coverage, context)
-        actions = []
-        # launch publish for all environment
-        sorted_environments = {}
-        # flip env: object in object: env
-        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
-        # sort envs
-        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
-        # restore mapping
-        for environment in raw_sorted_environments:
-            sorted_environments[flipped_environments[environment]] = environment
-        for env in sorted_environments:
-            environment = coverage.get_environment(env)
-            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-            for platform in sorted_publication_platforms:
-                actions.append(publish_data_on_platform.si(platform, coverage, env, job))
-        if actions:
-            # "get" method forces to check for publish statuses
-            chain(*actions).apply().get()
+        export = coverage_export_functions.save_export(coverage, context)
+        if export:
+            actions = []
+            # launch publish for all environment
+            sorted_environments = {}
+            # flip env: object in object: env
+            flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+            # sort envs
+            raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+            # restore mapping
+            for environment in raw_sorted_environments:
+                sorted_environments[flipped_environments[environment]] = environment
+            for env in sorted_environments:
+                environment = coverage.get_environment(env)
+                sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
+                for platform in sorted_publication_platforms:
+                    actions.append(publish_data_on_platform.si(platform, coverage, env, job))
+            if actions:
+                # "get" method forces to check for publish statuses
+                chain(*actions).apply().get()
         return context
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))

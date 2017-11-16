@@ -28,6 +28,7 @@
 # www.navitia.io
 
 import logging
+from typing import Optional
 
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
@@ -53,7 +54,7 @@ def postprocess(coverage: Coverage, context: Context) -> Context:
     return context
 
 
-def save_export(coverage: Coverage, context: Context) -> Context:
+def save_export(coverage: Coverage, context: Context) -> Optional[CoverageExport]:
     contributor_exports = []
     for contributor_context in context.contributor_contexts:
         data_sources = []
@@ -69,12 +70,10 @@ def save_export(coverage: Coverage, context: Context) -> Context:
                 CoverageExportContributor(contributor_id=contributor_context.contributor.id,
                                           validity_period=contributor_context.validity_period,
                                           data_sources=data_sources))
-
     if contributor_exports:
         export = CoverageExport(coverage_id=coverage.id,
                                 gridfs_id=context.global_gridfs_id,
                                 validity_period=context.validity_period,
                                 contributors=contributor_exports)
         export.save()
-
-    return context
+        return export

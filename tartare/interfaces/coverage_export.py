@@ -45,7 +45,11 @@ class CoverageExportResource(flask_restful.Resource):
     def _export(coverage: Coverage) -> Job:
         job = Job(coverage_id=coverage.id, action_type="coverage_export")
         job.save()
-        chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+        try:
+            chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+        except Exception as e:
+            # Exception when celery tasks aren't deferred, they are executed locally by blocking
+            logging.getLogger(__name__).error('Error : {}'.format(str(e)))
         return job
 
     def post(self, coverage_id: str) -> Response:

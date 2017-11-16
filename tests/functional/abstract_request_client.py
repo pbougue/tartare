@@ -149,3 +149,15 @@ class AbstractRequestClient:
 
     def assert_sucessful_create(self, raw):
         self.assert_status_is(raw, 201)
+
+    def full_export(self, contributor_id, coverage_id, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+        self.assert_sucessful_create(resp)
+        job_id = self.get_dict_from_response(resp)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
+        self.assert_sucessful_create(resp)
+        job_id = self.get_dict_from_response(resp)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+        return resp

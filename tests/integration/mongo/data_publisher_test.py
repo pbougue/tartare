@@ -181,7 +181,9 @@ class TestDataPublisher(TartareFixture):
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-            assert resp.status_code == 201
+            self.assert_sucessful_call(resp, 201)
+            resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+            self.assert_sucessful_call(resp, 201)
 
         # List contributor export
         r = self.to_json(self.get("/contributors/fr-idf/exports"))
@@ -229,8 +231,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-        resp = self.post("/contributors/{}/actions/export?current_date=2015-08-10".format(contributor_id))
-        assert resp.status_code == 201
+        self.full_export(contributor_id, coverage_id, '2015-08-10')
 
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
@@ -272,8 +273,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        assert resp.status_code == 201
+        self.full_export(contributor_id, coverage_id)
 
         # check if the file was successfully uploaded
         directory_content = session.nlst(directory)
@@ -311,8 +311,8 @@ class TestDataPublisher(TartareFixture):
 
         self._create_coverage(coverage_id, contributor_id, publication_platform, license)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        assert resp.status_code == 201
+        self.full_export(contributor_id, coverage_id)
+
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
                              init_ftp_upload_server.password)
@@ -378,8 +378,7 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
-        resp = self.post("/contributors/{}/actions/export?current_date=2015-08-10".format(contributor_id))
-        assert resp.status_code == 201
+        self.full_export(contributor_id, coverage_id, '2015-08-10')
 
         # check if the file was successfully uploaded
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
@@ -394,6 +393,7 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
     def test_publish_environment_respect_sequence_order(self, mock_post, init_http_download_server):
         contributor_id = 'contrib-seq'
+        cov_id = 'cov-sequence'
         publication_envs = ['integration', 'production', 'preproduction']
         url = "http://whatever.{env}/v0/jobs/il"
 
@@ -404,8 +404,8 @@ class TestDataPublisher(TartareFixture):
                 contributor_id
             ],
             "environments": {},
-            "id": 'cov-sequence',
-            "name": 'cov-sequence'
+            "id": cov_id,
+            "name": cov_id
         }
         publication_platform = {
             "sequence": 0,
@@ -427,8 +427,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages", json.dumps(coverage))
         self.assert_sucessful_call(resp, 201)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        self.assert_sucessful_call(resp, 201)
+        self.full_export(contributor_id, cov_id)
 
         for idx, environment in enumerate(publication_envs):
             assert url.format(env=environment) == mock_post.call_args_list[idx][0][0]
@@ -442,6 +441,7 @@ class TestDataPublisher(TartareFixture):
                                               ])
     def test_publish_platform_respect_sequence_order(self, mock_post, init_http_download_server):
         contributor_id = 'contrib-seq'
+        cov_id = 'cov-sequence'
         # we will create 5 platform for prod env with different sequences
         sequences = [4, 0, 3, 2, 1]
         url = "http://whatever.sequence.{seq}/v0/jobs/il"
@@ -469,14 +469,13 @@ class TestDataPublisher(TartareFixture):
                     "publication_platforms": publication_platforms
                 }
             },
-            "id": 'cov-sequence',
-            "name": 'cov-sequence'
+            "id": cov_id,
+            "name": cov_id
         }
         resp = self.post("/coverages", json.dumps(coverage))
         self.assert_sucessful_call(resp, 201)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        self.assert_sucessful_call(resp, 201)
+        self.full_export(contributor_id, cov_id)
 
         # and check that the post on url is made in the sequence order (asc)
         for idx in range(5):
@@ -486,6 +485,7 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(500)])
     def test_publish_platform_failed(self, mock_post, init_http_download_server):
         contributor_id = 'contrib-pub-failed'
+        cov_id = 'cov-sequence'
         publication_envs = ['integration', 'preproduction']
         url = "http://whatever.fr/pub"
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
@@ -495,8 +495,8 @@ class TestDataPublisher(TartareFixture):
                 contributor_id
             ],
             "environments": {},
-            "id": 'cov-sequence',
-            "name": 'cov-sequence'
+            "id": cov_id,
+            "name": cov_id
         }
         publication_platform = {
             "sequence": 0,
@@ -516,8 +516,7 @@ class TestDataPublisher(TartareFixture):
         resp = self.post("/coverages", json.dumps(coverage))
         self.assert_sucessful_call(resp, 201)
 
-        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-        self.assert_sucessful_call(resp, 201)
+        resp = self.full_export(contributor_id, cov_id)
 
         resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
         job = self.to_json(resp)['jobs'][0]

@@ -29,8 +29,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
 import json
+
+from tartare import app
 
 
 class TartareFixture(object):
@@ -77,3 +78,12 @@ class TartareFixture(object):
         raw = self.get('/jobs/{}'.format(id))
         self.assert_sucessful_call(raw, 200)
         return self.to_json(raw)['jobs'][0]
+
+    def full_export(self, contributor_id, coverage_id, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+        self.assert_sucessful_call(resp, 201)
+
+        resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
+        self.assert_sucessful_call(resp, 201)
+        return resp
