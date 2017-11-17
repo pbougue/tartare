@@ -314,8 +314,6 @@ def automatic_update() -> None:
     updated_contributors = []
     for contributor in contributors:
         # launch contributor export
-        logger.debug(contributor.id)
-
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update_contributor_export")
         job.save()
         action_export = contributor_export.si(Context(), contributor, job, datetime.date.today())
@@ -324,20 +322,14 @@ def automatic_update() -> None:
             updated_contributors.append(contributor.id)
         finish_job.si(job.id).delay()
 
-    coverages = models.Coverage.all()
-    logger.info("updated_contributors = " + (','.join(updated_contributors)))
-    logger.info("fetching {} coverages".format(len(coverages)))
-    for coverage in coverages:
-        do_export = False
-        for contributor_id in coverage.contributors:
-            if contributor_id in updated_contributors and not do_export:
-                logger.info('contributor {} in updated_contributors'.format(contributor_id))
-                do_export = True
-                break
-        if do_export:
-            job = models.Job(contributor_id=coverage.id, action_type="automatic_update_coverage_export")
-            job.save()
-            chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
-
-
-
+    if updated_contributors:
+        coverages = models.Coverage.all()
+        logger.info("updated_contributors = " + (','.join(updated_contributors)))
+        logger.info("fetching {} coverages".format(len(coverages)))
+        for coverage in coverages:
+            if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
+                job = models.Job(contributor_id=coverage.id, action_type="automatic_update_coverage_export")
+                job.save()
+                chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+    else:
+        logger.info("none of the contributors have been updated")

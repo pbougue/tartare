@@ -16,7 +16,7 @@
 ### Automatic update  
 1. This action happens as defined in Tartare (actually crontab(minute=0, hour=20, day_of_week='1-4'))
 2. It makes a contributor export on all contributors and keep the contributor ids of the successful ones (at least one data set has changed) 
-3. Then for all coverages, it looks if at least one of its contributor in the previous list and launch a coverage export in that case
+3. Then for all coverages, it looks if at least one of its contributor is in the previous list and launch a coverage export in that case
 
 
 ## Publishing platforms
