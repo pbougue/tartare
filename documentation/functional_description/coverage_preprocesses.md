@@ -5,6 +5,7 @@ These preprocesses use various FUSIO functionnalities, by sending input files an
 
 ### FusioDataUpdate
 A GTFS is sent to FUSIO to do a DataUpdate.  
+If this GTFS hasn't change since the previous coverage export, this preprocess will be skipped.  
 
 ### FusioImport
 FUSIO loads data and apply FUSIO trade rules processes on them.
