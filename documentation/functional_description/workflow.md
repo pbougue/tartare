@@ -27,6 +27,14 @@ These platforms will receive the coverage export, and can be of three types :
     * __stop_area__ : The stops.txt file will be extract from the exported file, renamed as <coverage_id>_stops.txt and published on the required url.   
 
 
+## Manual actions
+Several actions can be done manually :   
+- Forcing a coverage export  
+- Forcing a contributor export  
+- Fetching a specific data source and saving it if it's a new data.  
+- Getting a specific file made through the contributor export.  
+
+
 ## Failures during workflow.
 If there is a fail, only one retry will be tempted again, 180 secs after.  
 If this retry also fail, Tartare stops there and send an email.  
