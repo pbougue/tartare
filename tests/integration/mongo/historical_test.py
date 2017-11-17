@@ -85,8 +85,8 @@ class TestHistorical(TartareFixture):
                 {"input": {"url": url_config.format(number=i)}}
             ))
             self.assert_sucessful_call(raw)
-            raw = self.post('/contributors/id_test/actions/export')
-            self.assert_sucessful_call(raw, 201)
+
+            self.full_export('id_test', 'jdr')
 
         with app.app_context():
             self.assert_data_source_fetched_number('data_source_gtfs', exports_number, DATA_FORMAT_GTFS)

@@ -98,8 +98,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                     </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
 
-        raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
-        self.assert_sucessful_call(raw, 201)
+        self.full_export('id_test', 'jdr', '2017-08-10')
 
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=2),
@@ -109,8 +108,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                          json.dumps({"input": {"url": url}}))
         self.assert_sucessful_call(raw)
 
-        raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
-        self.assert_sucessful_call(raw, 201)
+        self.full_export('id_test', 'jdr', '2017-08-10')
 
         assert fusio_call.call_count == 2
 
@@ -136,10 +134,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                         </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
 
-        raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
-        self.assert_sucessful_call(raw, 201)
-
-        raw = self.post('/contributors/id_test/actions/export?current_date={}'.format("2017-08-10"))
-        self.assert_sucessful_call(raw, 201)
+        self.full_export('id_test', 'jdr', '2017-08-10')
+        self.full_export('id_test', 'jdr', '2017-08-10')
 
         assert fusio_call.call_count == 1

@@ -31,6 +31,7 @@ import logging
 import tempfile
 import zipfile
 from datetime import date
+from typing import Optional
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
@@ -56,7 +57,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
     return context
 
 
-def save_export(contributor: Contributor, context: Context, current_date: date) -> Context:
+def save_export(contributor: Contributor, context: Context, current_date: date) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -91,7 +92,8 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
                                    validity_period=contributor_export_validity_period,
                                    data_sources=contrib_export_data_sources)
         export.save()
-    return context
+        return export
+    return None
 
 
 def save_data_fetched_and_get_context(context: Context, file: str, filename: str,

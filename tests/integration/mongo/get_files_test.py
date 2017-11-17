@@ -33,10 +33,10 @@
 import os
 import json
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import assert_files_equals
+from tests.utils import assert_files_equals, _get_file_fixture_full_path
 
 file_used = "some_archive.zip"
-fixtures_file = os.path.realpath('tests/fixtures/gtfs/{}'.format(file_used))
+fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(file_used))
 
 
 class TestGetFiles(TartareFixture):
@@ -146,6 +146,8 @@ class TestGetFiles(TartareFixture):
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
 
+        raw = self.post('/coverages/{}/actions/export?current_date=2015-08-10'.format(coverage['id']), {})
+        assert raw.status_code == 201
 
         raw = self.get('coverages/{coverage_id}/exports'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
