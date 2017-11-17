@@ -69,7 +69,7 @@ class DataSource(flask_restful.Resource):
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
-    def delete(self, contributor_id: str, data_source_id:Optional[str]=None) -> Response:
+    def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
@@ -96,7 +96,7 @@ class DataSource(flask_restful.Resource):
             data_source = models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
             raise InvalidArguments(str(e))
-        except PyMongoError as e:
+        except PyMongoError:
             raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 200

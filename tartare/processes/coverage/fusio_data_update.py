@@ -57,16 +57,23 @@ class FusioDataUpdate(AbstractFusioProcess):
 
     def __is_update_needed(self, contributor_id: str, data_source_context: DataSourceContext) -> bool:
         coverage_export = CoverageExport.get_last(self.context.coverage.id)
+        # first coverage export => data update
         if not coverage_export:
             return True
         previous_coverage_contributor = next(
             (coverage_export_contributor for coverage_export_contributor in coverage_export.contributors if
              coverage_export_contributor.contributor_id == contributor_id), None)
+        # contributor is new to the coverage => data update
         if not previous_coverage_contributor:
             return True
         previous_contributor_data_source_grid_fs_id = next(
             (data_source.gridfs_id for data_source in previous_coverage_contributor.data_sources if
              data_source.data_source_id == data_source_context.data_source_id), None)
+        # data source is new to the contributor => data update
+        # OR
+        # data source id of contributor may have changed => data update because no way to know if data has changed too
+        if not previous_contributor_data_source_grid_fs_id:
+            return True
         previous_gtfs = GridFsHandler().get_file_from_gridfs(previous_contributor_data_source_grid_fs_id)
         current_gtfs = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         return previous_gtfs.md5 != current_gtfs.md5
