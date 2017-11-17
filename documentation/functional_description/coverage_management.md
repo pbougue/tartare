@@ -10,7 +10,22 @@ There are three environments available : integration, preproduction and producti
 Each environment contains :  
 **Name** : Usualy "integration", "preproduction" or "production".  
 **current_ntfs_id** : The id of the data to send.  
-**publication_platforms** : Technical informations (Type of data, protocol used, where to push the data (url like "protocol://...") and password / username if ftp).  
+One or more publication platforms.  
+
+### Publication plateforms
+An environment should contains publication plateforms.  
+Publication is the end goal of Datahub : to give data where we need it. Plateform is the where and what of achieving this goal.  
+
+**type** : The type of file we want to publish.  
+  - **navitia** : NTFS for Tyr.  
+  - **ODS** : Zip containing a GTFS and metadata asked by Open Data Soft.  
+  - **stop_area** : The original *stops.txt* from the GTFS renamed as *{coverage name}_stops.txt*.  
+  
+**Protocol** : By which means will the file be published.  
+  - **http**
+  - **ftp**
+**url** : Where the file will be sent.  
+**options** : Password and username to use if required to access the defined **url**.  
 
 
 ## Doable actions on a coverage
