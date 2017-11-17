@@ -12,9 +12,9 @@ Each environment contains :
 **current_ntfs_id** : The id of the data to send.  
 One or more publication platforms.  
 
-### Publication plateforms
-An environment should contains publication plateforms.  
-Publication is the end goal of Datahub : to give data where we need it. Plateform is the where and what of achieving this goal.  
+### Publication platforms
+An environment should contain publication platforms.  
+Publication is the end goal of Datahub : to give data where we need it. Platform is the where and what of achieving this goal.  
 
 **type** : The type of file we want to publish.  
   - **navitia** : NTFS for Tyr.  
@@ -25,7 +25,7 @@ Publication is the end goal of Datahub : to give data where we need it. Platefor
   - **http**
   - **ftp**
 **url** : Where the file will be sent.  
-**options** : Password and username to use if required to access the defined **url**.  
+**options** : Additional params (Username & password, directory).  
 
 
 ## Doable actions on a coverage
