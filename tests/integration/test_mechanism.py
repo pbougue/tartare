@@ -84,6 +84,6 @@ class TartareFixture(object):
         resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
         self.assert_sucessful_call(resp, 201)
 
-        resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
+        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         self.assert_sucessful_call(resp, 201)
         return resp

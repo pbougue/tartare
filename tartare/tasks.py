@@ -308,10 +308,36 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 @celery.task()
 def automatic_update() -> None:
+    logger.info('automatic_update')
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
+    updated_contributors = []
     for contributor in contributors:
         # launch contributor export
-        job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
+        logger.debug(contributor.id)
+
+        job = models.Job(contributor_id=contributor.id, action_type="automatic_update_contributor_export")
         job.save()
-        chain(contributor_export.si(Context(), contributor, job, datetime.date.today()), finish_job.si(job.id)).delay()
+        action_export = contributor_export.si(Context(), contributor, job, datetime.date.today())
+        export = action_export.apply_async().get(disable_sync_subtasks=False)
+        if export:
+            updated_contributors.append(contributor.id)
+        finish_job.si(job.id).delay()
+
+    coverages = models.Coverage.all()
+    logger.info("updated_contributors = " + (','.join(updated_contributors)))
+    logger.info("fetching {} coverages".format(len(coverages)))
+    for coverage in coverages:
+        do_export = False
+        for contributor_id in coverage.contributors:
+            if contributor_id in updated_contributors and not do_export:
+                logger.info('contributor {} in updated_contributors'.format(contributor_id))
+                do_export = True
+                break
+        if do_export:
+            job = models.Job(contributor_id=coverage.id, action_type="automatic_update_coverage_export")
+            job.save()
+            chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+
+
+
