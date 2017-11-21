@@ -31,6 +31,7 @@
 import json
 
 from tartare import app, mongo
+from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -73,7 +74,7 @@ class TestAutomaticUpdate(TartareFixture):
         assert job['started_at'] is not None
         assert job['updated_at'] is not None
         assert job['contributor_id'] == 'auto_update_contrib'
-        assert job['action_type'] == 'automatic_update_contributor_export'
+        assert job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
 
     def __assert_job_is_automatic_update_contributor_export_unchanged(self, job):
         assert job['state'] == 'done'
@@ -83,7 +84,7 @@ class TestAutomaticUpdate(TartareFixture):
         assert job['started_at'] is not None
         assert job['updated_at'] is not None
         assert job['contributor_id'] == 'auto_update_contrib'
-        assert job['action_type'] == 'automatic_update_contributor_export'
+        assert job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
 
     def __assert_job_is_automatic_update_coverage_export(self, job):
         assert job['state'] == 'done'
@@ -93,7 +94,7 @@ class TestAutomaticUpdate(TartareFixture):
         assert job['started_at'] is not None
         assert job['updated_at'] is not None
         assert job['contributor_id'] is None
-        assert job['action_type'] == 'automatic_update_coverage_export'
+        assert job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT
 
     def test_automatic_update_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
@@ -117,13 +118,13 @@ class TestAutomaticUpdate(TartareFixture):
         jobs = self.__run_automatic_update()
         assert len(jobs) == 2
         for job in jobs:
-            if job['action_type'] == 'automatic_update_contributor_export':
+            if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 self.__assert_job_is_automatic_update_contributor_export(job)
-            elif job['action_type'] == 'automatic_update_coverage_export':
+            elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
                 self.__assert_job_is_automatic_update_coverage_export(job)
             else:
                 assert False, print('action type should be either {} or {}, found {}'.format(
-                    'automatic_update_coverage_export', 'automatic_update_contributor_export', job['action_type']
+                    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, job['action_type']
                 ))
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
@@ -134,16 +135,16 @@ class TestAutomaticUpdate(TartareFixture):
         assert len(jobs_first_run) == 2
         assert len(jobs_second_run) == 3
         for job in jobs_second_run:
-            if job['action_type'] == 'automatic_update_contributor_export':
+            if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 if job['step'] == 'save_contributor_export':
                     self.__assert_job_is_automatic_update_contributor_export(job)
                 else:
                     self.__assert_job_is_automatic_update_contributor_export_unchanged(job)
-            elif job['action_type'] == 'automatic_update_coverage_export':
+            elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
                 self.__assert_job_is_automatic_update_coverage_export(job)
             else:
                 assert False, print('action type should be either {} or {}, found {}'.format(
-                    'automatic_update_coverage_export', 'automatic_update_contributor_export', job['action_type']
+                    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, job['action_type']
                 ))
 
     #
@@ -165,9 +166,9 @@ class TestAutomaticUpdate(TartareFixture):
         jobs_first_run = self.__run_automatic_update()
         assert len(jobs_first_run) == 6
         contributor_export_jobs = list(
-            filter(lambda job: job['action_type'] == 'automatic_update_contributor_export' and job['step'] == 'save_contributor_export', jobs_first_run))
+            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT and job['step'] == 'save_contributor_export', jobs_first_run))
         coverage_export_jobs = list(
-            filter(lambda job: job['action_type'] == 'automatic_update_coverage_export' and job['step'] == 'save_coverage_export', jobs_first_run))
+            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT and job['step'] == 'save_coverage_export', jobs_first_run))
         assert len(contributor_export_jobs) == 4  # all contributor_export are launched
         assert len(coverage_export_jobs) == 2  # cA and cB launched (not cC because no contributors attached)
 
@@ -180,9 +181,9 @@ class TestAutomaticUpdate(TartareFixture):
                    json.dumps({'input': {'url': self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')}}))
         jobs_second_run = self.__run_automatic_update()
         contributor_export_jobs = list(
-            filter(lambda job: job['action_type'] == 'automatic_update_contributor_export', jobs_second_run))
+            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))
         coverage_export_jobs = list(
-            filter(lambda job: job['action_type'] == 'automatic_update_coverage_export', jobs_second_run))
+            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT, jobs_second_run))
         assert len(contributor_export_jobs) == 4  # all contributor_export are launched
         assert len(coverage_export_jobs) == 1  # cA launched because c1 was updated
         contributor_export_unchanged_jobs = list(

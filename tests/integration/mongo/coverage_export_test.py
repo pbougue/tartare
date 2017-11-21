@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tests.integration.test_mechanism import TartareFixture
 import mock
 from tests.utils import mock_urlretrieve, mock_requests_post
@@ -50,7 +51,7 @@ class TestCoverageExport(TartareFixture):
         r = self.to_json(raw)
         assert 'job' in r
         job = r.get('job')
-        assert job.get('action_type') == 'coverage_export'
+        assert job.get('action_type') == ACTION_TYPE_COVERAGE_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200

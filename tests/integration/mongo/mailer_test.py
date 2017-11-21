@@ -28,7 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.models import Job
 from tartare.core.mailer import Mailer
 from tartare import app
@@ -75,7 +75,7 @@ class TestMailer():
     def test_coverage_export(self):
         now = datetime.datetime(2017, 5, 6, 16, 29, 43, tzinfo=datetime.timezone.utc)
         with app.app_context():
-            job = Job('coverage_export', coverage_id='fr-idf', state='failed',
+            job = Job(ACTION_TYPE_COVERAGE_EXPORT, coverage_id='fr-idf', state='failed',
                       id='8422cadb-4e68-4142-be27-f2ec32af49a3',
                       started_at=now)
             job.save()
@@ -88,7 +88,7 @@ class TestMailer():
                 '',
                 'Start execution : {}'.format(now.isoformat(sep=' ')),
                 'End execution : {}'.format(now.isoformat(sep=' ')),
-                'Action type: coverage_export',
+                'Action type: {}'.format(ACTION_TYPE_COVERAGE_EXPORT),
                 'Job: 8422cadb-4e68-4142-be27-f2ec32af49a3',
                 'Step: None',
                 'Coverage: fr-idf',

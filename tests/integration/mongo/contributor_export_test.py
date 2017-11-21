@@ -32,7 +32,7 @@
 import pytest
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE, ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 
@@ -54,7 +54,7 @@ class TestContributorExport(TartareFixture):
         r = self.to_json(raw)
         assert 'job' in r
         job = r.get('job')
-        assert job.get('action_type') == 'contributor_export'
+        assert job.get('action_type') == ACTION_TYPE_CONTRIBUTOR_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200
@@ -80,7 +80,7 @@ class TestContributorExport(TartareFixture):
         r = self.to_json(raw)
         assert 'job' in r
         job = r.get('job')
-        assert job.get('action_type') == 'contributor_export'
+        assert job.get('action_type') == ACTION_TYPE_CONTRIBUTOR_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200

@@ -44,6 +44,7 @@ from tartare.core import calendar_handler, models
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
+from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
@@ -199,7 +200,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
                        check_for_update: bool=True) -> Optional[ContributorExport]:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        logger.info('contributor_export')
+        logger.info('contributor_export from job {action}'.format(action=job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
             contributor)
@@ -236,7 +237,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
-    logger.info('coverage_export')
+    logger.info('coverage_export from job {action}'.format(action=job.action_type))
     try:
         context.instance = 'coverage'
         models.Job.update(job_id=job.id, state="running", step="fetching context")
@@ -307,16 +308,14 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def automatic_update(current_date: datetime.date=None) -> None:
-    current_date = current_date if current_date else datetime.date.today()
+def automatic_update(current_date: datetime.date=datetime.date.today()) -> None:
     logger.info('automatic_update')
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
     updated_contributors = []
     for contributor in contributors:
         # launch contributor export
-        # @TODO use constants for action_type
-        job = models.Job(contributor_id=contributor.id, action_type="automatic_update_contributor_export")
+        job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         job.save()
         action_export = contributor_export.si(Context(), contributor, job, current_date)
         export = action_export.apply_async().get(disable_sync_subtasks=False)
@@ -330,7 +329,7 @@ def automatic_update(current_date: datetime.date=None) -> None:
         logger.info("fetching {} coverages".format(len(coverages)))
         for coverage in coverages:
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
-                job = models.Job(coverage_id=coverage.id, action_type="automatic_update_coverage_export")
+                job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
                 chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
     else:
