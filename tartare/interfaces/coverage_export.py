@@ -30,6 +30,7 @@
 import flask_restful
 from flask import Response
 
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import Context
 from tartare.tasks import coverage_export, finish_job
 from tartare.interfaces.schema import JobSchema
@@ -43,7 +44,7 @@ from celery import chain
 class CoverageExportResource(flask_restful.Resource):
     @staticmethod
     def _export(coverage: Coverage) -> Job:
-        job = Job(coverage_id=coverage.id, action_type="coverage_export")
+        job = Job(coverage_id=coverage.id, action_type=ACTION_TYPE_COVERAGE_EXPORT)
         job.save()
         try:
             chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()

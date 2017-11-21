@@ -32,6 +32,7 @@
 from tartare import app
 from flask_restful import Api
 
+from tartare.interfaces.automatic_update import AutomaticUpdateResource
 from tartare.interfaces.data_source_fetch import DataSourceFetch
 from tartare.interfaces.status import Status
 from tartare.interfaces.index import Index
@@ -130,6 +131,9 @@ api.add_resource(ContributorExportResource,
                  contributor_and_id + export,
                  contributor_and_id + export_and_id,
                  contributor_and_id + '/actions/export')
+
+api.add_resource(AutomaticUpdateResource,
+                 '/actions/automatic_update')
 
 api.add_resource(Job,
                  '/jobs',
