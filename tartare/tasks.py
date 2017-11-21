@@ -307,16 +307,18 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def automatic_update() -> None:
+def automatic_update(current_date: datetime.date=None) -> None:
+    current_date = current_date if current_date else datetime.date.today()
     logger.info('automatic_update')
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
     updated_contributors = []
     for contributor in contributors:
         # launch contributor export
+        # @TODO use constants for action_type
         job = models.Job(contributor_id=contributor.id, action_type="automatic_update_contributor_export")
         job.save()
-        action_export = contributor_export.si(Context(), contributor, job, datetime.date.today())
+        action_export = contributor_export.si(Context(), contributor, job, current_date)
         export = action_export.apply_async().get(disable_sync_subtasks=False)
         if export:
             updated_contributors.append(contributor.id)
