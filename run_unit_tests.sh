@@ -9,15 +9,15 @@ case "$1" in
         ;;
 esac
 
-echo -e "\e[93mLooking for dupplicate tests...\e[0m"
+echo -e "\e[93mLooking for duplicate tests...\e[0m"
 grep "def test_" tests/ -R | cut -d':' -f2 | awk '{print $2}' | uniq -c | grep -v " 1 test_"
 RESULT=$?
 if [ $RESULT == 0 ] ; then
-    echo -e "\e[31mDupplicate tests found, aborting.\e[0m"
+    echo -e "\e[31mDuplicate tests found, aborting.\e[0m"
     exit 1
 fi
 
-echo -e "\e[32mNo dupplicate tests found, continuing.\e[0m"
+echo -e "\e[32mNo duplicate tests found, continuing.\e[0m"
 
 TEST_COMMAND="py.test -m \"not functional\" tests"
 if [ $NOCOV == 0 ] ; then

@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tartare.core import models
 from tests.integration.test_mechanism import TartareFixture
 import pytest
 import tartare
@@ -50,14 +51,30 @@ class TestCoverageApi(TartareFixture):
     def test_add_coverage_returns_success(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
         assert raw.status_code == 201
-        raw = self.get('/coverages')
         r = self.to_json(raw)
-
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
         assert coverage["id"] == "id_test"
         assert coverage["name"] == "name_test"
+        assert coverage['last_active_job'] is None
+
+        raw = self.get('/coverages')
+        r = self.to_json(raw)
+        assert len(r["coverages"]) == 1
+        assert isinstance(r["coverages"], list)
+        coverage = r["coverages"][0]
+        assert coverage["id"] == "id_test"
+        assert coverage["name"] == "name_test"
+        assert coverage['last_active_job'] is None
+
+        # test that we don't persist last_active_job in database
+        with tartare.app.app_context():
+            raw = tartare.mongo.db[models.Coverage.mongo_collection].find_one({
+                '_id': 'id_test',
+            })
+
+            assert 'last_active_job' not in raw
 
     def test_add_coverage_no_id(self):
         raw = self.post('/coverages', '{"name": "name_test"}')
