@@ -1285,26 +1285,30 @@ definitions:
       id:
         type: string
         example: jobx
-
       action_type:
         type: string
+        enum: [contributor_export, coverage_export, automatic_update_contributor_export, automatic_update_coverage_export]
         example: contributor_export
       coverage_id:
         type: string
         example: fr-idf
       state:
         type: string
+        description: Status of a step during an export
         example: pending
       step:
         type: string
+        description: "Last action of an export when it failed or succeeded"
         example: fetching data
       started_at:
         type: string
         format: date-time
+        description: "Start date of an export"
         example: "2017-05-29T13:37:55.967795+00:00"
       updated_at:
         type: string
         format: date-time
+        description: "Date of the last step that failed or succeeded"
         example: "2017-05-29T13:37:55.967795+00:00"
       contributor_id:
         type: string
@@ -1372,6 +1376,8 @@ definitions:
             },
             sequence: 0
           }
+      last_active_job:
+        $ref: "#/definitions/job"
 
   array_of_strings:
     type: array
