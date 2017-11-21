@@ -330,7 +330,7 @@ def automatic_update(current_date: datetime.date=None) -> None:
         logger.info("fetching {} coverages".format(len(coverages)))
         for coverage in coverages:
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
-                job = models.Job(contributor_id=coverage.id, action_type="automatic_update_coverage_export")
+                job = models.Job(coverage_id=coverage.id, action_type="automatic_update_coverage_export")
                 job.save()
                 chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
     else:
