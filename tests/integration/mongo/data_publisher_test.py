@@ -335,29 +335,6 @@ class TestDataPublisher(TartareFixture):
                 assert_files_equals(metadata, fixture)
         session.quit()
 
-    def test_config_user_password(self, contributor):
-        user_to_set = 'user'
-        coverage_id = 'default'
-        publication_platform = {
-            "sequence": 0,
-            "type": "ods",
-            "protocol": "ftp",
-            "url": "whatever.com",
-            "options": {
-                "authent": {
-                    "username": user_to_set,
-                    "password": 'my_password'
-                }
-            }
-        }
-        self._create_coverage(coverage_id, contributor['id'], publication_platform)
-        resp = self.get('/coverages/{cov_id}'.format(cov_id=coverage_id))
-        r = self.to_json(resp)['coverages'][0]
-        pub_platform = r['environments']['production']['publication_platforms'][0]
-        assert 'password' not in pub_platform['options']['authent']
-        assert 'username' in pub_platform['options']['authent']
-        assert user_to_set == pub_platform['options']['authent']['username']
-
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'

@@ -93,10 +93,10 @@ class DataSource(flask_restful.Resource):
             raise InvalidArguments('The modification of the id is not possible')
 
         try:
-            data_source = models.DataSource.update(contributor_id, data_source_id, request.json)
+            models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
             raise InvalidArguments(str(e))
-        except PyMongoError as e:
+        except PyMongoError:
             raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 200
+        return self.get(contributor_id, data_source_id)
