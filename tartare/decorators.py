@@ -28,19 +28,18 @@
 # www.navitia.io
 
 import logging
+import re
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from flask import request
-import re
 
 from tartare.core import models
-from tartare.core.models import Coverage, CoverageExport
-from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments
-from tartare.processes.processes import PreProcessManager
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
-    DATA_FORMAT_VALUES
-
+    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE
+from tartare.core.models import Coverage, CoverageExport, DataSource
+from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
+from tartare.processes.processes import PreProcessManager
 
 id_format_text = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 id_format = re.compile(id_format_text)
@@ -50,16 +49,31 @@ id_gridfs = re.compile(id_gridfs_text)
 
 
 def check_excepted_data_format(data_format: str, data_type: str) -> None:
-        if data_format not in DATA_FORMAT_VALUES:
-            msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
+    if data_format not in DATA_FORMAT_VALUES:
+        msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
+        logging.getLogger(__name__).error(msg)
+        raise InvalidArguments(msg)
 
-        if data_format not in DATA_FORMAT_BY_DATA_TYPE[data_type]:
-            msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
-                                                                                               data_type)
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
+    if data_format not in DATA_FORMAT_BY_DATA_TYPE[data_type]:
+        msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
+                                                                                           data_type)
+        logging.getLogger(__name__).error(msg)
+        raise InvalidArguments(msg)
+
+
+def check_contributor_data_source_osm_constraint(existing_data_sources: List[DataSource],
+                                                 new_data_sources: List[dict]) -> None:
+    osm_existing_ds_ids = [ds_model.id for ds_model in existing_data_sources if
+                           ds_model.data_format == DATA_FORMAT_OSM_FILE]
+    if len(osm_existing_ds_ids) > 1:
+        raise InternalServerError('found contributor with more than one OSM data source')
+    osm_new_ds = [ds_dict for ds_dict in new_data_sources if
+                  ds_dict.get('data_format', DATA_FORMAT_DEFAULT) == DATA_FORMAT_OSM_FILE and ds_dict.get(
+                      'id') not in osm_existing_ds_ids]
+    if len(osm_new_ds) + len(osm_existing_ds_ids) > 1:
+        msg = "contributor contains more than one OSM data source"
+        logging.getLogger(__name__).error(msg)
+        raise InvalidArguments(msg)
 
 
 class publish_params_validate(object):
@@ -135,9 +149,8 @@ class validate_contributor_prepocesses_data_source_ids(object):
 
 
 class check_contributor_integrity(object):
-
-    def __init__(self, contributor_id_required: bool=False) -> None:
-            self.contributor_id_required = contributor_id_required
+    def __init__(self, contributor_id_required: bool = False) -> None:
+        self.contributor_id_required = contributor_id_required
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
@@ -157,20 +170,23 @@ class check_contributor_integrity(object):
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
                 data_type = contributor.data_type
+                existing_data_sources = contributor.data_sources
             else:
                 data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
-
-            for data_source in post_data.get('data_sources', []):
-                check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
+                existing_data_sources = []
+            data_sources = post_data.get('data_sources', [])
+            if data_sources:
+                for data_source in post_data.get('data_sources', []):
+                    check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
+                check_contributor_data_source_osm_constraint(existing_data_sources, data_sources)
             return func(*args, **kwargs)
 
         return wrapper
 
 
 class check_data_source_integrity(object):
-
-    def __init__(self, data_source_id_required: bool=False) -> None:
-            self.data_source_id_required = data_source_id_required
+    def __init__(self, data_source_id_required: bool = False) -> None:
+        self.data_source_id_required = data_source_id_required
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
@@ -194,9 +210,15 @@ class check_data_source_integrity(object):
                     models.DataSource.get_one(contributor_id, data_source_id)
                 except ValueError as e:
                     raise ObjectNotFound(str(e))
-            check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
+                post_data['id'] = data_source_id
+                if post_data.get('data_format'):
+                    check_excepted_data_format(post_data.get('data_format'), data_type)
+            else:
+                check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
+            check_contributor_data_source_osm_constraint(contributor.data_sources, [post_data])
 
             return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -292,7 +314,8 @@ class validate_file_params(object):
 
             if contributor_id:
                 contributor_export = models.ContributorExport.get(contributor_id)
-                if not contributor_export or not next((ce for ce in contributor_export if ce.gridfs_id == file_id), None):
+                if not contributor_export or not next((ce for ce in contributor_export if ce.gridfs_id == file_id),
+                                                      None):
                     msg = "Contributor export not found."
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
