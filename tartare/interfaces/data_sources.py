@@ -80,7 +80,7 @@ class DataSource(flask_restful.Resource):
         return {'data_sources': []}, 204
 
     @json_data_validate()
-    @check_data_source_integrity()
+    @check_data_source_integrity(data_source_id_required=True)
     def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         ds = models.DataSource.get(contributor_id, data_source_id)
 
