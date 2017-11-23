@@ -35,7 +35,8 @@ import tartare
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
     DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, \
-    DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_PUBLIC_TRANSPORT
+    DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_OSM_FILE, \
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE
 from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
 from tartare import app, mongo
@@ -531,3 +532,61 @@ class TestDataSources(TartareFixture):
             assert contrib['data_sources'][0]['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert contrib['data_sources'][0]['fetch_started_at'] is None
             assert contrib['data_sources'][0]['updated_at'] is None
+
+    def test_post_multi_data_sources_osm_forbidden(self):
+        contributor = {
+            'id': 'id_test',
+            'name': 'id_test',
+            'data_prefix': 'id_test',
+            'data_type': DATA_TYPE_GEOGRAPHIC,
+        }
+        raw = self.post('/contributors', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw, 201)
+        data_sources = [
+            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_OSM_FILE},
+        ]
+        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(data_sources[0]))
+        self.assert_sucessful_call(raw, 201)
+        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(data_sources[1]))
+        response = self.assert_failed_call(raw)
+        assert response['error'] == 'contributor contains more than one OSM data source'
+        assert response['message'] == 'Invalid arguments'
+
+
+
+    def test_patch_multi_data_sources_two_osm_forbidden(self):
+        data_sources = [
+            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_BANO_FILE},
+        ]
+        contributor = {
+            'id': 'id_test',
+            'name': 'id_test',
+            'data_prefix': 'id_test',
+            'data_type': DATA_TYPE_GEOGRAPHIC,
+            'data_sources': data_sources,
+        }
+        raw = self.post('/contributors', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw, 201)
+        raw = self.patch('/contributors/id_test/data_sources/id2', self.dict_to_json({'data_format': DATA_FORMAT_OSM_FILE}))
+        response = self.assert_failed_call(raw)
+        assert response['error'] == 'contributor contains more than one OSM data source'
+        assert response['message'] == 'Invalid arguments'
+
+    def test_patch_multi_data_sources_update_one_osm_allowed(self):
+        data_sources = [
+            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_BANO_FILE},
+        ]
+        contributor = {
+            'id': 'id_test',
+            'name': 'id_test',
+            'data_prefix': 'id_test',
+            'data_type': DATA_TYPE_GEOGRAPHIC,
+            'data_sources': data_sources,
+        }
+        raw = self.post('/contributors', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw, 201)
+        raw = self.patch('/contributors/id_test/data_sources/id1', self.dict_to_json({'name': 'name-updated'}))
+        self.assert_sucessful_call(raw)
