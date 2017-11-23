@@ -30,10 +30,11 @@
 # www.navitia.io
 
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
-    DataSource
+
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
+    DataSource, MongoPlatformSchema
 
 
 class NoUnknownFieldMixin(Schema):
@@ -44,7 +45,17 @@ class NoUnknownFieldMixin(Schema):
                 raise ValidationError('Unknown field name {}'.format(key))
 
 
+class PlatformSchema(MongoPlatformSchema):
+    @post_dump()
+    def remove_password(self, data: dict) -> dict:
+        password = data.get('options', {}).get('authent', {}).get('password', {})
+        if password:
+            data['options']['authent'].pop('password')
+        return data
+
+
 class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
+    publication_platforms = fields.Nested(PlatformSchema, many=True)
     current_ntfs_id = fields.String(allow_none=True, dump_only=True)
 
 

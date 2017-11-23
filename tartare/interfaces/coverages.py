@@ -44,15 +44,6 @@ from tartare.processes.processes import PreProcessManager
 
 
 class Coverage(flask_restful.Resource):
-    def _hide_password_in_coverage_response(self, response: dict) -> dict:
-        for env_name, env_def in response.get('environments', []).items():
-            for (pub_idx, publication_platform) in enumerate(env_def.get('publication_platforms', [])):
-                if 'options' in publication_platform and 'authent' in publication_platform['options'] and \
-                        publication_platform['options']['authent']:
-                    response['environments'][env_name]['publication_platforms'][pub_idx]['options']['authent'].pop(
-                        'password', None)
-        return response
-
     @json_data_validate()
     @validate_contributors()
     def post(self) -> Response:
@@ -74,10 +65,11 @@ class Coverage(flask_restful.Resource):
             coverage.save()
         except DuplicateKeyError:
             raise DuplicateEntry("Coverage {} already exists.".format(request.json['id']))
-        except PyMongoError as e:
+        except PyMongoError:
             raise InternalServerError('Impossible to add coverage.')
 
-        return {'coverages': coverage_schema.dump([coverage], many=True).data}, 201
+        response, status = self.get(coverage.id)
+        return response, 201
 
     def get(self, coverage_id: Optional[str]=None) -> Response:
         if coverage_id:
@@ -86,15 +78,11 @@ class Coverage(flask_restful.Resource):
                 raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
-            result = MarshalResult(data=self._hide_password_in_coverage_response(result.data), errors=result.errors)
             return {'coverages': [result.data]}, 200
 
-        coverages = schema.CoverageSchema(many=True).dump(models.Coverage.all())
-        processed_coverages = []
-        for coverage in coverages.data:
-            processed_coverages.append(self._hide_password_in_coverage_response(coverage))
+        coverages = models.Coverage.all()
 
-        return {'coverages': MarshalResult(data=processed_coverages, errors=coverages.errors).data}, 200
+        return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
 
     def delete(self, coverage_id: str) -> Response:
         c = models.Coverage.delete(coverage_id)
@@ -122,4 +110,4 @@ class Coverage(flask_restful.Resource):
         except PyMongoError:
             raise InternalServerError('Impossible to update coverage with dataset {}'.format(request.json))
 
-        return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200
+        return self.get(coverage.id)

@@ -463,3 +463,50 @@ class TestCoverageApi(TartareFixture):
         r = self.to_json(raw)
         assert len(r["coverages"][0]['contributors']) == 1
         assert r["coverages"][0]['contributors'][0] == 'id_test'
+
+    def __assert_pub_platform_authent(self, pub_platform, user_to_set):
+        assert 'password' not in pub_platform['options']['authent']
+        assert 'username' in pub_platform['options']['authent']
+        assert user_to_set == pub_platform['options']['authent']['username']
+
+    def test_post_config_user_password_check_in_get(self):
+        user_to_set = 'user'
+        cov_id = 'cov'
+        coverage = {
+            "environments": {
+                "production": {
+                    "name": "production",
+                    "sequence": 0,
+                    "publication_platforms": [
+                        {
+                            "sequence": 0,
+                            "type": "ods",
+                            "protocol": "ftp",
+                            "url": "whatever.com",
+                            "options": {
+                                "authent": {
+                                    "username": user_to_set,
+                                    "password": 'my_password'
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": cov_id,
+            "name": cov_id
+        }
+        raw = self.post("/coverages", self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw, 201)
+        r = self.to_json(raw)['coverages'][0]
+        self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
+
+        raw = self.patch('/coverages/' + cov_id, self.dict_to_json({'name': 'toto'}))
+        self.assert_sucessful_call(raw, 200)
+        r = self.to_json(raw)['coverages'][0]
+        self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
+
+        raw = self.get('/coverages/{cov_id}'.format(cov_id=cov_id))
+        self.assert_sucessful_call(raw, 200)
+        r = self.to_json(raw)['coverages'][0]
+        self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
