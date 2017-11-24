@@ -103,22 +103,18 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
 
             for contributor_id in data['contributors']:
                 job_contributor = job_get_last(False, contributor_id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
-                if job_contributor is None:
-                    continue
+                if job_contributor:
+                    if job_coverage:
+                        # ----------------------------------- Automatic update -----------------------------------------
+                        # ------- contributor export 23/11/2017 ---- | ------ existing coverage export 20/11/2017 ------
+                        if job_contributor.has_failed() and job_contributor.started_at > job_coverage.started_at:
+                            return job_contributor
 
-                if job_coverage:
-                    # ----------------------------------- Automatic update ---------------------------------------------
-                    # --------- contributor export 23/11/2017 ---- | -------- existing coverage export 20/11/2017 ------
-                    if job_contributor.has_failed() and job_contributor.started_at > job_coverage.started_at:
+                    # No coverage export has succeeded
+                    # ------------------------------------ Automatic update --------------------------------------------
+                    # --------- contributor export failed -----------| ---------------- no coverage export -------------
+                    elif job_contributor.has_failed():
                         return job_contributor
-                    continue
-
-                # No coverage export has succeeded
-                # ------------------------------------ Automatic update ------------------------------------------------
-                # --------- contributor export failed -----------| ---------------- no coverage export -----------------
-                if job_coverage is None and job_contributor.has_failed():
-                    return job_contributor
-                continue
 
             return job_coverage
 

@@ -200,8 +200,10 @@ class TestCoverageStatus(TartareFixture):
         # Automatic update that fails in a contributor export
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2', 'unknown_file')
-        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update')
-        self.__create_coverage(['contributor_automatic_update_2', 'contributor_automatic_update_2'], 'coverage_export')
+        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3')
+        self.__create_coverage(['contributor_automatic_update_2',
+                                'contributor_automatic_update_2',
+                                'contributor_automatic_update_3'], 'coverage_export')
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
