@@ -728,8 +728,8 @@ class TestContributors(TartareFixture):
                 assert raw.status_code == 400, print(self.to_json(raw))
                 r = self.to_json(raw)
                 assert 'error' in r
-                assert r['error'] == 'data source format {format} is incompatible with contributor data_type {type}'. \
-                    format(format=data_format, type=data_type)
+                assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
+                    format(format=data_format, type=data_type, values=','.join((DATA_FORMAT_BY_DATA_TYPE[data_type])))
 
     def test_post_contrib_public_transport_with_data_format_valid(self):
         for data_type in DATA_TYPE_VALUES:
@@ -747,8 +747,8 @@ class TestContributors(TartareFixture):
                 self.assert_sucessful_call(raw, 400)
                 r = self.to_json(raw)
                 assert 'error' in r
-                assert r['error'] == 'data source format {other} is incompatible with contributor data_type {data_type}' \
-                    .format(other=other_data_format, data_type=data_type)
+                assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
+                           format(format=other_data_format, type=data_type, values=','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))
 
     def test_patch_contrib_public_transport_with_data_format_valid(self):
         for data_type in DATA_TYPE_VALUES:
@@ -776,7 +776,7 @@ class TestContributors(TartareFixture):
         assert response['error'] == 'contributor contains more than one OSM data source'
         assert response['message'] == 'Invalid arguments'
 
-    def test_patch_contributor_multi_data_sources_osm(self):
+    def test_patch_contributor_multi_data_sources_osm_with_new_one(self):
         data_sources = [
             {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
             {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_BANO_FILE},

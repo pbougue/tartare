@@ -55,8 +55,8 @@ def check_excepted_data_format(data_format: str, data_type: str) -> None:
         raise InvalidArguments(msg)
 
     if data_format not in DATA_FORMAT_BY_DATA_TYPE[data_type]:
-        msg = "data source format {} is incompatible with contributor data_type {}".format(data_format,
-                                                                                           data_type)
+        msg = "data source format {} is incompatible with contributor data_type {}, possibles values are: '{}'".format(
+            data_format, data_type, ','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))
         logging.getLogger(__name__).error(msg)
         raise InvalidArguments(msg)
 
@@ -204,18 +204,18 @@ class check_data_source_integrity(object):
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
             data_type = contributor.data_type
-
+            new_data_source = post_data.copy()
             if self.data_source_id_required:
                 try:
                     models.DataSource.get_one(contributor_id, data_source_id)
                 except ValueError as e:
                     raise ObjectNotFound(str(e))
-                post_data['id'] = data_source_id
+                new_data_source['id'] = data_source_id
                 if post_data.get('data_format'):
                     check_excepted_data_format(post_data.get('data_format'), data_type)
             else:
                 check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-            check_contributor_data_source_osm_constraint(contributor.data_sources, [post_data])
+            check_contributor_data_source_osm_constraint(contributor.data_sources, [new_data_source])
 
             return func(*args, **kwargs)
 
