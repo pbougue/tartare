@@ -990,6 +990,9 @@ class CoverageExportContributor(object):
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class MongoCoverageExportContributorSchema(Schema):
     contributor_id = fields.String(required=True)
@@ -1033,6 +1036,9 @@ class CoverageExport(Historisable):
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
         lasts = MongoCoverageExportSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class MongoCoverageExportSchema(Schema):

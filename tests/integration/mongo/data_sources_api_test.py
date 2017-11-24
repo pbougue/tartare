@@ -187,6 +187,14 @@ class TestDataSources(TartareFixture):
         assert patched_data_source["name"] == "name_modified"
         assert patched_data_source["data_format"] == "gtfs"
 
+    def test_patch_data_source_id(self, data_source):
+        modif_ds = {"id": "id_modified"}
+        raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
+        r = self.to_json(raw)
+        assert raw.status_code == 400, print(r)
+        assert r['message'] == 'Invalid arguments'
+        assert r['error'] == 'The modification of the id is not possible'
+
     def test_patch_ds_one_data_source_name_of_two_and_add_one(self, contributor):
         """
         using /data_sources endpoint

@@ -69,7 +69,7 @@ class DataSource(flask_restful.Resource):
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
 
-    def delete(self, contributor_id: str, data_source_id:Optional[str]=None) -> Response:
+    def delete(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
