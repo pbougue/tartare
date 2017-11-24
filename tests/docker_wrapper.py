@@ -116,12 +116,10 @@ class AbstractDocker(metaclass=ABCMeta):
         self.logger.info("IP addr is {}".format(self.ip_addr))
 
     def __exit__(self, *args, **kwargs):
-        logging.getLogger(__name__).info("stopping the temporary docker")
         if self.volumes:
             self._remove_temporary_files()
         self.docker.stop(container=self.container_id)
 
-        logging.getLogger(__name__).info("removing the temporary docker")
         self.docker.remove_container(container=self.container_id, v=True)
 
         # test to be sure the docker is removed at the end
