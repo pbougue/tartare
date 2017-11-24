@@ -73,6 +73,11 @@ class TartareFixture(object):
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
         assert raw.status_code == status_code_expected, print(self.to_json(raw))
+        return self.to_json(raw)
+
+    def assert_failed_call(self, raw, status_code_expected=400):
+        assert raw.status_code == status_code_expected, print(self.to_json(raw))
+        return self.to_json(raw)
 
     def get_job_details(self, id):
         raw = self.get('/jobs/{}'.format(id))
