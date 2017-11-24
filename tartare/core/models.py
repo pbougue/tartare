@@ -36,7 +36,7 @@ from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tu
 
 import pymongo
 from gridfs import GridOut
-from marshmallow import Schema, post_load, utils, fields, post_dump
+from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
 from tartare import mongo
@@ -804,8 +804,6 @@ class MongoDataSourceSchema(Schema):
         return DataSource(**data)
 
 
-
-
 class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
     sequence = fields.Integer(required=True)
@@ -892,6 +890,12 @@ class Job(object):
         return MongoJobSchema(strict=True).load(raw).data
 
     @classmethod
+    def get_last(cls, filter: dict) -> Optional['Job']:
+        raw = mongo.db[cls.mongo_collection].find(filter).sort("updated_at", -1).limit(1)
+        lasts = MongoJobSchema(many=True, strict=True).load(raw).data
+        return lasts[0] if lasts else None
+
+    @classmethod
     def update(cls, job_id: str, state: str = None, step: str = None, error_message: str = None) -> Optional['Job']:
         logger = logging.getLogger(__name__)
         if not job_id:
@@ -914,6 +918,9 @@ class Job(object):
         if raw.matched_count == 0:
             return None
         return job
+
+    def has_failed(self) -> bool:
+        return self.state == "failed"
 
 
 class MongoJobSchema(Schema):

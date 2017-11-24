@@ -28,9 +28,14 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional, List
 
 from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump
 
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
+    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
+    DataSource, Job
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
@@ -75,6 +80,48 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     @post_load
     def make_coverage(self, data: dict) -> Coverage:
         return Coverage(**data)
+
+    @post_dump
+    def add_last_active_job(self, data: dict) -> dict:
+        def job_get_last(is_coverage: bool, id: str, action_types: List[str]) -> Optional['Job']:
+            filter = {
+                'action_type': {'$in': action_types},
+                'coverage_id' if is_coverage else 'contributor_id': id
+            }
+
+            return Job.get_last(filter)
+
+        def get_last_active_job(data: dict) -> Optional['Job']:
+            job_coverage = job_get_last(True, data['id'],
+                                        [ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT])
+
+            # if a coverage export is launched, no contributor export is done so we return the last coverage's job
+            # -------------------------------------- Coverage export ---------------------------------------------------
+            # --------- no contributor export ------------ | -------- coverage export 20/11/2017 -----------------------
+            if job_coverage and job_coverage.action_type == ACTION_TYPE_COVERAGE_EXPORT:
+                return job_coverage
+
+            for contributor_id in data['contributors']:
+                job_contributor = job_get_last(False, contributor_id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
+                if job_contributor:
+                    if job_coverage:
+                        # ----------------------------------- Automatic update -----------------------------------------
+                        # ------- contributor export 23/11/2017 ---- | ------ existing coverage export 20/11/2017 ------
+                        if job_contributor.has_failed() and job_contributor.started_at > job_coverage.started_at:
+                            return job_contributor
+
+                    # No coverage export has succeeded
+                    # ------------------------------------ Automatic update --------------------------------------------
+                    # --------- contributor export failed -----------| ---------------- no coverage export -------------
+                    elif job_contributor.has_failed():
+                        return job_contributor
+
+            return job_coverage
+
+        last_active_job = get_last_active_job(data)
+        data['last_active_job'] = None if last_active_job is None else JobSchema(strict=True).dump(last_active_job).data
+
+        return data
 
 
 class DataSourceSchema(MongoDataSourceSchema):
