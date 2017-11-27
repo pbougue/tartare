@@ -65,9 +65,9 @@ class TestDataSourceFetchAction(TartareFixture):
         json_response = self.to_json(raw)
         data_source_id = json_response['data_sources'][0]['id']
 
-        response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
+        raw = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
 
-        assert response.status_code == 204, print(self.to_json(response))
+        self.assert_sucessful_call(raw, 204)
 
         with app.app_context():
             raw = mongo.db[models.DataSourceFetched.mongo_collection].find_one({

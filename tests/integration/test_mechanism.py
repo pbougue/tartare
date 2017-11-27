@@ -72,8 +72,9 @@ class TartareFixture(object):
         return "{method}://{ip}/{path}/{filename}".format(method=method, ip=ip, filename=filename, path=path)
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
-        assert raw.status_code == status_code_expected, print(self.to_json(raw))
-        return self.to_json(raw)
+        debug = self.to_json(raw) if status_code_expected != 204 else 'no body'
+        assert raw.status_code == status_code_expected, print(debug)
+        return debug
 
     def assert_failed_call(self, raw, status_code_expected=400):
         assert raw.status_code == status_code_expected, print(self.to_json(raw))

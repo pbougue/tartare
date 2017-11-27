@@ -38,7 +38,7 @@ from tests.integration.test_mechanism import TartareFixture
 class TestAutomaticUpdate(TartareFixture):
     def __run_automatic_update(self):
         raw = self.post('/actions/automatic_update?current_date=2015-08-10')
-        assert raw.status_code == 204
+        self.assert_sucessful_call(raw, 204)
         raw = self.get('/jobs')
         self.assert_sucessful_call(raw, 200)
         return self.to_json(raw)['jobs']

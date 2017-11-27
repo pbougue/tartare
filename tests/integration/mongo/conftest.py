@@ -29,8 +29,7 @@
 from tartare import app, mongo
 import pytest
 from tartare.core import models
-from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker, \
-    DownloadHttpServerGlobalDocker
+from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker
 from tests.utils import to_json
 from datetime import date
 

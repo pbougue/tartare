@@ -148,7 +148,7 @@ class TestCoveragePreProcesses(TartareFixture):
 
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         raw = self.delete('/coverages/jdr/preprocesses/{}'.format(preprocess_id))
-        assert raw.status_code == 204, print(self.to_json(raw))
+        self.assert_sucessful_call(raw, 204)
         raw = self.get('/coverages/jdr/preprocesses')
         r = self.to_json(raw)
         assert len(r['preprocesses']) == 0

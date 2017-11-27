@@ -327,7 +327,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
         assert raw.status_code == 201
         raw = self.delete('/coverages/id_test')
-        assert raw.status_code == 204
+        self.assert_sucessful_call(raw, 204)
         raw = self.get('/coverages/id_test')
         assert raw.status_code == 404
 

@@ -209,7 +209,7 @@ class TestContributorPreProcesses(TartareFixture):
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         raw = self.delete('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
-        assert raw.status_code == 204, print(self.to_json(raw))
+        self.assert_sucessful_call(raw, 204)
         raw = self.get('/contributors/id_test/preprocesses')
         r = self.to_json(raw)
         assert len(r['preprocesses']) == 0

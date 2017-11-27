@@ -222,7 +222,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
         raw = self.delete('/contributors/id_test')
-        assert raw.status_code == 204
+        self.assert_sucessful_call(raw, 204)
         raw = self.get('/contributors/id_test')
         assert raw.status_code == 404
 
