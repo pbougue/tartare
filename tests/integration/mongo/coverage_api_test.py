@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tartare.core.constants import DATA_TYPE_GEOGRAPHIC
 from tartare.core import models
 from tests.integration.test_mechanism import TartareFixture
 import pytest
@@ -527,3 +528,25 @@ class TestCoverageApi(TartareFixture):
         self.assert_sucessful_call(raw, 200)
         r = self.to_json(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
+
+
+    def __create_geo_contributor(self, id):
+        post_data = {
+            "id": id,
+            "name": id,
+            "data_type": DATA_TYPE_GEOGRAPHIC,
+            "data_prefix": id
+        }
+        raw = self.post('/contributors', self.dict_to_json(post_data))
+        self.assert_sucessful_call(raw, 201)
+
+
+    def test_post_coverage_multiple_geo_contrib(self, coverage):
+        self.__create_geo_contributor('geo-1')
+        self.__create_geo_contributor('geo-2')
+        raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-1'}))
+        self.assert_sucessful_call(raw, 201)
+        raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
+        assert raw.status_code == 400
+        r = self.to_json(raw)
+        assert False, print(r)
