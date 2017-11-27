@@ -549,4 +549,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
         assert raw.status_code == 400
         r = self.to_json(raw)
-        assert False, print(r)
+        assert r == {
+            'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
+            'message': 'Invalid arguments'
+        }

@@ -32,6 +32,7 @@ import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
+from tartare.exceptions import IntegrityException
 from tartare.interfaces import schema
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.decorators import json_data_validate
@@ -59,9 +60,11 @@ class CoverageContributorSubscription(flask_restful.Resource):
 
         try:
             coverage.add_contributor(contributor)
-        except (PyMongoError, ValueError) as e:
+        except (PyMongoError, ValueError):
             raise InternalServerError('Impossible to update coverage {} with contributor {}.'
                                       .format(coverage_id, contributor_id))
+        except IntegrityException as e:
+            raise InvalidArguments(str(e))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 201
 
