@@ -130,7 +130,7 @@ class DataSourceSchema(MongoDataSourceSchema):
 
     @post_dump()
     def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        data['status'], data['fetch_started_at'], data['updated_at'] = DataSource.format_calculated_attributes(
+        data['status'], data['fetch_started_at'], data['updated_at'], data['validity_period'] = DataSource.format_calculated_attributes(
             DataSource.get_calculated_attributes(data['id'])
         )
 

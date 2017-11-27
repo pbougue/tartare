@@ -222,7 +222,7 @@ def validate_post_data_set(func: Callable) -> Any:
         data_source_id = kwargs['data_source_id']
 
         try:
-            data_source = models.DataSource.get(contributor_id=contributor_id, data_source_id=data_source_id)
+            data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
         except ValueError as e:
             raise ObjectNotFound(str(e))
 

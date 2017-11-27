@@ -43,7 +43,7 @@ from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC
+    DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_FAILED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import IntegrityException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
@@ -292,7 +292,7 @@ class DataSource(object):
 
     @classmethod
     def get_calculated_attributes(cls, data_source_id: str) \
-            -> Tuple[str, Optional[datetime], Optional[datetime]]:
+            -> Tuple[str, Optional[datetime], Optional[datetime], Optional[ValidityPeriod]]:
 
         """
         :return: a tuple with (status, fetch_started_at, updated_at) attributes:
@@ -303,6 +303,8 @@ class DataSource(object):
         last_data_set = DataSourceFetched.get_last(data_source_id, None)
         status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
         fetch_started_at = last_data_set.created_at if last_data_set else None
+        validity_period = last_data_set.validity_period if last_data_set else None
+
         if status == DATA_SOURCE_STATUS_UPDATED:
             updated_at = last_data_set.saved_at
         elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
@@ -310,15 +312,17 @@ class DataSource(object):
         else:
             last_data_set_updated = DataSourceFetched.get_last(data_source_id)
             updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
-        return status, fetch_started_at, updated_at
+            validity_period = last_data_set_updated.validity_period if last_data_set_updated else None
+        return status, fetch_started_at, updated_at, validity_period
 
     @classmethod
-    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
-            -> Tuple[str, Optional[str], Optional[str]]:
-        status, fetch_started_at, updated_at = calculated_attributes
+    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime], Optional[ValidityPeriod]]) \
+            -> Tuple[str, Optional[str], Optional[str], Optional[str]]:
+        status, fetch_started_at, updated_at, validity_period = calculated_attributes
         return status, \
-               str(fetch_started_at) if fetch_started_at else None, \
-               str(updated_at) if updated_at else None
+        str(fetch_started_at) if fetch_started_at else None, \
+        str(updated_at) if updated_at else None, \
+        None if validity_period is None else MongoValidityPeriodSchema(strict=True).dump(validity_period).data
 
 
 class GenericPreProcess(SequenceContainer):

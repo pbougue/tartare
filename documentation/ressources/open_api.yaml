@@ -1653,6 +1653,9 @@ definitions:
         $ref: "#/definitions/input"
       license:
         $ref: "#/definitions/license"
+      validity_period:
+        $ref: "#/definitions/validity_period"
+
 
   input:
     type: object
