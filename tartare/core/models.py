@@ -42,8 +42,10 @@ from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
+    DATA_TYPE_GEOGRAPHIC
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.exceptions import IntegrityException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -593,6 +595,13 @@ class Coverage(PreProcessContainer):
         return contributor.id in self.contributors
 
     def add_contributor(self, contributor: Contributor) -> None:
+        if contributor.data_type == DATA_TYPE_GEOGRAPHIC and any(
+                        Contributor.get(contributor_id).data_type == DATA_TYPE_GEOGRAPHIC for contributor_id in
+                        self.contributors):
+            raise IntegrityException(
+                'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
+            )
+
         self.contributors.append(contributor.id)
         self.update(self.id, {"contributors": self.contributors})
 

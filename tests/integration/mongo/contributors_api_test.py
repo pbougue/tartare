@@ -688,7 +688,6 @@ class TestContributors(TartareFixture):
 
     def __create_contributor(self, data_type, data_format):
         id = 'id-{}-{}'.format(data_type, data_format)
-        logging.getLogger(__name__).debug(id)
         post_data = {
             "id": id,
             "name": id,
