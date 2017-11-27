@@ -76,33 +76,6 @@ def check_contributor_data_source_osm_constraint(existing_data_sources: List[Dat
         raise InvalidArguments(msg)
 
 
-class publish_params_validate(object):
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            # Test coverage
-            coverage = Coverage.get(kwargs.get("coverage_id"))
-            if not coverage:
-                msg = 'Coverage not found: {}'.format(kwargs.get("coverage_id"))
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            # Test environment
-            environment = coverage.get_environment(kwargs.get("environment_id"))
-            if not environment:
-                msg = 'Environment not found: {}'.format(kwargs.get("environment_id"))
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            # Test export
-            last_export = CoverageExport.get_last(coverage.id)
-            if not last_export:
-                msg = 'Coverage {} without export.'.format(coverage.id)
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
 class json_data_validate(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)

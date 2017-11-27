@@ -47,7 +47,6 @@ from tartare.interfaces.contributor_export import ContributorExportResource
 from tartare.interfaces.coverage_export import CoverageExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
-from tartare.interfaces.data_publisher import DataPublisher
 from tartare.interfaces.files import File
 from tartare.interfaces.preprocesses import PreProcesses
 
@@ -147,8 +146,5 @@ api.add_resource(Job,
 api.add_resource(CoverageExportResource,
                  coverage_and_id + '/exports',
                  coverage_and_id + '/actions/export')
-
-api.add_resource(DataPublisher,
-                 coverage_and_id + environment_and_id + '/actions/publish')
 
 api.add_resource(PreProcesses, '/preprocesses')
