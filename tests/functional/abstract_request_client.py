@@ -77,7 +77,7 @@ class AbstractRequestClient:
 
             for contributor in contributors:
                 raw = self.delete(resource + '/' + contributor['id'])
-                assert raw.status_code == 204, print(raw.content)
+                self.assert_sucessful_call(raw, 204)
 
     def assert_export_file_equals_ref_file(self, contributor_id, ref_file):
         # list of exports

@@ -169,7 +169,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         self.full_export('id_test', 'jdr', '2017-08-10')
         raw = self.delete('/contributors/id_test/data_sources/my_gtfs')
-        assert raw.status_code == 204
+        self.assert_sucessful_call(raw, 204)
         new_data_source = {
             "id": 'other_gtfs',
             "name": "other_gtfs",
