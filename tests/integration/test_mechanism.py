@@ -85,11 +85,22 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw, 200)
         return self.to_json(raw)['jobs'][0]
 
-    def full_export(self, contributor_id, coverage_id, current_date=None):
+    def contributor_export(self, contributor_id, current_date=None):
         date_option = '?current_date=' + current_date if current_date else ''
         resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
         self.assert_sucessful_call(resp, 201)
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_contributor_export', print(job)
+        assert job['error_message'] == '', print(job)
+        return resp
 
+    def coverage_export(self, coverage_id):
         resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         self.assert_sucessful_call(resp, 201)
         return resp
+
+    def full_export(self, contributor_id, coverage_id, current_date=None):
+        self.contributor_export(contributor_id, current_date)
+        return self.coverage_export(coverage_id)
