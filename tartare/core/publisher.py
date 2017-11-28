@@ -27,18 +27,21 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import ftplib
-from abc import ABCMeta, abstractmethod
 import logging
+import os
+import tempfile
+from abc import ABCMeta, abstractmethod
+from typing import List, BinaryIO, Optional
+from zipfile import ZipFile, ZIP_DEFLATED
+
 import requests
 
 from tartare import app
 from tartare.core.calendar_handler import dic_to_memory_csv
+from tartare.core.constants import DATA_FORMAT_OSM_FILE
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import Coverage, CoverageExport, DataSource
 from tartare.exceptions import ProtocolException
-from zipfile import ZipFile, ZIP_DEFLATED
-import tempfile
-import os
-from typing import List, BinaryIO, Optional
-from tartare.core.models import Coverage, CoverageExport
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +118,13 @@ class NavitiaPublisher(AbstractPublisher):
                 coverage_export: CoverageExport) -> None:
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
+        for cov_export_contrib in coverage_export.contributors:
+            for contrib_export_data_source in cov_export_contrib.data_sources:
+                if DataSource.get_one(cov_export_contrib.contributor_id,
+                                      contrib_export_data_source.data_source_id).data_format == DATA_FORMAT_OSM_FILE:
+                    osm_file = GridFsHandler().get_file_from_gridfs(contrib_export_data_source.gridfs_id)
+                    protocol_uploader.publish(osm_file, osm_file.filename)
+                    return
 
 
 class ODSPublisher(AbstractPublisher):
