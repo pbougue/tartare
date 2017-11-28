@@ -175,7 +175,6 @@ class DownloadHttpServerDocker(AbstractDocker):
         }
 
     def _remove_temporary_files(self):
-        self.logger.info('removing temporary files')
         exec_id = self.docker.exec_create(container=self.container_id,
                                           cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
         self.docker.exec_start(exec_id=exec_id)

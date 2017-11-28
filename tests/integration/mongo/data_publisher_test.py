@@ -91,8 +91,8 @@ class TestDataPublisher(TartareFixture):
         return resp
 
     @freeze_time("2015-08-10")
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_publish_ok(self, urlretrieve_func):
+    def test_publish_ok(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
@@ -101,22 +101,20 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": "http://bob/v0/jobs"
         }
-        self._create_contributor(contributor_id)
+        self._create_contributor(contributor_id, url=url)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
-            resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-            self.assert_sucessful_call(resp, 201)
-            resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+            resp = self.full_export(contributor_id, coverage_id)
             self.assert_sucessful_call(resp, 201)
 
         # List contributor export
         r = self.to_json(self.get("/contributors/fr-idf/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
-        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+        assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
+        assert exports[0]["validity_period"]["end_date"] == "2016-08-08"
 
         assert exports[0]["gridfs_id"]
         data_sources = exports[0]["data_sources"]
@@ -127,8 +125,8 @@ class TestDataPublisher(TartareFixture):
         r = self.to_json(self.get("/coverages/default/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
-        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+        assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
+        assert exports[0]["validity_period"]["end_date"] == "2016-08-08"
         assert exports[0]["gridfs_id"]
         contributors = exports[0]["contributors"]
         assert len(contributors) == 1
