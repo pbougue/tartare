@@ -5,7 +5,7 @@
 [Ruspell](#Ruspell)  
 
 
-## <a id="ComputeDirection" name="computeDirection"></a>Compute Directions
+## <a id="ComputeDirection" name="computeDirection"></a>Compute Directions (public_transport contributor)
 
 ### Use case  
 GTFS have a *trips.txt* file that may have no **direction_id** column, an empty column or each line having the same **direction_id** if it is of low quality.  
@@ -39,7 +39,7 @@ This is a case where we use a data source as a tool (the **direction_config** fo
 http://www.kisiodigital.com/Blog/Entry/id/132  
 
 
-## <a id="GtfsAgencyFile" name="GtfsAgencyFile"></a>GTFS Agency file
+## <a id="GtfsAgencyFile" name="GtfsAgencyFile"></a>GTFS Agency file (public_transport contributor)
 
 ### Use case
 This preprocess is used to create the required *agency.txt* file in a GTFS where there is none or to fill an empty existing one.  
@@ -57,7 +57,7 @@ If there is already an *agency.txt* and there is at least one line (+ column tit
 Since Tartare is currently only mono contributor, an export coverage with two or more contributors will not have a merged *agency.txt*. Files generated through GtfsAgencyFile preprocess can only contain 1 agency. 
 
 
-## <a id="Ruspell" name="Ruspell"></a>Ruspell
+## <a id="Ruspell" name="Ruspell"></a>Ruspell (public_transport contributor)
 
 ### Use case
 This preprocess is used to modify **stop_name** from *stops.txt*, such as adding accents (Metro > Métro), shortened words as full words (Av. > Avenue), upper case words to snake case, with exceptions.  
@@ -74,11 +74,11 @@ At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name
 2. Post a *data_source* for this contributor with **ruspell_config** as data format.  
 3. Post a yml as *data_sets* for this data_source.  
 4. Post a *data_source* for this contributor with **gtfs** as data format. 
-5. Post a *data_source* for this contributor with **bano_file** as data format.    
+5. Post a *data_source* for a geographic contributor with **bano_file** as data format.    
 5. Post a **Ruspell** preprocess for this contributor with :  
     As **links** in **params** :  
         * the *data_source* created on step 2 as **config**  
-        * the *data_source* created on step 5 as **bano**  
+        * the *data_source* and the **contributor_id**'s of its owner created on step 5 as **bano**  
     As **data_source_ids** :  
         * the *data_source* created on step 4, witch will be "preprocessed".  
 7. Launch the export action for this contributor.  
@@ -87,3 +87,4 @@ At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name
 
 Ruspell is a third party application : https://github.com/CanalTP/ruspell  
 Ruspell technical documentation in Tartare can be found there : https://github.com/CanalTP/tartare/blob/master/documentation/preprocesses.md#ruspell-1
+This is a case where a preprocess will use data sources from another contributor.  
