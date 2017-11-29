@@ -35,11 +35,12 @@ from tests.utils import get_response
 
 
 class TestFusioDataUpdatePreprocess(TartareFixture):
-    def __init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA'):
+    def __init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA', service_id='Google-1'):
 
         data_source = {
             "id": data_source_id,
             "name": data_source_id,
+            "service_id": service_id,
             "input": {
                 "type": "url",
                 "url": url
@@ -158,7 +159,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs",  url)
+        self.__init_contributor("id_test", "my_gtfs", url)
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -173,6 +174,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         new_data_source = {
             "id": 'other_gtfs',
             "name": "other_gtfs",
+            "service_id": "Google-2",
             "input": {
                 "type": "url",
                 "url": url
@@ -214,6 +216,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         new_data_source = {
             "id": 'other_gtfs',
             "name": "other_gtfs",
+            "service_id": "Google-2",
             "input": {
                 "type": "url",
                 "url": url
@@ -261,3 +264,23 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.full_export('id_test_2', 'jdr', '2017-08-10')
 
         assert fusio_call.call_count == 2
+
+    # Given I create a contributor with a data source with service_id null
+    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
+    # When  I do a contributor export on this contributor (and then a coverage export)
+    # Then  FusioDataUpdate should fail because service_id is null
+    def test_data_update_fail_if_data_source_has_service_id_null(self, init_http_download_server):
+        filename = 'gtfs-{number}.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=1),
+                              path='gtfs/historisation')
+        self.__init_contributor("id_test", "my_gtfs", url, service_id=None)
+        self.__init_coverage("jdr", ["id_test"])
+
+        response = self.full_export('id_test', 'jdr', '2017-08-10')
+        self.assert_sucessful_call(response, 201)
+
+        job_details = self.get_job_details(self.to_json(response)['job']['id'])
+
+        assert job_details['state'] == 'failed'
+        assert job_details['error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'

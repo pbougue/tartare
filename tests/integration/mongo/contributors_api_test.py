@@ -317,7 +317,35 @@ class TestContributors(TartareFixture):
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
-    def test_post_contrib_one_data_source_with_data_format(self):
+    def test_post_contrib_one_data_source_with_service_id(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "id": "data_source_id",
+                    "name": "data_source_name",
+                    "service_id": "Google-1",
+                    "input": {
+                        "type": "url",
+                        "url": "http://stif.com/od.zip"
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 201, print(self.to_json(raw))
+        raw = self.get('/contributors/id_test/')
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        assert r["contributors"][0]["data_sources"][0]["service_id"] == "Google-1"
+
+    def test_post_contrib_one_data_source_with_invalid_data_format(self):
         """
         using /contributors endpoint
         """
@@ -449,6 +477,7 @@ class TestContributors(TartareFixture):
                 {
                     "name": "data_source_2",
                     "data_format": "gtfs",
+                    "service_id": "Google-1",
                     "input": {
                         "type": "url",
                         "url": "http://stif.com/od.zip"
@@ -462,6 +491,7 @@ class TestContributors(TartareFixture):
         new_data_source = {
             "id": r["contributors"][0]["data_sources"][1]["id"],
             "name": "name_modified",
+            "service_id": None,
             "input": {
                 "type": "manual",
             }
@@ -472,6 +502,7 @@ class TestContributors(TartareFixture):
             new_data_source,
             {
                 "name": "data_source_3",
+                "service_id": "Google-2",
                 "input": {
                     "type": "computed",
                 }
@@ -489,6 +520,9 @@ class TestContributors(TartareFixture):
         assert patched_data_sources[0]["name"] == "data_source_name"
         assert patched_data_sources[1]["name"] == "name_modified"
         assert patched_data_sources[2]["name"] == "data_source_3"
+        assert patched_data_sources[0]["service_id"] is None
+        assert patched_data_sources[1]["service_id"] is None
+        assert patched_data_sources[2]["service_id"] == "Google-2"
 
     def test_patch_contrib_preprocesses_without_id(self, contributor):
         """
