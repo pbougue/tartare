@@ -2,9 +2,9 @@
 **Name**: Required, not unique.  
 **Data_prefix**: Required, unique. Needed to generate unique IDs when data are merged in one coverage from several contributors. 
 **ID**: Not required. If not provided, Tartare will generate one. Unique.  
-**data_type** : A contributor is either a *public_transport* contributor or a *geographic* contributor.  
-    *public_transport* : Use data source of *GTFS* and *ExternalSetting* format.  
-    *geographic* : Use data source of *OSM* or *Bano* format.     
+**data_type** : A contributor is either a *public_transport* contributor or a *geographic* contributor.
+1. *public_transport* : Use data source of *gtfs*, *direction_config*, *ruspell_config*, *lines_referential*, *tr_perimeter* and *pt_external_settings* format.  
+2. *geographic* : Use data source of *osm_file* or *bano_file* format.     
 
 
 ### Data sources
