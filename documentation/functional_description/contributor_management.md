@@ -26,9 +26,11 @@ Currently : deleting a contributor doesn't delete its preprocesses or data sourc
 
 ## Doable actions on a contributor
 A contributor export will do the following tasks, in the following order:
-1. Retrieve data from each contributor's datasource
+1. Retrieve data from each of its datasources.  
 2. Check if an upgrade has been made on the contributor's data.
 3. Each upgraded data retrieved will be retreated according to the contributor's preprocesses.
 4. Export the contributor's data and save them.
 
-The export progress can be supervised through the /jobs resource or /contributors/[contrib_id}/jobs sub-resource.
+The export progress can be supervised through the /jobs resource or /contributors/{contrib_id}/jobs sub-resource.
+If this is a manual contributor export, no other action will follow.  
+If this is an automatic update, a coverage export will follow. 
