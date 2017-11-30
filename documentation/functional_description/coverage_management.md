@@ -30,8 +30,10 @@ Publication is the end goal of Datahub : to give data where we need it. Platform
 
 ## Doable actions on a coverage
 A coverage export will do the following tasks, in the following order:
-1. Retrieve all data from contributor associated to this coverage.
+1. Retrieve all data from contributors associated to this coverage.
 2. Transformation from GTFS to NTFS.
 3. Exports are saved.
 
-The export progress can be supervised through the /jobs resource or /coverages/{coverage_id}/jobs sub-resource
+The export progress can be supervised through the /jobs resource or /coverages/{coverage_id}/jobs sub-resource  
+The coverage export, when done manualy, doesn't launch a contributor export on each of its contributors. If data has been updated since the last automatic update, they won't be used during the coverage export.  
+An automatic update will launch the contributor export function for each of its contributors before merging them.  
