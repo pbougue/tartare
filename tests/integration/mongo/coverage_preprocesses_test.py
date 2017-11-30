@@ -296,6 +296,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
     # When  I do a contributor export on this contributor (and then a coverage export)
     # Then  I can see that Fusio has been called twice
+    # And   Each data source service id is used
     def test_data_update_one_contributor_with_two_data_sources(self, fusio_call, wait_for_action_terminated,
                                                            init_http_download_server):
         filename = 'gtfs-{number}.zip'
@@ -317,3 +318,5 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.full_export('id_test', 'jdr', '2017-08-10')
 
         assert fusio_call.call_count == 2
+        assert fusio_call.call_args_list[0][1]['data']['serviceexternalcode'] == 'Google-1'
+        assert fusio_call.call_args_list[1][1]['data']['serviceexternalcode'] == 'Google-2'
