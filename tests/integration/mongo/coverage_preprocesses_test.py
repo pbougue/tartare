@@ -35,22 +35,27 @@ from tests.utils import get_response
 
 
 class TestFusioDataUpdatePreprocess(TartareFixture):
-    def __init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA', service_id='Google-1'):
+    def __create_data_source(self, data_source_id, url, service_id='Google-1', name=None):
+        if not name:
+            name = data_source_id
 
-        data_source = {
+        return {
             "id": data_source_id,
-            "name": data_source_id,
+            "name": name,
             "service_id": service_id,
             "input": {
                 "type": "url",
                 "url": url
             }
         }
+
+    def __init_contributor(self, contributor_id, data_sources, data_prefix='AAA'):
+
         contributor = {
             "id": contributor_id,
             "name": "name_test",
             "data_prefix": data_prefix,
-            "data_sources": [data_source]
+            "data_sources": data_sources
         }
         raw = self.post('/contributors', json.dumps(contributor))
         self.assert_sucessful_call(raw, 201)
@@ -91,7 +96,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
 
-        self.__init_contributor("id_test", "my_gtfs",  url)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -128,7 +133,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs",  url)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -159,7 +164,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs", url)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -203,7 +208,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs",  url)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -246,7 +251,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs",  url)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -257,7 +262,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
-        self.__init_contributor("id_test_2", "my_gtfs_2", url, 'BBB')
+        self.__init_contributor("id_test_2", [self.__create_data_source("my_gtfs_2",  url)], 'BBB')
         raw = self.post('/coverages/jdr/contributors', json.dumps({'id': 'id_test_2'}))
         self.assert_sucessful_call(raw, 201)
 
@@ -274,7 +279,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", "my_gtfs", url, service_id=None)
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url, service_id=None)])
         self.__init_coverage("jdr", ["id_test"])
 
         response = self.full_export('id_test', 'jdr', '2017-08-10')
@@ -284,3 +289,31 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         assert job_details['state'] == 'failed'
         assert job_details['error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'
+
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    # Given I create a contributor with 2 data sources
+    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
+    # When  I do a contributor export on this contributor (and then a coverage export)
+    # Then  I can see that Fusio has been called twice
+    def test_data_update_one_contributor_with_two_data_sources(self, fusio_call, wait_for_action_terminated,
+                                                           init_http_download_server):
+        filename = 'gtfs-{number}.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename.format(number=1),
+                              path='gtfs/historisation')
+        self.__init_contributor("id_test", [
+            self.__create_data_source("my_gtfs_1", url, service_id='Google-1'),
+            self.__create_data_source("my_gtfs_2", url, service_id='Google-2', name="my_gtfs_2"),
+        ])
+        self.__init_coverage("jdr", ["id_test"])
+
+        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                            <serverfusio>
+                                <ActionId>1607281547155684</ActionId>
+                            </serverfusio>"""
+
+        fusio_call.return_value = get_response(200, content)
+        self.full_export('id_test', 'jdr', '2017-08-10')
+
+        assert fusio_call.call_count == 2
