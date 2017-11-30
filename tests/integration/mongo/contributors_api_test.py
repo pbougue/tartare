@@ -59,6 +59,16 @@ class TestContributors(TartareFixture):
         r = self.to_json(raw)
         assert len(r["contributors"]) == 1
 
+    def test_add_contributor_empty_id(self):
+        raw = self.post('/contributors', '{"id": "", "name":"whatever", "data_prefix":"any_prefix"}')
+        r = self.to_json(raw)
+
+        assert 'error' in r
+        assert raw.status_code == 400
+        assert r['error'] == {
+            'id': ['field cannot be empty']
+        }
+
     def test_add_contributor_without_data_prefix(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"whatever"}')
         assert raw.status_code == 400

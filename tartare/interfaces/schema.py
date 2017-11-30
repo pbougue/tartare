@@ -30,7 +30,7 @@
 # www.navitia.io
 from typing import Optional, List
 
-from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump
+from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump, validate
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
@@ -40,6 +40,8 @@ from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, M
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
     DataSource, MongoPlatformSchema
+
+not_blank = validate.Length(min=1, error='field cannot be empty')
 
 
 class NoUnknownFieldMixin(Schema):
@@ -71,7 +73,7 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
 
 
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
-    id = fields.String(required=True)
+    id = fields.String(required=True, validate=not_blank)
     # we have to override nested field to add validation on input
     environments = fields.Nested(EnvironmentListSchema)
     # read only
@@ -137,7 +139,7 @@ class DataSourceSchema(MongoDataSourceSchema):
 
 
 class ContributorSchema(MongoContributorSchema):
-    id = fields.String()
+    id = fields.String(validate=not_blank)
 
     data_sources = fields.Nested(DataSourceSchema, many=True, required=False)
 
