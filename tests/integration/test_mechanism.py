@@ -111,7 +111,7 @@ class TartareFixture(object):
         self.contributor_export(contributor_id, current_date)
         return self.coverage_export(coverage_id)
 
-    def init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA', data_format=DATA_FORMAT_DEFAULT,
+    def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
                          data_type=DATA_TYPE_DEFAULT):
         data_source = {
             "id": data_source_id,
@@ -126,7 +126,7 @@ class TartareFixture(object):
             "data_type": data_type,
             "id": contributor_id,
             "name": contributor_id + '_name',
-            "data_prefix": data_prefix,
+            "data_prefix": contributor_id + '_prefix',
             "data_sources": [data_source]
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
