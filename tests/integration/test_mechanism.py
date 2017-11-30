@@ -32,6 +32,7 @@
 import json
 
 from tartare import app
+from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
 
 
 class TartareFixture(object):
@@ -110,20 +111,50 @@ class TartareFixture(object):
         self.contributor_export(contributor_id, current_date)
         return self.coverage_export(coverage_id)
 
-    def init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA'):
+    def init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA', data_format=DATA_FORMAT_DEFAULT,
+                         data_type=DATA_TYPE_DEFAULT):
         data_source = {
             "id": data_source_id,
             "name": data_source_id,
+            "data_format": data_format,
             "input": {
                 "type": "url",
                 "url": url
             }
         }
         contributor = {
+            "data_type": data_type,
             "id": contributor_id,
-            "name": "name_test",
+            "name": contributor_id + '_name',
             "data_prefix": data_prefix,
             "data_sources": [data_source]
         }
-        raw = self.post('/contributors', json.dumps(contributor))
+        raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_call(raw, 201)
+
+    def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
+        data_source = {
+            "id": data_source_id,
+            "name": data_source_id,
+            "data_format": data_format,
+            "input": {
+                "type": "url",
+                "url": url
+            }
+        }
+        raw = self.post('/contributors/{}/data_sources'.format(contrib_id), self.dict_to_json(data_source))
+        self.assert_sucessful_call(raw, 201)
+
+    def update_data_source_url(self, contrib_id, ds_id, url):
+        raw = self.patch('/contributors/{}/data_sources/{}'.format(contrib_id, ds_id),
+                         json.dumps({'input': {
+                             'url': url}}))
+        return self.assert_sucessful_call(raw, 200)
+
+    def run_automatic_update(self, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        raw = self.post('/actions/automatic_update{}'.format(date_option))
+        self.assert_sucessful_call(raw, 204)
+        raw = self.get('/jobs')
+        self.assert_sucessful_call(raw, 200)
+        return self.to_json(raw)['jobs']

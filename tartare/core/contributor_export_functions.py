@@ -149,7 +149,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
-        return True
+        return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
 
 
 def build_context(contributor: Contributor, context: Context) -> Context:
