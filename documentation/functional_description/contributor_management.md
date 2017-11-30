@@ -2,9 +2,9 @@
 **Name**: Required, not unique.  
 **Data_prefix**: Required, unique. Needed to generate unique IDs when data are merged in one coverage from several contributors. 
 **ID**: Not required. If not provided, Tartare will generate one. Unique.  
-**data_type** : A contributor is either a *public_transport* contributor or a *geographic* contributor.
+**data_type** : A contributor is either a *public_transport* contributor or a *geographic* contributor. *public_transport* is the default format.  
 1. *public_transport* : Use data source of *gtfs*, *direction_config*, *ruspell_config*, *lines_referential*, *tr_perimeter* and *pt_external_settings* format.  
-2. *geographic* : Use data source of *osm_file* or *bano_file* format.     
+2. *geographic* : Use data source of *osm_file*, *poly_file* or *bano_file* format.     
 
 
 ### Data sources
@@ -41,4 +41,4 @@ A contributor export will do the following tasks, in the following order:
 
 The export progress can be supervised through the /jobs resource or /contributors/{contrib_id}/jobs sub-resource.
 If this is a manual contributor export, no other action will follow.  
-If this is an automatic update, a coverage export will follow. 
+If this is an automatic update, a coverage export will follow if at least one of the contributor's data source has been updated. 
