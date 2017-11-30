@@ -69,6 +69,9 @@ class IntegrityException(Exception):
 
 
 class ParameterException(Exception):
+    """
+    Missing or invalid parameter
+    """
     pass
 
 

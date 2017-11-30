@@ -34,6 +34,7 @@ from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource, CoverageExport
+from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
@@ -43,12 +44,19 @@ from tartare.processes.utils import preprocess_registry
 class FusioDataUpdate(AbstractFusioProcess):
     def __get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
         validity_period = data_source_context.validity_period
+
+        # TODO data_source_context should be the entire data source model
+        data_source = DataSource.get_one(contributor.id, data_source_context.data_source_id)
+        if data_source.service_id is None:
+            raise ParameterException('service_id of data source {} of contributor {} should not be null'.format(
+                contributor.id, data_source.id))
+
         return {
             'action': 'dataupdate',
             'contributorexternalcode': contributor.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': data_source_context.data_source_id,
+            'serviceexternalcode': data_source.service_id,
             'libelle': 'unlibelle',
             'DateDebut': Fusio.format_date(validity_period.start_date),
             'DateFin': Fusio.format_date(validity_period.end_date),

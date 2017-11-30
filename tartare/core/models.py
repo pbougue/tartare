@@ -187,14 +187,18 @@ class Input(object):
 
 
 class DataSource(object):
-    def __init__(self, id: Optional[str] = None, name: Optional[str] = None,
+    def __init__(self, id: Optional[str] = None,
+                 name: Optional[str] = None,
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
-                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT), license: Optional[License] = None) -> None:
+                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
+                 license: Optional[License] = None,
+                 service_id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = input
         self.license = license if license else License()
+        self.service_id = service_id
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -807,6 +811,7 @@ class MongoDataSourceSchema(Schema):
     data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
+    service_id = fields.String(required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:

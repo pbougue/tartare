@@ -81,6 +81,7 @@ class TestDataSources(TartareFixture):
         r = self.to_json(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
+        assert r["data_sources"][0]["id"] == 'data_source_id'
 
     def test_post_ds_one_data_source_with_data_format(self, contributor):
         """
@@ -104,6 +105,32 @@ class TestDataSources(TartareFixture):
         assert r["data_sources"][0]["data_format"] == "gtfs"
         assert r["data_sources"][0]["input"]["type"] == "url"
         assert r["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
+        assert r["data_sources"][0]["service_id"] is None
+
+    def test_post_ds_one_data_source_with_service_id(self, contributor):
+        """
+        using /data_sources endpoint
+        """
+        post_ds = {
+            "name": "data_source_name",
+            "data_format": "gtfs",
+            "service_id": "Google-1",
+            "input": {
+                "type": "url",
+                "url": "http://stif.com/od.zip"
+            }
+        }
+        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
+        assert raw.status_code == 201, print(self.to_json(raw))
+
+        raw = self.get('/contributors/id_test/data_sources')
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        assert len(r["data_sources"]) == 1
+        assert r["data_sources"][0]["data_format"] == "gtfs"
+        assert r["data_sources"][0]["input"]["type"] == "url"
+        assert r["data_sources"][0]["input"]["url"] == "http://stif.com/od.zip"
+        assert r["data_sources"][0]["service_id"] == "Google-1"
 
     def test_post_ds_two_data_source(self, contributor):
         """
@@ -188,6 +215,18 @@ class TestDataSources(TartareFixture):
         assert patched_data_source["name"] == "name_modified"
         assert patched_data_source["data_format"] == "gtfs"
 
+    def test_patch_ds_data_source_service_id(self, data_source):
+        """
+        using /data_sources endpoint
+        """
+        modif_ds = {"service_id": "Google-1"}
+        raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
+        r = self.to_json(raw)
+        self.assert_sucessful_call(raw)
+        assert len(r["data_sources"]) == 1
+        patched_data_source = r["data_sources"][0]
+        assert patched_data_source["service_id"] == "Google-1"
+
     def test_patch_data_source_id(self, data_source):
         modif_ds = {"id": "id_modified"}
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
@@ -210,41 +249,43 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
+
         post_ds = {
             "id": "ds2_id",
             "name": "data_source_name2",
             "data_format": "gtfs",
+            "service_id": "Google-1",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
+
         modif_ds = {
             "name": "name_modified",
             "data_format": "gtfs",
+            "service_id": None,
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
             }
         }
         raw = self.patch('/contributors/id_test/data_sources/ds2_id', self.dict_to_json(modif_ds))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw)
+
         post_ds = {
             "id": "ds3_id",
             "name": "data_source_name3",
+            "service_id": "Google-2",
             "input": {
                 "type": "url",
                 "url": "http://stif.com/od.zip"
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        r = self.to_json(raw)
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/contributors/id_test/data_sources')
@@ -258,6 +299,9 @@ class TestDataSources(TartareFixture):
         assert patched_data_sources[0]["name"] == "data_source_name1"
         assert patched_data_sources[1]["name"] == "name_modified"
         assert patched_data_sources[2]["name"] == "data_source_name3"
+        assert patched_data_sources[0]["service_id"] is None
+        assert patched_data_sources[1]["service_id"] is None
+        assert patched_data_sources[2]["service_id"] == "Google-2"
 
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
@@ -552,8 +596,6 @@ class TestDataSources(TartareFixture):
         response = self.assert_failed_call(raw)
         assert response['error'] == 'contributor contains more than one OSM data source'
         assert response['message'] == 'Invalid arguments'
-
-
 
     def test_patch_multi_data_sources_two_osm_forbidden(self):
         data_sources = [
