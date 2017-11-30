@@ -34,7 +34,7 @@ import logging
 import pytest
 
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
-    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -802,10 +802,14 @@ class TestContributors(TartareFixture):
                 raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
                 self.assert_sucessful_call(raw)
 
-    def test_post_contributor_multi_data_sources_osm(self):
+    @pytest.mark.parametrize("data_format", [
+        DATA_FORMAT_OSM_FILE,
+        DATA_FORMAT_POLY_FILE
+    ])
+    def test_post_contributor_multi_data_sources_osm_poly(self, data_format):
         data_sources = [
-            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
-            {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id1', 'name': 'id1', 'data_format': data_format},
+            {'id': 'id2', 'name': 'id2', 'data_format': data_format},
         ]
         contributor = {
             'id': 'id_test',
@@ -816,12 +820,16 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         response = self.assert_failed_call(raw)
-        assert response['error'] == 'contributor contains more than one OSM data source'
+        assert response['error'] == 'contributor contains more than one {} data source'.format(data_format)
         assert response['message'] == 'Invalid arguments'
 
-    def test_patch_contributor_multi_data_sources_osm_with_new_one(self):
+    @pytest.mark.parametrize("data_format", [
+        DATA_FORMAT_OSM_FILE,
+        DATA_FORMAT_POLY_FILE
+    ])
+    def test_patch_contributor_multi_data_sources_osm_poly_with_new_one(self, data_format):
         data_sources = [
-            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id1', 'name': 'id1', 'data_format': data_format},
             {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_BANO_FILE},
         ]
         contributor = {
@@ -833,15 +841,19 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_call(raw, 201)
-        data_source = {'id': 'id3', 'name': 'id3', 'data_format': DATA_FORMAT_OSM_FILE}
+        data_source = {'id': 'id3', 'name': 'id3', 'data_format': data_format}
         raw = self.patch('/contributors/id_test', self.dict_to_json({'data_sources': [data_source]}))
         response = self.assert_failed_call(raw)
-        assert response['error'] == 'contributor contains more than one OSM data source'
+        assert response['error'] == 'contributor contains more than one {} data source'.format(data_format)
         assert response['message'] == 'Invalid arguments'
 
-    def test_patch_contributor_multi_data_sources_osm_update_one(self):
+    @pytest.mark.parametrize("data_format", [
+        DATA_FORMAT_OSM_FILE,
+        DATA_FORMAT_POLY_FILE
+    ])
+    def test_patch_contributor_multi_data_sources_osm_or_poly_update_one(self, data_format):
         data_sources = [
-            {'id': 'id1', 'name': 'id1', 'data_format': DATA_FORMAT_OSM_FILE},
+            {'id': 'id1', 'name': 'id1', 'data_format': data_format},
             {'id': 'id2', 'name': 'id2', 'data_format': DATA_FORMAT_BANO_FILE},
         ]
         contributor = {
@@ -853,6 +865,6 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_call(raw, 201)
-        data_source = {'id': 'id1', 'name': 'id1-updated', 'data_format': DATA_FORMAT_OSM_FILE}
+        data_source = {'id': 'id1', 'name': 'id1-updated', 'data_format': data_format}
         raw = self.patch('/contributors/id_test', self.dict_to_json({'data_sources': [data_source]}))
         self.assert_sucessful_call(raw)
