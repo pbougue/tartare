@@ -39,7 +39,8 @@ import mock
 import pytest
 from freezegun import freeze_time
 
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
+    DATA_FORMAT_POLY_FILE
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals, get_response
 
@@ -453,7 +454,11 @@ class TestDataPublisher(TartareFixture):
         assert job['state'] == 'done', print(job)
 
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200)])
-    def test_publish_navitia_with_osm(self, post_mock, init_http_download_server):
+    @pytest.mark.parametrize("data_format,file_name", [
+        (DATA_FORMAT_OSM_FILE, 'empty_pbf.osm.pbf'),
+        (DATA_FORMAT_POLY_FILE, 'ile-de-france.poly')
+    ])
+    def test_publish_navitia_with_osm_or_poly(self, post_mock, init_http_download_server, data_format, file_name):
         publish_url = "http://tyr.whatever.com"
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -461,8 +466,8 @@ class TestDataPublisher(TartareFixture):
         contributor_geo = 'geo'
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
         self._create_contributor(contributor_id, fetch_url)
-        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
-        self._create_contributor(contributor_geo, fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename=file_name)
+        self._create_contributor(contributor_geo, fetch_url, data_format=data_format,
                                  data_type=DATA_TYPE_GEOGRAPHIC)
         publication_platform = {
             "sequence": 0,
@@ -484,13 +489,52 @@ class TestDataPublisher(TartareFixture):
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
+
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
+    def test_publish_navitia_with_osm_and_poly(self, post_mock, init_http_download_server):
+        publish_url = "http://tyr.whatever.com"
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        filename = 'some_archive.zip'
+        contributor_geo = 'geo'
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self.init_contributor(contributor_id, 'gtfs_ds_id', fetch_url)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
+        self.init_contributor(contributor_geo, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+                                 data_type=DATA_TYPE_GEOGRAPHIC)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='ile-de-france.poly')
+        self.add_data_source_to_contributor(contributor_geo, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": publish_url,
+        }
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+
+        self.contributor_export(contributor_id, '2015-08-10')
+        self.contributor_export(contributor_geo, '2015-08-10')
+        resp = self.coverage_export(coverage_id)
+
+        assert post_mock.call_count == 3
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['error_message'] == '', print(job)
+        assert job['state'] == 'done', print(job)
+
     @mock.patch('requests.post')
-    def test_publish_only_osm(self, post_mock, init_http_download_server):
+    @pytest.mark.parametrize("data_format,file_name", [
+        (DATA_FORMAT_OSM_FILE, 'empty_pbf.osm.pbf'),
+        (DATA_FORMAT_POLY_FILE, 'ile-de-france.poly')
+    ])
+    def test_publish_only_osm_or_poly(self, post_mock, init_http_download_server, data_format, file_name):
         publish_url = "http://tyr.whatever.com"
         coverage_id = 'default'
         contributor_geo = 'geo'
-        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
-        self._create_contributor(contributor_geo, fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename=file_name)
+        self._create_contributor(contributor_geo, fetch_url, data_format=data_format,
                                  data_type=DATA_TYPE_GEOGRAPHIC)
         publication_platform = {
             "sequence": 0,
