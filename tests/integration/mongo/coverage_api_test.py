@@ -86,6 +86,16 @@ class TestCoverageApi(TartareFixture):
         r = self.to_json(raw)
         assert len(r["coverages"]) == 0
 
+    def test_add_coverage_empty_id(self):
+        raw = self.post('/coverages', '{"id": "", "name": "name_test"}')
+        r = self.to_json(raw)
+
+        assert 'error' in r
+        assert raw.status_code == 400
+        assert r['error'] == {
+            'id': ['field cannot be empty']
+        }
+
     def test_add_coverage_no_name(self):
         raw = self.post('/coverages', '{"id": "id_test"}')
         r = self.to_json(raw)
