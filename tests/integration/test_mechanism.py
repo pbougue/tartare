@@ -96,6 +96,11 @@ class TartareFixture(object):
         assert job['error_message'] == '', print(job)
         return resp
 
+    def get_job_from_export_response(self, response):
+        self.assert_sucessful_call(response, 201)
+        resp = self.get("/jobs/{}".format(self.to_json(response)['job']['id']))
+        return self.to_json(resp)['jobs'][0]
+
     def coverage_export(self, coverage_id):
         resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         self.assert_sucessful_call(resp, 201)
@@ -104,3 +109,21 @@ class TartareFixture(object):
     def full_export(self, contributor_id, coverage_id, current_date=None):
         self.contributor_export(contributor_id, current_date)
         return self.coverage_export(coverage_id)
+
+    def init_contributor(self, contributor_id, data_source_id, url, data_prefix='AAA'):
+        data_source = {
+            "id": data_source_id,
+            "name": data_source_id,
+            "input": {
+                "type": "url",
+                "url": url
+            }
+        }
+        contributor = {
+            "id": contributor_id,
+            "name": "name_test",
+            "data_prefix": data_prefix,
+            "data_sources": [data_source]
+        }
+        raw = self.post('/contributors', json.dumps(contributor))
+        self.assert_sucessful_call(raw, 201)

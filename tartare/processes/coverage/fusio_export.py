@@ -67,7 +67,8 @@ class FusioExport(AbstractFusioProcess):
         data = {
             'action': 'Export',
             'ExportType': self.get_export_type(),
-            'Source': 4}
+            'Source': 4
+        }
         resp = self.fusio.call(requests.post, api='api', data=data)
         action_id = self.fusio.get_action_id(resp.content)
         self.fusio.wait_for_action_terminated(action_id)

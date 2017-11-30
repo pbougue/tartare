@@ -158,8 +158,9 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # Then  I can see that Fusio has been called 2 time(s) in total
     # => because one time for the first coverage export (normal) and one other because we cannot perform comparison
     #    of the data sets (data source id has changed)
-    def test_data_update_called_if_data_source_deleted_and_recreated_with_new_id(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
+    def test_data_update_called_if_data_source_deleted_and_recreated_with_new_id(self, fusio_call,
+                                                                                 wait_for_action_terminated,
+                                                                                 init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -203,7 +204,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # => because one time for the first coverage export (normal) and one other because the new data source needs one
     #    data update and the first one's data set has not changed
     def test_data_update_called_if_data_source_added_to_contributor(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
+                                                                    init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -246,7 +247,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # => because one time for the first coverage export (normal) and one other because the new contributor needs one
     #    data update and the first one's data set has not changed
     def test_data_update_called_if_contributor_added(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
+                                                     init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -320,3 +321,70 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         assert fusio_call.call_count == 2
         assert fusio_call.call_args_list[0][1]['data']['serviceexternalcode'] == 'Google-1'
         assert fusio_call.call_args_list[1][1]['data']['serviceexternalcode'] == 'Google-2'
+
+
+class TestFusioExportPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('requests.get')
+    def test_fusio_export_avoid_merge(self, fusio_get, fusio_post, wait_for_action_terminated, init_http_download_server):
+        filename = 'gtfs-1.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename,
+                              path='gtfs/historisation')
+        self.init_contributor("id_test", "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        coverage = {
+            "id": "my_cov",
+            "name": "my_cov",
+            "contributors": ['id_test'],
+            "preprocesses":
+            [
+                {
+                    "id": "fusio_export",
+                    "type": "FusioExport",
+                    "params": {
+                        "url": fusio_end_point
+                    },
+                    "sequence": 0
+                }
+            ]
+
+        }
+        raw = self.post('/coverages', self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw, 201)
+
+        post_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+                        <serverfusio>
+                            <ActionId>42</ActionId>
+                        </serverfusio>"""
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
+        get_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
+        <Info>
+            <ActionList ActionCount="1" TerminatedCount="1" WaitingCount="0" AbortedCount="0" WorkingCount="0"
+                        ThreadSuspended="True">
+                <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
+                        ActionId="42" LastError="">
+                    <ActionProgression Status="Terminated"
+                                       Description="{url}"
+                                       StepCount="10" CurrentStep="10"/>
+                </Action>
+            </ActionList>
+        </Info>""".format(url=fetch_url)
+
+        fusio_post.return_value = get_response(200, post_content)
+        fusio_get.return_value = get_response(200, get_content)
+        expected_data = {
+            'action': 'Export',
+            'ExportType': 32,
+            'Source': 4}
+
+        resp = self.full_export('id_test', 'my_cov', '2017-08-10')
+
+        fusio_post.assert_called_with(fusio_end_point + 'api', data=expected_data, files=None)
+        fusio_get.assert_called_with(fusio_end_point + 'info', data=None, files=None)
+
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_coverage_export', print(job)
+        assert job['error_message'] == '', print(job)

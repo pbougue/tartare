@@ -53,9 +53,10 @@ def merge(coverage: Coverage, context: Context) -> Context:
                     context.global_gridfs_id = GridFsHandler().copy_file(data_source_context.gridfs_id)
                     context.validity_period = contributor_context.validity_period
                     return context
-    raise IntegrityException(
-        ('coverage {} does not contains any Fusio export preprocess ' +
-         'and fallback computation cannot find any {} data source').format(coverage.id, DATA_FORMAT_GTFS))
+        raise IntegrityException(
+            ('coverage {} does not contains any Fusio export preprocess ' +
+             'and fallback computation cannot find any {} data source').format(coverage.id, DATA_FORMAT_GTFS))
+    return context
 
 
 def postprocess(coverage: Coverage, context: Context) -> Context:
