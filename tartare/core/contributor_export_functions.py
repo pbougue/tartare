@@ -73,19 +73,17 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        # grid fs id is taken from the first data source having a validity period
+        # grid fs id is taken from the first data source
         # contributor with multiple data sources is not handled yet
         grid_fs_id = next((data_source.gridfs_id
-                           for data_source in contrib_export_data_sources
-                           if data_source.validity_period), None)
+                           for data_source in contrib_export_data_sources), None)
 
-        if grid_fs_id:
-            contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
-                                                                                                current_date)
-            new_gridfs_id = GridFsHandler().copy_file(grid_fs_id)
-        else:
-            new_gridfs_id = None
-            contributor_export_validity_period = None
+        if not grid_fs_id:
+            return None
+        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
+            validity_periods, current_date
+        ) if len(validity_periods) else None
+        new_gridfs_id = GridFsHandler().copy_file(grid_fs_id)
 
         export = ContributorExport(contributor_id=contributor.id,
                                    gridfs_id=new_gridfs_id,
@@ -151,7 +149,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
-        return True
+        return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
 
 
 def build_context(contributor: Contributor, context: Context) -> Context:

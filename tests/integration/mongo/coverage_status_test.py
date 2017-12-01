@@ -91,20 +91,23 @@ class TestCoverageStatus(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
     def test_status_after_success_coverage_export_without_contributor(self):
-        self.__create_coverage(coverage_id='coverage_export')
-        coverages = self.__run_coverage_export('coverage_export')
+        coverage_id = 'cov_id'
+        self.__create_coverage(coverage_id=coverage_id)
+        coverages = self.__run_coverage_export(coverage_id)
 
         assert len(coverages) == 1
         assert 'last_active_job' in coverages[0]
         last_active_job = coverages[0]['last_active_job']
-        assert last_active_job['coverage_id'] == 'coverage_export'
+        assert last_active_job['coverage_id'] == coverage_id
         assert last_active_job['contributor_id'] is None
         assert last_active_job['action_type'] == 'coverage_export'
-        assert last_active_job['error_message'] == ''
-        assert last_active_job['state'] == 'done'
-        assert last_active_job['step'] == 'save_coverage_export'
+        assert last_active_job['state'] == 'failed', print(last_active_job)
+        assert last_active_job['step'] == 'fetching context', print(last_active_job)
+        assert last_active_job['error_message'] == \
+               'unable to get any contributor exports since not contributors are attached to coverage {}'.format(
+                   coverage_id), print(last_active_job)
 
-    def test_status_after_success_coverage_export_with_one_contributor(self, init_http_download_server):
+    def test_status_after_success_coverage_export_without_contributor_export(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')
         self.__create_coverage(['contributor_export'], 'coverage_export')
         coverages = self.__run_coverage_export('coverage_export')
@@ -115,13 +118,14 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['coverage_id'] == 'coverage_export'
         assert last_active_job['contributor_id'] is None
         assert last_active_job['action_type'] == 'coverage_export'
-        assert last_active_job['error_message'] == ''
-        assert last_active_job['state'] == 'done'
-        assert last_active_job['step'] == 'save_coverage_export'
+        assert last_active_job['state'] == 'failed', print(last_active_job)
+        assert last_active_job['step'] == 'merge', print(last_active_job)
+        assert last_active_job['error_message'] == 'coverage coverage_export does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source'
 
-    def test_status_after_failed_coverage_export_with_invalid_url_contributor(self, init_http_download_server):
-        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export', 'invalid_file.zip')
+    def test_status_after_success_coverage_export_with_one_contributor(self, init_http_download_server):
+        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')
         self.__create_coverage(['contributor_export'], 'coverage_export')
+        self.contributor_export('contributor_export', '2015-08-10')
         coverages = self.__run_coverage_export('coverage_export')
 
         assert len(coverages) == 1
@@ -131,7 +135,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['contributor_id'] is None
         assert last_active_job['action_type'] == 'coverage_export'
         assert last_active_job['error_message'] == ''
-        assert last_active_job['state'] == 'done'  # No contributor has been exported, state cannot be failed
+        assert last_active_job['state'] == 'done'
         assert last_active_job['step'] == 'save_coverage_export'
 
     def test_status_after_success_automatic_update(self, init_http_download_server):

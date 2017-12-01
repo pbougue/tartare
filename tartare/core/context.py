@@ -26,12 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer
 import logging
 from typing import List, Optional
+
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.constants import DATA_FORMAT_DEFAULT
+from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
+    ValidityPeriodContainer
+from tartare.exceptions import IntegrityException
 
 
 class DataSourceContext:
@@ -70,7 +71,8 @@ class Context:
         for link in links:
             contributor_id = link.get('contributor_id')
             data_source_id = link.get('data_source_id')
-            data_source_context = self.get_contributor_data_source_context(contributor_id, data_source_id, [data_format])
+            data_source_context = self.get_contributor_data_source_context(contributor_id, data_source_id,
+                                                                           [data_format])
             if data_source_context:
                 return data_source_context
         return None
@@ -123,6 +125,10 @@ class Context:
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
         self.contributor_contexts = []
+        if not coverage.contributors:
+            raise IntegrityException(
+                'unable to get any contributor exports since not contributors are attached to coverage {}'.format(
+                    coverage.id))
         for contributor_id in coverage.contributors:
             contributor_export = ContributorExport.get_last(contributor_id)
             if contributor_export:

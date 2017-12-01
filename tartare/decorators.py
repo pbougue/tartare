@@ -36,8 +36,8 @@ from flask import request
 
 from tartare.core import models
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
-    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE
-from tartare.core.models import Coverage, CoverageExport, DataSource
+    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE
+from tartare.core.models import DataSource
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
 from tartare.processes.processes import PreProcessManager
 
@@ -61,19 +61,20 @@ def check_excepted_data_format(data_format: str, data_type: str) -> None:
         raise InvalidArguments(msg)
 
 
-def check_contributor_data_source_osm_constraint(existing_data_sources: List[DataSource],
+def check_contributor_data_source_osm_and_poly_constraint(existing_data_sources: List[DataSource],
                                                  new_data_sources: List[dict]) -> None:
-    osm_existing_ds_ids = [ds_model.id for ds_model in existing_data_sources if
-                           ds_model.data_format == DATA_FORMAT_OSM_FILE]
-    if len(osm_existing_ds_ids) > 1:
-        raise InternalServerError('found contributor with more than one OSM data source')
-    osm_new_ds = [ds_dict for ds_dict in new_data_sources if
-                  ds_dict.get('data_format', DATA_FORMAT_DEFAULT) == DATA_FORMAT_OSM_FILE and ds_dict.get(
-                      'id') not in osm_existing_ds_ids]
-    if len(osm_new_ds) + len(osm_existing_ds_ids) > 1:
-        msg = "contributor contains more than one OSM data source"
-        logging.getLogger(__name__).error(msg)
-        raise InvalidArguments(msg)
+    for data_format in [DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE]:
+        existing_ds_ids = [ds_model.id for ds_model in existing_data_sources if
+                               ds_model.data_format == data_format]
+        if len(existing_ds_ids) > 1:
+            raise InternalServerError('found contributor with more than one {} data source'.format(data_format))
+        new_ds = [ds_dict for ds_dict in new_data_sources if
+                      ds_dict.get('data_format', DATA_FORMAT_DEFAULT) == data_format and ds_dict.get(
+                          'id') not in existing_ds_ids]
+        if len(new_ds) + len(existing_ds_ids) > 1:
+            msg = "contributor contains more than one {} data source".format(data_format)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidArguments(msg)
 
 
 class json_data_validate(object):
@@ -151,7 +152,7 @@ class check_contributor_integrity(object):
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-                check_contributor_data_source_osm_constraint(existing_data_sources, data_sources)
+                check_contributor_data_source_osm_and_poly_constraint(existing_data_sources, data_sources)
             return func(*args, **kwargs)
 
         return wrapper
@@ -188,7 +189,7 @@ class check_data_source_integrity(object):
                     check_excepted_data_format(post_data.get('data_format'), data_type)
             else:
                 check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-            check_contributor_data_source_osm_constraint(contributor.data_sources, [new_data_source])
+            check_contributor_data_source_osm_and_poly_constraint(contributor.data_sources, [new_data_source])
 
             return func(*args, **kwargs)
 

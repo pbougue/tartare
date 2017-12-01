@@ -970,7 +970,7 @@ class ContributorExport(Historisable):
         self.data_sources = [] if data_sources is None else data_sources
 
     def save(self) -> None:
-        raw = MongoContributorExportSchema().dump(self).data
+        raw = MongoContributorExportSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
         self.keep_historical(3, {'contributor_id': self.contributor_id})

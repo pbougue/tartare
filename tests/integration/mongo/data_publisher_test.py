@@ -39,20 +39,24 @@ import mock
 import pytest
 from freezegun import freeze_time
 
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
+    DATA_FORMAT_POLY_FILE
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals, get_response
 
 
 class TestDataPublisher(TartareFixture):
-    def _create_contributor(self, id, url='http://canaltp.fr/gtfs.zip'):
+    def _create_contributor(self, id, url='http://canaltp.fr/gtfs.zip', data_format="gtfs",
+                            data_type=DATA_TYPE_PUBLIC_TRANSPORT):
         contributor = {
+            "data_type": data_type,
             "id": id,
-            "name": "fr idf",
-            "data_prefix": "AAA",
+            "name": id,
+            "data_prefix": id,
             "data_sources": [
                 {
-                    "name": "gtfs data",
-                    "data_format": "gtfs",
+                    "name": 'ds' + data_format,
+                    "data_format": data_format,
                     "input": {
                         "type": "url",
                         "url": url
@@ -65,10 +69,9 @@ class TestDataPublisher(TartareFixture):
         return resp
 
     def _create_coverage(self, id, contributor_id, publication_platform, license=None):
+        contributor_ids = contributor_id if type(contributor_id) == list else [contributor_id]
         coverage = {
-            "contributors": [
-                contributor_id
-            ],
+            "contributors": contributor_ids,
             "environments": {
                 "production": {
                     "name": "production",
@@ -89,8 +92,8 @@ class TestDataPublisher(TartareFixture):
         return resp
 
     @freeze_time("2015-08-10")
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_publish_ok(self, urlretrieve_func):
+    def test_publish_ok(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         publication_platform = {
@@ -99,22 +102,20 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": "http://bob/v0/jobs"
         }
-        self._create_contributor(contributor_id)
+        self._create_contributor(contributor_id, url=url)
         self._create_coverage(coverage_id, contributor_id, publication_platform)
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
-            resp = self.post("/contributors/{}/actions/export".format(contributor_id))
-            self.assert_sucessful_call(resp, 201)
-            resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+            resp = self.full_export(contributor_id, coverage_id)
             self.assert_sucessful_call(resp, 201)
 
         # List contributor export
         r = self.to_json(self.get("/contributors/fr-idf/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
-        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+        assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
+        assert exports[0]["validity_period"]["end_date"] == "2016-08-08"
 
         assert exports[0]["gridfs_id"]
         data_sources = exports[0]["data_sources"]
@@ -125,8 +126,8 @@ class TestDataPublisher(TartareFixture):
         r = self.to_json(self.get("/coverages/default/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-03-25"
-        assert exports[0]["validity_period"]["end_date"] == "2015-08-26"
+        assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
+        assert exports[0]["validity_period"]["end_date"] == "2016-08-08"
         assert exports[0]["gridfs_id"]
         contributors = exports[0]["contributors"]
         assert len(contributors) == 1
@@ -425,3 +426,130 @@ class TestDataPublisher(TartareFixture):
         assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
             job)
         assert job['state'] == 'failed'
+
+    @mock.patch('requests.post', side_effect=[get_response(200)])
+    def test_publish_navitia(self, post_mock, init_http_download_server):
+        publish_url = "http://tyr.whatever.com"
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        filename = 'some_archive.zip'
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self._create_contributor(contributor_id, fetch_url)
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": publish_url,
+        }
+        self._create_coverage(coverage_id, contributor_id, publication_platform)
+
+        resp = self.full_export(contributor_id, coverage_id, '2015-08-10')
+
+        post_mock.assert_called_once()
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['error_message'] == '', print(job)
+        assert job['state'] == 'done', print(job)
+
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(200)])
+    @pytest.mark.parametrize("data_format,file_name", [
+        (DATA_FORMAT_OSM_FILE, 'empty_pbf.osm.pbf'),
+        (DATA_FORMAT_POLY_FILE, 'ile-de-france.poly')
+    ])
+    def test_publish_navitia_with_osm_or_poly(self, post_mock, init_http_download_server, data_format, file_name):
+        publish_url = "http://tyr.whatever.com"
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        filename = 'some_archive.zip'
+        contributor_geo = 'geo'
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self._create_contributor(contributor_id, fetch_url)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename=file_name)
+        self._create_contributor(contributor_geo, fetch_url, data_format=data_format,
+                                 data_type=DATA_TYPE_GEOGRAPHIC)
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": publish_url,
+        }
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+
+        self.contributor_export(contributor_id, '2015-08-10')
+        self.contributor_export(contributor_geo, '2015-08-10')
+        resp = self.coverage_export(coverage_id)
+
+        assert post_mock.call_count == 2
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['error_message'] == '', print(job)
+        assert job['state'] == 'done', print(job)
+
+
+    @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
+    def test_publish_navitia_with_osm_and_poly(self, post_mock, init_http_download_server):
+        publish_url = "http://tyr.whatever.com"
+        contributor_id = 'fr-idf'
+        coverage_id = 'default'
+        filename = 'some_archive.zip'
+        contributor_geo = 'geo'
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
+        self.init_contributor(contributor_id, 'gtfs_ds_id', fetch_url)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
+        self.init_contributor(contributor_geo, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+                                 data_type=DATA_TYPE_GEOGRAPHIC)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='ile-de-france.poly')
+        self.add_data_source_to_contributor(contributor_geo, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": publish_url,
+        }
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+
+        self.contributor_export(contributor_id, '2015-08-10')
+        self.contributor_export(contributor_geo, '2015-08-10')
+        resp = self.coverage_export(coverage_id)
+
+        assert post_mock.call_count == 3
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['error_message'] == '', print(job)
+        assert job['state'] == 'done', print(job)
+
+    @mock.patch('requests.post')
+    @pytest.mark.parametrize("data_format,file_name", [
+        (DATA_FORMAT_OSM_FILE, 'empty_pbf.osm.pbf'),
+        (DATA_FORMAT_POLY_FILE, 'ile-de-france.poly')
+    ])
+    def test_publish_only_osm_or_poly(self, post_mock, init_http_download_server, data_format, file_name):
+        publish_url = "http://tyr.whatever.com"
+        coverage_id = 'default'
+        contributor_geo = 'geo'
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename=file_name)
+        self._create_contributor(contributor_geo, fetch_url, data_format=data_format,
+                                 data_type=DATA_TYPE_GEOGRAPHIC)
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "http",
+            "url": publish_url,
+        }
+        self._create_coverage(coverage_id, contributor_geo, publication_platform)
+
+        resp = self.full_export(contributor_geo, coverage_id, '2015-08-10')
+
+        assert post_mock.call_count == 0
+
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['step'] == 'merge', print(job)
+        assert job['error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(job)
+        assert job['state'] == 'failed', print(job)

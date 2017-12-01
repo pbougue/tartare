@@ -32,6 +32,7 @@
 import json
 
 from tartare import app
+from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
 
 
 class TartareFixture(object):
@@ -85,11 +86,75 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw, 200)
         return self.to_json(raw)['jobs'][0]
 
-    def full_export(self, contributor_id, coverage_id, current_date=None):
+    def contributor_export(self, contributor_id, current_date=None):
         date_option = '?current_date=' + current_date if current_date else ''
         resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
         self.assert_sucessful_call(resp, 201)
+        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
+        job = self.to_json(resp)['jobs'][0]
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_contributor_export', print(job)
+        assert job['error_message'] == '', print(job)
+        return resp
 
+    def get_job_from_export_response(self, response):
+        self.assert_sucessful_call(response, 201)
+        resp = self.get("/jobs/{}".format(self.to_json(response)['job']['id']))
+        return self.to_json(resp)['jobs'][0]
+
+    def coverage_export(self, coverage_id):
         resp = self.post("/coverages/{}/actions/export".format(coverage_id))
         self.assert_sucessful_call(resp, 201)
         return resp
+
+    def full_export(self, contributor_id, coverage_id, current_date=None):
+        self.contributor_export(contributor_id, current_date)
+        return self.coverage_export(coverage_id)
+
+    def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
+                         data_type=DATA_TYPE_DEFAULT):
+        data_source = {
+            "id": data_source_id,
+            "name": data_source_id,
+            "data_format": data_format,
+            "input": {
+                "type": "url",
+                "url": url
+            }
+        }
+        contributor = {
+            "data_type": data_type,
+            "id": contributor_id,
+            "name": contributor_id + '_name',
+            "data_prefix": contributor_id + '_prefix',
+            "data_sources": [data_source]
+        }
+        raw = self.post('/contributors', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw, 201)
+
+    def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
+        data_source = {
+            "id": data_source_id,
+            "name": data_source_id,
+            "data_format": data_format,
+            "input": {
+                "type": "url",
+                "url": url
+            }
+        }
+        raw = self.post('/contributors/{}/data_sources'.format(contrib_id), self.dict_to_json(data_source))
+        self.assert_sucessful_call(raw, 201)
+
+    def update_data_source_url(self, contrib_id, ds_id, url):
+        raw = self.patch('/contributors/{}/data_sources/{}'.format(contrib_id, ds_id),
+                         json.dumps({'input': {
+                             'url': url}}))
+        return self.assert_sucessful_call(raw, 200)
+
+    def run_automatic_update(self, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        raw = self.post('/actions/automatic_update{}'.format(date_option))
+        self.assert_sucessful_call(raw, 204)
+        raw = self.get('/jobs')
+        self.assert_sucessful_call(raw, 200)
+        return self.to_json(raw)['jobs']

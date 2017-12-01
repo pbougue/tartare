@@ -177,7 +177,7 @@ class TestContributorExport(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 5, print(grid_fs_list)
+            assert grid_fs_list.count() == 5
 
     @pytest.mark.parametrize("filename,path,data_format", [
         ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),
@@ -202,4 +202,4 @@ class TestContributorExport(TartareFixture):
         assert job['state'] == 'done', print(job)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 2, print(grid_fs_list)
+            assert grid_fs_list.count() == 3

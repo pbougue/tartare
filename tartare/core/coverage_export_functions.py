@@ -30,21 +30,32 @@
 import logging
 from typing import Optional
 
+from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource
+from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource, \
+    DataSource
+from tartare.exceptions import IntegrityException
 
 logger = logging.getLogger(__name__)
 
 
 def merge(coverage: Coverage, context: Context) -> Context:
     logger.info("merge for coverage_id = %s", coverage.id)
-    for contributor_context in context.contributor_contexts:
-        if not context.validity_period:
-            context.validity_period = contributor_context.validity_period
-        if not context.global_gridfs_id and contributor_context.data_source_contexts[0].gridfs_id:
-            context.global_gridfs_id = GridFsHandler().copy_file(contributor_context.data_source_contexts[0].gridfs_id)
-        break
+    # following condition is matched when Fusio export preprocess is not attached to coverage
+    # it simulates its behavior for now for tests purposes
+    # merge necessary for multi-contributors is not handled here and should be done by Fusio
+    if not context.global_gridfs_id:
+        for contributor_context in context.contributor_contexts:
+            for data_source_context in contributor_context.data_source_contexts:
+                if DataSource.get_one(contributor_context.contributor.id,
+                                      data_source_context.data_source_id).data_format == DATA_FORMAT_GTFS:
+                    context.global_gridfs_id = GridFsHandler().copy_file(data_source_context.gridfs_id)
+                    context.validity_period = contributor_context.validity_period
+                    return context
+        raise IntegrityException(
+            ('coverage {} does not contains any Fusio export preprocess ' +
+             'and fallback computation cannot find any {} data source').format(coverage.id, DATA_FORMAT_GTFS))
     return context
 
 
