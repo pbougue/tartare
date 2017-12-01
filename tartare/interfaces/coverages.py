@@ -32,11 +32,11 @@ from typing import Optional
 import flask_restful
 from flask import Response
 from flask import request
-from marshmallow import MarshalResult, ValidationError
+from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import json_data_validate, validate_contributors, validate_patch_coverages
+from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -44,8 +44,8 @@ from tartare.processes.processes import PreProcessManager
 
 
 class Coverage(flask_restful.Resource):
-    @json_data_validate()
-    @validate_contributors()
+    @JsonDataValidate()
+    @ValidateContributors()
     def post(self) -> Response:
         coverage_schema = schema.CoverageSchema(strict=True)
         post_data = request.json
@@ -90,9 +90,9 @@ class Coverage(flask_restful.Resource):
             raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
         return "", 204
 
-    @json_data_validate()
-    @validate_contributors()
-    @validate_patch_coverages()
+    @JsonDataValidate()
+    @ValidateContributors()
+    @ValidatePatchCoverages()
     def patch(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:

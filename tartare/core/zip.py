@@ -32,7 +32,7 @@ from functools import partial
 
 import os
 import shutil
-from typing import Callable, Any, Union
+from typing import Callable, Union
 from zipfile import is_zipfile, ZipFile
 from tartare.exceptions import InvalidFile
 

@@ -47,12 +47,10 @@ ftp_scheme_start = 'ftp://'
 
 class AbstractFetcher(metaclass=ABCMeta):
     @abstractmethod
-    def fetch(self, url: str, destination_path: str, data_format: str,
-              expected_file_name: str = None) -> Tuple[str, str]:
+    def fetch(self, url: str, destination_path: str, expected_file_name: str = None) -> Tuple[str, str]:
         """
         :param url: url to fetch from
         :param destination_path: the existing directory to use as destination path
-        :param data_format: data format of resource to fetch (see tartare/core/constants.py:DATA_FORMAT_VALUES)
         :param expected_file_name: the file_name to use to save the downloaded file (if None, will guess it from URL)
         :return: tuple(dest_full_file_name, expected_file_name) where
           - dest_full_file_name is full destination file name (/tmp/tmp123/config.json)
@@ -61,7 +59,7 @@ class AbstractFetcher(metaclass=ABCMeta):
         pass
 
     @classmethod
-    def fetch_to_target(self, url: str, dest_full_file_name: str, data_format: str) -> None:
+    def fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
         try:
             urllib.request.urlretrieve(url, dest_full_file_name)
         except HTTPError as e:
@@ -72,7 +70,7 @@ class AbstractFetcher(metaclass=ABCMeta):
             raise FetcherException('error during download of file: {}'.format(str(e)))
 
     @classmethod
-    def guess_file_name_from_url(self, url: str) -> str:
+    def guess_file_name_from_url(cls, url: str) -> str:
         if FetcherManager.http_matches_url(url) or FetcherManager.ftp_matches_url(url):
             parsed = urlparse(url)
             if parsed.path:
@@ -102,18 +100,16 @@ class FetcherManager:
 
 
 class FtpFetcher(AbstractFetcher):
-    def fetch(self, url: str, destination_path: str, data_format: str,
-              expected_file_name: str = None) -> Tuple[str, str]:
+    def fetch(self, url: str, destination_path: str, expected_file_name: str = None) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(url)
         dest_full_file_name = os.path.join(destination_path, expected_file_name)
-        self.fetch_to_target(url, dest_full_file_name, data_format)
+        self.fetch_to_target(url, dest_full_file_name)
         return dest_full_file_name, expected_file_name
 
 
 class HttpFetcher(AbstractFetcher):
-    def fetch(self, url: str, destination_path: str, data_format: str,
-              expected_file_name: str = None) -> Tuple[str, str]:
+    def fetch(self, url: str, destination_path: str, expected_file_name: str = None) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(url) if not expected_file_name else expected_file_name
         dest_full_file_name = os.path.join(destination_path, expected_file_name)
-        self.fetch_to_target(url, dest_full_file_name, data_format)
+        self.fetch_to_target(url, dest_full_file_name)
         return dest_full_file_name, expected_file_name

@@ -114,7 +114,8 @@ class Context:
                      if data_source_context.data_source_id == data_source_id), None)
 
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
-                                            validity_period: Optional[ValidityPeriod], gridfs_id: Optional[str]) -> None:
+                                            validity_period: Optional[ValidityPeriod],
+                                            gridfs_id: Optional[str]) -> None:
         contributor_context = next((contributor_context for contributor_context in self.contributor_contexts
                                     if contributor_context.contributor.id == contributor_id), None)
         if contributor_context:

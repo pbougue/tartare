@@ -28,25 +28,27 @@
 # www.navitia.io
 
 from typing import Optional
+
 import flask_restful
 from flask import Response
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from tartare.core import models
 from flask import request
-from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.helper import setdefault_ids
+from pymongo.errors import PyMongoError, DuplicateKeyError
+
+from tartare.core import models
 from tartare.core.mongodb_helper import upgrade_dict
-from tartare.decorators import json_data_validate, validate_contributor_prepocesses_data_source_ids, \
-    check_contributor_integrity
+from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
+    CheckContributorIntegrity
+from tartare.helper import setdefault_ids
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.interfaces import schema
 from tartare.processes.processes import PreProcessManager
 
 
 class Contributor(flask_restful.Resource):
-    @json_data_validate()
-    @validate_contributor_prepocesses_data_source_ids()
-    @check_contributor_integrity()
+    @JsonDataValidate()
+    @ValidateContributorPrepocessesDataSourceIds()
+    @CheckContributorIntegrity()
     def post(self) -> Response:
         post_data = request.json
         if 'data_prefix' not in post_data:
@@ -79,7 +81,7 @@ class Contributor(flask_restful.Resource):
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
 
-    def get(self, contributor_id: Optional[str]=None) -> Response:
+    def get(self, contributor_id: Optional[str] = None) -> Response:
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
@@ -95,8 +97,8 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
         return "", 204
 
-    @json_data_validate()
-    @check_contributor_integrity(True)
+    @JsonDataValidate()
+    @CheckContributorIntegrity(True)
     def patch(self, contributor_id: str) -> Response:
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error
@@ -111,7 +113,8 @@ class Contributor(flask_restful.Resource):
 
         PreProcessManager.check_preprocesses_for_instance(preprocess_dict_list, 'contributor')
         existing_data_source_ids = [data_source.id for data_source in contributor.data_sources]
-        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids, 'contributor')
+        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids,
+                                                                 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)

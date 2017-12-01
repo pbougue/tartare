@@ -28,20 +28,21 @@
 # www.navitia.io
 from typing import Optional
 
+import flask_restful
 from flask import Response
 from flask_restful import abort, request
-import flask_restful
-from pymongo.errors import PyMongoError
-from tartare.core import models
-from tartare.interfaces import schema
 from marshmallow import ValidationError
+from pymongo.errors import PyMongoError
+
+from tartare.core import models
+from tartare.decorators import JsonDataValidate
 from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate
+from tartare.interfaces import schema
 from tartare.processes import processes
 
 
 class PreProcess(flask_restful.Resource):
-    @json_data_validate()
+    @JsonDataValidate()
     def post(self, contributor_id: Optional[str]=None, coverage_id: Optional[str]=None) -> Response:
         preprocess_schema = schema.PreProcessSchema(strict=True)
         instance = 'contributor' if contributor_id else 'coverage'
@@ -54,7 +55,7 @@ class PreProcess(flask_restful.Resource):
 
         try:
             preprocess.save(contributor_id=contributor_id, coverage_id=coverage_id)
-        except (PyMongoError, ValueError) as e:
+        except (PyMongoError, ValueError):
             raise InternalServerError('Impossible to add data source.')
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump([preprocess]).data}, 201
@@ -72,7 +73,7 @@ class PreProcess(flask_restful.Resource):
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump(ps).data}, 200
 
-    @json_data_validate()
+    @JsonDataValidate()
     def patch(self, contributor_id: Optional[str]=None, preprocess_id: Optional[str]=None,
               coverage_id: Optional[str]=None) -> Response:
         ds = models.PreProcess.get(preprocess_id=preprocess_id,
@@ -86,8 +87,8 @@ class PreProcess(flask_restful.Resource):
         if errors:
             raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
 
+        p = request.json
         try:
-            p = request.json
             instance = 'contributor' if contributor_id else 'coverage'
             processes.PreProcessManager.check_preprocesses_for_instance([p], instance)
             preprocesses = models.PreProcess.update(preprocess_id,

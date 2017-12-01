@@ -42,7 +42,7 @@ import requests
 from gridfs.grid_file import GridOut
 from requests import Response
 from datetime import datetime, date
-from typing import Optional, Callable
+from typing import Optional
 
 
 def grid_out_len(self: GridOut) -> int:

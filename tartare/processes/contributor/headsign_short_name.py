@@ -26,18 +26,19 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
+import tempfile
 from functools import partial
 
-from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
-import logging
-from tartare.exceptions import ParameterException
-from tartare.core.gridfs_handler import GridFsHandler
-import tempfile
-from tartare.core.readers import CsvReader
-from tartare.core import zip
 from gridfs import GridOut
 from pandas.core.series import Series
+
+from tartare.core import zip
+from tartare.core.context import Context
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.readers import CsvReader
+from tartare.exceptions import ParameterException
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
 
@@ -46,6 +47,7 @@ class HeadsignShortName(AbstractContributorProcess):
     # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
     METRO = 1
     RAIL = 2
+
     def get_trip_short_name(self, row: Series, map_route_modes: dict) -> str:
 
         # Metro
