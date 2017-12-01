@@ -47,13 +47,13 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "Bad contributor unknown"
+        assert r["error"] == "bad contributor unknown"
 
     def test_fetch_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "Data source unknown not found for contributor id_test."
+        assert r["error"] == "data source unknown not found for contributor id_test"
 
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
@@ -99,7 +99,7 @@ class TestDataSourceFetchAction(TartareFixture):
         json_response = self.json_to_dict(response)
 
         assert response.status_code == 400, print(self.json_to_dict(response))
-        assert json_response['error'] == 'Data source type should be url.'
+        assert json_response['error'] == 'data source type should be url'
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
@@ -115,4 +115,4 @@ class TestDataSourceFetchAction(TartareFixture):
         json_response = self.json_to_dict(response)
 
         assert response.status_code == 500, print(self.json_to_dict(response))
-        assert json_response['error'].startswith('Fetching {} failed:'.format(url))
+        assert json_response['error'].startswith('fetching {} failed:'.format(url))

@@ -152,4 +152,4 @@ def date_from_string(value: str, name: str) -> date:
     try:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except:
-        raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))
+        raise ValueError("the {} argument value is not valid, you gave: {}".format(name, value))

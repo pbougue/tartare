@@ -64,9 +64,9 @@ class Coverage(flask_restful.Resource):
         try:
             coverage.save()
         except DuplicateKeyError:
-            raise DuplicateEntry("Coverage {} already exists.".format(request.json['id']))
+            raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
         except PyMongoError:
-            raise InternalServerError('Impossible to add coverage.')
+            raise InternalServerError('impossible to add coverage')
 
         response, status = self.get(coverage.id)
         return response, 201
@@ -75,7 +75,7 @@ class Coverage(flask_restful.Resource):
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
-                raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+                raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
             return {'coverages': [result.data]}, 200
@@ -87,7 +87,7 @@ class Coverage(flask_restful.Resource):
     def delete(self, coverage_id: str) -> Response:
         c = models.Coverage.delete(coverage_id)
         if c == 0:
-            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
         return "", 204
 
     @JsonDataValidate()
@@ -96,9 +96,9 @@ class Coverage(flask_restful.Resource):
     def patch(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
         if 'id' in request.json and coverage.id != request.json['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
         coverage_schema = schema.CoverageSchema(partial=True)
         errors = coverage_schema.validate(request.json, partial=True)
         if errors:
@@ -108,6 +108,6 @@ class Coverage(flask_restful.Resource):
         try:
             coverage = models.Coverage.update(coverage_id, request.json)
         except PyMongoError:
-            raise InternalServerError('Impossible to update coverage with dataset {}'.format(request.json))
+            raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
 
         return self.get(coverage.id)

@@ -43,19 +43,19 @@ class TestDatasetApi(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "Bad contributor unknown"
+        assert r["error"] == "bad contributor unknown"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "Data source unknown not found for contributor id_test."
+        assert r["error"] == "data source unknown not found for contributor id_test"
 
     def test_post_dataset_without_file(self, data_source):
         raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
-        assert r["error"] == "No file provided."
+        assert r["error"] == "no file provided"
 
     def test_post_dataset_with_bad_file_param(self, data_source):
         with open(fixtures_path, 'rb') as file:
@@ -64,7 +64,7 @@ class TestDatasetApi(TartareFixture):
                             headers={})
             assert raw.status_code == 400
             r = self.json_to_dict(raw)
-            assert r["error"] == 'File provided with bad param ("file" param expected).'
+            assert r["error"] == 'file provided with bad param ("file" param expected)'
 
     def test_post_dataset(self, data_source):
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))

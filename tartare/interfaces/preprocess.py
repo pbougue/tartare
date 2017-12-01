@@ -56,7 +56,7 @@ class PreProcess(flask_restful.Resource):
         try:
             preprocess.save(contributor_id=contributor_id, coverage_id=coverage_id)
         except (PyMongoError, ValueError):
-            raise InternalServerError('Impossible to add data source.')
+            raise InternalServerError('impossible to add data source')
 
         return {'preprocesses': schema.PreProcessSchema(many=True).dump([preprocess]).data}, 201
 
@@ -67,7 +67,7 @@ class PreProcess(flask_restful.Resource):
                                        contributor_id=contributor_id,
                                        coverage_id=coverage_id)
             if not ps and preprocess_id:
-                raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
+                raise ObjectNotFound("preprocess '{}' not found".format(preprocess_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -85,7 +85,7 @@ class PreProcess(flask_restful.Resource):
         schema_preprocess = schema.PreProcessSchema(partial=True)
         errors = schema_preprocess.validate(request.json, partial=True)
         if errors:
-            raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
+            raise ObjectNotFound("preprocess '{}' not found".format(preprocess_id))
 
         p = request.json
         try:
@@ -107,7 +107,7 @@ class PreProcess(flask_restful.Resource):
         try:
             nb_deleted = models.PreProcess.delete(preprocess_id, coverage_id=coverage_id, contributor_id=contributor_id)
             if nb_deleted == 0:
-                raise ObjectNotFound("Preprocess '{}' not found.".format(preprocess_id))
+                raise ObjectNotFound("preprocess '{}' not found".format(preprocess_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 

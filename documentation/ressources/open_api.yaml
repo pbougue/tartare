@@ -399,7 +399,7 @@ paths:
             properties:
               message:
                 type: string
-                example: "Valid fusio file provided : file.zip"
+                example: "valid fusio file provided : file.zip"
         400:
           description: Invalid arguments
           schema :

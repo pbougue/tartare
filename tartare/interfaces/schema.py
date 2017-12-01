@@ -48,7 +48,7 @@ class NoUnknownFieldMixin(Schema):
     def check_unknown_fields(self, data: dict, original_data: dict) -> None:
         for key in original_data:
             if key not in self.fields:
-                raise ValidationError('Unknown field name {}'.format(key))
+                raise ValidationError('unknown field name {}'.format(key))
 
 
 class PlatformSchema(MongoPlatformSchema):

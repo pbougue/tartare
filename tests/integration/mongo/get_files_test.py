@@ -45,27 +45,27 @@ class TestGetFiles(TartareFixture):
         resp = self.get('/contributors/AA/exports/BB/files/aa', follow_redirects=True)
         assert resp.status_code == 400
         json_resp = self.json_to_dict(resp)
-        assert json_resp.get('error') == 'Invalid file id, you give aa'
+        assert json_resp.get('error') == 'invalid file id, you give aa'
 
     def test_get_files_invalid_export_id(self):
         resp = self.get('/contributors/AA/exports/BB/files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 400
         json_resp = self.json_to_dict(resp)
-        assert json_resp.get('error') == 'Invalid export id, you give BB'
+        assert json_resp.get('error') == 'invalid export id, you give BB'
 
     def test_get_files_contributor_not_found(self):
         resp = self.get('/contributors/AA/exports/7ffab229-3d48-4eea-aa2c-22f8680230b6/'
                         'files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 404
         json_resp = self.json_to_dict(resp)
-        assert json_resp.get('error') == 'Contributor export not found.'
+        assert json_resp.get('error') == 'contributor export not found'
 
     def test_get_files_coverage_not_found(self):
         resp = self.get('/coverages/AA/exports/7ffab229-3d48-4eea-aa2c-22f8680230b6/'
                         'files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 404
         json_resp = self.json_to_dict(resp)
-        assert json_resp.get('error') == 'Coverage not found.'
+        assert json_resp.get('error') == 'coverage not found'
 
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)

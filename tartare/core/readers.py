@@ -83,7 +83,7 @@ class JsonReader(AbstractPandaReader):
             if usecols:
                 self.data = self.data.filter(items=usecols).drop_duplicates()
         except ValueError as e:
-            raise InvalidFile('Impossible to parse file {}, Error {}'.format(json_file.filename, str(e)))
+            raise InvalidFile('impossible to parse file {}, error {}'.format(json_file.filename, str(e)))
 
 
 class CsvReader(AbstractPandaReader):
@@ -101,7 +101,7 @@ class CsvReader(AbstractPandaReader):
                                     usecols: Optional[List[str]] = None,
                                     **kwargs: Any) -> None:
         if not is_zipfile(zip_file):
-            msg = '{} is not a zip file or does not exist.'.format(zip_file)
+            msg = '{} is not a zip file or does not exist'.format(zip_file)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
         with ZipFile(zip_file, 'r') as files_zip, tempfile.TemporaryDirectory() as tmp_path:
@@ -114,12 +114,12 @@ class CsvReader(AbstractPandaReader):
         filename = csv_full_filename.split(os.path.sep)[-1]
         not_in = self.__get_columns_not_in_file(csv_full_filename, usecols, sep)
         if not_in:
-            raise InvalidFile("Header not found in file {}, Error : '{}' is not in list".
+            raise InvalidFile("header not found in file {}, error : '{}' is not in list".
                               format(filename, ", ".join(not_in)))
         try:
             self.data = pd.read_csv(csv_full_filename, sep=sep, usecols=usecols, **kwargs)
         except ValueError as e:
-            raise InvalidFile('Impossible to parse file {}, Error {}'.format(filename, str(e)))
+            raise InvalidFile('impossible to parse file {}, error {}'.format(filename, str(e)))
 
     def save_as_csv(self, csv_full_filename: str) -> None:
         self.data.to_csv(csv_full_filename, index=False)

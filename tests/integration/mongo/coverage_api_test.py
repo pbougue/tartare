@@ -142,7 +142,7 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert 'error' in r
-        assert 'Unknown field name notvalidenv' in r['error']['environments']['_schema']
+        assert 'unknown field name notvalidenv' in r['error']['environments']['_schema']
 
     def test_add_coverage_with_all_env(self):
         raw = self.post('/coverages',
@@ -469,7 +469,7 @@ class TestCoverageApi(TartareFixture):
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
-        assert r['error'] == 'Contributor unknown not found.'
+        assert r['error'] == 'contributor unknown not found'
 
     def test_add_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
@@ -483,7 +483,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
-        assert r['error'] == 'Contributor unknown not found.'
+        assert r['error'] == 'contributor unknown not found'
 
     def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["id_test"]}')
