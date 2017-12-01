@@ -29,12 +29,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-import logging
 
 import pytest
 
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
-    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -771,8 +770,10 @@ class TestContributors(TartareFixture):
                 assert raw.status_code == 400, print(self.to_json(raw))
                 r = self.to_json(raw)
                 assert 'error' in r
-                assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
-                    format(format=data_format, type=data_type, values=','.join((DATA_FORMAT_BY_DATA_TYPE[data_type])))
+                assert r[
+                           'error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
+                           format(format=data_format, type=data_type,
+                                  values=','.join((DATA_FORMAT_BY_DATA_TYPE[data_type])))
 
     def test_post_contrib_public_transport_with_data_format_valid(self):
         for data_type in DATA_TYPE_VALUES:
@@ -790,8 +791,10 @@ class TestContributors(TartareFixture):
                 self.assert_sucessful_call(raw, 400)
                 r = self.to_json(raw)
                 assert 'error' in r
-                assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
-                           format(format=other_data_format, type=data_type, values=','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))
+                assert r[
+                           'error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
+                           format(format=other_data_format, type=data_type,
+                                  values=','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))
 
     def test_patch_contrib_public_transport_with_data_format_valid(self):
         for data_type in DATA_TYPE_VALUES:
@@ -801,6 +804,20 @@ class TestContributors(TartareFixture):
             for other_data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
                 raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
                 self.assert_sucessful_call(raw)
+
+    def test_patch_data_type_with_wrong_data_source(self):
+        raw = self.__create_contributor(DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE)
+        contributor_id = 'id-{}-{}'.format(DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE)
+        self.assert_sucessful_call(raw, 201)
+        raw = self.patch('/contributors/{}'.format(contributor_id),
+                         self.dict_to_json({"data_type": DATA_TYPE_PUBLIC_TRANSPORT}))
+        resp = self.assert_failed_call(raw)
+        assert resp[
+                   'error'] == "data source format {} is incompatible with contributor data_type {}, possibles values are: '{}'".format(
+            DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT,
+            ','.join(DATA_FORMAT_BY_DATA_TYPE[DATA_TYPE_PUBLIC_TRANSPORT])
+        )
+        assert resp['message'] == 'Invalid arguments'
 
     @pytest.mark.parametrize("data_format", [
         DATA_FORMAT_OSM_FILE,

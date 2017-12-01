@@ -143,12 +143,14 @@ class check_contributor_integrity(object):
                     msg = "Contributor '{}' not found.".format(contributor_id)
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
-                data_type = contributor.data_type
+                data_type = post_data.get('data_type', contributor.data_type)
                 existing_data_sources = contributor.data_sources
             else:
                 data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
                 existing_data_sources = []
             data_sources = post_data.get('data_sources', [])
+            for existing_data_source in existing_data_sources:
+                check_excepted_data_format(existing_data_source.data_format, data_type)
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
