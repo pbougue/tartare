@@ -1261,6 +1261,10 @@ definitions:
         type: string
         description: "Last action of an export when it failed or succeeded"
         example: fetching data
+      error_message:
+        type: string
+        description: "Error message"
+        example: "error during publishing on http://whatever.fr/pub, status code => 500"
       started_at:
         type: string
         format: date-time
