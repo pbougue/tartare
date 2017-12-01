@@ -121,13 +121,14 @@ class NavitiaPublisher(AbstractPublisher):
         for cov_export_contrib in coverage_export.contributors:
             for contrib_export_data_source in cov_export_contrib.data_sources:
                 data_source_obj = DataSource.get_one(cov_export_contrib.contributor_id,
-                                      contrib_export_data_source.data_source_id)
+                                                     contrib_export_data_source.data_source_id)
                 # osm and poly file are published only once by coverage because of the following constraints:
                 # - one geo contributor allowed by coverage
                 # - one osm data source allowed by geo contributor
                 # - one poly data source allowed by geo contributor
                 # see tartare.decorators.check_contributor_data_source_osm_and_poly_constraint
-                if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
+                if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or \
+                                data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
                     file_to_publish = GridFsHandler().get_file_from_gridfs(contrib_export_data_source.gridfs_id)
                     protocol_uploader.publish(file_to_publish, file_to_publish.filename)
 

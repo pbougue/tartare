@@ -28,21 +28,20 @@
 # www.navitia.io
 import json
 import logging
-from functools import partial
-
 import tempfile
 from collections import defaultdict
+from functools import partial
 from typing import Dict, List
 
+from tartare.core import zip
+from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader
 from tartare.exceptions import IntegrityException
-from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.core import zip
 from tartare.processes.utils import preprocess_registry
-from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG
+
 
 @preprocess_registry()
 class ComputeDirections(AbstractContributorProcess):
@@ -83,8 +82,8 @@ class ComputeDirections(AbstractContributorProcess):
                                  item in a_stop_sequence]  # reduce to keep only known stops
                 if len(new_reference) < 2:
                     raise IntegrityException(
-                        'unable to calculate direction_id for route {route_id}: not enough stops for trip {trip_id}'.format(
-                            route_id=a_route, trip_id=a_trip))
+                        'unable to calculate direction_id for route {route_id}: not enough stops for trip {trip_id}'.
+                            format(route_id=a_route, trip_id=a_trip))
 
                 forward_sequence_count = 0
                 sequence_count = len(new_reference) - 1
@@ -106,7 +105,7 @@ class ComputeDirections(AbstractContributorProcess):
 
     def __apply_rules(self, trips_reader: CsvReader, trips_file_name: str, trips_to_fix: Dict[str, str]) -> None:
         trips_reader.apply(column_name='direction_id', callback=lambda row, trips=trips_to_fix:
-                   trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
+                           trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
         trips_reader.save_as_csv(trips_file_name)
 
     def __get_stop_sequence_by_trip(self, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:

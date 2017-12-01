@@ -35,11 +35,11 @@ from tartare.core import models
 from tartare.exceptions import IntegrityException
 from tartare.interfaces import schema
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate
+from tartare.decorators import JsonDataValidate
 
 
 class CoverageContributorSubscription(flask_restful.Resource):
-    @json_data_validate()
+    @JsonDataValidate()
     def post(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:

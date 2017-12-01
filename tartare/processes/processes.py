@@ -28,15 +28,14 @@
 # www.navitia.io
 
 import logging
-
-from tartare.processes.abstract_preprocess import AbstractProcess
-from tartare.processes import contributor
-from tartare.processes import coverage
 from typing import List, Dict
 
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.http_exceptions import InvalidArguments
+from tartare.processes import contributor
+from tartare.processes import coverage
+from tartare.processes.abstract_preprocess import AbstractProcess
 
 
 class PreProcessManager(object):
@@ -58,8 +57,9 @@ class PreProcessManager(object):
     @classmethod
     def get_preprocess(cls, context: Context, preprocess: PreProcess) -> AbstractProcess:
         """
-        :param preprocess_name: Ruspell, FusioImport, ....
-        :return: Ruspell, FusioImport, ... or FusioDataUpdate  Object
+        :param context: current context
+        :param preprocess: preprocess model object (api)
+        :return: preprocess instance to run (worker)
         """
         attr = cls.get_preprocess_class(preprocess.type, context.instance)
         try:
@@ -82,7 +82,8 @@ class PreProcessManager(object):
             if 'data_source_ids' in preprocess and preprocess['data_source_ids']:
                 for data_source_id in preprocess['data_source_ids']:
                     if data_source_id not in existing_data_source_ids:
-                        msg = "data_source referenced by id '{data_source_id}' in preprocess '{preprocess}' not found in {instance}".format(
+                        msg = ("data_source referenced by id '{data_source_id}' in preprocess '{preprocess}' " +
+                               "not found in {instance}").format(
                             data_source_id=data_source_id, preprocess=preprocess['type'], instance=instance)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)

@@ -114,10 +114,10 @@ class GridCalendar(Resource):
         coverage.save_grid_calendars(content)
         zip_file.close()
 
-        #run the update of navitia in background
+        # run the update of navitia in background
         for k, env in coverage.environments.items():
             if env.current_ntfs_id:
-                #TODO: use a chain later
+                # @TODO: use a chain later
                 tasks.send_ntfs_to_tyr.delay(coverage.id, k)
 
         return {'message': 'OK'}, 200

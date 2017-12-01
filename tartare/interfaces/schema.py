@@ -34,8 +34,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
-    DataSource, Job
+from tartare.core.models import Job
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \

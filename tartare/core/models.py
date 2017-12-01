@@ -67,7 +67,7 @@ class ChoiceField(fields.Field):
         'invalid': 'choice "{current_value}" not in possible values ({possible_values}).'
     }
 
-    def _serialize(self, value: str, attr: str, _: Any ) -> str:
+    def _serialize(self, value: str, attr: str, _: Any) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
@@ -317,8 +317,8 @@ class DataSource(object):
             -> Tuple[str, Optional[str], Optional[str]]:
         status, fetch_started_at, updated_at = calculated_attributes
         return status, \
-        str(fetch_started_at) if fetch_started_at else None, \
-        str(updated_at) if updated_at else None
+               str(fetch_started_at) if fetch_started_at else None, \
+               str(updated_at) if updated_at else None
 
 
 class GenericPreProcess(SequenceContainer):
@@ -693,7 +693,8 @@ class Historisable(object):
         """Keep only `num` data sources fetched and GridFS for the contributor
 
         Args:
-            num (int): The number of data sources fetched you want to keep
+            :param num: The number of data sources fetched you want to keep
+            :param filter: the filter to apply to the data_sources selected
         """
         old_rows = self.get_all_before_n_last(num, filter)
 
@@ -725,7 +726,9 @@ class DataSourceFetched(Historisable):
         self.saved_at = saved_at
 
     def update(self) -> bool:
-        raw = mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data})
+        raw = mongo.db[self.mongo_collection].update_one(
+            {'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data}
+        )
         return raw.matched_count == 1
 
     def save(self) -> None:

@@ -28,8 +28,8 @@
 # www.navitia.io
 
 import logging
-from datetime import timedelta, date, datetime
-from typing import Tuple, List
+from datetime import timedelta, date
+from typing import List
 from zipfile import is_zipfile
 
 import numpy as np

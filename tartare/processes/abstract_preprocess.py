@@ -58,10 +58,10 @@ class AbstractProcess(metaclass=ABCMeta):
         return self.params.get('links')[key]
 
 
-class AbstractFusioProcess(AbstractProcess):
+class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
-        if not 'url' in self.params:
+        if 'url' not in self.params:
             raise ParameterException('params.url not present in fusio preprocess')
         self.fusio = Fusio(self.params['url'])
 

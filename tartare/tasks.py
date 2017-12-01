@@ -94,25 +94,6 @@ class CallbackTask(tartare.ContextTask):
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
 
-@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
-    coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].publication_platforms[0].url
-    grifs_handler = GridFsHandler()
-    file = grifs_handler.get_file_from_gridfs(file_id)
-    logging.debug('file: %s', file)
-    logger.info('trying to send %s to %s', file.filename, url)
-    # TODO: how to handle timeout?
-    try:
-        response = upload_file(url, file.filename, file)
-        if response.status_code != 200:
-            raise self.retry()
-        else:
-            grifs_handler.delete_file_from_gridfs(file_id)
-    except:
-        logging.exception('error')
-
-
 def _get_publisher(platform: Platform) -> AbstractPublisher:
     from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
@@ -178,7 +159,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
     grid_calendars_file = coverage.get_grid_calendars()
     if grid_calendars_file:
         with tempfile.TemporaryDirectory() as tmpdirname:
-            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip' \
+            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip'
                                             .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
             logger.debug("Working to generate [{}]".format(output_ntfs_file))
             _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
@@ -197,7 +178,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date: datetime.date,
-                       check_for_update: bool=True) -> Optional[ContributorExport]:
+                       check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
         logger.info('contributor_export from job {action}'.format(action=job.action_type))
@@ -308,7 +289,7 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def automatic_update(current_date: datetime.date=datetime.date.today()) -> None:
+def automatic_update(current_date: datetime.date = datetime.date.today()) -> None:
     logger.info('automatic_update')
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))

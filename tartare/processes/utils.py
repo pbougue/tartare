@@ -26,15 +26,17 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Callable
 from abc import ABCMeta
+from typing import Callable
 
-PREPROCESSES_POSSIBLE = {}#type: dict
+PREPROCESSES_POSSIBLE = {}  # type: dict
 
-def preprocess_registry(filter: str='contributor') -> Callable:
+
+def preprocess_registry(filter: str = 'contributor') -> Callable:
     def deco(cls: ABCMeta) -> ABCMeta:
         if filter not in PREPROCESSES_POSSIBLE:
             PREPROCESSES_POSSIBLE[filter] = []
         PREPROCESSES_POSSIBLE[filter].append(cls.__name__)
         return cls
+
     return deco
