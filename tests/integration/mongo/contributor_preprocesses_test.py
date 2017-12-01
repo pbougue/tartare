@@ -87,7 +87,7 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
@@ -95,17 +95,17 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
         gridfs_id = r["exports"][0]["gridfs_id"]
 
@@ -130,23 +130,23 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
         gridfs_id = r["exports"][0]["gridfs_id"]
 
@@ -164,23 +164,23 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
         gridfs_id = r["exports"][0]["gridfs_id"]
 
@@ -206,24 +206,24 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
         gridfs_id = r["exports"][0]["gridfs_id"]
 
@@ -256,11 +256,11 @@ class TestGtfsAgencyProcess(TartareFixture):
 class TestComputeDirectionsProcess(TartareFixture):
     def __do_export(self):
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-01-15')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         return r['jobs'][0]
 
@@ -425,11 +425,11 @@ class TestComputeExternalSettings(TartareFixture):
                 self.assert_sucessful_call(raw, 201)
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         return r['jobs'][0]
 
@@ -536,7 +536,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1

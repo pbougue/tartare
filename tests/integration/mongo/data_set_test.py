@@ -42,19 +42,19 @@ class TestDatasetApi(TartareFixture):
     def test_post_dataset_of_unknown_contributor(self):
         raw = self.post('/contributors/unknown/data_sources/unknown/data_sets')
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"] == "Bad contributor unknown"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"] == "Data source unknown not found for contributor id_test."
 
     def test_post_dataset_without_file(self, data_source):
         raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"] == "No file provided."
 
     def test_post_dataset_with_bad_file_param(self, data_source):
@@ -63,13 +63,13 @@ class TestDatasetApi(TartareFixture):
                             params={'bad_param': file},
                             headers={})
             assert raw.status_code == 400
-            r = self.to_json(raw)
+            r = self.json_to_dict(raw)
             assert r["error"] == 'File provided with bad param ("file" param expected).'
 
     def test_post_dataset(self, data_source):
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
         self.assert_sucessful_call(raw)
-        ds = self.to_json(raw)['data_sources'][0]
+        ds = self.json_to_dict(raw)['data_sources'][0]
         assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
         assert ds['fetch_started_at'] is None
         assert ds['updated_at'] is None
@@ -79,7 +79,7 @@ class TestDatasetApi(TartareFixture):
                             params={'file': file},
                             headers={})
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["data_sets"]) == 1
         assert 'id' in r['data_sets'][0]
 
@@ -89,7 +89,7 @@ class TestDatasetApi(TartareFixture):
 
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
         self.assert_sucessful_call(raw)
-        ds = self.to_json(raw)['data_sources'][0]
+        ds = self.json_to_dict(raw)['data_sources'][0]
         assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None

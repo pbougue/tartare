@@ -286,7 +286,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         response = self.full_export('id_test', 'jdr', '2017-08-10')
         self.assert_sucessful_call(response, 201)
 
-        job_details = self.get_job_details(self.to_json(response)['job']['id'])
+        job_details = self.get_job_details(self.json_to_dict(response)['job']['id'])
 
         assert job_details['state'] == 'failed'
         assert job_details['error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'
@@ -393,7 +393,7 @@ class TestFusioExportPreprocess(TartareFixture):
 
         raw = self.get('coverages/{coverage_id}/exports'.format(coverage_id=coverage['id']))
         self.assert_sucessful_call(raw)
-        exports = self.to_json(raw).get('exports')
+        exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
         resp = self.get('/coverages/{coverage_id}/exports/{export_id}/files/{gridfs_id}'.

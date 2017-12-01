@@ -111,7 +111,7 @@ class TestDataPublisher(TartareFixture):
             self.assert_sucessful_call(resp, 201)
 
         # List contributor export
-        r = self.to_json(self.get("/contributors/fr-idf/exports"))
+        r = self.json_to_dict(self.get("/contributors/fr-idf/exports"))
         exports = r["exports"]
         assert len(exports) == 1
         assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
@@ -123,7 +123,7 @@ class TestDataPublisher(TartareFixture):
         assert data_sources[0]["validity_period"]
 
         # List coverage export
-        r = self.to_json(self.get("/coverages/default/exports"))
+        r = self.json_to_dict(self.get("/coverages/default/exports"))
         exports = r["exports"]
         assert len(exports) == 1
         assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
@@ -420,8 +420,8 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.full_export(contributor_id, cov_id)
 
-        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
-        job = self.to_json(resp)['jobs'][0]
+        resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
+        job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'publish_data preproduction navitia', print(job)
         assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
             job)
@@ -447,8 +447,8 @@ class TestDataPublisher(TartareFixture):
 
         post_mock.assert_called_once()
 
-        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
-        job = self.to_json(resp)['jobs'][0]
+        resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
+        job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'publish_data production navitia', print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
@@ -483,8 +483,8 @@ class TestDataPublisher(TartareFixture):
 
         assert post_mock.call_count == 2
 
-        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
-        job = self.to_json(resp)['jobs'][0]
+        resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
+        job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'publish_data production navitia', print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
@@ -518,8 +518,8 @@ class TestDataPublisher(TartareFixture):
 
         assert post_mock.call_count == 3
 
-        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
-        job = self.to_json(resp)['jobs'][0]
+        resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
+        job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'publish_data production navitia', print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
@@ -548,8 +548,8 @@ class TestDataPublisher(TartareFixture):
 
         assert post_mock.call_count == 0
 
-        resp = self.get("/jobs/{}".format(self.to_json(resp)['job']['id']))
-        job = self.to_json(resp)['jobs'][0]
+        resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
+        job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'merge', print(job)
         assert job['error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(job)
         assert job['state'] == 'failed', print(job)

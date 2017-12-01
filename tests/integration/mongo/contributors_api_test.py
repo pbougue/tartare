@@ -44,24 +44,24 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 200
         raw = self.get('/contributors/')
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 0
 
     def test_get_contributors_non_exist(self):
         raw = self.get('/contributors/id_test')
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'message' in r
 
     def test_add_contributor_without_id(self):
         raw = self.post('/contributors', '{"name":"whatever", "data_prefix":"any_prefix"}')
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
 
     def test_add_contributor_empty_id(self):
         raw = self.post('/contributors', '{"id": "", "name":"whatever", "data_prefix":"any_prefix"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert 'error' in r
         assert raw.status_code == 400
@@ -72,7 +72,7 @@ class TestContributors(TartareFixture):
     def test_add_contributor_without_data_prefix(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"whatever"}')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert r['error'] == "contributor data_prefix must be specified"
 
@@ -80,7 +80,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert len(r["contributors"]) == 1
         assert isinstance(r["contributors"], list)
@@ -94,7 +94,7 @@ class TestContributors(TartareFixture):
                                          '"data_prefix":"AAA", "data_type": "geographic"}')
         assert raw.status_code == 201
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert len(r["contributors"]) == 1
         assert isinstance(r["contributors"], list)
@@ -107,36 +107,36 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", '
                                          '"data_prefix":"AAA", "data_type": "bob"}')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert r['error'] == {
             'data_type': ['choice "bob" not in possible values (geographic, public_transport).']}
 
     def test_add_contributors_no_id(self):
         raw = self.post('/contributors', '{"name": "name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 0
 
     def test_add_coverage_no_name(self):
         raw = self.post('/contributors', '{"id": "id_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 0
 
     def test_add_coverage_no_prefix(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 0
 
     def test_add_contributors_unique_data_suffix_ok(self):
@@ -145,7 +145,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAB"}')
         assert raw.status_code == 201
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 2
 
     def test_add_contributors_unique_data_suffix_error(self):
@@ -154,14 +154,14 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test2", "name":"name_test2", "data_prefix":"AAA"}')
         assert raw.status_code == 409
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
 
     def test_post_contrib_no_data_source(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         print(r)
         assert raw.status_code == 200
         assert len(r["contributors"][0]["data_sources"]) == 0
@@ -177,7 +177,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 409
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"].startswith("duplicate entry:")
         assert "id" in r["error"]
         assert r["message"] == "Duplicate entry"
@@ -193,7 +193,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 409
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"].startswith("duplicate entry:")
         assert "data_prefix" in r["error"]
         assert r["message"] == "Duplicate entry"
@@ -220,7 +220,7 @@ class TestContributors(TartareFixture):
 
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 409
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["error"].startswith("duplicate entry:")
         assert "data_sources.id" in r["error"]
         assert r["message"] == "Duplicate entry"
@@ -239,7 +239,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test2", "name": "name_test2", "data_prefix":"AAA"}')
         assert raw.status_code == 201
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
 
     def test_update_contributor_name(self):
@@ -247,7 +247,7 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 201
 
         raw = self.patch('/contributors/id_test', '{"name": "new_name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert raw.status_code == 200
         assert r["contributors"][0]['id'] == "id_test"
@@ -263,7 +263,7 @@ class TestContributors(TartareFixture):
 
     def test_update_unknown_coverage(self):
         raw = self.patch('/contributors/unknown', '{"name": "new_name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'message' in r
         assert raw.status_code == 404
 
@@ -272,7 +272,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
         raw = self.patch('/contributors/id_test', '{"id": "bob"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
 
@@ -295,9 +295,9 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
@@ -321,9 +321,9 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
 
@@ -348,9 +348,9 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         assert r["contributors"][0]["data_sources"][0]["service_id"] == "Google-1"
@@ -375,8 +375,8 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 400, print(self.to_json(raw))
-        r = self.to_json(raw)
+        assert raw.status_code == 400, print(self.json_to_dict(raw))
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert r['message'] == 'Invalid arguments'
 
@@ -408,7 +408,7 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', json.dumps(post_data))
         assert raw.status_code == 201
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 2
         assert r["contributors"][0]["data_sources"][0]["id"] != r["contributors"][0]["data_sources"][1]["id"]
@@ -432,11 +432,11 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
         r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         patched_data_source = r["contributors"][0]["data_sources"][0]
@@ -458,7 +458,7 @@ class TestContributors(TartareFixture):
         data_source_list["data_sources"] = [new_data_source]
         print("patching data with ", json.dumps(data_source_list))
         raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         patched_data_source = r["contributors"][0]["data_sources"][0]
@@ -496,7 +496,7 @@ class TestContributors(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
         new_data_source = {
             "id": r["contributors"][0]["data_sources"][1]["id"],
@@ -520,7 +520,7 @@ class TestContributors(TartareFixture):
         ]
         print("patching data with ", json.dumps(data_source_list))
         raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 3
         patched_data_sources = r["contributors"][0]["data_sources"]
@@ -557,12 +557,12 @@ class TestContributors(TartareFixture):
             }
         ]
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
@@ -586,12 +586,12 @@ class TestContributors(TartareFixture):
             }
         ]
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
@@ -614,12 +614,12 @@ class TestContributors(TartareFixture):
             }
         ]
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert raw.status_code == 400, print(r)
         assert "contributors" not in r
         assert "message" in r
@@ -648,7 +648,7 @@ class TestContributors(TartareFixture):
             }
         ]
         raw = self.get('/contributors')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r['contributors']) == 1
         r["contributors"][0]["preprocesses"] = preprocesses
@@ -682,7 +682,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(payload))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r[
                    'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
             missing_id=missing_id)
@@ -725,7 +725,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.patch('/contributors/id_test', json.dumps(payload))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' " \
                              "not found in contributor".format(missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
@@ -768,8 +768,8 @@ class TestContributors(TartareFixture):
         for data_type in DATA_TYPE_VALUES:
             for data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
                 raw = self.__create_contributor(data_type, data_format)
-                assert raw.status_code == 400, print(self.to_json(raw))
-                r = self.to_json(raw)
+                assert raw.status_code == 400, print(self.json_to_dict(raw))
+                r = self.json_to_dict(raw)
                 assert 'error' in r
                 assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
                     format(format=data_format, type=data_type, values=','.join((DATA_FORMAT_BY_DATA_TYPE[data_type])))
@@ -788,7 +788,7 @@ class TestContributors(TartareFixture):
             for other_data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
                 raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
                 self.assert_sucessful_call(raw, 400)
-                r = self.to_json(raw)
+                r = self.json_to_dict(raw)
                 assert 'error' in r
                 assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
                            format(format=other_data_format, type=data_type, values=','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))

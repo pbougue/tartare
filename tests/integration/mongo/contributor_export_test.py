@@ -41,7 +41,7 @@ class TestContributorExport(TartareFixture):
     def test_contributor_export_contributor_not_found(self):
         raw = self.post('/contributors/toto/actions/export', {})
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert r.get('error') == 'Contributor not found: toto'
 
@@ -51,20 +51,20 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/id_test/actions/export', {})
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'job' in r
         job = r.get('job')
         assert job.get('action_type') == ACTION_TYPE_CONTRIBUTOR_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
         raw_job = self.get('/jobs/{}'.format(job['id']))
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
@@ -77,20 +77,20 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/id_test/actions/export', {})
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'job' in r
         job = r.get('job')
         assert job.get('action_type') == ACTION_TYPE_CONTRIBUTOR_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
         raw_job = self.get('contributors/id_test/jobs/{}'.format(job['id']))
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
@@ -118,11 +118,11 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
-        job = self.to_json(raw).get('job')
+        job = self.json_to_dict(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = self.to_json(raw_job)['jobs'][0]
+        job = self.json_to_dict(raw_job)['jobs'][0]
         assert job['state'] == state
         assert job['step'] == step
         if error_message:
@@ -143,11 +143,11 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
         assert raw.status_code == 201
-        job = self.to_json(raw).get('job')
+        job = self.json_to_dict(raw).get('job')
 
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = self.to_json(raw_job)['jobs'][0]
+        job = self.json_to_dict(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
 
     def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
@@ -195,10 +195,10 @@ class TestContributorExport(TartareFixture):
 
         raw = self.post('/contributors/{}/actions/export?current_date={}'.format(cid, "2015-08-10"), {})
         assert raw.status_code == 201
-        job = self.to_json(raw).get('job')
+        job = self.json_to_dict(raw).get('job')
         raw_job = self.get(
             'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=cid, job_id=job['id']))
-        job = self.to_json(raw_job)['jobs'][0]
+        job = self.json_to_dict(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
