@@ -53,13 +53,13 @@ class TestContributorPreProcesses(TartareFixture):
 
         contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
         raw = self.post('/contributors', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.post('/contributors/id_test/preprocesses', json.dumps(post_ps))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/preprocesses')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
@@ -69,7 +69,7 @@ class TestContributorPreProcesses(TartareFixture):
         preprocess_id = r["preprocesses"][0]["id"]
 
         raw = self.get('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == post_ps["type"]
@@ -79,10 +79,10 @@ class TestContributorPreProcesses(TartareFixture):
     def test_preprocess_not_found(self):
         contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
         raw = self.post('/contributors', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/preprocesses/toto')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert raw.status_code == 404, print(r)
 
     def test_post_contrib_one_data_source_with_id(self):
@@ -114,9 +114,9 @@ class TestContributorPreProcesses(TartareFixture):
             }]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         assert r["contributors"][0]["preprocesses"][0]['id'] == 'toto'
@@ -150,9 +150,9 @@ class TestContributorPreProcesses(TartareFixture):
             }]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 1
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
@@ -169,7 +169,7 @@ class TestContributorPreProcesses(TartareFixture):
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["preprocesses"]) == 1
         assert r["preprocesses"][0]["type"] == new_preprocess["type"]
@@ -204,14 +204,14 @@ class TestContributorPreProcesses(TartareFixture):
             }]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         raw = self.delete('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
         self.assert_sucessful_call(raw, 204)
         raw = self.get('/contributors/id_test/preprocesses')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r['preprocesses']) == 0
 
     def test_post_preprocess_with_unknown_type(self):
@@ -221,7 +221,7 @@ class TestContributorPreProcesses(TartareFixture):
 
         contributor = {"id": "id_test", "name": "name_test", "data_prefix": "AAA"}
         raw = self.post('/contributors', json.dumps(contributor))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         post_ps = {
             "type": "bob",
@@ -235,7 +235,7 @@ class TestContributorPreProcesses(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/preprocesses', json.dumps(post_ps))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
@@ -270,7 +270,7 @@ class TestContributorPreProcesses(TartareFixture):
             }]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
@@ -281,7 +281,7 @@ class TestContributorPreProcesses(TartareFixture):
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert raw.status_code == 400, print(r)
         assert 'error' in r
         assert r['error'] == "impossible to build preprocess bob : " \
@@ -324,9 +324,9 @@ class TestContributorPreProcesses(TartareFixture):
             ]}
 
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         raw = self.get('/contributors/id_test/')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         new_preprocess = {
@@ -336,13 +336,13 @@ class TestContributorPreProcesses(TartareFixture):
         }
 
         raw = self.patch('/contributors/id_test/preprocesses/titi', json.dumps(new_preprocess))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         # Update only one preprocess
         assert len(r["preprocesses"]) == 1
 
         raw = self.get('/contributors/id_test')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["preprocesses"]) == 2
         p_titi = None

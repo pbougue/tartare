@@ -55,10 +55,10 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
 
@@ -75,10 +75,10 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         assert r["data_sources"][0]["id"] == 'data_source_id'
@@ -96,10 +96,10 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         assert r["data_sources"][0]["data_format"] == "gtfs"
@@ -121,10 +121,10 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         assert r["data_sources"][0]["data_format"] == "gtfs"
@@ -144,7 +144,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         post_ds = {
             "name": "data_source_name2",
             "input": {
@@ -153,10 +153,10 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 2
         assert r["data_sources"][0]["id"] != r["data_sources"][1]["id"]
@@ -174,7 +174,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        assert raw.status_code == 201, print(self.to_json(raw))
+        assert raw.status_code == 201, print(self.json_to_dict(raw))
         post_ds = {
             "id": "duplicate_id",
             "name": "data_source_name2",
@@ -184,7 +184,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        payload = self.to_json(raw)
+        payload = self.json_to_dict(raw)
         assert raw.status_code == 409, print(payload)
         assert payload['error'] == "Duplicate data_source id 'duplicate_id' for contributor 'id_test'"
 
@@ -196,7 +196,7 @@ class TestDataSources(TartareFixture):
         print("patching data with ", self.dict_to_json(data_source))
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]),
                          self.dict_to_json(data_source))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         patched_data_source = r["data_sources"][0]
@@ -208,7 +208,7 @@ class TestDataSources(TartareFixture):
         """
         modif_ds = {"name": "name_modified"}
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         patched_data_source = r["data_sources"][0]
@@ -221,7 +221,7 @@ class TestDataSources(TartareFixture):
         """
         modif_ds = {"service_id": "Google-1"}
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
         patched_data_source = r["data_sources"][0]
@@ -230,7 +230,7 @@ class TestDataSources(TartareFixture):
     def test_patch_data_source_id(self, data_source):
         modif_ds = {"id": "id_modified"}
         raw = self.patch('/contributors/id_test/data_sources/{}'.format(data_source["id"]), self.dict_to_json(modif_ds))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert raw.status_code == 400, print(r)
         assert r['message'] == 'Invalid arguments'
         assert r['error'] == 'The modification of the id is not possible'
@@ -289,7 +289,7 @@ class TestDataSources(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/contributors/id_test/data_sources')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 3
         patched_data_sources = r["data_sources"]
@@ -326,11 +326,11 @@ class TestDataSources(TartareFixture):
             }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == expected_status_code, print(response)
-        data_source_created = self.to_json(response)
+        data_source_created = self.json_to_dict(response)
         if expected_status_code == 201:
             data_source_raw = self.get('/contributors/{cid}/data_sources/{dsid}'.format(cid=contributor['id'], dsid=
             data_source_created['data_sources'][0]['id']))
-            data_source_from_api = self.to_json(data_source_raw)['data_sources'][0]
+            data_source_from_api = self.json_to_dict(data_source_raw)['data_sources'][0]
 
             with tartare.app.app_context():
                 expected_url = license_url if license_url else tartare.app.config.get('DEFAULT_LICENSE_URL')
@@ -346,7 +346,7 @@ class TestDataSources(TartareFixture):
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == 400, print(response)
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert 'error' in response_payload
         assert response_payload['error'] == 'choice "failed" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
@@ -358,7 +358,7 @@ class TestDataSources(TartareFixture):
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']), self.dict_to_json(data_source))
         assert response.status_code == 400, print(response)
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert {'error': {'input': {'type': [
             'choice "wrong" not in possible values (url, manual, computed).']}},
                    'message': 'Invalid arguments'} == response_payload, print(response_payload)
@@ -372,7 +372,7 @@ class TestDataSources(TartareFixture):
             }
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json(data_source))
-            assert response.status_code == 201, print(self.to_json(response))
+            assert response.status_code == 201, print(self.json_to_dict(response))
 
     def test_post_data_source_valid_input_type(self, contributor):
         for input_type in INPUT_TYPE_VALUES:
@@ -383,7 +383,7 @@ class TestDataSources(TartareFixture):
             }
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json(data_source))
-            assert response.status_code == 201, print(self.to_json(response))
+            assert response.status_code == 201, print(self.json_to_dict(response))
 
     def test_data_source_data_format_default_value(self, contributor):
         data_source = {
@@ -392,7 +392,7 @@ class TestDataSources(TartareFixture):
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json(data_source))
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['data_format'] == DATA_FORMAT_DEFAULT, print(response_payload)
 
@@ -403,7 +403,7 @@ class TestDataSources(TartareFixture):
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json(data_source))
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
 
@@ -415,7 +415,7 @@ class TestDataSources(TartareFixture):
         }
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json(data_source))
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert response.status_code == 201, print(response_payload)
         assert response_payload['data_sources'][0]['input']['type'] == INPUT_TYPE_DEFAULT, print(response_payload)
 
@@ -426,7 +426,7 @@ class TestDataSources(TartareFixture):
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], data_source['id']),
                               self.dict_to_json(pacth))
         assert response.status_code == 400, print(response)
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         assert 'error' in response_payload
         assert response_payload['error'] == 'choice "issues 257" not in possible values {}.'.format(DATA_FORMAT_VALUES)
 
@@ -439,7 +439,7 @@ class TestDataSources(TartareFixture):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json(data_source))
         self.assert_sucessful_call(response, 201)
-        data_source = self.to_json(response)['data_sources'][0]
+        data_source = self.json_to_dict(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == expected_file_name, print(data_source)
 
         new_expected_file_name = 'config_new.json'
@@ -448,13 +448,13 @@ class TestDataSources(TartareFixture):
                               self.dict_to_json({'input': {'expected_file_name': new_expected_file_name}}))
 
         self.assert_sucessful_call(response)
-        data_source = self.to_json(response)['data_sources'][0]
+        data_source = self.json_to_dict(response)['data_sources'][0]
         assert data_source['input']['expected_file_name'] == new_expected_file_name, print(data_source)
 
     def test_data_source_calculated_fields_values_after_posting(self, contributor):
         response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                              self.dict_to_json({"name": "ds-name"}))
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         self.assert_sucessful_call(response, 201)
         ds = response_payload['data_sources'][0]
         assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
@@ -481,10 +481,10 @@ class TestDataSources(TartareFixture):
         response = self.post('/contributors/{}/actions/export?current_date=2015-08-23'.format(contributor.get('id')))
         self.assert_sucessful_call(response, 201)
 
-        job_details = self.get_job_details(self.to_json(response)['job']['id'])
+        job_details = self.get_job_details(self.json_to_dict(response)['job']['id'])
         response = self.get('/contributors/{}/data_sources'.format(contributor.get('id')))
         self.assert_sucessful_call(response)
-        return job_details, self.to_json(response)['data_sources'][0]
+        return job_details, self.json_to_dict(response)['data_sources'][0]
 
     def test_data_source_calculated_fields_values_after_export_ok(self, contributor, init_http_download_server):
         job_details, ds = self.__init_ds_and_export(contributor, init_http_download_server)
@@ -542,14 +542,14 @@ class TestDataSources(TartareFixture):
         for ds_name in ["ds-name1", "ds-name2"]:
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json({"name": ds_name}))
-            response_payload = self.to_json(response)
+            response_payload = self.json_to_dict(response)
             self.assert_sucessful_call(response, 201)
             ds = response_payload['data_sources'][0]
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
         response = self.get('/contributors/{}'.format(contributor['id']))
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         self.assert_sucessful_call(response, 200)
         for ds in response_payload['contributors'][0]['data_sources']:
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
@@ -564,13 +564,13 @@ class TestDataSources(TartareFixture):
             response = self.post('/contributors/{}/data_sources'.format(contrib_id),
                                  self.dict_to_json({"name": "ds-" + contrib_id}))
             self.assert_sucessful_call(response, 201)
-            response_payload = self.to_json(response)
+            response_payload = self.json_to_dict(response)
             ds = response_payload['data_sources'][0]
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
         response = self.get('/contributors')
-        response_payload = self.to_json(response)
+        response_payload = self.json_to_dict(response)
         self.assert_sucessful_call(response, 200)
         for contrib in response_payload['contributors']:
             assert contrib['data_sources'][0]['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED

@@ -38,7 +38,7 @@ class TestCoverageStatus(TartareFixture):
 
         raw = self.get('/coverages')
         self.assert_sucessful_call(raw, 200)
-        return self.to_json(raw)['coverages']
+        return self.json_to_dict(raw)['coverages']
 
     def __run_coverage_export(self, coverage_id):
         raw = self.post('/coverages/' + coverage_id + '/actions/export?current_date=2015-08-10')
@@ -46,7 +46,7 @@ class TestCoverageStatus(TartareFixture):
 
         raw = self.get('/coverages')
         self.assert_sucessful_call(raw, 200)
-        return self.to_json(raw)['coverages']
+        return self.json_to_dict(raw)['coverages']
 
     def __create_contributor(self, ip, id="auto_update_contrib", file='some_archive.zip'):
         contributor = {

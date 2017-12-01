@@ -43,7 +43,7 @@ class TestPreProcesses(TartareFixture):
         owner = 'contributor'
         raw = self.get('/preprocesses?owner={}'.format(owner))
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'preprocesses' in r
         preprocesses = r['preprocesses']
         assert 'coverage' not in preprocesses
@@ -53,7 +53,7 @@ class TestPreProcesses(TartareFixture):
         owner = 'coverage'
         raw = self.get('/preprocesses?owner={}'.format(owner))
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'preprocesses' in r
         preprocesses = r['preprocesses']
         assert 'contributor' not in preprocesses
@@ -62,7 +62,7 @@ class TestPreProcesses(TartareFixture):
     def test_preprocesses_without_owner(self):
         raw = self.get('/preprocesses')
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'preprocesses' in r
         preprocesses = r['preprocesses']
         for owner in PREPROCESSES_POSSIBLE.keys():
@@ -71,6 +71,6 @@ class TestPreProcesses(TartareFixture):
     def test_preprocesses_owner_invalid(self):
         raw = self.get('/preprocesses?owner=abcd')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'message' in r
         assert r['error'] == "The owner argument must be in list ['contributor', 'coverage'], you gave abcd"

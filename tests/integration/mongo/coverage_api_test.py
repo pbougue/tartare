@@ -40,19 +40,19 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 200
         raw = self.get('/coverages/')
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 0
 
     def test_get_coverage_non_exist(self):
         raw = self.get('/coverages/id_test')
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'message' in r
 
     def test_add_coverage_returns_success(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -61,7 +61,7 @@ class TestCoverageApi(TartareFixture):
         assert coverage['last_active_job'] is None
 
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -79,16 +79,16 @@ class TestCoverageApi(TartareFixture):
 
     def test_add_coverage_no_id(self):
         raw = self.post('/coverages', '{"name": "name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 0
 
     def test_add_coverage_empty_id(self):
         raw = self.post('/coverages', '{"id": "", "name": "name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert 'error' in r
         assert raw.status_code == 400
@@ -98,11 +98,11 @@ class TestCoverageApi(TartareFixture):
 
     def test_add_coverage_no_name(self):
         raw = self.post('/coverages', '{"id": "id_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 0
 
     def test_add_coverage_with_name(self):
@@ -110,7 +110,7 @@ class TestCoverageApi(TartareFixture):
                    '{"id": "id_test", "name": "name of the coverage"}')
         assert raw.status_code == 201
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         assert r["coverages"][0]["id"] == "id_test"
@@ -122,7 +122,7 @@ class TestCoverageApi(TartareFixture):
                    "environments" : {"preproduction": {"name": "pre", "sequence": 0}}}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -140,7 +140,7 @@ class TestCoverageApi(TartareFixture):
                     "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
 
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert 'Unknown field name notvalidenv' in r['error']['environments']['_schema']
 
@@ -154,7 +154,7 @@ class TestCoverageApi(TartareFixture):
                         }}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -199,7 +199,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.post('/coverages', self.dict_to_json(post_data))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         expected_error = {
             'error': {
@@ -245,7 +245,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.post('/coverages', self.dict_to_json(post_data))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         expected_error = {
             'error': {
@@ -291,7 +291,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.post('/coverages', self.dict_to_json(post_data))
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -319,7 +319,7 @@ class TestCoverageApi(TartareFixture):
                         '''{"id": "id_test", "name": "name of the coverage"}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         assert r["coverages"][0]["id"] == "id_test"
@@ -327,7 +327,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.patch('/coverages/id_test', '{"name": "new name"}')
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r["coverages"][0]["id"] == "id_test"
         assert r["coverages"][0]["name"] == "new name"
 
@@ -345,7 +345,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages', '{"id": "id_test2", "name": "name_test2"}')
         assert raw.status_code == 201
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
 
     def test_update_coverage_returns_success_status(self):
@@ -353,7 +353,7 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 201
 
         raw = self.patch('/coverages/id_test', '{"name": "new_name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert raw.status_code == 200
         assert r["coverages"][0]['id'] == "id_test"
@@ -361,7 +361,7 @@ class TestCoverageApi(TartareFixture):
 
     def test_update_unknown_coverage(self):
         raw = self.patch('/coverages/unknown', '{"name": "new_name_test"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'message' in r
         assert raw.status_code == 404
 
@@ -370,7 +370,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
         assert raw.status_code == 201
         raw = self.patch('/coverages/id_test', '{"id": "bob"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
         assert raw.status_code == 400
 
@@ -379,7 +379,7 @@ class TestCoverageApi(TartareFixture):
         assert raw.status_code == 201
 
         raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "foo": "bar"}')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         assert raw.status_code == 400
         assert 'error' in r
@@ -394,7 +394,7 @@ class TestCoverageApi(TartareFixture):
 
         raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "environments": {"bar": {"name": "bar"}}}')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
 
     def test_update_coverage_env(self):
@@ -409,7 +409,7 @@ class TestCoverageApi(TartareFixture):
 
         assert raw.status_code == 200
         raw = self.get('/coverages')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
         assert isinstance(r["coverages"], list)
         coverage = r["coverages"][0]
@@ -432,7 +432,7 @@ class TestCoverageApi(TartareFixture):
                          "production": null
                         }}''')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
 
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
@@ -456,7 +456,7 @@ class TestCoverageApi(TartareFixture):
         assert response.status_code == expected_status_code, print(response)
         if expected_status_code == 201:
             coverage_raw = self.get('/coverages/{cid}'.format(cid=coverage['id']))
-            coverage_from_api = self.to_json(coverage_raw)['coverages'][0]
+            coverage_from_api = self.json_to_dict(coverage_raw)['coverages'][0]
 
             with tartare.app.app_context():
                 expected_url = license_url if license_url else tartare.app.config.get('DEFAULT_LICENSE_URL')
@@ -468,27 +468,27 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r['error'] == 'Contributor unknown not found.'
 
     def test_add_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["id_test"]}')
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"][0]['contributors']) == 1
         assert r["coverages"][0]['contributors'][0] == 'id_test'
 
     def test_patch_coverage_with_unknown_contributor(self, coverage):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["unknown"]}')
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r['error'] == 'Contributor unknown not found.'
 
     def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["id_test"]}')
         assert raw.status_code == 200
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["coverages"][0]['contributors']) == 1
         assert r["coverages"][0]['contributors'][0] == 'id_test'
 
@@ -526,17 +526,17 @@ class TestCoverageApi(TartareFixture):
         }
         raw = self.post("/coverages", self.dict_to_json(coverage))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)['coverages'][0]
+        r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
         raw = self.patch('/coverages/' + cov_id, self.dict_to_json({'name': 'toto'}))
         self.assert_sucessful_call(raw, 200)
-        r = self.to_json(raw)['coverages'][0]
+        r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
         raw = self.get('/coverages/{cov_id}'.format(cov_id=cov_id))
         self.assert_sucessful_call(raw, 200)
-        r = self.to_json(raw)['coverages'][0]
+        r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
 
@@ -558,7 +558,7 @@ class TestCoverageApi(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
         assert raw.status_code == 400
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert r == {
             'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
