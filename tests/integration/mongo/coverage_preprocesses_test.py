@@ -31,7 +31,7 @@ import json
 import mock
 
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import get_response
+from tests.utils import get_response, assert_files_equals, _get_file_fixture_full_path
 
 
 class TestFusioDataUpdatePreprocess(TartareFixture):
@@ -327,7 +327,7 @@ class TestFusioExportPreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
     @mock.patch('requests.get')
-    def test_fusio_export_avoid_merge(self, fusio_get, fusio_post, wait_for_action_terminated, init_http_download_server):
+    def test_fusio_export_avoid_merge_and_use_fusio_export_file(self, fusio_get, fusio_post, wait_for_action_terminated, init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -388,3 +388,16 @@ class TestFusioExportPreprocess(TartareFixture):
         assert job['state'] == 'done', print(job)
         assert job['step'] == 'save_coverage_export', print(job)
         assert job['error_message'] == '', print(job)
+
+        fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format('sample_1.zip'))
+
+        raw = self.get('coverages/{coverage_id}/exports'.format(coverage_id=coverage['id']))
+        self.assert_sucessful_call(raw)
+        exports = self.to_json(raw).get('exports')
+        assert len(exports) == 1
+
+        resp = self.get('/coverages/{coverage_id}/exports/{export_id}/files/{gridfs_id}'.
+                        format(coverage_id=coverage['id'], export_id=exports[0]['id'],
+                               gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
+        self.assert_sucessful_call(raw)
+        assert_files_equals(resp.data, fixtures_file)
