@@ -50,7 +50,7 @@ id_gridfs = re.compile(id_gridfs_text)
 
 def check_excepted_data_format(data_format: str, data_type: str) -> None:
     if data_format not in DATA_FORMAT_VALUES:
-        msg = 'choice "{}" not in possible values {}.'.format(data_format, DATA_FORMAT_VALUES)
+        msg = 'choice "{}" not in possible values {}'.format(data_format, DATA_FORMAT_VALUES)
         logging.getLogger(__name__).error(msg)
         raise InvalidArguments(msg)
 
@@ -83,7 +83,7 @@ class JsonDataValidate(object):
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
             if post_data is None:
-                msg = 'request without data.'
+                msg = 'request without data'
                 logging.getLogger(__name__).error(msg)
                 raise UnsupportedMediaType(msg)
             return func(*args, **kwargs)
@@ -100,7 +100,7 @@ class ValidateContributors(object):
                 for contributor_id in post_data.get("contributors"):
                     contributor_model = models.Contributor.get(contributor_id)
                     if not contributor_model:
-                        msg = "Contributor {} not found.".format(contributor_id)
+                        msg = "contributor {} not found".format(contributor_id)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
             return func(*args, **kwargs)
@@ -133,14 +133,14 @@ class CheckContributorIntegrity(object):
             contributor_id = kwargs.get('contributor_id', None)
 
             if self.contributor_id_required and not contributor_id:
-                msg = "contributor_id not present in request."
+                msg = "contributor_id not present in request"
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
 
             if contributor_id:
                 contributor = models.Contributor.get(contributor_id)
                 if not contributor:
-                    msg = "Contributor '{}' not found.".format(contributor_id)
+                    msg = "contributor '{}' not found".format(contributor_id)
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
                 data_type = post_data.get('data_type', contributor.data_type)
@@ -171,12 +171,12 @@ class CheckDataSourceIntegrity(object):
             contributor_id = kwargs.get('contributor_id', None)
             data_source_id = kwargs.get('data_source_id', None)
             if self.data_source_id_required and not data_source_id:
-                msg = "data_source_id not present in request."
+                msg = "data_source_id not present in request"
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
             contributor = models.Contributor.get(contributor_id)
             if not contributor:
-                msg = "Contributor '{}' not found.".format(contributor_id)
+                msg = "contributor '{}' not found".format(contributor_id)
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
             data_type = contributor.data_type
@@ -227,13 +227,13 @@ def validate_post_data_set(func: Callable) -> Any:
             raise ObjectNotFound(str(e))
 
         if data_source is None:
-            raise ObjectNotFound("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+            raise ObjectNotFound("data source {} not found for contributor {}".format(data_source_id, contributor_id))
 
         if not request.files:
-            raise InvalidArguments('No file provided.')
+            raise InvalidArguments('no file provided')
 
         if 'file' not in request.files:
-            raise InvalidArguments('File provided with bad param ("file" param expected).')
+            raise InvalidArguments('file provided with bad param ("file" param expected)')
 
         return func(*args, **kwargs)
 
@@ -251,40 +251,40 @@ class validate_file_params(object):
             environment_id = kwargs.get("environment_id")
 
             if not id_gridfs.match(file_id):
-                msg = "Invalid file id, you give {}".format(file_id)
+                msg = "invalid file id, you give {}".format(file_id)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidArguments(msg)
 
             if export_id and not id_format.match(export_id):
-                msg = "Invalid export id, you give {}".format(export_id)
+                msg = "invalid export id, you give {}".format(export_id)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidArguments(msg)
 
             if not coverage_id and not contributor_id:
-                msg = "Invalid argument, required argument contributor_id or coverage_id"
+                msg = "invalid argument, required argument contributor_id or coverage_id"
                 logging.getLogger(__name__).error(msg)
                 raise InvalidArguments(msg)
 
             if coverage_id:
                 coverage = models.Coverage.get(coverage_id)
                 if not coverage:
-                    msg = "Coverage not found."
+                    msg = "coverage not found"
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
                 if environment_id:
                     environment = coverage.get_environment(environment_id)
                     if not environment:
-                        msg = "Environment not found."
+                        msg = "environment not found"
                         logging.getLogger(__name__).error(msg)
                         raise ObjectNotFound(msg)
                     if environment.current_ntfs_id != file_id:
-                        msg = "Environment file not found."
+                        msg = "environment file not found"
                         logging.getLogger(__name__).error(msg)
                         raise ObjectNotFound(msg)
                 else:
                     coverage_export = models.CoverageExport.get(coverage_id)
                     if not coverage_export or not next((ce for ce in coverage_export if ce.gridfs_id == file_id), None):
-                        msg = "Coverage export not found."
+                        msg = "coverage export not found"
                         logging.getLogger(__name__).error(msg)
                         raise ObjectNotFound(msg)
 
@@ -292,7 +292,7 @@ class validate_file_params(object):
                 contributor_export = models.ContributorExport.get(contributor_id)
                 if not contributor_export or not next((ce for ce in contributor_export if ce.gridfs_id == file_id),
                                                       None):
-                    msg = "Contributor export not found."
+                    msg = "contributor export not found"
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
 

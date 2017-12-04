@@ -73,4 +73,4 @@ class TestPreProcesses(TartareFixture):
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert 'message' in r
-        assert r['error'] == "The owner argument must be in list ['contributor', 'coverage'], you gave abcd"
+        assert r['error'] == "the owner argument must be in list ['contributor', 'coverage'], you gave abcd"

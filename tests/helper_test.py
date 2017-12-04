@@ -126,4 +126,4 @@ def test_date_from_string():
 def test_date_from_string_invalid():
     with pytest.raises(ValueError) as exec_value:
         date_from_string('ee', 'current_date')
-    assert str(exec_value.value) == 'The current_date argument value is not valid, you gave: ee'
+    assert str(exec_value.value) == 'the current_date argument value is not valid, you gave: ee'

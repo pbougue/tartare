@@ -186,7 +186,7 @@ class TestDataSources(TartareFixture):
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
         payload = self.json_to_dict(raw)
         assert raw.status_code == 409, print(payload)
-        assert payload['error'] == "Duplicate data_source id 'duplicate_id' for contributor 'id_test'"
+        assert payload['error'] == "duplicate data_source id 'duplicate_id' for contributor 'id_test'"
 
     def test_patch_ds_data_source_with_full_contributor(self, data_source):
         """
@@ -233,7 +233,7 @@ class TestDataSources(TartareFixture):
         r = self.json_to_dict(raw)
         assert raw.status_code == 400, print(r)
         assert r['message'] == 'Invalid arguments'
-        assert r['error'] == 'The modification of the id is not possible'
+        assert r['error'] == 'the modification of the id is not possible'
 
     def test_patch_ds_one_data_source_name_of_two_and_add_one(self, contributor):
         """
@@ -348,7 +348,7 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 400, print(response)
         response_payload = self.json_to_dict(response)
         assert 'error' in response_payload
-        assert response_payload['error'] == 'choice "failed" not in possible values {}.'.format(DATA_FORMAT_VALUES)
+        assert response_payload['error'] == 'choice "failed" not in possible values {}'.format(DATA_FORMAT_VALUES)
 
     def test_post_data_source_wrong_input_type(self, contributor):
         data_source = {
@@ -428,7 +428,7 @@ class TestDataSources(TartareFixture):
         assert response.status_code == 400, print(response)
         response_payload = self.json_to_dict(response)
         assert 'error' in response_payload
-        assert response_payload['error'] == 'choice "issues 257" not in possible values {}.'.format(DATA_FORMAT_VALUES)
+        assert response_payload['error'] == 'choice "issues 257" not in possible values {}'.format(DATA_FORMAT_VALUES)
 
     def test_manage_data_source_expected_file_name(self, contributor):
         expected_file_name = 'config.json'

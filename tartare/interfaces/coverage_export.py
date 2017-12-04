@@ -56,7 +56,7 @@ class CoverageExportResource(flask_restful.Resource):
     def post(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            msg = 'Coverage not found: {}'.format(coverage_id)
+            msg = 'coverage not found: {}'.format(coverage_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
         job = self._export(coverage)
@@ -66,7 +66,7 @@ class CoverageExportResource(flask_restful.Resource):
     def get(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            msg = 'Coverage not found: {}'.format(coverage_id)
+            msg = 'coverage not found: {}'.format(coverage_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 

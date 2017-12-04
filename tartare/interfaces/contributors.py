@@ -77,7 +77,7 @@ class Contributor(flask_restful.Resource):
         except DuplicateKeyError as e:
             raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
-            raise InternalServerError('Impossible to add contributor {}'.format(contributor))
+            raise InternalServerError('impossible to add contributor {}'.format(contributor))
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
 
@@ -85,7 +85,7 @@ class Contributor(flask_restful.Resource):
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
-                raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
             result = schema.ContributorSchema().dump(c)
             return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
@@ -94,7 +94,7 @@ class Contributor(flask_restful.Resource):
     def delete(self, contributor_id: str) -> Response:
         c = models.Contributor.delete(contributor_id)
         if c == 0:
-            raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
         return "", 204
 
     @JsonDataValidate()
@@ -122,10 +122,10 @@ class Contributor(flask_restful.Resource):
             raise InvalidArguments(errors)
 
         if 'data_prefix' in request_data and contributor.data_prefix != request_data['data_prefix']:
-            raise InvalidArguments('The modification of the data_prefix is not possible ({} => {})'.format(
+            raise InvalidArguments('the modification of the data_prefix is not possible ({} => {})'.format(
                 contributor.data_prefix, request_data['data_prefix']))
         if 'id' in request_data and contributor.id != request_data['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
 
         upgrade_dict(contributor.data_sources, request_data, "data_sources")
         upgrade_dict(contributor.preprocesses, request_data, "preprocesses")

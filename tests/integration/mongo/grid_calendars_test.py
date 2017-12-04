@@ -73,7 +73,7 @@ def test_post_grid_calendar_returns_non_compliant_file_status(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('error') == 'Non-compliant file(s) : grid_periods.txt.'
+    assert r.get('error') == 'non-compliant file(s) : grid_periods.txt'
 
 
 def test_post_grid_calendar_returns_file_missing_status(app, coverage):
@@ -83,14 +83,14 @@ def test_post_grid_calendar_returns_file_missing_status(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('error') == 'File(s) missing : grid_calendars.txt.'
+    assert r.get('error') == 'file(s) missing : grid_calendars.txt'
 
 
 def test_post_grid_calendar_returns_archive_missing_message(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar')
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('error') == 'The archive is missing.'
+    assert r.get('error') == 'the archive is missing'
 
 
 def test_update_calendar_data_with_last_ntfs_after_post(app, coverage_obj, fixture_dir):

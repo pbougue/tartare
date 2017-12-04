@@ -57,13 +57,13 @@ class DataSource(flask_restful.Resource):
         except (ValueError, DuplicateKeyError) as e:
             raise DuplicateEntry(str(e))
         except PyMongoError:
-            raise InternalServerError('Impossible to add data source.')
+            raise InternalServerError('impossible to add data source')
 
     def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
             if ds is None:
-                raise ObjectNotFound("Data source '{}' not found.".format(data_source_id))
+                raise ObjectNotFound("data source '{}' not found".format(data_source_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -73,7 +73,7 @@ class DataSource(flask_restful.Resource):
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
-                raise ObjectNotFound("Data source '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("data source '{}' not found".format(contributor_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -87,10 +87,10 @@ class DataSource(flask_restful.Resource):
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)
         if errors:
-            raise InvalidArguments("Invalid data, {}".format(errors))
+            raise InvalidArguments("invalid data, {}".format(errors))
 
         if 'id' in request.json and ds[0].id != request.json['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
 
         try:
             models.DataSource.update(contributor_id, data_source_id, request.json)

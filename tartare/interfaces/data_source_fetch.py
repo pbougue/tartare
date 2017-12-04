@@ -44,11 +44,11 @@ class DataSourceFetch(flask_restful.Resource):
             raise ObjectNotFound(str(e))
 
         if not data_source.is_type(INPUT_TYPE_URL) or not data_source.input.url:
-            raise InvalidArguments('Data source type should be {}.'.format(INPUT_TYPE_URL))
+            raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_URL))
 
         try:
             fetch_and_save_dataset(contributor_id, data_source)
         except FetcherException as e:
-            raise InternalServerError('Fetching {} failed: {}'.format(data_source.input.url, str(e)))
+            raise InternalServerError('fetching {} failed: {}'.format(data_source.input.url, str(e)))
 
         return '', 204

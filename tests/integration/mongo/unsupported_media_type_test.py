@@ -16,7 +16,7 @@ class TestUnsupportedMediaType(TartareFixture):
             raw = self.post(root, json.dumps({}), headers=None)
             assert raw.status_code == 415
             r = self.json_to_dict(raw)
-            assert r['error'] == 'request without data.'
+            assert r['error'] == 'request without data'
 
     def test_patchs_without_head(self):
         roots = ['/coverages/jdr/preprocesses/1234',
@@ -26,4 +26,4 @@ class TestUnsupportedMediaType(TartareFixture):
             raw = self.patch(root, json.dumps({}), headers=None)
             assert raw.status_code == 415
             r = self.json_to_dict(raw)
-            assert r['error'] == 'request without data.'
+            assert r['error'] == 'request without data'

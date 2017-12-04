@@ -59,7 +59,7 @@ class ContributorExportResource(Resource, CommonArgs):
     def post(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
-            msg = 'Contributor not found: {}'.format(contributor_id)
+            msg = 'contributor not found: {}'.format(contributor_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 
@@ -70,7 +70,7 @@ class ContributorExportResource(Resource, CommonArgs):
     def get(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
-            msg = 'Contributor not found: {}'.format(contributor_id)
+            msg = 'contributor not found: {}'.format(contributor_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
         exports = ContributorExport.get(contributor_id=contributor.id)

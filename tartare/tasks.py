@@ -206,7 +206,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
             return contributor_export_functions.save_export(contributor, context, current_date)
 
     except FetcherException as exc:
-        msg = 'Contributor export failed{retry_or_not}, error {error}'.format(
+        msg = 'contributor export failed{retry_or_not}, error {error}'.format(
             error=str(exc),
             retry_or_not=' (retrying)' if int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')) else ''
         )

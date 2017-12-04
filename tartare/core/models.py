@@ -207,14 +207,14 @@ class DataSource(object):
     def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
         contributor = Contributor.get(contributor_id)
         if not contributor.data_sources:
-            raise ValueError("Unknown data source id {}.".format(data_source_id))
+            raise ValueError("unknown data source id {}".format(data_source_id))
         data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
         return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
 
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
-            raise ValueError("Duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
+            raise ValueError("duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
         raw_contrib = MongoContributorSchema().dump(contributor).data
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
@@ -229,7 +229,7 @@ class DataSource(object):
                 return None
             contributor = MongoContributorSchema(strict=True).load(raw).data
         else:
-            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
+            raise ValueError("to get data_sources you must provide a contributor_id or a data_source_id")
 
         data_sources = contributor.data_sources
         if data_source_id is not None:
@@ -243,14 +243,14 @@ class DataSource(object):
         data_sources = DataSource.get(contributor_id, data_source_id)
 
         if data_sources is None:
-            raise ValueError("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+            raise ValueError("data source {} not found for contributor {}".format(data_source_id, contributor_id))
 
         return data_sources[0]
 
     @classmethod
     def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
         if data_source_id is None:
-            raise ValueError('A data_source id is required')
+            raise ValueError('a data_source id is required')
         contributor = get_contributor(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
@@ -262,12 +262,12 @@ class DataSource(object):
     def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> 'DataSource':
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
-            raise ValueError('A data_source id is required')
+            raise ValueError('a data_source id is required')
         if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
-            raise ValueError("No data_source id {} exists in contributor with id {}"
+            raise ValueError("no data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
         if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
+            raise ValueError("id from request {} doesn't match id from url {}"
                              .format(tmp_dataset['id'], data_source_id))
 
         # `$` acts as a placeholder of the first match in the list
@@ -335,9 +335,9 @@ class GenericPreProcess(SequenceContainer):
                   ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
         if self.id in [p.id for p in data.preprocesses]:
-            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
+            raise ValueError("duplicate PreProcess id '{}'".format(self.id))
 
         data.preprocesses.append(ref_model_object)
         raw_contrib = mongo_schema().dump(data).data
@@ -350,14 +350,14 @@ class GenericPreProcess(SequenceContainer):
         if object_id is not None:
             data = class_name.get(object_id)
             if data is None:
-                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+                raise ValueError('bad {} {}'.format(class_name.label, object_id))
         elif preprocess_id is not None:
             raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
             if raw is None:
                 return None
             data = mongo_schema(strict=True).load(raw).data
         else:
-            raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
+            raise ValueError("to get preprocess you must provide a contributor_id or a preprocess_id")
 
         preprocesses = data.preprocesses
 
@@ -372,7 +372,7 @@ class GenericPreProcess(SequenceContainer):
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
         nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
         data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
@@ -386,13 +386,13 @@ class GenericPreProcess(SequenceContainer):
                     preprocess_id: str, preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
         if not data:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
         if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
-            raise ValueError("No preprocesses id {} exists in {} with id {}"
+            raise ValueError("no preprocesses id {} exists in {} with id {}"
                              .format(object_id, class_name.label, preprocess_id))
         if 'id' in preprocess and preprocess['id'] != preprocess_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
+            raise ValueError("id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
 
         preprocess['id'] = preprocess_id
@@ -407,7 +407,7 @@ class GenericPreProcess(SequenceContainer):
 class PreProcess(GenericPreProcess):
     def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
         # so it's the one that will need to be saved as a PreProcess
         if contributor_id:
@@ -419,7 +419,7 @@ class PreProcess(GenericPreProcess):
     def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
             coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         if contributor_id:
             return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
         if coverage_id:
@@ -428,9 +428,9 @@ class PreProcess(GenericPreProcess):
     @classmethod
     def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
         if preprocess_id is None:
-            raise ValueError('A preprocess id is required')
+            raise ValueError('a preprocess id is required')
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         if contributor_id:
             return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
         if coverage_id:
@@ -440,10 +440,10 @@ class PreProcess(GenericPreProcess):
     def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
                preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         if preprocess_id is None:
-            raise ValueError('A PreProcess id is required')
+            raise ValueError('a PreProcess id is required')
 
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
 
         if contributor_id:
             return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
@@ -508,7 +508,7 @@ class Contributor(PreProcessContainer):
 def get_contributor(contributor_id: str) -> Contributor:
     contributor = Contributor.get(contributor_id)
     if contributor is None:
-        raise ValueError('Bad contributor {}'.format(contributor_id))
+        raise ValueError('bad contributor {}'.format(contributor_id))
     return contributor
 
 

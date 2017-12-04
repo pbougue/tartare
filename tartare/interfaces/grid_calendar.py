@@ -92,23 +92,23 @@ class GridCalendar(Resource):
     def post(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
+            raise ObjectNotFound("coverage {} not found".format(coverage_id))
 
         if not request.files:
-            raise InvalidArguments('The archive is missing.')
+            raise InvalidArguments('the archive is missing')
         content = request.files['file']
         logger = logging.getLogger(__name__)
         logger.info('content received: {}'.format(content))
         if not is_zipfile(content):
-            raise InvalidArguments('Invalid ZIP.')
+            raise InvalidArguments('invalid ZIP')
         zip_file = ZipFile(content)
         valid_file, missing_files = is_valid_file(zip_file)
         if not valid_file:
-            raise InvalidArguments('File(s) missing : {}.'.format(''.join(missing_files)))
+            raise InvalidArguments('file(s) missing : {}'.format(''.join(missing_files)))
         # check files header
         valid_header, invalid_files = check_files_header(zip_file)
         if not valid_header:
-            raise InvalidArguments('Non-compliant file(s) : {}.'.format(''.join(invalid_files)))
+            raise InvalidArguments('non-compliant file(s) : {}'.format(''.join(invalid_files)))
 
         content.stream.seek(0)
         coverage.save_grid_calendars(content)

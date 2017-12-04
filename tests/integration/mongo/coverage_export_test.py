@@ -40,7 +40,7 @@ class TestCoverageExport(TartareFixture):
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
         assert 'error' in r
-        assert r.get('error') == 'Coverage not found: toto'
+        assert r.get('error') == 'coverage not found: toto'
 
     def test_coverage_export(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
@@ -97,7 +97,7 @@ class TestCoverageExport(TartareFixture):
         assert exports.status_code == 404
         r = self.json_to_dict(exports)
         assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/bob/exports] but did you mean /coverages/<string:coverage_id>/exports or /coverages/<string:coverage_id>/actions/export or /coverages/<string:coverage_id>/jobs ?'
-        assert r['error'] == 'Coverage not found: bob'
+        assert r['error'] == 'coverage not found: bob'
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_save_coverage_export(self, mock_urlretrieve):

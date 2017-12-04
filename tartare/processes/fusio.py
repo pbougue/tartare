@@ -40,10 +40,10 @@ from typing import Optional, Any
 
 def is_running(status: str) -> bool:
     if not status:
-        raise FusioException('Error publishing data on fusio: action not found')
+        raise FusioException('error publishing data on fusio: action not found')
 
     if status.lower() == 'aborted':
-        raise FusioException('Error publishing data on fusio: action aborted')
+        raise FusioException('error publishing data on fusio: action aborted')
     return status.lower() != 'terminated'
 
 
