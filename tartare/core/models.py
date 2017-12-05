@@ -705,8 +705,8 @@ class Historisable(object):
             if num_deleted:
                 gridfs_ids = []  # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
-                for gridf_ids in gridfs_ids:
-                    GridFsHandler().delete_file_from_gridfs(gridf_ids)
+            for gridf_id in gridfs_ids:
+                GridFsHandler().delete_file_from_gridfs(gridf_id)
 
 
 class DataSourceFetched(Historisable):
@@ -960,14 +960,12 @@ class ContributorExport(Historisable):
     mongo_collection = 'contributor_exports'
 
     def __init__(self, contributor_id: str,
-                 gridfs_id: str,
                  validity_period: ValidityPeriod,
                  data_sources: List[ContributorExportDataSource]=None,
                  id: str=None,
                  created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
-        self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
@@ -997,7 +995,6 @@ class ContributorExport(Historisable):
 class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True, required=False)

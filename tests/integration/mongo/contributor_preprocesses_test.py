@@ -107,7 +107,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_call(exports)
         r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -148,7 +148,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_call(exports)
         r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -182,7 +182,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_call(exports)
         r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -225,7 +225,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_call(exports)
         r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
 
@@ -363,7 +363,7 @@ class TestComputeDirectionsProcess(TartareFixture):
 
         with app.app_context():
             export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
+            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
             with ZipFile(new_zip_file, 'r') as new_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     assert_zip_contains_only_txt_files(new_zip_file)

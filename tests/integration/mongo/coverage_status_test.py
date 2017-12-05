@@ -104,7 +104,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['state'] == 'failed', print(last_active_job)
         assert last_active_job['step'] == 'fetching context', print(last_active_job)
         assert last_active_job['error_message'] == \
-               'unable to get any contributor exports since not contributors are attached to coverage {}'.format(
+               'unable to get any contributor exports since no contributors are attached to coverage {}'.format(
                    coverage_id), print(last_active_job)
 
     def test_status_after_success_coverage_export_without_contributor_export(self, init_http_download_server):

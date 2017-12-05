@@ -119,20 +119,6 @@ class TestGetFiles(TartareFixture):
         job = self.json_to_dict(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
 
-
-        raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
-        assert raw.status_code == 200
-        exports = self.json_to_dict(raw).get('exports')
-        assert len(exports) == 1
-
-
-        resp = self.get('/contributors/{contrib_id}/exports/{export_id}/files/{gridfs_id}'.
-                        format(contrib_id=contributor['id'], export_id=exports[0]['id'],
-                               gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
-        assert resp.status_code == 200
-
-        assert_files_equals(resp.data, fixtures_file)
-
         # Get file for contributor export
         raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
         assert raw.status_code == 200
@@ -142,7 +128,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/contributors/{contrib_id}/exports/{export_id}/files/{gridfs_id}'.
                         format(contrib_id=contributor['id'], export_id=exports[0]['id'],
-                               gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
+                               gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
 

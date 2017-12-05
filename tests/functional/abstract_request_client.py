@@ -79,14 +79,14 @@ class AbstractRequestClient:
                 raw = self.delete(resource + '/' + contributor['id'])
                 self.assert_sucessful_call(raw, 204)
 
-    def assert_export_file_equals_ref_file(self, contributor_id, ref_file):
+    def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file):
         # list of exports
         raw = self.get('contributors/{contributor_id}/exports'.format(contributor_id=contributor_id))
         self.assert_sucessful_call(raw)
         exports = self.get_dict_from_response(raw)
         assert "exports" in exports
         assert len(exports["exports"]) == 1
-        gridfs_id = exports["exports"][0]["gridfs_id"]
+        gridfs_id = next(ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
         assert gridfs_id
         export_id = exports["exports"][0]["id"]
         assert export_id

@@ -73,40 +73,16 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        # grid fs id is taken from the first data source
-        # contributor with multiple data sources is not handled yet
-        grid_fs_id = next((data_source.gridfs_id
-                           for data_source in contrib_export_data_sources), None)
-
-        if not grid_fs_id:
-            return None
         contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
             validity_periods, current_date
         ) if len(validity_periods) else None
-        new_gridfs_id = GridFsHandler().copy_file(grid_fs_id)
 
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=new_gridfs_id,
                                    validity_period=contributor_export_validity_period,
                                    data_sources=contrib_export_data_sources)
         export.save()
         return export
     return None
-
-
-def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
-                                      contributor_id: str, data_source_id: str,
-                                      validity_period: models.ValidityPeriod) -> Context:
-    data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                   data_source_id=data_source_id,
-                                                   validity_period=validity_period)
-    data_source_fetched.update_dataset(file, filename)
-    data_source_fetched.save()
-    context.add_contributor_data_source_context(contributor_id=contributor_id,
-                                                data_source_id=data_source_id,
-                                                validity_period=validity_period,
-                                                gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
-    return context
 
 
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:

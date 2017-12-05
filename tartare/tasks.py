@@ -136,7 +136,7 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         publisher = _get_publisher(platform)
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
+        current_ntfs_id = coverage_export.gridfs_id
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
         msg = 'publish data on platform "{type}" failed, {error}'.format(

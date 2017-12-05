@@ -160,7 +160,7 @@ class TestContributorExport(TartareFixture):
         assert raw.status_code == 201
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 3, print(grid_fs_list)
+            assert grid_fs_list.count() == 2, print(grid_fs_list)
 
     def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
@@ -177,7 +177,7 @@ class TestContributorExport(TartareFixture):
         self.assert_sucessful_call(raw, 201)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 5
+            assert grid_fs_list.count() == 3
 
     @pytest.mark.parametrize("filename,path,data_format", [
         ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),
@@ -202,4 +202,4 @@ class TestContributorExport(TartareFixture):
         assert job['state'] == 'done', print(job)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 3
+            assert grid_fs_list.count() == 2
