@@ -761,8 +761,22 @@ class DataSourceFetched(Historisable):
         self.update()
         self.keep_historical(
             app.config.get('HISTORICAL', 3),
-            {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id}
+            {
+                'contributor_id': self.contributor_id,
+                'data_source_id': self.data_source_id,
+                'status': DATA_SOURCE_STATUS_UPDATED
+            }
         )
+        self.clean_intermediates_statuses_until(self.created_at)
+
+    def clean_intermediates_statuses_until(self, last_update_date: datetime) -> None:
+        old_rows = mongo.db[self.mongo_collection].find({
+            'contributor_id': self.contributor_id,
+            'data_source_id': self.data_source_id,
+            'status': {'$ne': DATA_SOURCE_STATUS_UPDATED},
+            'created_at': {'$lt': last_update_date.isoformat()}
+        })
+        self.delete_many([row.get('_id') for row in old_rows])
 
     def is_identical_to(self, file_path: str) -> bool:
         return self.get_md5() == get_md5_content_file(file_path)
