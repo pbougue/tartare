@@ -203,14 +203,6 @@ class DataSource(object):
     def __repr__(self) -> str:
         return str(vars(self))
 
-    @classmethod
-    def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
-        contributor = Contributor.get(contributor_id)
-        if not contributor.data_sources:
-            raise ValueError("unknown data source id {}".format(data_source_id))
-        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
-        return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
-
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
@@ -767,8 +759,10 @@ class DataSourceFetched(Historisable):
         self.set_status(DATA_SOURCE_STATUS_UPDATED)
         self.saved_at = datetime.utcnow()
         self.update()
-        self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
-                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(
+            app.config.get('HISTORICAL', 3),
+            {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id}
+        )
 
     def is_identical_to(self, file_path: str) -> bool:
         return self.get_md5() == get_md5_content_file(file_path)
@@ -974,7 +968,7 @@ class ContributorExport(Historisable):
         raw = MongoContributorExportSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'contributor_id': self.contributor_id})
 
     @classmethod
     def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
@@ -1041,7 +1035,7 @@ class CoverageExport(Historisable):
         raw = MongoCoverageExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'coverage_id': self.coverage_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'coverage_id': self.coverage_id})
 
     @classmethod
     def get(cls, coverage_id: str) -> Optional[List['CoverageExport']]:

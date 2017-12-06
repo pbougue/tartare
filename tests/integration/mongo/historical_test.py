@@ -67,7 +67,6 @@ class TestHistorical(TartareFixture):
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_call(raw, 201)
 
-    @freeze_time("2017-08-10")
     @pytest.mark.parametrize("exports_number", [1, 2, 3, 4, 5])
     def test_historisation(self, contributor, init_http_download_server, exports_number):
         self.__init_contributor_config()
@@ -89,26 +88,31 @@ class TestHistorical(TartareFixture):
             self.full_export('id_test', 'jdr')
 
         with app.app_context():
-            self.assert_data_source_fetched_number('data_source_gtfs', exports_number, DATA_FORMAT_GTFS)
-            self.assert_data_source_fetched_number('data_source_config', exports_number, DATA_FORMAT_DIRECTION_CONFIG)
+            self.assert_data_source_fetched_number('data_source_gtfs', exports_number)
+            self.assert_data_source_fetched_number('data_source_config', exports_number)
             self.assert_contributor_exports_number(exports_number)
             self.assert_coverage_exports_number(exports_number)
+            self.assert_files_number(exports_number)
 
-    def assert_data_source_fetched_number(self, data_source_id, exports_number, data_format):
+    def assert_data_source_fetched_number(self, data_source_id, exports_number):
         raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
             'contributor_id': 'id_test',
             'data_source_id': data_source_id
         })
-        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[data_format])
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL', 3))
 
     def assert_contributor_exports_number(self, exports_number):
         raw = mongo.db[models.ContributorExport.mongo_collection].find({
             'contributor_id': 'id_test'
         })
-        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[DATA_FORMAT_GTFS])
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL', 3))
 
     def assert_coverage_exports_number(self, exports_number):
         raw = mongo.db[models.CoverageExport.mongo_collection].find({
             'coverage_id': 'jdr'
         })
-        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL')[DATA_FORMAT_GTFS])
+        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL', 3))
+
+    def assert_files_number(self, exports_number):
+        raw = mongo.db['fs.files'].find({})
+        assert raw.count() == min(tartare.app.config.get('HISTORICAL', 3), exports_number) * 5
