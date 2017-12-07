@@ -9,7 +9,4 @@ FUSIO_WAIT_FIXED = 1*1000
 CELERY_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-HISTORICAL = {
-    'gtfs': 3,
-    'direction_config': 2
-}
+HISTORICAL = 2

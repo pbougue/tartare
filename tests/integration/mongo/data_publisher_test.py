@@ -117,7 +117,7 @@ class TestDataPublisher(TartareFixture):
         assert exports[0]["validity_period"]["start_date"] == "2015-08-10"
         assert exports[0]["validity_period"]["end_date"] == "2016-08-08"
 
-        assert exports[0]["gridfs_id"]
+        assert exports[0]['data_sources'][0]["gridfs_id"]
         data_sources = exports[0]["data_sources"]
         assert len(data_sources) == 1
         assert data_sources[0]["validity_period"]

@@ -203,14 +203,6 @@ class DataSource(object):
     def __repr__(self) -> str:
         return str(vars(self))
 
-    @classmethod
-    def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
-        contributor = Contributor.get(contributor_id)
-        if not contributor.data_sources:
-            raise ValueError("unknown data source id {}".format(data_source_id))
-        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
-        return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
-
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
@@ -675,8 +667,8 @@ class Historisable(object):
             if num_deleted:
                 gridfs_ids = []  # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
-                for gridf_ids in gridfs_ids:
-                    GridFsHandler().delete_file_from_gridfs(gridf_ids)
+            for gridf_id in gridfs_ids:
+                GridFsHandler().delete_file_from_gridfs(gridf_id)
 
 
 class DataSourceFetched(Historisable):
@@ -737,8 +729,24 @@ class DataSourceFetched(Historisable):
         self.set_status(DATA_SOURCE_STATUS_UPDATED)
         self.saved_at = datetime.utcnow()
         self.update()
-        self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
-                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(
+            app.config.get('HISTORICAL', 3),
+            {
+                'contributor_id': self.contributor_id,
+                'data_source_id': self.data_source_id,
+                'status': DATA_SOURCE_STATUS_UPDATED
+            }
+        )
+        self.clean_intermediates_statuses_until(self.created_at)
+
+    def clean_intermediates_statuses_until(self, last_update_date: datetime) -> None:
+        old_rows = mongo.db[self.mongo_collection].find({
+            'contributor_id': self.contributor_id,
+            'data_source_id': self.data_source_id,
+            'status': {'$ne': DATA_SOURCE_STATUS_UPDATED},
+            'created_at': {'$lt': last_update_date.isoformat()}
+        })
+        self.delete_many([row.get('_id') for row in old_rows])
 
     def is_identical_to(self, file_path: str) -> bool:
         return self.get_md5() == get_md5_content_file(file_path)
@@ -930,14 +938,12 @@ class ContributorExport(Historisable):
     mongo_collection = 'contributor_exports'
 
     def __init__(self, contributor_id: str,
-                 gridfs_id: str,
                  validity_period: ValidityPeriod,
                  data_sources: List[ContributorExportDataSource]=None,
                  id: str=None,
                  created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
-        self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
@@ -946,7 +952,7 @@ class ContributorExport(Historisable):
         raw = MongoContributorExportSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'contributor_id': self.contributor_id})
 
     @classmethod
     def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
@@ -967,7 +973,6 @@ class ContributorExport(Historisable):
 class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True, required=False)
@@ -1014,7 +1019,7 @@ class CoverageExport(Historisable):
         raw = MongoCoverageExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'coverage_id': self.coverage_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'coverage_id': self.coverage_id})
 
     @classmethod
     def get(cls, coverage_id: str) -> Optional[List['CoverageExport']]:

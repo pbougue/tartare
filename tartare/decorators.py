@@ -289,9 +289,9 @@ class validate_file_params(object):
                         raise ObjectNotFound(msg)
 
             if contributor_id:
-                contributor_export = models.ContributorExport.get(contributor_id)
-                if not contributor_export or not next((ce for ce in contributor_export if ce.gridfs_id == file_id),
-                                                      None):
+                contributor_exports = models.ContributorExport.get(contributor_id)
+                if not contributor_exports or not next((ce for ce in contributor_exports if any(
+                                data_source.gridfs_id == file_id for data_source in ce.data_sources)), None):
                     msg = "contributor export not found"
                     logging.getLogger(__name__).error(msg)
                     raise ObjectNotFound(msg)
