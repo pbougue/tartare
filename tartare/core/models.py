@@ -290,36 +290,6 @@ class DataSource(object):
     def is_type(self, type: str) -> bool:
         return self.input.type == type
 
-    @classmethod
-    def get_calculated_attributes(cls, data_source_id: str) \
-            -> Tuple[str, Optional[datetime], Optional[datetime]]:
-
-        """
-        :return: a tuple with (status, fetch_started_at, updated_at) attributes:
-            - status: status of the last try on fetching data
-            - fetch_started_at: datetime at which the last try on fetching data started
-            - updated_at: datetime at which the last fetched data set was valid and inserted in database
-        """
-        last_data_set = DataSourceFetched.get_last(data_source_id, None)
-        status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
-        fetch_started_at = last_data_set.created_at if last_data_set else None
-        if status == DATA_SOURCE_STATUS_UPDATED:
-            updated_at = last_data_set.saved_at
-        elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
-            updated_at = None
-        else:
-            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
-            updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
-        return status, fetch_started_at, updated_at
-
-    @classmethod
-    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
-            -> Tuple[str, Optional[str], Optional[str]]:
-        status, fetch_started_at, updated_at = calculated_attributes
-        return status, \
-               str(fetch_started_at) if fetch_started_at else None, \
-               str(updated_at) if updated_at else None
-
 
 class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
@@ -1076,3 +1046,26 @@ class MongoCoverageExportSchema(Schema):
     @post_load
     def make_coverage_export(self, data: dict) -> CoverageExport:
         return CoverageExport(**data)
+
+
+class CoverageStatus(object):
+    """
+   Calculate following attributes:
+       - status: status of the last try on fetching data
+       - fetch_started_at: datetime at which the last try on fetching data started
+       - updated_at: datetime at which the last fetched data set was valid and inserted in database
+       - validity_period: validity period of the data source
+   """
+    def __init__(self, data_source_id: str) -> None:
+        last_data_set = DataSourceFetched.get_last(data_source_id, None)
+        self.status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
+        self.fetch_started_at = last_data_set.created_at if last_data_set else None
+        self.validity_period = last_data_set.validity_period if last_data_set else None
+        self.updated_at = None
+
+        if self.status == DATA_SOURCE_STATUS_UPDATED:
+            self.updated_at = last_data_set.saved_at
+        else:
+            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
+            self.updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
+            self.validity_period = last_data_set_updated.validity_period if last_data_set_updated else None

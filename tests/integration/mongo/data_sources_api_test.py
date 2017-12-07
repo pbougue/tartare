@@ -460,6 +460,7 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
         assert ds['fetch_started_at'] is None
         assert ds['updated_at'] is None
+        assert ds['validity_period'] is None
 
         # test that calculated fields are not persisted to database
         with app.app_context():
@@ -471,6 +472,7 @@ class TestDataSources(TartareFixture):
             assert 'status' not in data_source
             assert 'fetch_started_at' not in data_source
             assert 'updated_at' not in data_source
+            assert 'validity_period' not in data_source
 
     def __init_ds_and_export(self, contributor, init_http_download_server, do_init=True):
         if do_init:
@@ -493,6 +495,9 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
+        assert ds['validity_period'] == {'start_date': '2015-03-25', 'end_date': '2015-08-26'}
+        assert 'start_date' in ds['validity_period']
+        assert 'end_date' in ds['validity_period']
 
     @mock.patch('tartare.core.fetcher.HttpFetcher.fetch', side_effect=FetcherException('my_message'))
     def test_data_source_calculated_fields_values_after_export_failed(self, fetch_mock, contributor,
@@ -504,6 +509,8 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_FAILED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is None
+        assert ds['validity_period'] is None
+
 
     def test_data_source_calculated_fields_values_after_export_ok_then_unchanged(self, contributor,
                                                                                  init_http_download_server):
@@ -513,12 +520,14 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
+        assert ds['validity_period'] is not None
         new_job_details, new_ds = self.__init_ds_and_export(contributor, init_http_download_server, do_init=False)
         assert new_job_details['step'] == 'save_contributor_export'
         assert new_job_details['state'] == 'done'
         assert new_ds['status'] == DATA_SOURCE_STATUS_UNCHANGED
         assert new_ds['fetch_started_at'] != ds['fetch_started_at']
         assert new_ds['updated_at'] == ds['updated_at']
+        assert new_ds['validity_period'] == ds['validity_period']
 
     def test_data_source_calculated_fields_values_after_export_ok_then_failed(self, contributor,
                                                                               init_http_download_server):
@@ -528,6 +537,7 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
+        assert ds['validity_period'] is not None
         response = self.patch('/contributors/{}/data_sources/{}'.format(contributor['id'], ds['id']),
                               self.dict_to_json({'input': {'url': 'plop'}}))
         self.assert_sucessful_call(response)
@@ -537,6 +547,7 @@ class TestDataSources(TartareFixture):
         assert new_ds['status'] == DATA_SOURCE_STATUS_FAILED
         assert new_ds['fetch_started_at'] != ds['fetch_started_at']
         assert new_ds['updated_at'] == ds['updated_at']
+        assert new_ds['validity_period'] == ds['validity_period']
 
     def test_data_source_calculated_fields_values_after_posting_one_contributor(self, contributor):
         for ds_name in ["ds-name1", "ds-name2"]:
@@ -548,6 +559,7 @@ class TestDataSources(TartareFixture):
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
+            assert ds['validity_period'] is None
         response = self.get('/contributors/{}'.format(contributor['id']))
         response_payload = self.json_to_dict(response)
         self.assert_sucessful_call(response, 200)
@@ -555,6 +567,7 @@ class TestDataSources(TartareFixture):
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
+            assert ds['validity_period'] is None
 
     def test_data_source_calculated_fields_values_after_posting_multi_contributors(self):
         for contrib_id in ["contrib1", "contri2b"]:
@@ -569,6 +582,7 @@ class TestDataSources(TartareFixture):
             assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert ds['fetch_started_at'] is None
             assert ds['updated_at'] is None
+            assert ds['validity_period'] is None
         response = self.get('/contributors')
         response_payload = self.json_to_dict(response)
         self.assert_sucessful_call(response, 200)
@@ -576,6 +590,7 @@ class TestDataSources(TartareFixture):
             assert contrib['data_sources'][0]['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
             assert contrib['data_sources'][0]['fetch_started_at'] is None
             assert contrib['data_sources'][0]['updated_at'] is None
+            assert contrib['data_sources'][0]['validity_period'] is None
 
     @pytest.mark.parametrize("data_format", [
         DATA_FORMAT_OSM_FILE,
