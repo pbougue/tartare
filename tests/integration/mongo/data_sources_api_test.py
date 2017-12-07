@@ -495,7 +495,7 @@ class TestDataSources(TartareFixture):
         assert ds['status'] == DATA_SOURCE_STATUS_UPDATED
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
-        assert ds['validity_period'] is not None
+        assert ds['validity_period'] == {'start_date': '2015-03-25', 'end_date': '2015-08-26'}
         assert 'start_date' in ds['validity_period']
         assert 'end_date' in ds['validity_period']
 

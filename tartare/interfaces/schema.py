@@ -34,11 +34,11 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
-from tartare.core.models import Job
+from tartare.core.models import Job, MongoValidityPeriodSchema, CoverageStatus
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
-    DataSource, MongoPlatformSchema
+    MongoPlatformSchema
 
 not_blank = validate.Length(min=1, error='field cannot be empty')
 
@@ -130,9 +130,9 @@ class DataSourceSchema(MongoDataSourceSchema):
 
     @post_dump()
     def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        data['status'], data['fetch_started_at'], data['updated_at'], data['validity_period'] = DataSource.format_calculated_attributes(
-            DataSource.get_calculated_attributes(data['id'])
-        )
+        coverage_status = CoverageStatus(data['id'])
+        coverage_status_dict = CoverageStatusSchema().dump(coverage_status).data
+        data.update(coverage_status_dict)
 
         return data
 
@@ -161,3 +161,10 @@ class CoverageExportSchema(MongoCoverageExportSchema, NoUnknownFieldMixin):
 
 class DataSourceFetchedSchema(MongoDataSourceFetchedSchema, NoUnknownFieldMixin):
     id = fields.String()
+
+
+class CoverageStatusSchema(Schema):
+    status = fields.String(allow_none=False)
+    fetch_started_at = fields.Date(allow_none=True)
+    updated_at = fields.Date(allow_none=True)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, allow_none=True)
