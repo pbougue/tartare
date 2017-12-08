@@ -6,14 +6,14 @@
 [GtfsAgencyFile](#GtfsAgencyFile)  
 [Ruspell](#Ruspell)  
 
-**COVERAGE PREPROCESSES**
-[FusioDataUpdate](#FusioDataUpdate)
-[FusioImport](#FusioImport)
-[FusioPreprod](#FusioPreprod)
-[FusioExport](#FusioExport)
+**COVERAGE PREPROCESSES**  
+[FusioDataUpdate](#FusioDataUpdate)  
+[FusioImport](#FusioImport)  
+[FusioPreprod](#FusioPreprod)  
+[FusioExport](#FusioExport)  
 
-**COUPLED PREPROCESSES**
-[ExternalSettings](#ExternalSettings)
+**COUPLED PREPROCESSES**  
+[ExternalSettings](#ExternalSettings)  
 
 ## Contributor preprocesses
 
