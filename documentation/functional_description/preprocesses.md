@@ -77,7 +77,7 @@ This preprocess is used to modify **stop_name** from *stops.txt*, such as adding
 ####  How does it work?
 The ***Ruspell*** preprocess is associated to the contributor and will be used only on specific data sources found in **data_source_ids**.  
 This preprocess will use a **ruspell_config** format data source, containing all rules to apply to the data sources being peprocessed.  
-After that, all data sources of **bano_file** format will be used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
+A *geographic* contributor will be also needed, with **bano_files** has data sources. These bano files willbe used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
 At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name**.  
 
 ####  How to use it?
@@ -86,14 +86,15 @@ At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name
 2. Post a *data_source* for this contributor with **ruspell_config** as data format.  
 3. Post a yml as *data_sets* for this data_source.  
 4. Post a *data_source* for this contributor with **gtfs** as data format. 
-5. Post a *data_source* for a geographic contributor with **bano_file** as data format.    
-5. Post a **Ruspell** preprocess for this contributor with :  
+5. Post a *contributor* with a geographic **data_type** .  
+6. Post as many data sources with a **bano_file** as data format for this geographic contributor.
+7. Post a **Ruspell** preprocess for this contributor with :  
     As **links** in **params** :  
         * the *data_source* created on step 2 as **config**  
-        * the *data_source* and the **contributor_id**'s of its owner created on step 5 as **bano**  
+        * the *data_source* and the **contributor_id**'s of its owner created on step 6 as **bano**  
     As **data_source_ids** :  
         * the *data_source* created on step 4, witch will be "preprocessed".  
-7. Launch the export action for this contributor.  
+8. Launch the export action for this contributor.  
 
 ##### Notes
 
