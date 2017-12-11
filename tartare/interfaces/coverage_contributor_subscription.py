@@ -32,46 +32,49 @@ import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
+from tartare.exceptions import IntegrityException
 from tartare.interfaces import schema
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import json_data_validate
+from tartare.decorators import JsonDataValidate
 
 
 class CoverageContributorSubscription(flask_restful.Resource):
-    @json_data_validate()
+    @JsonDataValidate()
     def post(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ObjectNotFound("Coverage {} not found.".format(coverage_id))
+            raise ObjectNotFound("coverage {} not found".format(coverage_id))
 
         if 'id' not in request.json:
-            raise InvalidArguments('Missing contributor_id attribute in request body.')
+            raise InvalidArguments('missing contributor_id attribute in request body')
 
         contributor_id = request.json['id']
 
         contributor = models.Contributor.get(contributor_id=contributor_id)
         if contributor is None:
-            raise ObjectNotFound("Contributor {} not found.".format(contributor_id))
+            raise ObjectNotFound("contributor {} not found".format(contributor_id))
 
         if coverage.has_contributor(contributor):
-            raise DuplicateEntry('Contributor id {} already exists in coverage {}.'
+            raise DuplicateEntry('contributor id {} already exists in coverage {}'
                                  .format(contributor_id, coverage_id))
 
         try:
             coverage.add_contributor(contributor)
-        except (PyMongoError, ValueError) as e:
-            raise InternalServerError('Impossible to update coverage {} with contributor {}.'
+        except (PyMongoError, ValueError):
+            raise InternalServerError('impossible to update coverage {} with contributor {}'
                                       .format(coverage_id, contributor_id))
+        except IntegrityException as e:
+            raise InvalidArguments(str(e))
 
         return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 201
 
     def delete(self, coverage_id: str, contributor_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ObjectNotFound('Unknown coverage id "{}".'.format(coverage_id))
+            raise ObjectNotFound('unknown coverage id "{}"'.format(coverage_id))
 
         if contributor_id not in coverage.contributors:
-            raise ObjectNotFound('Unknown contributor id "{}" attribute in uri.'.format(contributor_id))
+            raise ObjectNotFound('unknown contributor id "{}" attribute in uri'.format(contributor_id))
 
         try:
             coverage.remove_contributor(contributor_id)

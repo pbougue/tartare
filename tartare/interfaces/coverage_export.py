@@ -30,6 +30,7 @@
 import flask_restful
 from flask import Response
 
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import Context
 from tartare.tasks import coverage_export, finish_job
 from tartare.interfaces.schema import JobSchema
@@ -43,15 +44,19 @@ from celery import chain
 class CoverageExportResource(flask_restful.Resource):
     @staticmethod
     def _export(coverage: Coverage) -> Job:
-        job = Job(coverage_id=coverage.id, action_type="coverage_export")
+        job = Job(coverage_id=coverage.id, action_type=ACTION_TYPE_COVERAGE_EXPORT)
         job.save()
-        chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+        try:
+            chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+        except Exception as e:
+            # Exception when celery tasks aren't deferred, they are executed locally by blocking
+            logging.getLogger(__name__).error('Error : {}'.format(str(e)))
         return job
 
     def post(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            msg = 'Coverage not found: {}'.format(coverage_id)
+            msg = 'coverage not found: {}'.format(coverage_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
         job = self._export(coverage)
@@ -61,7 +66,7 @@ class CoverageExportResource(flask_restful.Resource):
     def get(self, coverage_id: str) -> Response:
         coverage = Coverage.get(coverage_id)
         if not coverage:
-            msg = 'Coverage not found: {}'.format(coverage_id)
+            msg = 'coverage not found: {}'.format(coverage_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 

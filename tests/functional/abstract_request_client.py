@@ -77,16 +77,16 @@ class AbstractRequestClient:
 
             for contributor in contributors:
                 raw = self.delete(resource + '/' + contributor['id'])
-                assert raw.status_code == 204, print(raw.content)
+                self.assert_sucessful_call(raw, 204)
 
-    def assert_export_file_equals_ref_file(self, contributor_id, ref_file):
+    def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file):
         # list of exports
         raw = self.get('contributors/{contributor_id}/exports'.format(contributor_id=contributor_id))
         self.assert_sucessful_call(raw)
         exports = self.get_dict_from_response(raw)
         assert "exports" in exports
         assert len(exports["exports"]) == 1
-        gridfs_id = exports["exports"][0]["gridfs_id"]
+        gridfs_id = next(ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
         assert gridfs_id
         export_id = exports["exports"][0]["id"]
         assert export_id
@@ -124,7 +124,7 @@ class AbstractRequestClient:
                         HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         return json_file
 
-    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=10, break_if='done'):
+    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=15, break_if='done'):
         retry = 0
         while retry < nb_retries_max:
             raw = self.get('jobs/' + job_id)
@@ -149,3 +149,15 @@ class AbstractRequestClient:
 
     def assert_sucessful_create(self, raw):
         self.assert_status_is(raw, 201)
+
+    def full_export(self, contributor_id, coverage_id, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+        self.assert_sucessful_create(resp)
+        job_id = self.get_dict_from_response(resp)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
+        self.assert_sucessful_create(resp)
+        job_id = self.get_dict_from_response(resp)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+        return resp

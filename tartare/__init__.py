@@ -31,11 +31,12 @@
 from typing import Any
 
 from celery import Task, Celery
-from flask import Flask, jsonify, Response
-from werkzeug.exceptions import NotFound
 from celery.signals import setup_logging
+from flask import Flask, jsonify, Response
 from flask_pymongo import PyMongo
 from flask_script import Manager
+from werkzeug.exceptions import NotFound
+
 from tartare.helper import configure_logger
 
 app = Flask(__name__)  # type: Flask
@@ -68,6 +69,7 @@ class ContextTask(Task):
     def __call__(self, *args: list, **kwargs: dict) -> Any:
         with app.app_context():
             return Task.__call__(self, *args, **kwargs)
+
 
 celery = Celery(app.import_name)
 celery.conf.update(app.config)

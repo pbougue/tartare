@@ -26,22 +26,22 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from typing import Optional, List
+from typing import Optional
 
 import flask_restful
 from flask import Response
-from flask_restful import abort, request
-from marshmallow import ValidationError
+from flask_restful import request
 from pymongo.errors import PyMongoError, DuplicateKeyError
-
 from tartare.core import models
-from tartare.decorators import json_data_validate
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
+from marshmallow import ValidationError
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.decorators import JsonDataValidate, CheckDataSourceIntegrity
 
 
 class DataSource(flask_restful.Resource):
-    @json_data_validate()
+    @JsonDataValidate()
+    @CheckDataSourceIntegrity()
     def post(self, contributor_id: str) -> Response:
         data_source_schema = schema.DataSourceSchema(strict=True)
         try:
@@ -57,13 +57,13 @@ class DataSource(flask_restful.Resource):
         except (ValueError, DuplicateKeyError) as e:
             raise DuplicateEntry(str(e))
         except PyMongoError:
-            raise InternalServerError('Impossible to add data source.')
+            raise InternalServerError('impossible to add data source')
 
     def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
             if ds is None:
-                raise ObjectNotFound("Data source '{}' not found.".format(data_source_id))
+                raise ObjectNotFound("data source '{}' not found".format(data_source_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
@@ -73,31 +73,30 @@ class DataSource(flask_restful.Resource):
         try:
             nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
             if nb_deleted == 0:
-                raise ObjectNotFound("Data source '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("data source '{}' not found".format(contributor_id))
         except ValueError as e:
             raise InvalidArguments(str(e))
 
         return {'data_sources': []}, 204
 
-    @json_data_validate()
-    def patch(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
+    @JsonDataValidate()
+    @CheckDataSourceIntegrity(data_source_id_required=True)
+    def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
         ds = models.DataSource.get(contributor_id, data_source_id)
-        if len(ds) != 1:
-            abort(404)
 
         schema_data_source = schema.DataSourceSchema(partial=True)
         errors = schema_data_source.validate(request.json, partial=True)
         if errors:
-            raise InvalidArguments("Invalid data, {}".format(errors))
+            raise InvalidArguments("invalid data, {}".format(errors))
 
         if 'id' in request.json and ds[0].id != request.json['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
 
         try:
-            data_source = models.DataSource.update(contributor_id, data_source_id, request.json)
+            models.DataSource.update(contributor_id, data_source_id, request.json)
         except ValueError as e:
             raise InvalidArguments(str(e))
-        except PyMongoError as e:
+        except PyMongoError:
             raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump([data_source]).data}, 200
+        return self.get(contributor_id, data_source_id)

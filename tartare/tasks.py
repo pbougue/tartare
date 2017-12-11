@@ -44,9 +44,11 @@ from tartare.core import calendar_handler, models
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
+from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer
+from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
+    ContributorExport
 from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
 from tartare.exceptions import FetcherException
 from tartare.helper import upload_file
@@ -92,25 +94,6 @@ class CallbackTask(tartare.ContextTask):
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
 
 
-@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_file_to_tyr_and_discard(self: Task, coverage_id: str, environment_type: str, file_id: str) -> None:
-    coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].publication_platforms[0].url
-    grifs_handler = GridFsHandler()
-    file = grifs_handler.get_file_from_gridfs(file_id)
-    logging.debug('file: %s', file)
-    logger.info('trying to send %s to %s', file.filename, url)
-    # TODO: how to handle timeout?
-    try:
-        response = upload_file(url, file.filename, file)
-        if response.status_code != 200:
-            raise self.retry()
-        else:
-            grifs_handler.delete_file_from_gridfs(file_id)
-    except:
-        logging.exception('error')
-
-
 def _get_publisher(platform: Platform) -> AbstractPublisher:
     from tartare import navitia_publisher, stop_area_publisher, ods_publisher
     publishers_by_type = {
@@ -153,7 +136,7 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         publisher = _get_publisher(platform)
         publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
         # Upgrade current_ntfs_id
-        current_ntfs_id = gridfs_handler.copy_file(coverage_export.gridfs_id)
+        current_ntfs_id = coverage_export.gridfs_id
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, Exception) as exc:
         msg = 'publish data on platform "{type}" failed, {error}'.format(
@@ -176,7 +159,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
     grid_calendars_file = coverage.get_grid_calendars()
     if grid_calendars_file:
         with tempfile.TemporaryDirectory() as tmpdirname:
-            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip' \
+            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip'
                                             .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
             logger.debug("Working to generate [{}]".format(output_ntfs_file))
             _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
@@ -195,10 +178,10 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor, job: Job, current_date: datetime.date,
-                       check_for_update: bool = True) -> Context:
+                       check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
         models.Job.update(job_id=job.id, state="running", step="fetching data")
-        logger.info('contributor_export')
+        logger.info('contributor_export from job {action}'.format(action=job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
             contributor)
@@ -207,6 +190,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
+            models.Job.update(job_id=job.id, state="running", step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
             models.Job.update(job_id=job.id, state="running", step="preprocess")
             context = launch(contributor.preprocesses, context)
@@ -219,19 +203,10 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
 
             # insert export in mongo db
             models.Job.update(job_id=job.id, state="running", step="save_contributor_export")
-            contributor_export_functions.save_export(contributor, context, current_date)
-            coverages = [coverage for coverage in models.Coverage.all() if coverage.has_contributor(contributor)]
-            actions = []
-            if coverages:
-                actions.append(coverage_export.s(context, coverages[0], job))
-                for coverage in coverages[1:]:
-                    # Launch coverage export
-                    actions.append(coverage_export.s(coverage, job))
-                context = chain(*actions).apply().get()
-            return context
+            return contributor_export_functions.save_export(contributor, context, current_date)
 
     except FetcherException as exc:
-        msg = 'Contributor export failed{retry_or_not}, error {error}'.format(
+        msg = 'contributor export failed{retry_or_not}, error {error}'.format(
             error=str(exc),
             retry_or_not=' (retrying)' if int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')) else ''
         )
@@ -243,7 +218,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor, j
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
-    logger.info('coverage_export')
+    logger.info('coverage_export from job {action}'.format(action=job.action_type))
     try:
         context.instance = 'coverage'
         models.Job.update(job_id=job.id, state="running", step="fetching context")
@@ -260,25 +235,26 @@ def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) 
 
         # insert export in mongo db
         models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
-        coverage_export_functions.save_export(coverage, context)
-        actions = []
-        # launch publish for all environment
-        sorted_environments = {}
-        # flip env: object in object: env
-        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
-        # sort envs
-        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
-        # restore mapping
-        for environment in raw_sorted_environments:
-            sorted_environments[flipped_environments[environment]] = environment
-        for env in sorted_environments:
-            environment = coverage.get_environment(env)
-            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-            for platform in sorted_publication_platforms:
-                actions.append(publish_data_on_platform.si(platform, coverage, env, job))
-        if actions:
-            # "get" method forces to check for publish statuses
-            chain(*actions).apply().get()
+        export = coverage_export_functions.save_export(coverage, context)
+        if export:
+            actions = []
+            # launch publish for all environment
+            sorted_environments = {}
+            # flip env: object in object: env
+            flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+            # sort envs
+            raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+            # restore mapping
+            for environment in raw_sorted_environments:
+                sorted_environments[flipped_environments[environment]] = environment
+            for env in sorted_environments:
+                environment = coverage.get_environment(env)
+                sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
+                for platform in sorted_publication_platforms:
+                    actions.append(publish_data_on_platform.si(platform, coverage, env, job))
+            if actions:
+                # "get" method forces to check for publish statuses
+                chain(*actions).apply().get()
         return context
     except Exception as exc:
         msg = 'coverage export failed, error {}'.format(str(exc))
@@ -313,11 +289,29 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 
 
 @celery.task()
-def automatic_update() -> None:
+def automatic_update(current_date: datetime.date = datetime.date.today()) -> None:
+    logger.info('automatic_update')
     contributors = models.Contributor.all()
     logger.info("fetching {} contributors".format(len(contributors)))
+    updated_contributors = []
     for contributor in contributors:
         # launch contributor export
-        job = models.Job(contributor_id=contributor.id, action_type="automatic_update")
+        job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         job.save()
-        chain(contributor_export.si(Context(), contributor, job, datetime.date.today()), finish_job.si(job.id)).delay()
+        action_export = contributor_export.si(Context(), contributor, job, current_date)
+        export = action_export.apply_async().get(disable_sync_subtasks=False)
+        if export:
+            updated_contributors.append(contributor.id)
+        finish_job.si(job.id).delay()
+
+    if updated_contributors:
+        coverages = models.Coverage.all()
+        logger.info("updated_contributors = " + (','.join(updated_contributors)))
+        logger.info("fetching {} coverages".format(len(coverages)))
+        for coverage in coverages:
+            if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
+                job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
+                job.save()
+                chain(coverage_export.si(Context('coverage'), coverage, job), finish_job.si(job.id)).delay()
+    else:
+        logger.info("none of the contributors have been updated")

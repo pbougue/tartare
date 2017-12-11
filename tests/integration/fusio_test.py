@@ -40,14 +40,14 @@ from tartare.processes.fusio import is_running
 def test_is_running_none_status():
     with pytest.raises(FusioException) as excinfo:
         is_running(status=None)
-    assert str(excinfo.value) == "Error publishing data on fusio: action not found"
+    assert str(excinfo.value) == "error publishing data on fusio: action not found"
     assert str(excinfo.typename) == "FusioException"
 
 
 def test_is_running_abort_status():
     with pytest.raises(FusioException) as excinfo:
         is_running(status='aborted')
-    assert str(excinfo.value) == "Error publishing data on fusio: action aborted"
+    assert str(excinfo.value) == "error publishing data on fusio: action aborted"
     assert str(excinfo.typename) == "FusioException"
 
 

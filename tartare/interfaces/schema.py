@@ -28,12 +28,19 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from typing import Optional, List
 
-from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
-    DataSource
+from marshmallow import Schema, fields, post_load, validates_schema, ValidationError, post_dump, validate
+
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
+    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
+from tartare.core.models import Job, MongoValidityPeriodSchema, CoverageStatus
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
+    MongoPlatformSchema
+
+not_blank = validate.Length(min=1, error='field cannot be empty')
 
 
 class NoUnknownFieldMixin(Schema):
@@ -41,10 +48,20 @@ class NoUnknownFieldMixin(Schema):
     def check_unknown_fields(self, data: dict, original_data: dict) -> None:
         for key in original_data:
             if key not in self.fields:
-                raise ValidationError('Unknown field name {}'.format(key))
+                raise ValidationError('unknown field name {}'.format(key))
+
+
+class PlatformSchema(MongoPlatformSchema):
+    @post_dump()
+    def remove_password(self, data: dict) -> dict:
+        password = data.get('options', {}).get('authent', {}).get('password', {})
+        if password:
+            data['options']['authent'].pop('password')
+        return data
 
 
 class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
+    publication_platforms = fields.Nested(PlatformSchema, many=True)
     current_ntfs_id = fields.String(allow_none=True, dump_only=True)
 
 
@@ -55,7 +72,7 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
 
 
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
-    id = fields.String(required=True)
+    id = fields.String(required=True, validate=not_blank)
     # we have to override nested field to add validation on input
     environments = fields.Nested(EnvironmentListSchema)
     # read only
@@ -65,21 +82,63 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     def make_coverage(self, data: dict) -> Coverage:
         return Coverage(**data)
 
+    @post_dump
+    def add_last_active_job(self, data: dict) -> dict:
+        def job_get_last(is_coverage: bool, id: str, action_types: List[str]) -> Optional['Job']:
+            filter = {
+                'action_type': {'$in': action_types},
+                'coverage_id' if is_coverage else 'contributor_id': id
+            }
+
+            return Job.get_last(filter)
+
+        def get_last_active_job(data: dict) -> Optional['Job']:
+            job_coverage = job_get_last(True, data['id'],
+                                        [ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT])
+
+            # if a coverage export is launched, no contributor export is done so we return the last coverage's job
+            # -------------------------------------- Coverage export ---------------------------------------------------
+            # --------- no contributor export ------------ | -------- coverage export 20/11/2017 -----------------------
+            if job_coverage and job_coverage.action_type == ACTION_TYPE_COVERAGE_EXPORT:
+                return job_coverage
+
+            for contributor_id in data['contributors']:
+                job_contributor = job_get_last(False, contributor_id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
+                if job_contributor:
+                    if job_coverage:
+                        # ----------------------------------- Automatic update -----------------------------------------
+                        # ------- contributor export 23/11/2017 ---- | ------ existing coverage export 20/11/2017 ------
+                        if job_contributor.has_failed() and job_contributor.started_at > job_coverage.started_at:
+                            return job_contributor
+
+                    # No coverage export has succeeded
+                    # ------------------------------------ Automatic update --------------------------------------------
+                    # --------- contributor export failed -----------| ---------------- no coverage export -------------
+                    elif job_contributor.has_failed():
+                        return job_contributor
+
+            return job_coverage
+
+        last_active_job = get_last_active_job(data)
+        data['last_active_job'] = None if last_active_job is None else JobSchema(strict=True).dump(last_active_job).data
+
+        return data
+
 
 class DataSourceSchema(MongoDataSourceSchema):
     id = fields.String()
 
     @post_dump()
     def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        data['status'], data['fetch_started_at'], data['updated_at'] = DataSource.format_calculated_attributes(
-            DataSource.get_calculated_attributes(data['id'])
-        )
+        coverage_status = CoverageStatus(data['id'])
+        coverage_status_dict = CoverageStatusSchema().dump(coverage_status).data
+        data.update(coverage_status_dict)
 
         return data
 
 
 class ContributorSchema(MongoContributorSchema):
-    id = fields.String()
+    id = fields.String(validate=not_blank)
 
     data_sources = fields.Nested(DataSourceSchema, many=True, required=False)
 
@@ -102,3 +161,10 @@ class CoverageExportSchema(MongoCoverageExportSchema, NoUnknownFieldMixin):
 
 class DataSourceFetchedSchema(MongoDataSourceFetchedSchema, NoUnknownFieldMixin):
     id = fields.String()
+
+
+class CoverageStatusSchema(Schema):
+    status = fields.String(allow_none=False)
+    fetch_started_at = fields.Date(allow_none=True)
+    updated_at = fields.Date(allow_none=True)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, allow_none=True)

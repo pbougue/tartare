@@ -32,13 +32,13 @@
 from tartare import app
 from flask_restful import Api
 
+from tartare.interfaces.automatic_update import AutomaticUpdateResource
 from tartare.interfaces.data_source_fetch import DataSourceFetch
 from tartare.interfaces.status import Status
 from tartare.interfaces.index import Index
 from tartare.interfaces.coverages import Coverage
 from tartare.interfaces.contributors import Contributor
 from tartare.interfaces.grid_calendar import GridCalendar
-from tartare.interfaces.data_update import DataUpdate, CoverageData
 from tartare.interfaces.data_sources import DataSource
 from tartare.interfaces.data_set import DataSet
 from tartare.interfaces.coverage_contributor_subscription import CoverageContributorSubscription
@@ -46,7 +46,6 @@ from tartare.interfaces.contributor_export import ContributorExportResource
 from tartare.interfaces.coverage_export import CoverageExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
-from tartare.interfaces.data_publisher import DataPublisher
 from tartare.interfaces.files import File
 from tartare.interfaces.preprocesses import PreProcesses
 
@@ -93,14 +92,6 @@ api.add_resource(GridCalendar,
                  coverage_and_id + '/grid_calendar',
                  endpoint='grid_calendar')
 
-api.add_resource(DataUpdate,
-                 coverage_and_id + environment_and_type + '/data_update',
-                 endpoint='data_update')
-
-api.add_resource(CoverageData,
-                 coverage_and_id + environment_and_type + '/data/<string:data_type>',
-                 endpoint='data')
-
 api.add_resource(Contributor,
                  contributor,
                  contributor_and_id,
@@ -131,6 +122,9 @@ api.add_resource(ContributorExportResource,
                  contributor_and_id + export_and_id,
                  contributor_and_id + '/actions/export')
 
+api.add_resource(AutomaticUpdateResource,
+                 '/actions/automatic_update')
+
 api.add_resource(Job,
                  '/jobs',
                  contributor_and_id + '/jobs',
@@ -143,8 +137,5 @@ api.add_resource(Job,
 api.add_resource(CoverageExportResource,
                  coverage_and_id + '/exports',
                  coverage_and_id + '/actions/export')
-
-api.add_resource(DataPublisher,
-                 coverage_and_id + environment_and_id + '/actions/publish')
 
 api.add_resource(PreProcesses, '/preprocesses')

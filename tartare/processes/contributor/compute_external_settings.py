@@ -32,11 +32,12 @@ import os
 import shutil
 import tempfile
 import zipfile
-from typing import List
 
 from gridfs import GridOut
+from typing import List
 
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
+    DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
@@ -117,8 +118,10 @@ class ComputeExternalSettings(AbstractContributorProcess):
                                        'STIF:StopPoint:Q:{}:'.format(row[self.stop_extensions_object_code_column]))
 
     def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter) -> None:
-        lines_referential_data_source_context = self.context.get_contributor_data_source_context(
-            self.contributor_id, self.params['links'].get('lines_referential'))
+        links = self.params.get('links')
+        lines_referential_data_source_context = self.context.get_data_source_context_in_links(
+            links, DATA_FORMAT_LINES_REFERENTIAL
+        )
         reader = JsonReader()
         reader.load_json_data_from_io(
             self.gfs.get_file_from_gridfs(lines_referential_data_source_context.gridfs_id),
@@ -136,8 +139,10 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 '{nb} lines in Codifligne are not in the GTFS'.format(nb=nb_lines_not_in_gtfs))
 
     def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter) -> None:
-        tr_perimeter_data_source_context = self.context.get_contributor_data_source_context(
-            self.contributor_id, self.params['links'].get('tr_perimeter'))
+        links = self.params.get('links')
+        tr_perimeter_data_source_context = self.context.get_data_source_context_in_links(
+            links, DATA_FORMAT_TR_PERIMETER
+        )
         reader = JsonReader()
         reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])
@@ -185,26 +190,17 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
             return self.__save_csv_files_as_data_set(tmp_csv_workspace)
 
-    def __check_config(self) -> None:
+    def __check_target_data_source(self) -> None:
         if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
             raise ParameterException('target_data_source_id missing in preprocess config')
-        links_to_check = ['tr_perimeter', 'lines_referential']
-
-        for param in links_to_check:
-            data_source_id = self.get_link(param)
-            data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
-                                                                                          data_source_id)
-            if not data_source_config_context:
-                raise ParameterException(
-                    'link {data_source_id} is not a data_source id present in contributor'.format(
-                        data_source_id=data_source_id))
         if not self.context.get_contributor_data_source_context(self.contributor_id,
                                                                 self.params['target_data_source_id']):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
                 self.params['target_data_source_id']))
 
     def do(self) -> Context:
-        self.__check_config()
+        self.__check_target_data_source()
+        self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,

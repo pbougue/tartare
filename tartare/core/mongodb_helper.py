@@ -40,7 +40,7 @@ def upgrade_dict(source: Union[List[DataSource], List[PreProcess]], request_data
     map_model = {
         "data_sources": DataSourceSchema,
         "preprocesses": PreProcessSchema
-    } #type: Dict[str, Union[Type[DataSourceSchema], Type[PreProcessSchema]]]
+    }  # type: Dict[str, Union[Type[DataSourceSchema], Type[PreProcessSchema]]]
     existing_id = [d.id for d in source]
     logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
     # constructing PATCH data

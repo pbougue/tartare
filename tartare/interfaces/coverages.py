@@ -32,11 +32,11 @@ from typing import Optional
 import flask_restful
 from flask import Response
 from flask import request
-from marshmallow import MarshalResult, ValidationError
+from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import json_data_validate, validate_contributors, validate_patch_coverages
+from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -44,17 +44,8 @@ from tartare.processes.processes import PreProcessManager
 
 
 class Coverage(flask_restful.Resource):
-    def _hide_password_in_coverage_response(self, response: dict) -> dict:
-        for env_name, env_def in response.get('environments', []).items():
-            for (pub_idx, publication_platform) in enumerate(env_def.get('publication_platforms', [])):
-                if 'options' in publication_platform and 'authent' in publication_platform['options'] and \
-                        publication_platform['options']['authent']:
-                    response['environments'][env_name]['publication_platforms'][pub_idx]['options']['authent'].pop(
-                        'password', None)
-        return response
-
-    @json_data_validate()
-    @validate_contributors()
+    @JsonDataValidate()
+    @ValidateContributors()
     def post(self) -> Response:
         coverage_schema = schema.CoverageSchema(strict=True)
         post_data = request.json
@@ -73,44 +64,41 @@ class Coverage(flask_restful.Resource):
         try:
             coverage.save()
         except DuplicateKeyError:
-            raise DuplicateEntry("Coverage {} already exists.".format(request.json['id']))
-        except PyMongoError as e:
-            raise InternalServerError('Impossible to add coverage.')
+            raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
+        except PyMongoError:
+            raise InternalServerError('impossible to add coverage')
 
-        return {'coverages': coverage_schema.dump([coverage], many=True).data}, 201
+        response, status = self.get(coverage.id)
+        return response, 201
 
     def get(self, coverage_id: Optional[str]=None) -> Response:
         if coverage_id:
             c = models.Coverage.get(coverage_id)
             if c is None:
-                raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+                raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
 
             result = schema.CoverageSchema().dump(c)
-            result = MarshalResult(data=self._hide_password_in_coverage_response(result.data), errors=result.errors)
             return {'coverages': [result.data]}, 200
 
-        coverages = schema.CoverageSchema(many=True).dump(models.Coverage.all())
-        processed_coverages = []
-        for coverage in coverages.data:
-            processed_coverages.append(self._hide_password_in_coverage_response(coverage))
+        coverages = models.Coverage.all()
 
-        return {'coverages': MarshalResult(data=processed_coverages, errors=coverages.errors).data}, 200
+        return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
 
     def delete(self, coverage_id: str) -> Response:
         c = models.Coverage.delete(coverage_id)
         if c == 0:
-            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
         return "", 204
 
-    @json_data_validate()
-    @validate_contributors()
-    @validate_patch_coverages()
+    @JsonDataValidate()
+    @ValidateContributors()
+    @ValidatePatchCoverages()
     def patch(self, coverage_id: str) -> Response:
         coverage = models.Coverage.get(coverage_id)
         if coverage is None:
-            raise ObjectNotFound("Coverage '{}' not found.".format(coverage_id))
+            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
         if 'id' in request.json and coverage.id != request.json['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
         coverage_schema = schema.CoverageSchema(partial=True)
         errors = coverage_schema.validate(request.json, partial=True)
         if errors:
@@ -120,6 +108,6 @@ class Coverage(flask_restful.Resource):
         try:
             coverage = models.Coverage.update(coverage_id, request.json)
         except PyMongoError:
-            raise InternalServerError('Impossible to update coverage with dataset {}'.format(request.json))
+            raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
 
-        return {'coverages': schema.CoverageSchema().dump([coverage], many=True).data}, 200
+        return self.get(coverage.id)

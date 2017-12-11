@@ -82,12 +82,12 @@ class TestGtfsAgencyProcess(TartareFixture):
         return contrib_payload
 
     def test_gtfs_without_agency_file(self, init_http_download_server):
-        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="some_archive.zip")
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
@@ -95,19 +95,19 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -125,30 +125,30 @@ class TestGtfsAgencyProcess(TartareFixture):
                     assert value == data[0][key]
 
     def test_gtfs_with_agency_file(self, init_http_download_server):
-        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="gtfs_valid.zip")
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_valid.zip')
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -159,31 +159,30 @@ class TestGtfsAgencyProcess(TartareFixture):
                 assert len(data) == 2
 
     def test_gtfs_with_empty_agency_file(self, init_http_download_server):
-        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
-                                              data_set="gtfs_empty_agency_file.zip")
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_empty_agency_file.zip')
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -201,32 +200,32 @@ class TestGtfsAgencyProcess(TartareFixture):
                     assert value == data[0][key]
 
     def test_gtfs_header_only_in_agency_file(self, init_http_download_server):
-        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr,
-                                              data_set="gtfs_header_only_in_agency_file.zip")
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_header_only_in_agency_file.zip')
+
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
 
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
-        r = self.to_json(job)
+        r = self.json_to_dict(job)
         assert r["jobs"][0]['state'] == 'done', print(job)
 
         exports = self.get('/contributors/contrib_id/exports')
         self.assert_sucessful_call(exports)
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["gridfs_id"]
+        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
 
@@ -257,11 +256,11 @@ class TestGtfsAgencyProcess(TartareFixture):
 class TestComputeDirectionsProcess(TartareFixture):
     def __do_export(self):
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-01-15')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         return r['jobs'][0]
 
@@ -269,8 +268,8 @@ class TestComputeDirectionsProcess(TartareFixture):
                                                add_data_source_target=True,
                                                data_set_filename='unsorted_stop_sequences.zip',
                                                do_export=True):
-        url = "http://{ip}/compute_directions/{data_set}".format(ip=init_http_download_server.ip_addr,
-                                                                 data_set=data_set_filename)
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=data_set_filename,
+                              path='compute_directions')
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -313,25 +312,27 @@ class TestComputeDirectionsProcess(TartareFixture):
             return self.__do_export()
 
     @pytest.mark.parametrize(
-        "params", [
-            ({}),
-            ({"config": {}}),
-            ({"config": {"something": "bob"}}),
+        "params, expected_error_message", [
+            ({}, "links missing in preprocess"),
+            ({"links": []}, "empty links in preprocess"),
+            ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
+             "link bob is not a data_source id present in contributor something")
         ])
-    def test_compute_directions_invalid_params(self, params, init_http_download_server_global_fixtures):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+    def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
-        assert job['error_message'] == 'data_source_id missing in preprocess config', print(job)
+        assert job['error_message'] == expected_error_message, print(job)
 
-    def test_compute_directions_missing_ds_config(self, init_http_download_server_global_fixtures):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
-                                                          {"config": {"data_source_id": "ds-config"}},
+    def test_compute_directions_missing_ds_config(self, init_http_download_server):
+        job = self.__setup_contributor_export_environment(init_http_download_server,
+                                                          {"links": [{"contributor_id": "id_test",
+                                                                      "data_source_id": "ds-config"}]},
                                                           add_data_source_config=False)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == \
-               'data_source_id "ds-config" in preprocess config does not belong to contributor', print(job)
+               'link ds-config is not a data_source id present in contributor id_test', print(job)
 
     #
     # Test that:
@@ -349,10 +350,11 @@ class TestComputeDirectionsProcess(TartareFixture):
             # missing column, stop_sequence in order
             ('missing_column.zip', 'compute_directions/expected_trips_missing_column.txt'),
         ])
-    def test_compute_directions(self, init_http_download_server_global_fixtures, data_set_filename,
+    def test_compute_directions(self, init_http_download_server, data_set_filename,
                                 expected_trips_file_name):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
-                                                          {"config": {"data_source_id": "ds-config"}},
+        job = self.__setup_contributor_export_environment(init_http_download_server,
+                                                          {"links": [{"contributor_id": "id_test",
+                                                                      "data_source_id": "ds-config"}]},
                                                           data_set_filename=data_set_filename)
 
         assert job['state'] == 'done', print(job)
@@ -361,7 +363,7 @@ class TestComputeDirectionsProcess(TartareFixture):
 
         with app.app_context():
             export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.gridfs_id)
+            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
             with ZipFile(new_zip_file, 'r') as new_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     assert_zip_contains_only_txt_files(new_zip_file)
@@ -372,8 +374,9 @@ class TestComputeDirectionsProcess(TartareFixture):
 
 class TestComputeExternalSettings(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
-        url = "http://{ip}/prepare_external_settings/fr-idf-custo-post-fusio-sample.zip".format(
-            ip=init_http_download_server.ip_addr)
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='fr-idf-custo-post-fusio-sample.zip',
+                              path='prepare_external_settings')
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -422,56 +425,61 @@ class TestComputeExternalSettings(TartareFixture):
                 self.assert_sucessful_call(raw, 201)
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)
         return r['jobs'][0]
 
     @pytest.mark.parametrize(
         "params, expected_message", [
             ({}, 'target_data_source_id missing in preprocess config'),
-            ({'target_data_source_id': 'ds-target'}, 'tr_perimeter missing in preprocess links'),
-            ({'target_data_source_id': 'ds-target', 'links': {}},
-             'tr_perimeter missing in preprocess links'),
-            ({'target_data_source_id': 'ds-target', 'links': {'lines_referential': 'something'}},
-             'tr_perimeter missing in preprocess links'),
+            ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess'),
+            ({'target_data_source_id': 'ds-target', 'links': []}, 'empty links in preprocess'),
+            ({'target_data_source_id': 'ds-target', 'links': [{'lines_referential': 'something'}]},
+             'contributor_id missing in links'),
             (
                     {'target_data_source_id': 'ds-target',
-                     'links': {'contributor_trigram': 'OIF', 'tr_perimeter': 'whatever'}},
-                    'link whatever is not a data_source id present in contributor'),
+                     'links': [{'contributor_id': 'id_test', 'data_source_id': 'whatever'}]},
+                    'link whatever is not a data_source id present in contributor id_test'),
         ])
-    def test_prepare_external_settings_missing_config(self, init_http_download_server_global_fixtures, params,
+    def test_prepare_external_settings_missing_config(self, init_http_download_server, params,
                                                       expected_message):
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params)
+        job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     @pytest.mark.parametrize(
         "links, expected_message", [
-            ({}, 'link tr_perimeter_id is not a data_source id present in contributor'),
+            ({}, 'link tr_perimeter_id is not a data_source id present in contributor id_test'),
             ({'tr_perimeter': 'tr_perimeter_id'},
-             'link lines_referential_id is not a data_source id present in contributor'),
+             'link lines_referential_id is not a data_source id present in contributor id_test'),
             ({'lines_referential': 'lines_referential_id'},
-             'link tr_perimeter_id is not a data_source id present in contributor'),
+             'link tr_perimeter_id is not a data_source id present in contributor id_test'),
         ])
-    def test_prepare_external_settings_invalid_links(self, init_http_download_server_global_fixtures, links,
+    def test_prepare_external_settings_invalid_links(self, init_http_download_server, links,
                                                      expected_message):
         params = {'target_data_source_id': 'ds-target',
-                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures, params, links)
+                  'links': [
+                      {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
+                      {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
+                  ]}
+        job = self.__setup_contributor_export_environment(init_http_download_server, params, links)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
         assert job['error_message'] == expected_message, print(job)
 
-    def test_prepare_external_settings(self, init_http_download_server_global_fixtures):
+    def test_prepare_external_settings(self, init_http_download_server):
         params = {'target_data_source_id': 'ds-target',
-                  'links': {'tr_perimeter': 'tr_perimeter_id', 'lines_referential': 'lines_referential_id'}}
+                  'links': [
+                      {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
+                      {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
+                  ]}
         links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
-        job = self.__setup_contributor_export_environment(init_http_download_server_global_fixtures,
+        job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           params, links)
         assert job['state'] == 'done', print(job)
         assert job['step'] == 'save_contributor_export', print(job)
@@ -523,16 +531,15 @@ class TestHeadsignShortNameProcess(TartareFixture):
         return contrib_payload
 
     def test_headsign_short_name(self, init_http_download_server):
-        url = "http://{ip}/{data_set}".format(ip=init_http_download_server.ip_addr, data_set="headsign_short_name.zip")
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename='headsign_short_name.zip')
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
-        r = self.to_json(raw)

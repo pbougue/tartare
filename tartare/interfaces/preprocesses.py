@@ -46,6 +46,6 @@ class PreProcesses(Resource):
         if not owner:
             return {'preprocesses': PREPROCESSES_POSSIBLE}, 200
         if owner not in PREPROCESSES_POSSIBLE:
-            raise InvalidArguments("The owner argument must be in list {}, you gave {}".format(
+            raise InvalidArguments("the owner argument must be in list {}, you gave {}".format(
                 list(PREPROCESSES_POSSIBLE.keys()), owner))
         return {'preprocesses': {owner: PREPROCESSES_POSSIBLE[owner]}}, 200

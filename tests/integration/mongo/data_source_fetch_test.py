@@ -46,28 +46,28 @@ class TestDataSourceFetchAction(TartareFixture):
     def test_fetch_with_unknown_contributor(self):
         raw = self.post('/contributors/unknown/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
-        r = self.to_json(raw)
-        assert r["error"] == "Bad contributor unknown"
+        r = self.json_to_dict(raw)
+        assert r["error"] == "bad contributor unknown"
 
     def test_fetch_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
-        r = self.to_json(raw)
-        assert r["error"] == "Data source unknown not found for contributor id_test."
+        r = self.json_to_dict(raw)
+        assert r["error"] == "data source unknown not found for contributor id_test"
 
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename='sample_1.zip')
+        url = self.format_url(ip, 'sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        json_response = self.to_json(raw)
+        json_response = self.json_to_dict(raw)
         data_source_id = json_response['data_sources'][0]['id']
 
-        response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
+        raw = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
 
-        assert response.status_code == 204, print(self.to_json(response))
+        self.assert_sucessful_call(raw, 204)
 
         with app.app_context():
             raw = mongo.db[models.DataSourceFetched.mongo_collection].find_one({
@@ -92,14 +92,14 @@ class TestDataSourceFetchAction(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "manual", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        json_response = self.to_json(raw)
+        json_response = self.json_to_dict(raw)
         data_source_id = json_response['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
-        json_response = self.to_json(response)
+        json_response = self.json_to_dict(response)
 
-        assert response.status_code == 400, print(self.to_json(response))
-        assert json_response['error'] == 'Data source type should be url.'
+        assert response.status_code == 400, print(self.json_to_dict(response))
+        assert json_response['error'] == 'data source type should be url'
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
@@ -108,11 +108,11 @@ class TestDataSourceFetchAction(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        json_response = self.to_json(raw)
+        json_response = self.json_to_dict(raw)
         data_source_id = json_response['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
-        json_response = self.to_json(response)
+        json_response = self.json_to_dict(response)
 
-        assert response.status_code == 500, print(self.to_json(response))
-        assert json_response['error'].startswith('Fetching {} failed:'.format(url))
+        assert response.status_code == 500, print(self.json_to_dict(response))
+        assert json_response['error'].startswith('fetching {} failed:'.format(url))

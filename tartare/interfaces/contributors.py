@@ -28,23 +28,27 @@
 # www.navitia.io
 
 from typing import Optional
+
 import flask_restful
 from flask import Response
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from tartare.core import models
 from flask import request
-from tartare.interfaces import schema
 from marshmallow import ValidationError
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.helper import setdefault_ids
+from pymongo.errors import PyMongoError, DuplicateKeyError
+
+from tartare.core import models
 from tartare.core.mongodb_helper import upgrade_dict
-from tartare.decorators import json_data_validate, validate_contributor_prepocesses_data_source_ids
+from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
+    CheckContributorIntegrity
+from tartare.helper import setdefault_ids
+from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
+from tartare.interfaces import schema
 from tartare.processes.processes import PreProcessManager
 
 
 class Contributor(flask_restful.Resource):
-    @json_data_validate()
-    @validate_contributor_prepocesses_data_source_ids()
+    @JsonDataValidate()
+    @ValidateContributorPrepocessesDataSourceIds()
+    @CheckContributorIntegrity()
     def post(self) -> Response:
         post_data = request.json
         if 'data_prefix' not in post_data:
@@ -73,15 +77,15 @@ class Contributor(flask_restful.Resource):
         except DuplicateKeyError as e:
             raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
-            raise InternalServerError('Impossible to add contributor {}'.format(contributor))
+            raise InternalServerError('impossible to add contributor {}'.format(contributor))
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
 
-    def get(self, contributor_id: Optional[str]=None) -> Response:
+    def get(self, contributor_id: Optional[str] = None) -> Response:
         if contributor_id:
             c = models.Contributor.get(contributor_id)
             if c is None:
-                raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
+                raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
             result = schema.ContributorSchema().dump(c)
             return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
@@ -90,17 +94,15 @@ class Contributor(flask_restful.Resource):
     def delete(self, contributor_id: str) -> Response:
         c = models.Contributor.delete(contributor_id)
         if c == 0:
-            raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
+            raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
         return "", 204
 
-    @json_data_validate()
+    @JsonDataValidate()
+    @CheckContributorIntegrity(True)
     def patch(self, contributor_id: str) -> Response:
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error
         contributor = models.Contributor.get(contributor_id)
-        if contributor is None:
-            raise ObjectNotFound("Contributor '{}' not found.".format(contributor_id))
-
         request_data = request.json
         preprocess_dict_list = request_data.get('preprocesses', [])
         data_sources_dict_list = request_data.get('data_sources', [])
@@ -111,7 +113,8 @@ class Contributor(flask_restful.Resource):
 
         PreProcessManager.check_preprocesses_for_instance(preprocess_dict_list, 'contributor')
         existing_data_source_ids = [data_source.id for data_source in contributor.data_sources]
-        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids, 'contributor')
+        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids,
+                                                                 'contributor')
 
         schema_contributor = schema.ContributorSchema(partial=True)
         errors = schema_contributor.validate(request_data, partial=True)
@@ -119,10 +122,10 @@ class Contributor(flask_restful.Resource):
             raise InvalidArguments(errors)
 
         if 'data_prefix' in request_data and contributor.data_prefix != request_data['data_prefix']:
-            raise InvalidArguments('The modification of the data_prefix is not possible ({} => {})'.format(
+            raise InvalidArguments('the modification of the data_prefix is not possible ({} => {})'.format(
                 contributor.data_prefix, request_data['data_prefix']))
         if 'id' in request_data and contributor.id != request_data['id']:
-            raise InvalidArguments('The modification of the id is not possible')
+            raise InvalidArguments('the modification of the id is not possible')
 
         upgrade_dict(contributor.data_sources, request_data, "data_sources")
         upgrade_dict(contributor.preprocesses, request_data, "preprocesses")
@@ -130,6 +133,6 @@ class Contributor(flask_restful.Resource):
         try:
             contributor = models.Contributor.update(contributor_id, request_data)
         except PyMongoError:
-            raise InternalServerError('impossible to update contributor with dataset {}'.format(request_data))
+            raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
 
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200

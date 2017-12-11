@@ -37,7 +37,7 @@ def test_bad_coverage(app):
                '''{"id": "bob"}''')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('error') == 'Coverage unknown not found.'
+    assert r.get('error') == 'coverage unknown not found'
 
 
 def test_missing_contributor_id(app, coverage):
@@ -45,7 +45,7 @@ def test_missing_contributor_id(app, coverage):
                '''{}''')
     r = to_json(raw)
     assert raw.status_code == 400
-    assert r.get('error') == 'Missing contributor_id attribute in request body.'
+    assert r.get('error') == 'missing contributor_id attribute in request body'
 
 
 def test_unknown_contributor(app, coverage):
@@ -53,7 +53,7 @@ def test_unknown_contributor(app, coverage):
                '''{"id": "bob"}''')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('error') == 'Contributor bob not found.'
+    assert r.get('error') == 'contributor bob not found'
 
 
 def test_add_contributor(app, coverage, contributor):
@@ -71,21 +71,21 @@ def test_add_contributor(app, coverage, contributor):
                json.dumps({"id": contributor.get('id')}))
     r = to_json(raw)
     assert raw.status_code == 409
-    assert r.get('error') == 'Contributor id {} already exists in coverage jdr.'.format(contributor.get('id'))
+    assert r.get('error') == 'contributor id {} already exists in coverage jdr'.format(contributor.get('id'))
 
 
 def test_delete_unknown_coverage(app):
     raw = delete(app, '/coverages/jdr/contributors/toto')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('error') == 'Unknown coverage id "jdr".'
+    assert r.get('error') == 'unknown coverage id "jdr"'
 
 
 def test_delete_unknown_contributor(app, coverage, contributor):
     raw = delete(app, '/coverages/jdr/contributors/toto')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('error') == 'Unknown contributor id "toto" attribute in uri.'
+    assert r.get('error') == 'unknown contributor id "toto" attribute in uri'
 
 
 def test_delete_valid_contributor(app, coverage, contributor):

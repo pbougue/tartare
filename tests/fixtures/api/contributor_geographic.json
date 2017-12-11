@@ -1,0 +1,17 @@
+{
+  "data_prefix": "bib",
+  "data_type": "geographic",
+  "data_sources": [
+    {
+      "data_format": "bano_file",
+      "id": "ruspell_bano_file",
+      "input": {
+        "type": "url",
+        "url": "http://{HTTP_SERVER_IP}/ruspell/bano-75.csv"
+      },
+      "name": "Bano Ruspell"
+    }
+  ],
+  "id": "geo",
+  "name": "geo"
+}

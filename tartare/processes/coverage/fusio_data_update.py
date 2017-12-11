@@ -34,6 +34,7 @@ from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource, CoverageExport
+from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
@@ -43,12 +44,19 @@ from tartare.processes.utils import preprocess_registry
 class FusioDataUpdate(AbstractFusioProcess):
     def __get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
         validity_period = data_source_context.validity_period
+
+        # TODO data_source_context should be the entire data source model
+        data_source = DataSource.get_one(contributor.id, data_source_context.data_source_id)
+        if data_source.service_id is None:
+            raise ParameterException('service_id of data source {} of contributor {} should not be null'.format(
+                contributor.id, data_source.id))
+
         return {
             'action': 'dataupdate',
             'contributorexternalcode': contributor.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': data_source_context.data_source_id,
+            'serviceexternalcode': data_source.service_id,
             'libelle': 'unlibelle',
             'DateDebut': Fusio.format_date(validity_period.start_date),
             'DateFin': Fusio.format_date(validity_period.end_date),
@@ -57,16 +65,23 @@ class FusioDataUpdate(AbstractFusioProcess):
 
     def __is_update_needed(self, contributor_id: str, data_source_context: DataSourceContext) -> bool:
         coverage_export = CoverageExport.get_last(self.context.coverage.id)
+        # first coverage export => data update
         if not coverage_export:
             return True
         previous_coverage_contributor = next(
             (coverage_export_contributor for coverage_export_contributor in coverage_export.contributors if
              coverage_export_contributor.contributor_id == contributor_id), None)
+        # contributor is new to the coverage => data update
         if not previous_coverage_contributor:
             return True
         previous_contributor_data_source_grid_fs_id = next(
             (data_source.gridfs_id for data_source in previous_coverage_contributor.data_sources if
              data_source.data_source_id == data_source_context.data_source_id), None)
+        # data source is new to the contributor => data update
+        # OR
+        # data source id of contributor may have changed => data update because no way to know if data has changed too
+        if not previous_contributor_data_source_grid_fs_id:
+            return True
         previous_gtfs = GridFsHandler().get_file_from_gridfs(previous_contributor_data_source_grid_fs_id)
         current_gtfs = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
         return previous_gtfs.md5 != current_gtfs.md5

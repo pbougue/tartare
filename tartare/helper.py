@@ -42,7 +42,7 @@ import requests
 from gridfs.grid_file import GridOut
 from requests import Response
 from datetime import datetime, date
-from typing import Optional, Callable
+from typing import Optional
 
 
 def grid_out_len(self: GridOut) -> int:
@@ -152,4 +152,4 @@ def date_from_string(value: str, name: str) -> date:
     try:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except:
-        raise ValueError("The {} argument value is not valid, you gave: {}".format(name, value))
+        raise ValueError("the {} argument value is not valid, you gave: {}".format(name, value))

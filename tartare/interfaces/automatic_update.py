@@ -28,29 +28,18 @@
 # www.navitia.io
 
 import flask_restful
-import logging
 from flask import Response
-from tartare.core.models import Coverage, Job
-from tartare.tasks import publish_data_on_platform, finish_job
-from tartare.decorators import publish_params_validate
-from celery import chain
-from tartare.interfaces.schema import JobSchema
+
+from tartare.interfaces.common_argrs import CommonArgs
+from tartare.tasks import automatic_update
+import logging
 
 
-class DataPublisher(flask_restful.Resource):
-    @publish_params_validate()
-    def post(self, coverage_id: str, environment_id: str) -> Response:
-        logging.getLogger(__name__).debug('trying to publish data: coverage {}, environment {}'.format(coverage_id,
-                                                                                                       environment_id))
-        coverage = Coverage.get(coverage_id)
-        environment = coverage.get_environment(environment_id)
-        job = Job(coverage_id=coverage_id, action_type="publish_data")
-        job.save()
-        actions = []
-        for platform in environment.publication_platforms:
-            actions.append(publish_data_on_platform.si(platform, coverage, environment_id, job))
-        actions.append(finish_job(job.id))
-        if actions:
-            chain(*actions).delay()
-        job_schema = JobSchema(strict=True)
-        return {'job': job_schema.dump(job).data}, 201
+class AutomaticUpdateResource(flask_restful.Resource, CommonArgs):
+    def post(self) -> Response:
+        try:
+            automatic_update.si(self.get_current_date()).delay()
+        except Exception as e:
+            # Exception when celery tasks aren't deferred, they are executed locally by blocking
+            logging.getLogger(__name__).error('Error : {}'.format(str(e)))
+        return '', 204

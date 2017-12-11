@@ -7,16 +7,21 @@ List of preprocesses for coverages
 This preprocess fixes trips.txt files into one or more gtfs data sources (referenced by data_source_ids) having missing direction_id based upon a provided config file as a data source (referenced by params.config.data_source_id)
 ```json
 {
-    "id": "my-compute-dir-id",
-    "type": "ComputeDirections",
-    "data_source_ids": ["data-source-id-to-preprocess"],
-    "params": {
-        "config": {
-            "data_source_id": "data-source-id-config"
-        }
-    },
-    "sequence": 0
- }
+  "id": "my-compute-dir-id",
+  "type": "ComputeDirections",
+  "data_source_ids": [
+    "data-source-id-to-preprocess"
+  ],
+  "params": {
+    "links": [
+      {
+        "contributor_id": "{cid}",
+        "data_source_id": "data-source-id-config"
+      }
+    ]
+  },
+  "sequence": 0
+}
 ```
 You will then need to provide a json config file (see example in [here](https://github.com/CanalTP/tartare/blob/master/tests/fixtures/compute_directions/config.json)) to the data source identified by "data-source-id-config" by doing:
 ```bash
@@ -71,19 +76,29 @@ see [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell)
 
 ```json
 {
-    "id": "ruspell-id",
-    "type": "Ruspell",
-    "sequence": 1,
-    "data_source_ids": ["id1", "id2"],
-    "params": {
-        "links" : {
-            "config" : "data_source_id_of_ruspell_config",
-            "bano" : [
-                "data_source_id_of_bano-1",
-                "data_source_id_of_bano-2"
-            ]
-        }
-    }
+  "id": "ruspell-id",
+  "type": "Ruspell",
+  "sequence": 1,
+  "data_source_ids": [
+    "id1",
+    "id2"
+  ],
+  "params": {
+    "links": [
+      {
+        "contributor_id": "c1",
+        "data_source_id": "data_source_id_of_ruspell_config"
+      },
+      {
+        "contributor_id": "bano",
+        "data_source_id": "data_source_id_of_bano-1"
+      },
+      {
+        "contributor_id": "bano",
+        "data_source_id": "data_source_id_of_bano-2"
+      }
+    ]
+  }
 }
 ```
 
@@ -145,15 +160,22 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
 #### ComputeExternalSettings (Contributor preprocess)
 ```json
 {
-   "data_source_ids": ["your-gtfs-id"],
-   "id":"compute_ext_settings",
-   "params":{
-      "target_data_source_id": "my_external_settings_data_source_id",
-      "links": {
-        "tr_perimeter": "my-data-source-of-perimeter-json-id",
-        "lines_referential": "my-data-source-of-lines-json-id"
+  "data_source_ids": [
+    "your-gtfs-id"
+  ],
+  "id": "compute_ext_settings",
+  "params": {
+    "target_data_source_id": "my_external_settings_data_source_id",
+    "links": [
+      {
+        "contributor_id": "{cid}",
+        "data_source_id": "my-data-source-of-perimeter-json-id"
+      },
+      {
+        "contributor_id": "{cid_2}",
+        "data_source_id": "my-data-source-of-lines-json-id"
       }
-   },
+   ],
    "type":"ComputeExternalSettings",
    "sequence":0
 }
@@ -167,7 +189,7 @@ by doing
 ```bash
 curl -i -X POST \
   -F "file=@\"./path/to/your_tr_perimeter_file.json\"" \
- 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
+ 'http://{tartare_host}/contributors/{cid_1}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
 ```
 
 and 
@@ -175,7 +197,7 @@ and
 ```bash
 curl -i -X POST \
   -F "file=@\"./path/to/your_lines_referential_file.json\"" \
- 'http://{tartare_host}/contributors/{cid}/data_sources/my-data-source-of-lines-json-id/data_sets'
+ 'http://{tartare_host}/contributors/{cid_2}/data_sources/my-data-source-of-lines-json-id/data_sets'
 ```
 
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  
@@ -197,6 +219,6 @@ __my_external_settings_data_source_id__ must have the "pt_external_settings" **d
 }
 ```
 
-This preprocess will use the "computed" data source from contributor export and send the txt files to fusio.  
+This preprocess will use the "computed" data source from contributor export and send the csv files to fusio
 For now the multi-contributor coverage is not supported so no merge will be done.  
 The usual Fusio coverage preprocesses (DataUpdate,FusioImport,FusioPreprod,FusioExport) are needed for Fusio to use these txt files generated through ComputeExternalSettings.  

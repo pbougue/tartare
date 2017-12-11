@@ -365,89 +365,6 @@ paths:
         200:
           description: Return the data file requested
 
-  /coverages/{coverage_id}/environments/{environment_type}/data_update:
-    post:
-      summary: Handle a file to coverage {coverage_id} for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
-      tags:
-        - data
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: path
-          name: environment_type
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} the DATA will be sent to
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
-          required: true
-      responses:
-        200:
-          description: OK
-          schema:
-            type: object
-            properties:
-              message:
-                type: string
-                example: "Valid fusio file provided : file.zip"
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/environments/{environment_id}/actions/publish:
-    post:
-      summary: Handle a file to coverage {coverage_id} for processing (NTFS, GTFS, OSM, Fare, POI, synonym). (DEPRECATED)
-      tags:
-        - data
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: which we want to publish or somethin
-          required: true
-        - in: path
-          name: environment_id
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} the DATA will be sent to
-          required: true
-      responses:
-        200:
-          description: OK
-          schema:
-            type: object
-            properties:
-              message:
-                type: string
-                example: "OK"
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
   /coverages/{coverage_id}/exports:
     get:
       summary: Display coverage exports
@@ -1285,26 +1202,34 @@ definitions:
       id:
         type: string
         example: jobx
-
       action_type:
         type: string
+        enum: [contributor_export, coverage_export, automatic_update_contributor_export, automatic_update_coverage_export]
         example: contributor_export
       coverage_id:
         type: string
         example: fr-idf
       state:
         type: string
+        description: Status of a step during an export
         example: pending
       step:
         type: string
+        description: "Last action of an export when it failed or succeeded"
         example: fetching data
+      error_message:
+        type: string
+        description: "Error message"
+        example: "error during publishing on http://whatever.fr/pub, status code => 500"
       started_at:
         type: string
         format: date-time
+        description: "Start date of an export"
         example: "2017-05-29T13:37:55.967795+00:00"
       updated_at:
         type: string
         format: date-time
+        description: "Date of the last step that failed or succeeded"
         example: "2017-05-29T13:37:55.967795+00:00"
       contributor_id:
         type: string
@@ -1372,6 +1297,8 @@ definitions:
             },
             sequence: 0
           }
+      last_active_job:
+        $ref: "#/definitions/job"
 
   array_of_strings:
     type: array
@@ -1452,9 +1379,13 @@ definitions:
     properties:
       type:
         type: string
+        enum: ["navitia", "ods", "stop_area"]
+        description: This determines which treatment will be performed on the platforms
         example: ods
       protocol:
         type: string
+        enum: ["http", "ftp"]
+        description: Protocol used to send file
         example: ftp
       url:
         type: string
@@ -1537,8 +1468,16 @@ definitions:
         type: integer
         example: 1
       params:
+        description: Process parameters object.
         type: object
-        example: {config_file: conf_yml, bano_data_ids: [bano_75, bano_91]}
+        example: {
+          links: [
+            {
+              contributor_id: "stif",
+              data_source_id: "ds_stif"
+            }
+          ]
+        }
 
   coverage_preprocess_list:
     type: object
@@ -1677,6 +1616,10 @@ definitions:
       name:
         type: string
         example: Tram feed for Lyon
+      service_id:
+        type: string
+        description: Service id used by FusioDataUpdate preprocess
+        example: Google-1
       data_format:
         type: string
         example: "gtfs"
@@ -1710,6 +1653,9 @@ definitions:
         $ref: "#/definitions/input"
       license:
         $ref: "#/definitions/license"
+      validity_period:
+        $ref: "#/definitions/validity_period"
+
 
   input:
     type: object

@@ -10,7 +10,8 @@ from mongodb_migrations.base import BaseMigration
 class Migration(BaseMigration):
     def _fix_data_sources_missing_data_format(self, data_sources):
         for data_source in data_sources:
-            data_source['data_format'] = 'gtfs'
+            if not data_source.get('data_format'):
+                data_source['data_format'] = 'gtfs'
 
     def upgrade_contributors(self):
         all_contributors = self.db['contributors'].find()

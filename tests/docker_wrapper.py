@@ -27,9 +27,12 @@
 # www.navitia.io
 import logging
 import os
+import subprocess
 from abc import ABCMeta, abstractmethod
 
 import docker
+import pytest
+from docker.errors import APIError
 
 
 class AbstractDocker(metaclass=ABCMeta):
@@ -52,6 +55,9 @@ class AbstractDocker(metaclass=ABCMeta):
     @property
     def volumes_bindings(self):
         return None
+
+    def wait_until_available(self):
+        return
 
     def _remove_temporary_files(self):
         pass
@@ -103,25 +109,27 @@ class AbstractDocker(metaclass=ABCMeta):
             port_bindings=self.port_bindings
         )
 
-        self.container_id = self.docker.create_container(self.image_name, name=self.container_name, ports=self.ports,
+        try:
+            self.container_id = self.docker.create_container(self.image_name, name=self.container_name, ports=self.ports,
                                                          environment=self.env_vars,
                                                          volumes=self.volumes, host_config=host_config).get('Id')
-        self.logger.info("docker id is {}".format(self.container_id))
-        self.logger.info("starting the temporary docker for image {}".format(self.image_name))
-        self.docker.start(self.container_id)
-        self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
-        if not self.ip_addr:
-            self.logger.error("temporary docker {} not started".format(self.container_id))
-            assert False
-        self.logger.info("IP addr is {}".format(self.ip_addr))
+            self.logger.info("docker id is {}".format(self.container_id))
+            self.logger.info("starting the temporary docker for image {}".format(self.image_name))
+            self.docker.start(self.container_id)
+            self.ip_addr = self.docker.inspect_container(self.container_id).get('NetworkSettings', {}).get('IPAddress')
+            if not self.ip_addr:
+                self.logger.error("temporary docker {} not started".format(self.container_id))
+                assert False
+            self.logger.info("IP addr is {}".format(self.ip_addr))
+            self.wait_until_available()
+        except APIError as e:
+            pytest.exit("error during setup of docker container {}, aborting. Details:\n{}".format(self.container_name, str(e)))
 
     def __exit__(self, *args, **kwargs):
-        logging.getLogger(__name__).info("stopping the temporary docker")
         if self.volumes:
             self._remove_temporary_files()
         self.docker.stop(container=self.container_id)
 
-        logging.getLogger(__name__).info("removing the temporary docker")
         self.docker.remove_container(container=self.container_id, v=True)
 
         # test to be sure the docker is removed at the end
@@ -129,7 +137,7 @@ class AbstractDocker(metaclass=ABCMeta):
             if cont['Image'].split(':')[0] == self.image_name:
                 if self.container_id in (name[1:] for name in cont['Names']):
                     self.logger.error("something is strange, the container is still there ...")
-                    exit(1)
+                    exit(2)
 
 
 class DownloadHttpServerDocker(AbstractDocker):
@@ -140,6 +148,14 @@ class DownloadHttpServerDocker(AbstractDocker):
     @property
     def volumes(self):
         return [self.working_dir]
+
+    def wait_until_available(self):
+        self.logger.info("Waiting for container to be available")
+        command = 'wget http://{} --retry-connrefused --tries=5 --wait=1 --spider'.format(self.ip_addr + ':80')
+        process = subprocess.Popen(command.split(), stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+        if process.returncode != 0:
+            raise str(error)
 
     @property
     def container_name(self):
@@ -152,14 +168,13 @@ class DownloadHttpServerDocker(AbstractDocker):
     @property
     def volumes_bindings(self):
         return {
-            os.path.join(self.fixtures_directory, 'gtfs'): {
+            self.fixtures_directory: {
                 'bind': self.working_dir,
                 'mode': 'rw',
             },
         }
 
     def _remove_temporary_files(self):
-        self.logger.info('removing temporary files')
         exec_id = self.docker.exec_create(container=self.container_id,
                                           cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
         self.docker.exec_start(exec_id=exec_id)
@@ -185,7 +200,7 @@ class DownloadFtpServerDocker(AbstractDocker):
     @property
     def volumes_bindings(self):
         return {
-            os.path.join(self.fixtures_directory, 'gtfs'): {
+            self.fixtures_directory: {
                 'bind': self.working_dir,
                 'mode': 'rw',
             },
@@ -193,21 +208,6 @@ class DownloadFtpServerDocker(AbstractDocker):
 
     def _remove_temporary_files(self):
         pass
-
-
-class DownloadHttpServerGlobalDocker(DownloadHttpServerDocker):
-    @property
-    def volumes_bindings(self):
-        return {
-            self.fixtures_directory: {
-                'bind': self.working_dir,
-                'mode': 'rw',
-            },
-        }
-
-    @property
-    def container_name(self):
-        return 'http_download_server_global'
 
 
 class UploadFtpServerDocker(AbstractDocker):

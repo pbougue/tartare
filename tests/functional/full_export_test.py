@@ -65,21 +65,30 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
-        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
+        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id', data_source_id='data_source_to_process_id',
                                                 ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
+        # create contributor with data_type : geographic
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_geographic.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        raw = self.post('contributors/geo/actions/export?current_date=2017-10-02')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
+
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_ruspell.json')
         raw = self.post('contributors', json_file)
         self.assert_sucessful_create(raw)
 
         # launch ruspell preprocess
-        raw = self.post('contributors/AMI/actions/export')
+        raw = self.post('contributors/AMI/actions/export?current_date=2017-10-02')
         job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=15)
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
-        self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip')
+        self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip', data_source_id="Google-1")
 
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
@@ -91,12 +100,10 @@ class TestFullExport(AbstractRequestClient):
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
 
-        raw = self.post('contributors/contributor_id/actions/export')
-        job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+        self.full_export('contributor_id', 'coverage_id')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
-                                                ref_file='compute_directions/functional.zip')
+                                                ref_file='compute_directions/functional.zip', data_source_id="data_source_to_process_id")
 
     def test_exports_combined_two_coverages(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
@@ -113,9 +120,8 @@ class TestFullExport(AbstractRequestClient):
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
 
-        raw = self.post('contributors/contributor_id/actions/export')
-        job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
+        self.full_export('contributor_id', 'coverage_id')
+        self.full_export('contributor_id', 'coverage_id_2')
 
     def test_contrib_export_with_headsign_short_name(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_headsign_short_name.json')
@@ -127,5 +133,5 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
-        self.assert_export_file_equals_ref_file(contributor_id='AMI',
+        self.assert_export_file_equals_ref_file(contributor_id='AMI', data_source_id="Google-1",
                                                 ref_file='headsign_short_name/ref_headsign_short_name.zip')

@@ -28,8 +28,8 @@
 # www.navitia.io
 
 import logging
-from datetime import timedelta, date, datetime
-from typing import Tuple, List
+from datetime import timedelta, date
+from typing import List
 from zipfile import is_zipfile
 
 import numpy as np
@@ -120,7 +120,7 @@ class ValidityPeriodFinder(object):
     def get_validity_period(self, file: str) -> ValidityPeriod:
 
         if not is_zipfile(file):
-            msg = '{} is not a zip file or not exist.'.format(file)
+            msg = '{} is not a zip file or not exist'.format(file)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
@@ -142,7 +142,7 @@ class ValidityPeriodFinder(object):
             self._parse_calendar_dates(file)
 
         if not self.is_start_date_valid() or not self.is_end_date_valid():
-            msg = 'Impossible to find validity period'
+            msg = 'impossible to find validity period'
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
         return ValidityPeriod(self.start_date, self.end_date)
@@ -153,7 +153,7 @@ class ValidityPeriodFinder(object):
                                                 parse_dates=['feed_start_date', 'feed_end_date'],
                                                 date_parser=self.date_parser)
         if self.reader.count_rows() > 1:
-            msg = 'Impossible to find validity period, invalid file {}.'.format(self.feed_info_filename)
+            msg = 'impossible to find validity period, invalid file {}'.format(self.feed_info_filename)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 

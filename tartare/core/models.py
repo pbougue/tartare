@@ -36,14 +36,16 @@ from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tu
 
 import pymongo
 from gridfs import GridOut
-from marshmallow import Schema, post_load, utils, fields, post_dump
+from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED
+    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
+    DATA_TYPE_GEOGRAPHIC
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.exceptions import IntegrityException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -62,20 +64,20 @@ class ChoiceField(fields.Field):
     A Choice field.
     """
     default_error_messages = {
-        'invalid': 'choice "{current_value}" not in possible values {possible_values}.'
+        'invalid': 'choice "{current_value}" not in possible values ({possible_values}).'
     }
 
-    def _serialize(self, value: str, attr: str, _: Any ) -> str:
+    def _serialize(self, value: str, attr: str, _: Any) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=self.possible_values)
+            self.fail('invalid', current_value=value, possible_values=', '.join(self.possible_values))
 
     def _deserialize(self, value: str, attr: str, data: dict) -> str:
         if value in self.possible_values:
             return utils.ensure_text_type(value)
         else:
-            self.fail('invalid', current_value=value, possible_values=self.possible_values)
+            self.fail('invalid', current_value=value, possible_values=', '.join(self.possible_values))
 
 
 class DataFormat(ChoiceField):
@@ -91,6 +93,16 @@ class DataType(ChoiceField):
 class InputType(ChoiceField):
     def __init__(self, **metadata: Any) -> None:
         super().__init__(INPUT_TYPE_VALUES, **metadata)
+
+
+class PlatformType(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(PLATFORM_TYPE_VALUES, **metadata)
+
+
+class PlatformProtocol(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(PLATFORM_PROTOCOL_VALUES, **metadata)
 
 
 SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
@@ -175,30 +187,26 @@ class Input(object):
 
 
 class DataSource(object):
-    def __init__(self, id: Optional[str] = None, name: Optional[str] = None,
+    def __init__(self, id: Optional[str] = None,
+                 name: Optional[str] = None,
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
-                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT), license: Optional[License] = None) -> None:
+                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
+                 license: Optional[License] = None,
+                 service_id: str=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = input
         self.license = license if license else License()
+        self.service_id = service_id
 
     def __repr__(self) -> str:
         return str(vars(self))
 
-    @classmethod
-    def get_number_of_historical(cls, contributor_id: str, data_source_id: str) -> int:
-        contributor = Contributor.get(contributor_id)
-        if not contributor.data_sources:
-            raise ValueError("Unknown data source id {}.".format(data_source_id))
-        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
-        return app.config.get('HISTORICAL', {}).get(data_source.data_format, 3)
-
     def save(self, contributor_id: str) -> None:
         contributor = get_contributor(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
-            raise ValueError("Duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
+            raise ValueError("duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
         raw_contrib = MongoContributorSchema().dump(contributor).data
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
@@ -213,7 +221,7 @@ class DataSource(object):
                 return None
             contributor = MongoContributorSchema(strict=True).load(raw).data
         else:
-            raise ValueError("To get data_sources you must provide a contributor_id or a data_source_id")
+            raise ValueError("to get data_sources you must provide a contributor_id or a data_source_id")
 
         data_sources = contributor.data_sources
         if data_source_id is not None:
@@ -223,18 +231,18 @@ class DataSource(object):
         return data_sources
 
     @classmethod
-    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> Optional['DataSource']:
+    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> 'DataSource':
         data_sources = DataSource.get(contributor_id, data_source_id)
 
         if data_sources is None:
-            raise ValueError("Data source {} not found for contributor {}.".format(data_source_id, contributor_id))
+            raise ValueError("data source {} not found for contributor {}".format(data_source_id, contributor_id))
 
         return data_sources[0]
 
     @classmethod
     def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
         if data_source_id is None:
-            raise ValueError('A data_source id is required')
+            raise ValueError('a data_source id is required')
         contributor = get_contributor(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
@@ -246,12 +254,12 @@ class DataSource(object):
     def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> 'DataSource':
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
-            raise ValueError('A data_source id is required')
+            raise ValueError('a data_source id is required')
         if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
-            raise ValueError("No data_source id {} exists in contributor with id {}"
+            raise ValueError("no data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
         if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
+            raise ValueError("id from request {} doesn't match id from url {}"
                              .format(tmp_dataset['id'], data_source_id))
 
         # `$` acts as a placeholder of the first match in the list
@@ -274,36 +282,6 @@ class DataSource(object):
     def is_type(self, type: str) -> bool:
         return self.input.type == type
 
-    @classmethod
-    def get_calculated_attributes(cls, data_source_id: str) \
-            -> Tuple[str, Optional[datetime], Optional[datetime]]:
-
-        """
-        :return: a tuple with (status, fetch_started_at, updated_at) attributes:
-            - status: status of the last try on fetching data
-            - fetch_started_at: datetime at which the last try on fetching data started
-            - updated_at: datetime at which the last fetched data set was valid and inserted in database
-        """
-        last_data_set = DataSourceFetched.get_last(data_source_id, None)
-        status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
-        fetch_started_at = last_data_set.created_at if last_data_set else None
-        if status == DATA_SOURCE_STATUS_UPDATED:
-            updated_at = last_data_set.saved_at
-        elif status == DATA_SOURCE_STATUS_NEVER_FETCHED:
-            updated_at = None
-        else:
-            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
-            updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
-        return status, fetch_started_at, updated_at
-
-    @classmethod
-    def format_calculated_attributes(cls, calculated_attributes: Tuple[str, Optional[datetime], Optional[datetime]]) \
-            -> Tuple[str, Optional[str], Optional[str]]:
-        status, fetch_started_at, updated_at = calculated_attributes
-        return status, \
-        str(fetch_started_at) if fetch_started_at else None, \
-        str(updated_at) if updated_at else None
-
 
 class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
@@ -319,9 +297,9 @@ class GenericPreProcess(SequenceContainer):
                   ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
         if self.id in [p.id for p in data.preprocesses]:
-            raise ValueError("Duplicate PreProcess id '{}'".format(self.id))
+            raise ValueError("duplicate PreProcess id '{}'".format(self.id))
 
         data.preprocesses.append(ref_model_object)
         raw_contrib = mongo_schema().dump(data).data
@@ -334,14 +312,14 @@ class GenericPreProcess(SequenceContainer):
         if object_id is not None:
             data = class_name.get(object_id)
             if data is None:
-                raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+                raise ValueError('bad {} {}'.format(class_name.label, object_id))
         elif preprocess_id is not None:
             raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
             if raw is None:
                 return None
             data = mongo_schema(strict=True).load(raw).data
         else:
-            raise ValueError("To get preprocess you must provide a contributor_id or a preprocess_id")
+            raise ValueError("to get preprocess you must provide a contributor_id or a preprocess_id")
 
         preprocesses = data.preprocesses
 
@@ -356,7 +334,7 @@ class GenericPreProcess(SequenceContainer):
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
         if data is None:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
         nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
         data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
@@ -370,13 +348,13 @@ class GenericPreProcess(SequenceContainer):
                     preprocess_id: str, preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
         if not data:
-            raise ValueError('Bad {} {}'.format(class_name.label, object_id))
+            raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
         if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
-            raise ValueError("No preprocesses id {} exists in {} with id {}"
+            raise ValueError("no preprocesses id {} exists in {} with id {}"
                              .format(object_id, class_name.label, preprocess_id))
         if 'id' in preprocess and preprocess['id'] != preprocess_id:
-            raise ValueError("Id from request {} doesn't match id from url {}"
+            raise ValueError("id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
 
         preprocess['id'] = preprocess_id
@@ -391,7 +369,7 @@ class GenericPreProcess(SequenceContainer):
 class PreProcess(GenericPreProcess):
     def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
         # so it's the one that will need to be saved as a PreProcess
         if contributor_id:
@@ -403,7 +381,7 @@ class PreProcess(GenericPreProcess):
     def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
             coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         if contributor_id:
             return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
         if coverage_id:
@@ -412,9 +390,9 @@ class PreProcess(GenericPreProcess):
     @classmethod
     def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
         if preprocess_id is None:
-            raise ValueError('A preprocess id is required')
+            raise ValueError('a preprocess id is required')
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
         if contributor_id:
             return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
         if coverage_id:
@@ -424,10 +402,10 @@ class PreProcess(GenericPreProcess):
     def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
                preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
         if preprocess_id is None:
-            raise ValueError('A PreProcess id is required')
+            raise ValueError('a PreProcess id is required')
 
         if not any([coverage_id, contributor_id]):
-            raise ValueError('Bad arguments.')
+            raise ValueError('bad arguments')
 
         if contributor_id:
             return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
@@ -492,7 +470,7 @@ class Contributor(PreProcessContainer):
 def get_contributor(contributor_id: str) -> Contributor:
     contributor = Contributor.get(contributor_id)
     if contributor is None:
-        raise ValueError('Bad contributor {}'.format(contributor_id))
+        raise ValueError('bad contributor {}'.format(contributor_id))
     return contributor
 
 
@@ -583,6 +561,13 @@ class Coverage(PreProcessContainer):
         return contributor.id in self.contributors
 
     def add_contributor(self, contributor: Contributor) -> None:
+        if contributor.data_type == DATA_TYPE_GEOGRAPHIC and any(
+                        Contributor.get(contributor_id).data_type == DATA_TYPE_GEOGRAPHIC for contributor_id in
+                        self.contributors):
+            raise IntegrityException(
+                'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
+            )
+
         self.contributors.append(contributor.id)
         self.update(self.id, {"contributors": self.contributors})
 
@@ -612,8 +597,8 @@ class MongoContributorExportDataSourceSchema(Schema):
 
 
 class MongoPlatformSchema(Schema):
-    type = fields.String(required=True)
-    protocol = fields.String(required=True)
+    type = PlatformType(required=True)
+    protocol = PlatformProtocol(required=True)
     sequence = fields.Integer(required=True)
     url = fields.String(required=True)
     options = fields.Dict(required=False)
@@ -670,7 +655,8 @@ class Historisable(object):
         """Keep only `num` data sources fetched and GridFS for the contributor
 
         Args:
-            num (int): The number of data sources fetched you want to keep
+            :param num: The number of data sources fetched you want to keep
+            :param filter: the filter to apply to the data_sources selected
         """
         old_rows = self.get_all_before_n_last(num, filter)
 
@@ -681,8 +667,8 @@ class Historisable(object):
             if num_deleted:
                 gridfs_ids = []  # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
-                for gridf_ids in gridfs_ids:
-                    GridFsHandler().delete_file_from_gridfs(gridf_ids)
+            for gridf_id in gridfs_ids:
+                GridFsHandler().delete_file_from_gridfs(gridf_id)
 
 
 class DataSourceFetched(Historisable):
@@ -702,7 +688,9 @@ class DataSourceFetched(Historisable):
         self.saved_at = saved_at
 
     def update(self) -> bool:
-        raw = mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data})
+        raw = mongo.db[self.mongo_collection].update_one(
+            {'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data}
+        )
         return raw.matched_count == 1
 
     def save(self) -> None:
@@ -741,8 +729,24 @@ class DataSourceFetched(Historisable):
         self.set_status(DATA_SOURCE_STATUS_UPDATED)
         self.saved_at = datetime.utcnow()
         self.update()
-        self.keep_historical(DataSource.get_number_of_historical(self.contributor_id, self.data_source_id),
-                             {'contributor_id': self.contributor_id, 'data_source_id': self.data_source_id})
+        self.keep_historical(
+            app.config.get('HISTORICAL', 3),
+            {
+                'contributor_id': self.contributor_id,
+                'data_source_id': self.data_source_id,
+                'status': DATA_SOURCE_STATUS_UPDATED
+            }
+        )
+        self.clean_intermediates_statuses_until(self.created_at)
+
+    def clean_intermediates_statuses_until(self, last_update_date: datetime) -> None:
+        old_rows = mongo.db[self.mongo_collection].find({
+            'contributor_id': self.contributor_id,
+            'data_source_id': self.data_source_id,
+            'status': {'$ne': DATA_SOURCE_STATUS_UPDATED},
+            'created_at': {'$lt': last_update_date.isoformat()}
+        })
+        self.delete_many([row.get('_id') for row in old_rows])
 
     def is_identical_to(self, file_path: str) -> bool:
         return self.get_md5() == get_md5_content_file(file_path)
@@ -788,12 +792,11 @@ class MongoDataSourceSchema(Schema):
     data_format = DataFormat()
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
+    service_id = fields.String(required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
         return DataSource(**data)
-
-
 
 
 class MongoPreProcessSchema(Schema):
@@ -882,6 +885,12 @@ class Job(object):
         return MongoJobSchema(strict=True).load(raw).data
 
     @classmethod
+    def get_last(cls, filter: dict) -> Optional['Job']:
+        raw = mongo.db[cls.mongo_collection].find(filter).sort("updated_at", -1).limit(1)
+        lasts = MongoJobSchema(many=True, strict=True).load(raw).data
+        return lasts[0] if lasts else None
+
+    @classmethod
     def update(cls, job_id: str, state: str = None, step: str = None, error_message: str = None) -> Optional['Job']:
         logger = logging.getLogger(__name__)
         if not job_id:
@@ -905,6 +914,9 @@ class Job(object):
             return None
         return job
 
+    def has_failed(self) -> bool:
+        return self.state == "failed"
+
 
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
@@ -926,23 +938,21 @@ class ContributorExport(Historisable):
     mongo_collection = 'contributor_exports'
 
     def __init__(self, contributor_id: str,
-                 gridfs_id: str,
                  validity_period: ValidityPeriod,
                  data_sources: List[ContributorExportDataSource]=None,
                  id: str=None,
                  created_at: datetime=None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
-        self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.utcnow()
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
     def save(self) -> None:
-        raw = MongoContributorExportSchema().dump(self).data
+        raw = MongoContributorExportSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'contributor_id': self.contributor_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'contributor_id': self.contributor_id})
 
     @classmethod
     def get(cls, contributor_id: str) -> Optional[List['ContributorExport']]:
@@ -963,7 +973,6 @@ class ContributorExport(Historisable):
 class MongoContributorExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
     data_sources = fields.Nested(MongoContributorExportDataSourceSchema, many=True, required=False)
@@ -979,6 +988,9 @@ class CoverageExportContributor(object):
         self.contributor_id = contributor_id
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class MongoCoverageExportContributorSchema(Schema):
@@ -1007,7 +1019,7 @@ class CoverageExport(Historisable):
         raw = MongoCoverageExportSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
-        self.keep_historical(3, {'coverage_id': self.coverage_id})
+        self.keep_historical(app.config.get('HISTORICAL', 3), {'coverage_id': self.coverage_id})
 
     @classmethod
     def get(cls, coverage_id: str) -> Optional[List['CoverageExport']]:
@@ -1024,6 +1036,9 @@ class CoverageExport(Historisable):
         lasts = MongoCoverageExportSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class MongoCoverageExportSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
@@ -1036,3 +1051,26 @@ class MongoCoverageExportSchema(Schema):
     @post_load
     def make_coverage_export(self, data: dict) -> CoverageExport:
         return CoverageExport(**data)
+
+
+class CoverageStatus(object):
+    """
+   Calculate following attributes:
+       - status: status of the last try on fetching data
+       - fetch_started_at: datetime at which the last try on fetching data started
+       - updated_at: datetime at which the last fetched data set was valid and inserted in database
+       - validity_period: validity period of the data source
+   """
+    def __init__(self, data_source_id: str) -> None:
+        last_data_set = DataSourceFetched.get_last(data_source_id, None)
+        self.status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
+        self.fetch_started_at = last_data_set.created_at if last_data_set else None
+        self.validity_period = last_data_set.validity_period if last_data_set else None
+        self.updated_at = None
+
+        if self.status == DATA_SOURCE_STATUS_UPDATED:
+            self.updated_at = last_data_set.saved_at
+        else:
+            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
+            self.updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
+            self.validity_period = last_data_set_updated.validity_period if last_data_set_updated else None

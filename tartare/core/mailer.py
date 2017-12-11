@@ -28,19 +28,19 @@
 # www.navitia.io
 
 
+import logging
 import smtplib
+import socket
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-import socket
-import logging
 from typing import List
 
 from tartare.core.models import Job
 
 
 class Mailer(object):
-    def __init__(self, config: dict, platform: str='Unknown') -> None:
+    def __init__(self, config: dict, platform: str = 'Unknown') -> None:
         self.from_ = config.get("from", 'tartare@canaltp.fr')
         self.to = config.get("to")
         self.cc = config.get("cc")
@@ -96,10 +96,10 @@ class Mailer(object):
             logging.getLogger(__name__).debug("Mail sent to %s" % self.get_to_addrs())
         except smtplib.SMTPException as exception:
             logging.getLogger(__name__).critical("Sendmail error [from = %s, to = %s], error message :%s" %
-                                              (self.from_, self.to, str(exception)))
+                                                 (self.from_, self.to, str(exception)))
         except (socket.gaierror, Exception) as e:
             logging.getLogger(__name__).critical("Connection error [host = %s], error message :%s" %
-                                              (self.host, str(e)))
+                                                 (self.host, str(e)))
         finally:
             server.quit()
 

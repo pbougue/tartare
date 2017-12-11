@@ -29,16 +29,19 @@
 
 import logging
 import tempfile
+import zipfile
 from datetime import date
+from typing import Optional
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
-    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
+    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
+from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
-from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
+from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
@@ -54,7 +57,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
     return context
 
 
-def save_export(contributor: Contributor, context: Context, current_date: date) -> Context:
+def save_export(contributor: Contributor, context: Context, current_date: date) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -70,34 +73,16 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        # grid fs id is taken from the first data source having a validity period
-        # contributor with multiple data sources is not handled yet
-        grid_fs_id = next((data_source.gridfs_id
-                           for data_source in contrib_export_data_sources
-                           if data_source.validity_period), None)
-        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(validity_periods,
-                                                                                            current_date)
+        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
+            validity_periods, current_date
+        ) if len(validity_periods) else None
+
         export = ContributorExport(contributor_id=contributor.id,
-                                   gridfs_id=GridFsHandler().copy_file(grid_fs_id),
                                    validity_period=contributor_export_validity_period,
                                    data_sources=contrib_export_data_sources)
         export.save()
-    return context
-
-
-def save_data_fetched_and_get_context(context: Context, file: str, filename: str,
-                                      contributor_id: str, data_source_id: str,
-                                      validity_period: models.ValidityPeriod) -> Context:
-    data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                   data_source_id=data_source_id,
-                                                   validity_period=validity_period)
-    data_source_fetched.update_dataset(file, filename)
-    data_source_fetched.save()
-    context.add_contributor_data_source_context(contributor_id=contributor_id,
-                                                data_source_id=data_source_id,
-                                                validity_period=validity_period,
-                                                gridfs_id=GridFsHandler().copy_file(data_source_fetched.gridfs_id))
-    return context
+        return export
+    return None
 
 
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
@@ -118,9 +103,11 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.save()
         try:
             fetcher = FetcherManager.select_from_url(url)
-            dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name, data_source.data_format,
+            dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name,
                                                                     data_source.input.expected_file_name)
-        except (FetcherException, GuessFileNameFromUrlException, ParameterException) as e:
+            if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
+                raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
+        except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
             new_data_source_fetched.set_status(DATA_SOURCE_STATUS_FAILED).update()
             raise e
 
@@ -138,7 +125,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
-        return True
+        return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
 
 
 def build_context(contributor: Contributor, context: Context) -> Context:
@@ -150,7 +137,23 @@ def build_context(contributor: Contributor, context: Context) -> Context:
                 raise ParameterException(
                     'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
             context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                        GridFsHandler().copy_file(data_set.gridfs_id))
+                                                        data_set.gridfs_id)
         else:
             context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
+    # links data added
+    if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
+        for preprocess in contributor.preprocesses:
+            for link in preprocess.params.get('links', []):
+                contributor_id = link.get('contributor_id')
+                data_source_id = link.get('data_source_id')
+                if contributor_id and data_source_id and contributor_id != contributor.id:
+                    tmp_contributor = Contributor.get(contributor_id)
+                    if not tmp_contributor:
+                        continue
+                    data_set = DataSourceFetched.get_last(data_source_id)
+                    if not data_set:
+                        continue
+                    context.add_contributor_context(tmp_contributor)
+                    context.add_contributor_data_source_context(contributor_id, data_source_id, None,
+                                                                data_set.gridfs_id)
     return context

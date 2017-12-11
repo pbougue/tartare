@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tests.integration.test_mechanism import TartareFixture
 import mock
 from tests.utils import mock_urlretrieve, mock_requests_post
@@ -37,9 +38,9 @@ class TestCoverageExport(TartareFixture):
     def test_coverage_export_coverage_not_found(self):
         raw = self.post('/coverages/toto/actions/export', {})
         assert raw.status_code == 404
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'error' in r
-        assert r.get('error') == 'Coverage not found: toto'
+        assert r.get('error') == 'coverage not found: toto'
 
     def test_coverage_export(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
@@ -47,20 +48,20 @@ class TestCoverageExport(TartareFixture):
 
         raw = self.post('/coverages/id_test/actions/export', {})
         assert raw.status_code == 201
-        r = self.to_json(raw)
+        r = self.json_to_dict(raw)
         assert 'job' in r
         job = r.get('job')
-        assert job.get('action_type') == 'coverage_export'
+        assert job.get('action_type') == ACTION_TYPE_COVERAGE_EXPORT
 
         raw_job = self.get('/jobs')
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
         raw_job = self.get('/jobs/{}'.format(job['id']))
         assert raw_job.status_code == 200
-        r_jobs = self.to_json(raw_job)
+        r_jobs = self.json_to_dict(raw_job)
         assert len(r_jobs['jobs']) == 1
         assert r_jobs.get('jobs')[0]['id'] == job['id']
 
@@ -74,7 +75,7 @@ class TestCoverageExport(TartareFixture):
         # Exports for coverage1, one export
         exports = self.get('/coverages/coverage1/exports')
         assert exports.status_code == 200
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 1
         assert r["exports"][0]["gridfs_id"] == "1234"
         assert r["exports"][0]["coverage_id"] == "coverage1"
@@ -88,15 +89,15 @@ class TestCoverageExport(TartareFixture):
         # Exports for coverage2, 0 export
         exports = self.get('/coverages/coverage2/exports')
         assert exports.status_code == 200
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert len(r["exports"]) == 0
 
         # Exports for unknown coverage, 0 export
         exports = self.get('/coverages/bob/exports')
         assert exports.status_code == 404
-        r = self.to_json(exports)
+        r = self.json_to_dict(exports)
         assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/bob/exports] but did you mean /coverages/<string:coverage_id>/exports or /coverages/<string:coverage_id>/actions/export or /coverages/<string:coverage_id>/jobs ?'
-        assert r['error'] == 'Coverage not found: bob'
+        assert r['error'] == 'coverage not found: bob'
 
     @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
     def test_save_coverage_export(self, mock_urlretrieve):
@@ -118,19 +119,21 @@ class TestCoverageExport(TartareFixture):
         # launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             job = self.post('/contributors/id_test/actions/export?current_date=2015-08-10', {})
-            assert job.status_code == 201
+            self.assert_sucessful_call(job, 201)
+            job = self.post('/coverages/coverage1/actions/export?current_date=2015-08-10', {})
+            self.assert_sucessful_call(job, 201)
 
             # jobs of coverage
             jobs = self.get("/jobs")
             assert jobs.status_code == 200
-            json = self.to_json(jobs)
+            json = self.json_to_dict(jobs)
             assert "jobs" in json
-            assert len(json.get("jobs")) == 1
+            assert len(json.get("jobs")) == 2
 
         # coverage export
         ce = self.get("/coverages/coverage1/exports")
         assert ce.status_code == 200
-        json = self.to_json(ce)
+        json = self.json_to_dict(ce)
         assert "exports" in json
         assert len(json.get("exports")) == 1
         assert json.get("exports")[0].get("gridfs_id")

@@ -28,21 +28,20 @@
 # www.navitia.io
 import json
 import logging
-from functools import partial
-
 import tempfile
 from collections import defaultdict
-from typing import Dict
-from typing import List
+from functools import partial
+from typing import Dict, List
 
+from tartare.core import zip
+from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG
 from tartare.core.context import Context
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader
 from tartare.exceptions import IntegrityException
-from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.core import zip
 from tartare.processes.utils import preprocess_registry
+
 
 @preprocess_registry()
 class ComputeDirections(AbstractContributorProcess):
@@ -53,19 +52,12 @@ class ComputeDirections(AbstractContributorProcess):
         super().__init__(context, preprocess)
 
     def __get_config_gridfs_id_from_context(self) -> str:
-        if not self.params.get('config') or 'data_source_id' not in self.params.get('config'):
-            raise ParameterException('data_source_id missing in preprocess config')
-
-        data_source_id_config = self.params.get('config')['data_source_id']
-        data_source_config_context = self.context.get_contributor_data_source_context(self.contributor_id,
-                                                                                      data_source_id_config)
-        if not data_source_config_context:
-            raise ParameterException(
-                'data_source_id "{data_source_id_config}" in preprocess config does not belong to contributor'.format(
-                    data_source_id_config=data_source_id_config))
+        links = self.params.get('links')
+        data_source_config_context = self.context.get_data_source_context_in_links(links, DATA_FORMAT_DIRECTION_CONFIG)
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:
+        self.check_links([DATA_FORMAT_DIRECTION_CONFIG])
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
         for data_source_id_to_process in self.data_source_ids:
             # following data_source_to_process_context cannot be None because of integrity checks
@@ -90,8 +82,8 @@ class ComputeDirections(AbstractContributorProcess):
                                  item in a_stop_sequence]  # reduce to keep only known stops
                 if len(new_reference) < 2:
                     raise IntegrityException(
-                        'unable to calculate direction_id for route {route_id}: not enough stops for trip {trip_id}'.format(
-                            route_id=a_route, trip_id=a_trip))
+                        'unable to calculate direction_id for route {route_id}: not enough stops for trip {trip_id}'.
+                            format(route_id=a_route, trip_id=a_trip))
 
                 forward_sequence_count = 0
                 sequence_count = len(new_reference) - 1
@@ -113,7 +105,7 @@ class ComputeDirections(AbstractContributorProcess):
 
     def __apply_rules(self, trips_reader: CsvReader, trips_file_name: str, trips_to_fix: Dict[str, str]) -> None:
         trips_reader.apply(column_name='direction_id', callback=lambda row, trips=trips_to_fix:
-                   trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
+                           trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
         trips_reader.save_as_csv(trips_file_name)
 
     def __get_stop_sequence_by_trip(self, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:

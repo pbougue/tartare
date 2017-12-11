@@ -33,10 +33,10 @@
 import os
 import json
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import assert_files_equals
+from tests.utils import assert_files_equals, _get_file_fixture_full_path
 
 file_used = "some_archive.zip"
-fixtures_file = os.path.realpath('tests/fixtures/gtfs/{}'.format(file_used))
+fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(file_used))
 
 
 class TestGetFiles(TartareFixture):
@@ -44,32 +44,31 @@ class TestGetFiles(TartareFixture):
     def test_get_files_invalid_file_id(self):
         resp = self.get('/contributors/AA/exports/BB/files/aa', follow_redirects=True)
         assert resp.status_code == 400
-        json_resp = self.to_json(resp)
-        assert json_resp.get('error') == 'Invalid file id, you give aa'
+        json_resp = self.json_to_dict(resp)
+        assert json_resp.get('error') == 'invalid file id, you give aa'
 
     def test_get_files_invalid_export_id(self):
         resp = self.get('/contributors/AA/exports/BB/files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 400
-        json_resp = self.to_json(resp)
-        assert json_resp.get('error') == 'Invalid export id, you give BB'
+        json_resp = self.json_to_dict(resp)
+        assert json_resp.get('error') == 'invalid export id, you give BB'
 
     def test_get_files_contributor_not_found(self):
         resp = self.get('/contributors/AA/exports/7ffab229-3d48-4eea-aa2c-22f8680230b6/'
                         'files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 404
-        json_resp = self.to_json(resp)
-        assert json_resp.get('error') == 'Contributor export not found.'
+        json_resp = self.json_to_dict(resp)
+        assert json_resp.get('error') == 'contributor export not found'
 
     def test_get_files_coverage_not_found(self):
         resp = self.get('/coverages/AA/exports/7ffab229-3d48-4eea-aa2c-22f8680230b6/'
                         'files/7ffab2293d484eeaaa2c22f8', follow_redirects=True)
         assert resp.status_code == 404
-        json_resp = self.to_json(resp)
-        assert json_resp.get('error') == 'Coverage not found.'
+        json_resp = self.json_to_dict(resp)
+        assert json_resp.get('error') == 'coverage not found'
 
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
-        ip = init_http_download_server.ip_addr
-        url = "http://{ip}/{filename}".format(ip=ip, filename=file_used)
+        url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)
 
         coverage = {
             "contributors": [contributor['id']],
@@ -106,51 +105,39 @@ class TestGetFiles(TartareFixture):
         # Coverage added
         raw = self.post('/coverages', params=json.dumps(coverage))
         assert raw.status_code == 201
-        json_coverage = self.to_json(raw)
+        json_coverage = self.json_to_dict(raw)
         assert len(json_coverage['coverages']) == 1
 
 
         raw = self.post('/contributors/{}/actions/export?current_date=2015-08-10'.format(contributor['id']), {})
         assert raw.status_code == 201
-        job = self.to_json(raw).get('job')
+        job = self.json_to_dict(raw).get('job')
 
         raw_job = self.get('contributors/{contrib_id}/jobs/{job_id}'.
                            format(contrib_id=contributor['id'], job_id=job['id']))
 
-        job = self.to_json(raw_job)['jobs'][0]
+        job = self.json_to_dict(raw_job)['jobs'][0]
         assert job['state'] == 'done', print(job)
-
-
-        raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
-        assert raw.status_code == 200
-        exports = self.to_json(raw).get('exports')
-        assert len(exports) == 1
-
-
-        resp = self.get('/contributors/{contrib_id}/exports/{export_id}/files/{gridfs_id}'.
-                        format(contrib_id=contributor['id'], export_id=exports[0]['id'],
-                               gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
-        assert resp.status_code == 200
-
-        assert_files_equals(resp.data, fixtures_file)
 
         # Get file for contributor export
         raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
         assert raw.status_code == 200
-        exports = self.to_json(raw).get('exports')
+        exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
 
         resp = self.get('/contributors/{contrib_id}/exports/{export_id}/files/{gridfs_id}'.
                         format(contrib_id=contributor['id'], export_id=exports[0]['id'],
-                               gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
+                               gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
 
+        raw = self.post('/coverages/{}/actions/export?current_date=2015-08-10'.format(coverage['id']), {})
+        assert raw.status_code == 201
 
         raw = self.get('coverages/{coverage_id}/exports'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
-        exports = self.to_json(raw).get('exports')
+        exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
 
@@ -162,7 +149,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/coverages/{coverage_id}'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
-        coverages = self.to_json(resp).get('coverages')
+        coverages = self.json_to_dict(resp).get('coverages')
         assert len(exports) == 1
         environments = coverages[0]['environments']
         resp = self.get('/coverages/{coverage_id}/environments/{environment_id}/files/{gridfs_id}'.
@@ -174,4 +161,3 @@ class TestGetFiles(TartareFixture):
         # current date invalid
         raw = self.post('/contributors/{}/actions/export?current_date=abcd'.format(contributor['id']), {})
         assert raw.status_code == 400
-

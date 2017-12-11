@@ -30,6 +30,7 @@
 from flask_restful import Resource
 from flask import Response
 
+from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.context import Context
 from tartare.tasks import contributor_export, finish_job
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
@@ -45,7 +46,7 @@ class ContributorExportResource(Resource, CommonArgs):
 
     @staticmethod
     def _export(contributor: Contributor, current_date: date) -> Job:
-        job = Job(contributor_id=contributor.id, action_type="contributor_export")
+        job = Job(contributor_id=contributor.id, action_type=ACTION_TYPE_CONTRIBUTOR_EXPORT)
         job.save()
         try:
             chain(contributor_export.si(Context(), contributor, job, current_date, False),
@@ -58,7 +59,7 @@ class ContributorExportResource(Resource, CommonArgs):
     def post(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
-            msg = 'Contributor not found: {}'.format(contributor_id)
+            msg = 'contributor not found: {}'.format(contributor_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 
@@ -69,7 +70,7 @@ class ContributorExportResource(Resource, CommonArgs):
     def get(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
         if not contributor:
-            msg = 'Contributor not found: {}'.format(contributor_id)
+            msg = 'contributor not found: {}'.format(contributor_id)
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
         exports = ContributorExport.get(contributor_id=contributor.id)
