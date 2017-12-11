@@ -77,7 +77,7 @@ This preprocess is used to modify **stop_name** from *stops.txt*, such as adding
 ####  How does it work?
 The ***Ruspell*** preprocess is associated to the contributor and will be used only on specific data sources found in **data_source_ids**.  
 This preprocess will use a **ruspell_config** format data source, containing all rules to apply to the data sources being peprocessed.  
-A *geographic* contributor will be also needed, with **bano_files** has data sources. These bano files willbe used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
+A *geographic* contributor will be also needed, with **bano_files** has data sources. These bano files will be used to check **stop_name** against the GTFS's *stops.txt* to fix names.  
 At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name**.  
 
 ####  How to use it?
