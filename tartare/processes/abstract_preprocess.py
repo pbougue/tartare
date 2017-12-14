@@ -45,11 +45,15 @@ class AbstractProcess(metaclass=ABCMeta):
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         self.context = context
         self.params = preprocess.params if preprocess else {}  # type: dict
-        self.data_source_ids = preprocess.data_source_ids if preprocess else []
+        self.data_source_ids = preprocess.data_source_ids
+        self.process_id = preprocess.id
 
     @abstractmethod
     def do(self) -> Context:
         pass
+
+    def format_error_message(self, msg: str) -> str:
+        return '[process "{}"] {}'.format(self.process_id, msg)
 
     def get_link(self, key: str) -> Any:
         if not self.params.get('links') or key not in self.params.get('links'):

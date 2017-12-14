@@ -33,11 +33,12 @@ import tempfile
 from functools import partial
 
 from tartare.core import zip
+from tartare.core.constants import DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_GEOGRAPHIC
 from tartare.core.context import Context
 from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
-from tartare.exceptions import ParameterException
+from tartare.exceptions import ParameterException, RuntimeException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -60,9 +61,8 @@ class Ruspell(AbstractContributorProcess):
         data_source_config_context = self.context.get_contributor_data_source_context(contributor_id,
                                                                                       data_source_id)
         if not data_source_config_context:
-            raise ParameterException(
-                'data_source_id "{data_source_id}" in preprocess links does not belong to contributor'.format(
-                    data_source_id=data_source_id))
+            msg = 'contributor "{}" has not been exported'.format(contributor_id)
+            raise RuntimeException(self.format_error_message(msg))
         return data_source_config_context.gridfs_id
 
     def __extract_data_sources_from_gridfs(self, data_format: str, path: str) -> str:
@@ -82,9 +82,9 @@ class Ruspell(AbstractContributorProcess):
                 with open(file_path, 'wb+') as f:
                     f.write(gridout.read())
             except ValueError:
-                raise ParameterException(
-                    'data_source_id "{data_source_id}" in preprocess links does not exist'.format(
-                        data_source_id=data_source_id))
+                msg = 'data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(data_source_id,
+                                                                                                           contributor_id)
+                raise ParameterException(self.format_error_message(msg))
         return file_path
 
     def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
