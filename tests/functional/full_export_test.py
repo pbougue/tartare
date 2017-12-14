@@ -122,3 +122,23 @@ class TestFullExport(AbstractRequestClient):
 
         self.full_export('contributor_id', 'coverage_id')
         self.full_export('contributor_id', 'coverage_id_2')
+
+    def test_contrib_export_preprocess_ko_before_ok(self):
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_preprocess_ko.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        # launch export with a preprocess generating error => should end up being failed
+        raw = self.post('contributors/contributor_preprocess_ko/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'preprocess', break_if='failed')
+
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_headsign_short_name.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        # launch export generating success => should end up being done
+        raw = self.post('contributors/AMI/actions/export')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+
