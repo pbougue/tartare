@@ -917,6 +917,9 @@ class Job(object):
     def has_failed(self) -> bool:
         return self.state == "failed"
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')

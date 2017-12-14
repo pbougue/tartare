@@ -57,7 +57,7 @@ def postprocess(contributor: Contributor, context: Context) -> Context:
     return context
 
 
-def save_export(contributor: Contributor, context: Context, current_date: date) -> Optional[ContributorExport]:
+def save_export(contributor: Contributor, context: Context) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -74,7 +74,7 @@ def save_export(contributor: Contributor, context: Context, current_date: date) 
 
     if contrib_export_data_sources:
         contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
-            validity_periods, current_date
+            validity_periods, context.current_date
         ) if len(validity_periods) else None
 
         export = ContributorExport(contributor_id=contributor.id,

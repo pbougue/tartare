@@ -40,13 +40,10 @@ class TestFullExport(AbstractRequestClient):
 
         self.assert_sucessful_create(raw)
 
-        raw = self.post('contributors/contributor_id/actions/export')
+        raw = self.post('contributors/contributor_id/actions/export?current_date=2017-12-14')
         self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', break_if='failed')
-        raw = self.get('jobs/' + job_id)
-        job = self.get_dict_from_response(raw)['jobs'][0]
-        assert job['state'] == 'failed'
 
     def test_contrib_export_with_compute_directions(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor.json')
@@ -60,7 +57,7 @@ class TestFullExport(AbstractRequestClient):
                 files={'file': file})
             self.assert_sucessful_create(raw)
 
-        raw = self.post('contributors/contributor_with_preprocess_id/actions/export')
+        raw = self.post('contributors/contributor_with_preprocess_id/actions/export?current_date=2017-12-14')
         self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
