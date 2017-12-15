@@ -38,7 +38,7 @@ from zipfile import ZipFile, is_zipfile
 import pandas as pd
 from gridfs import GridOut
 
-from tartare.exceptions import InvalidFile
+from tartare.exceptions import InvalidFile, ColumnNotFound
 
 
 class AbstractPandaReader(metaclass=ABCMeta):
@@ -73,7 +73,10 @@ class AbstractPandaReader(metaclass=ABCMeta):
             yield {value[key_column]: value_apply_function(value)}
 
     def apply(self, column_name: str, callback: Callable[..., Any], fillna: str='') -> None:
-        self.data[column_name] = self.data.apply(callback, axis=1).fillna(fillna)
+        try:
+            self.data[column_name] = self.data.apply(callback, axis=1).fillna(fillna)
+        except KeyError:
+            raise ColumnNotFound('column "{}" missing'.format(column_name))
 
 
 class JsonReader(AbstractPandaReader):

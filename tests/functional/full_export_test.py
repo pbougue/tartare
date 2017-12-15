@@ -122,16 +122,3 @@ class TestFullExport(AbstractRequestClient):
 
         self.full_export('contributor_id', 'coverage_id')
         self.full_export('contributor_id', 'coverage_id_2')
-
-    def test_contrib_export_with_headsign_short_name(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_headsign_short_name.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
-
-        # launch HeadsignShortName preprocess
-        raw = self.post('contributors/AMI/actions/export')
-        job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
-
-        self.assert_export_file_equals_ref_file(contributor_id='AMI', data_source_id="Google-1",
-                                                ref_file='headsign_short_name/ref_headsign_short_name.zip')
