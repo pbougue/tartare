@@ -422,7 +422,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'] == 'publish_data preproduction navitia', print(job)
+        assert job['step'].startswith('publish_data preproduction navitia on '), print(job)
         assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
             job)
         assert job['state'] == 'failed'
@@ -449,7 +449,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['step'].startswith('publish_data production navitia on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
@@ -485,7 +485,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['step'].startswith('publish_data production navitia on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
@@ -520,7 +520,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'] == 'publish_data production navitia', print(job)
+        assert job['step'].startswith('publish_data production navitia on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 

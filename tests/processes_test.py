@@ -32,8 +32,9 @@ import pytest
 import requests
 from mock import mock
 
+from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import Context
-from tartare.core.models import ValidityPeriod, PreProcess
+from tartare.core.models import ValidityPeriod, PreProcess, Job
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from tests.utils import get_response
@@ -51,7 +52,7 @@ class TestFusioProcesses:
         end_date = date(2017, 1, 15)
         expected_period = ValidityPeriod(begin_date, end_date)
         get_validity_period_union.return_value = expected_period
-        context = Context()
+        context = Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT))
         keep_response_content = 'fusio_response'
         action_id = 42
 
@@ -72,7 +73,8 @@ class TestFusioProcesses:
         with pytest.raises(IntegrityException) as excinfo:
             subcall_details = 'sub call details'
             get_validity_period_union.side_effect = ValidityPeriodException(subcall_details)
-            fusio_import = FusioImport(Context(), PreProcess(params={"url": "whatever"}))
+            fusio_import = FusioImport(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+                                       PreProcess(params={"url": "whatever"}))
             fusio_import.do()
         assert str(excinfo.value) == 'bounds date for fusio import incorrect: {details}'.format(details=subcall_details)
 
@@ -84,7 +86,7 @@ class TestFusioProcesses:
                     <ActionId>1607281547155684</ActionId>
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
-        fusio_preprod = FusioPreProd(context=Context('coverage'),
+        fusio_preprod = FusioPreProd(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                      preprocess=PreProcess(params={'url': 'http://fusio_host'}))
         fusio_preprod.do()
 
@@ -106,7 +108,8 @@ class TestFusioProcesses:
             'url': 'http://fusio_host',
             "export_type": "Ntfs"
         }
-        fusio_export = FusioExport(context=Context('coverage'), preprocess=PreProcess(params=params))
+        fusio_export = FusioExport(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+                                   preprocess=PreProcess(params=params))
         fusio_export.do()
         data = {
             'action': 'Export',
@@ -123,7 +126,8 @@ class TestFusioProcesses:
             'url': 'http://fusio_host',
             "export_type": "bob"
         }
-        fusio_export = FusioExport(context=Context('coverage'), preprocess=PreProcess(params=params))
+        fusio_export = FusioExport(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+                                   preprocess=PreProcess(params=params))
         with pytest.raises(FusioException) as excinfo:
             fusio_export.do()
         assert str(excinfo.value) == "export_type bob not found"

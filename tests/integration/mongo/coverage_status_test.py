@@ -173,7 +173,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['state'] == 'failed'
         assert last_active_job['step'] == 'fetching data'
 
-    def test_status_after_failed_automatic_update_on_publiction(self, init_http_download_server, init_ftp_upload_server):
+    def test_status_after_failed_automatic_update_on_publication(self, init_http_download_server, init_ftp_upload_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update')
         publication_platform = {
             "sequence": 0,
@@ -198,7 +198,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['action_type'] == 'automatic_update_coverage_export'
         assert last_active_job['error_message'] != ''
         assert last_active_job['state'] == 'failed'
-        assert last_active_job['step'] == 'publish_data production ods'
+        assert last_active_job['step'].startswith('publish_data production ods on ')
 
     def test_status_successive_automatic_update(self, init_http_download_server):
         # Automatic update that fails in a contributor export
