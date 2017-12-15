@@ -97,7 +97,7 @@ class TestFullExport(AbstractRequestClient):
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
 
-        self.full_export('contributor_id', 'coverage_id')
+        self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
                                                 ref_file='compute_directions/functional.zip', data_source_id="data_source_to_process_id")
@@ -117,8 +117,8 @@ class TestFullExport(AbstractRequestClient):
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
 
-        self.full_export('contributor_id', 'coverage_id')
-        self.full_export('contributor_id', 'coverage_id_2')
+        self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
+        self.full_export('contributor_id', 'coverage_id_2', current_date='2017-12-14')
 
     def test_contrib_export_preprocess_ko_before_ok(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_preprocess_ko.json')
@@ -126,7 +126,7 @@ class TestFullExport(AbstractRequestClient):
         self.assert_sucessful_create(raw)
 
         # launch export with a preprocess generating error => should end up being failed
-        raw = self.post('contributors/contributor_preprocess_ko/actions/export')
+        raw = self.post('contributors/contributor_preprocess_ko/actions/export?current_date=2017-12-14')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'preprocess', break_if='failed')
 
@@ -135,7 +135,7 @@ class TestFullExport(AbstractRequestClient):
         self.assert_sucessful_create(raw)
 
         # launch export generating success => should end up being done
-        raw = self.post('contributors/AMI/actions/export')
+        raw = self.post('contributors/AMI/actions/export?current_date=2017-12-14')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 

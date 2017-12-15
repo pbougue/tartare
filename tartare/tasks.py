@@ -120,11 +120,9 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
     return publishers_by_protocol[platform.protocol](platform.url, platform.options)
 
 
-@celery.task(bind=True, default_retry_delay=180, max_retries=0, acks_late=True, base=CallbackTask)
-def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
-    step = "publish_data {env} {platform}".format(env=environment_id, platform=platform.type)
+def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
+    step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
     models.Job.update(job_id=job.id, state="running", step=step)
-    logger.info('publish_data_on_platform {}'.format(platform.url))
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
@@ -135,11 +133,11 @@ def publish_data_on_platform(self: Task, platform: Platform, coverage: Coverage,
         # Upgrade current_ntfs_id
         current_ntfs_id = coverage_export.gridfs_id
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except (ProtocolException, Exception) as exc:
+    except ProtocolException as exc:
         msg = 'publish data on platform "{type}" failed, {error}'.format(
             error=str(exc), url=platform.url, type=platform.type)
         logger.error(msg)
-        self.retry(exc=exc)
+        raise exc
 
 
 @celery.task()
@@ -187,7 +185,8 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
-            context.job = models.Job.update(job_id=context.job.id, state="running", step="building preprocesses context")
+            context.job = models.Job.update(job_id=context.job.id, state="running",
+                                            step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
             context.job = models.Job.update(job_id=context.job.id, state="running", step="preprocess")
             launch(contributor.preprocesses, context)
@@ -199,6 +198,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
         )
         logger.error(msg)
         raise self.retry(exc=exc)
+
 
 @celery.task(base=CallbackTask)
 def contributor_export_finalization(context: Context) -> Optional[ContributorExport]:
@@ -217,52 +217,50 @@ def contributor_export_finalization(context: Context) -> Optional[ContributorExp
     return export
 
 
-@celery.task(bind=True, default_retry_delay=180,
-             max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
-             base=CallbackTask)
-def coverage_export(self: Task, context: Context, coverage: Coverage, job: Job) -> Context:
+@celery.task(base=CallbackTask)
+def coverage_export(context: Context) -> Context:
+    coverage = context.coverage
+    job = context.job
     logger.info('coverage_export from job {action}'.format(action=job.action_type))
-    try:
-        context.instance = 'coverage'
-        models.Job.update(job_id=job.id, state="running", step="fetching context")
-        context.fill_contributor_contexts(coverage)
+    context.instance = 'coverage'
+    models.Job.update(job_id=job.id, state="running", step="fetching context")
+    context.fill_contributor_contexts(coverage)
 
-        models.Job.update(job_id=job.id, state="running", step="preprocess")
-        context = launch(coverage.preprocesses, context)
+    models.Job.update(job_id=job.id, state="running", step="preprocess")
+    launch(coverage.preprocesses, context)
 
-        models.Job.update(job_id=job.id, state="running", step="merge")
-        context = coverage_export_functions.merge(coverage, context)
 
-        models.Job.update(job_id=job.id, state="running", step="postprocess")
-        coverage_export_functions.postprocess(coverage, context)
+@celery.task(base=CallbackTask)
+def coverage_export_finalization(context: Context) -> Optional[ContributorExport]:
+    coverage = context.coverage
+    job = context.job
+    logger.info('coverage_export_finalization from job {action}'.format(action=job.action_type))
+    models.Job.update(job_id=job.id, state="running", step="merge")
+    context = coverage_export_functions.merge(coverage, context)
 
-        # insert export in mongo db
-        models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
-        export = coverage_export_functions.save_export(coverage, context)
-        if export:
-            actions = []
-            # launch publish for all environment
-            sorted_environments = {}
-            # flip env: object in object: env
-            flipped_environments = dict((v, k) for k, v in coverage.environments.items())
-            # sort envs
-            raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
-            # restore mapping
-            for environment in raw_sorted_environments:
-                sorted_environments[flipped_environments[environment]] = environment
-            for env in sorted_environments:
-                environment = coverage.get_environment(env)
-                sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-                for platform in sorted_publication_platforms:
-                    actions.append(publish_data_on_platform.si(platform, coverage, env, job))
-            if actions:
-                # "get" method forces to check for publish statuses
-                chain(*actions).apply().get()
-        return context
-    except Exception as exc:
-        msg = 'coverage export failed, error {}'.format(str(exc))
-        logger.error(msg)
-        raise self.retry(exc=exc)
+    models.Job.update(job_id=job.id, state="running", step="postprocess")
+    coverage_export_functions.postprocess(coverage, context)
+
+    # insert export in mongo db
+    models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
+    export = coverage_export_functions.save_export(coverage, context)
+    if export:
+        # launch publish for all environment
+        sorted_environments = {}
+        # flip env: object in object: env
+        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+        # sort envs
+        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+        # restore mapping
+        for environment in raw_sorted_environments:
+            sorted_environments[flipped_environments[environment]] = environment
+        for env in sorted_environments:
+            environment = coverage.get_environment(env)
+            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
+            for platform in sorted_publication_platforms:
+                publish_data_on_platform(platform, coverage, env, job)
+    finish_job(context)
+    return context
 
 
 def launch(processes: List[PreProcess], context: Context) -> Context:
@@ -270,6 +268,8 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
     if not processes:
         if context.instance == 'contributor':
             contributor_export_finalization.si(context).delay()
+        else:
+            coverage_export_finalization.si(context).delay()
     else:
         sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
         actions = []
@@ -286,6 +286,8 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
 
         if context.instance == 'contributor':
             actions.append(contributor_export_finalization.s())
+        else:
+            actions.append(coverage_export_finalization.s())
 
         chain(*actions).delay()
 
@@ -321,6 +323,7 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
-                chain(coverage_export.si(Context('coverage', job, current_date=current_date), coverage), finish_job.si(job.id)).delay()
+                chain(coverage_export.si(Context('coverage', job, current_date=current_date), coverage),
+                      finish_job.si(job.id)).delay()
     else:
         logger.info("none of the contributors have been updated")
