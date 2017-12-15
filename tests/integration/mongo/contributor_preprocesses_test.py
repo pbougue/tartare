@@ -27,14 +27,15 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
-import os
-import tempfile
 from zipfile import ZipFile
-import pytest
 
+import os
+import pytest
+import tempfile
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
+    DATA_TYPE_GEOGRAPHIC
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport
 from tartare.helper import get_dict_from_zip
@@ -92,11 +93,9 @@ class TestGtfsAgencyProcess(TartareFixture):
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
-
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
         r = self.json_to_dict(raw)
-
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
@@ -214,7 +213,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
         self.assert_sucessful_call(raw, 201)
         r = self.json_to_dict(raw)
-
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         self.assert_sucessful_call(job)
@@ -543,3 +541,109 @@ class TestHeadsignShortNameProcess(TartareFixture):
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
         self.assert_sucessful_call(raw, 201)
+
+
+class TestRuspellProcess(TartareFixture):
+    def __setup_contributor_export_environment(self, init_http_download_server, params, export_contrib_geo=True):
+        # Create contributor geographic
+        url_bano = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
+        contrib_geographic = {
+            "id": "bano",
+            "name": "bano",
+            "data_prefix": "BAN",
+            "data_type": DATA_TYPE_GEOGRAPHIC,
+            "data_sources": [
+                {
+                    "id": "bano_75",
+                    "name": "bano_75",
+                    "data_format": DATA_FORMAT_BANO_FILE,
+                    "input": {"type": "url", "url": url_bano}
+                }
+            ]
+        }
+
+        raw = self.post('/contributors', json.dumps(contrib_geographic))
+        self.assert_sucessful_call(raw, 201)
+
+        if export_contrib_geo:
+            raw = self.post('/contributors/bano/actions/export?current_date=2017-09-11')
+            self.assert_sucessful_call(raw, 201)
+
+        # Create contributor public_transport
+        url_gtfs = self.format_url(ip=init_http_download_server.ip_addr,
+                                   filename='gtfs.zip',
+                                   path='ruspell')
+        url_ruspell_config = self.format_url(ip=init_http_download_server.ip_addr,
+                                             filename='config-fr_idf.yml',
+                                             path='ruspell')
+        contrib_public_transport = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "OIF",
+            "preprocesses": [{
+                "id": "ruspell_id",
+                "sequence": 0,
+                "data_source_ids": ["ds_to_process"],
+                "type": "Ruspell",
+                "params": params
+            }]
+        }
+        data_sources = [
+            {
+                "id": "ds_to_process",
+                "name": "ds_to_process",
+                "data_format": "gtfs",
+                "input": {"type": "url", "url": url_gtfs}
+            },
+            {
+                "id": "ds_config_ruspell",
+                "name": "ds_config_ruspell",
+                "data_format": DATA_FORMAT_RUSPELL_CONFIG,
+                "input": {"type": "url", "url": url_ruspell_config}
+            }
+        ]
+
+        contrib_public_transport['data_sources'] = data_sources
+        raw = self.post('/contributors', json.dumps(contrib_public_transport))
+        self.assert_sucessful_call(raw, 201)
+
+        raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
+        r = self.json_to_dict(raw)
+        self.assert_sucessful_call(raw, 201)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.json_to_dict(raw)
+        self.assert_sucessful_call(raw)
+        return r['jobs'][0]
+
+    @pytest.mark.parametrize(
+        "contributor_id, data_source_id", [
+            ('unknown', 'ds_config_ruspell'),  # unknown contributor
+            ('id_test', 'unknown'),  # unknown data source
+            ('bano', 'ds_config_ruspell')  # data source in bad contributor
+        ])
+    def test_ruspell_error_message_misconfigured_links(self, init_http_download_server, contributor_id, data_source_id):
+        params = {
+            'links': [
+                {'contributor_id': contributor_id, 'data_source_id': data_source_id},
+                {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
+            ]
+        }
+
+        job = self.__setup_contributor_export_environment(init_http_download_server,
+                                                          params)
+        assert job['state'] == 'failed'
+        assert job['error_message'] == '[process "ruspell_id"] data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
+            data_source_id, contributor_id)
+
+    def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
+        params = {
+            'links': [
+                {'contributor_id': 'id_test', 'data_source_id': 'ds_config_ruspell'},
+                {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
+            ]
+        }
+
+        job = self.__setup_contributor_export_environment(init_http_download_server, params, False)
+        assert job['state'] == 'failed'
+        assert job['error_message'] == '[process "ruspell_id"] contributor "bano" has not been exported'

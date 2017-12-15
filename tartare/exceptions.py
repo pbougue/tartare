@@ -75,6 +75,10 @@ class ParameterException(Exception):
     pass
 
 
+class RuntimeException(Exception):
+    pass
+
+
 class CommandRuntimeException(Exception):
     def __init__(self, command: str, message: Optional[str] = '') -> None:
         message = '{}: {}'.format(command, message)
