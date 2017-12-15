@@ -10,7 +10,14 @@ from kombu import Exchange, Queue
 # the default vhost is "/" so the URL end with *two* slash
 # http://docs.celeryproject.org/en/latest/configuration.html#std:setting-BROKER_URL
 BROKER_URL = str(os.getenv('TARTARE_RABBITMQ_HOST', 'amqp://guest:guest@localhost:5672//'))
-CELERY_RESULT_BACKEND = 'rpc'
+
+MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
+MONGO_DATABASE = os.getenv('MONGO_DATABASE', 'tartare')
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}?connect=false'.format(
+    host=MONGO_HOST, database=MONGO_DATABASE
+))
+
+CELERY_RESULT_BACKEND = MONGO_URI
 CELERY_DEFAULT_QUEUE = 'tartare'
 CELERY_DEFAULT_EXCHANGE = 'celery_tartare'
 CELERY_DEFAULT_ROUTING_KEY = 'celery'
@@ -45,11 +52,6 @@ CELERYBEAT_SCHEDULE_FILENAME = '/tmp/celerybeat-schedule'
 
 CELERYD_HIJACK_ROOT_LOGGER = False
 
-MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
-MONGO_DATABASE = os.getenv('MONGO_DATABASE', 'tartare')
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://{host}/{database}?connect=false'.format(
-    host=MONGO_HOST, database=MONGO_DATABASE
-))
 TYR_UPLOAD_TIMEOUT = int(os.getenv('TYR_UPLOAD_TIMEOUT', '10'))
 
 FUSIO_STOP_MAX_ATTEMPT_NUMBER = 100

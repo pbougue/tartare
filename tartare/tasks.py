@@ -35,7 +35,8 @@ from typing import Optional, List
 from zipfile import ZipFile
 
 from billiard.einfo import ExceptionInfo
-from celery import chain
+from celery import chain, chord, group
+from celery.result import AsyncResult
 from celery.task import Task
 
 import tartare
@@ -67,9 +68,6 @@ def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> 
 
 class CallbackTask(tartare.ContextTask):
     def on_failure(self, exc: Exception, task_id: str, args: list, kwargs: dict, einfo: ExceptionInfo) -> None:
-        logger.debug('on_failure')
-        logger.debug(exc)
-        logger.debug(args)
         # if contributor_export or coverage_export is failing we clean the context
         if isinstance(args[0], Context):
             context = args[0]
@@ -84,8 +82,6 @@ class CallbackTask(tartare.ContextTask):
         mailer.build_msg_and_send_mail(job)
 
     def update_job(self, job: Job, exc: Exception) -> None:
-        logger.debug('update_job')
-        logger.debug(job)
         if job:
             with tartare.app.app_context():
                 models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
@@ -140,7 +136,6 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
         raise exc
 
 
-@celery.task()
 def finish_job(context: Context) -> None:
     context.job = models.Job.update(job_id=context.job.id, state="done")
 
@@ -189,7 +184,9 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
                                             step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
             context.job = models.Job.update(job_id=context.job.id, state="running", step="preprocess")
-            launch(contributor.preprocesses, context)
+            return launch(contributor.preprocesses, context)
+        else:
+            finish_job(context)
 
     except FetcherException as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
@@ -231,7 +228,7 @@ def coverage_export(context: Context) -> Context:
 
 
 @celery.task(base=CallbackTask)
-def coverage_export_finalization(context: Context) -> Optional[ContributorExport]:
+def coverage_export_finalization(context: Context) -> Context:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export_finalization from job {action}'.format(action=job.action_type))
@@ -263,13 +260,12 @@ def coverage_export_finalization(context: Context) -> Optional[ContributorExport
     return context
 
 
-def launch(processes: List[PreProcess], context: Context) -> Context:
-    logger.debug('launch')
+def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
     if not processes:
         if context.instance == 'contributor':
-            contributor_export_finalization.si(context).delay()
+            return contributor_export_finalization.s(context).delay()
         else:
-            coverage_export_finalization.si(context).delay()
+            return coverage_export_finalization.s(context).delay()
     else:
         sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
         actions = []
@@ -289,7 +285,7 @@ def launch(processes: List[PreProcess], context: Context) -> Context:
         else:
             actions.append(coverage_export_finalization.s())
 
-        chain(*actions).delay()
+        return chain(*actions).delay()
 
 
 @celery.task(base=CallbackTask)
@@ -303,27 +299,39 @@ def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Cont
 def automatic_update(current_date: datetime.date = datetime.date.today()) -> None:
     logger.info('automatic_update')
     contributors = models.Contributor.all()
-    logger.info("fetching {} contributors".format(len(contributors)))
-    updated_contributors = []
-    for contributor in contributors:
-        # launch contributor export
-        job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
-        job.save()
-        action_export = contributor_export.si(Context('contributor', job, current_date=current_date), contributor)
-        export = action_export.apply_async().get(disable_sync_subtasks=False)
-        if export:
-            updated_contributors.append(contributor.id)
-        finish_job.si(job.id).delay()
+    if contributors:
+        actions_header = []
+        logger.info("fetching {} contributors".format(len(contributors)))
+        for contributor in contributors:
+            # launch contributor export
+            job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
+            job.save()
+            action_export = contributor_export.si(Context('contributor', job, current_date=current_date), contributor)
+            actions_header.append(action_export)
+        chord(actions_header)(automatic_update_launch_coverage_exports.s())
+    else:
+        logger.info("no contributors found")
 
+
+@celery.task()
+def automatic_update_launch_coverage_exports(contributor_export_results: List[AsyncResult]) -> None:
+    logger.info('automatic_update_launch_coverage_exports')
+    updated_contributors = []
+    for contributor_export_result in contributor_export_results:
+        # if contributor_export action generated an export in database (new data set fetched)
+        if contributor_export_result and isinstance(contributor_export_result.info, ContributorExport):
+            updated_contributors.append(contributor_export_result.info.contributor_id)
     if updated_contributors:
         coverages = models.Coverage.all()
         logger.info("updated_contributors = " + (','.join(updated_contributors)))
         logger.info("fetching {} coverages".format(len(coverages)))
+        actions = []
         for coverage in coverages:
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
-                chain(coverage_export.si(Context('coverage', job, current_date=current_date), coverage),
-                      finish_job.si(job.id)).delay()
+                actions.append(coverage_export.si(Context('coverage', job, coverage=coverage)))
+        if actions:
+            group(actions).delay()
     else:
         logger.info("none of the contributors have been updated")
