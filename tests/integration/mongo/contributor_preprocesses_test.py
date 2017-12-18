@@ -502,9 +502,9 @@ class TestComputeExternalSettings(TartareFixture):
 
 
 class TestHeadsignShortNameProcess(TartareFixture):
-    def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
+    def __contributor_creator(self, data_set_url, data_source_id='id2'):
         contrib_payload = {
-            "id": contrib_id,
+            "id": "id_test",
             "name": "name_test",
             "data_prefix": "AAA",
             "data_sources": [
@@ -520,27 +520,54 @@ class TestHeadsignShortNameProcess(TartareFixture):
             ],
             "preprocesses": [
                 {
+                    "id": "headsign_short_name",
                     "sequence": 0,
                     "data_source_ids": [data_source_id],
                     "type": "HeadsignShortName"
                 }
             ]
         }
-        return contrib_payload
-
-    def test_headsign_short_name(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='headsign_short_name.zip')
-        contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
         self.assert_sucessful_call(raw, 201)
-        r = self.json_to_dict(raw)
-        assert len(r["contributors"]) == 1
-        preprocesses = r["contributors"][0]["preprocesses"]
-        assert len(preprocesses) == 1
 
-        raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
+        raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
+        r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw, 201)
+
+        raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
+        r = self.json_to_dict(raw)
+        self.assert_sucessful_call(raw)
+        return r['jobs'][0]
+
+    def test_headsign_short_name(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              path='headsign_short_name',
+                              filename='headsign_short_name.zip')
+        job = self.__contributor_creator(url)
+
+        assert job['state'] == 'done'
+        assert job['step'] == 'save_contributor_export'
+        assert job['error_message'] == ''
+
+        with app.app_context():
+            export = ContributorExport.get_last('id_test')
+            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
+            with ZipFile(new_zip_file, 'r') as new_zip_file:
+                with tempfile.TemporaryDirectory() as tmp_dir_name:
+                    assert_zip_contains_only_txt_files(new_zip_file)
+                    new_zip_file.extractall(tmp_dir_name)
+                    assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
+                                        _get_file_fixture_full_path('headsign_short_name/ref_trips.txt'))
+
+    def test_headsign_short_name_missing_column(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              path='headsign_short_name',
+                              filename='headsign_short_name_without_trip_short_name.zip')
+        job = self.__contributor_creator(url)
+
+        assert job['state'] == 'failed'
+        assert job['error_message'] == '[process "headsign_short_name"] error in file "trips.txt": column "trip_short_name" missing'
 
 
 class TestRuspellProcess(TartareFixture):
