@@ -261,35 +261,34 @@ def coverage_export_finalization(context: Context) -> Context:
 
 
 def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
-    if not processes:
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
+    actions = []
+
+    # Do better
+    def get_queue(preprocess: PreProcess) -> str:
+        return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
+    if not sorted_preprocesses:
         if context.instance == 'contributor':
             return contributor_export_finalization.s(context).delay()
         else:
             return coverage_export_finalization.s(context).delay()
     else:
-        sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
-        actions = []
-
-        # Do better
-        def get_queue(preprocess: PreProcess) -> str:
-            return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
-
         first_process = sorted_preprocesses[0]
-        actions.append(run_contributor_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+        actions.append(run_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
 
         for p in sorted_preprocesses[1:]:
-            actions.append(run_contributor_preprocess.s(p).set(queue=get_queue(p)))
+            actions.append(run_preprocess.s(p).set(queue=get_queue(p)))
 
         if context.instance == 'contributor':
             actions.append(contributor_export_finalization.s())
         else:
             actions.append(coverage_export_finalization.s())
 
-        return chain(*actions).delay()
+    return chain(*actions).delay()
 
 
 @celery.task(base=CallbackTask)
-def run_contributor_preprocess(context: Context, preprocess: PreProcess) -> Context:
+def run_preprocess(context: Context, preprocess: PreProcess) -> Context:
     process_instance = PreProcessManager.get_preprocess(context, preprocess=preprocess)
     logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=preprocess.type))
     return process_instance.do()

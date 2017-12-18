@@ -106,12 +106,12 @@ def test_preprocess_invalid_instance():
     assert str(excinfo.typename) == "InvalidArguments"
 
 
-@mock.patch('tartare.tasks.run_contributor_preprocess.s')
-def test_launch_in_sequence(mock_run_contributor_preprocess):
+@mock.patch('tartare.tasks.run_preprocess.s')
+def test_launch_in_sequence(mock_run_preprocess):
     preprocesses = [PreProcess(id='bob', sequence=1), PreProcess(id='toto', sequence=0),
                     PreProcess(id='tata', sequence=2)]
     launch(preprocesses, Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
-    calls = mock_run_contributor_preprocess.call_args_list
+    calls = mock_run_preprocess.call_args_list
     assert 'toto' == calls[0][0][1].id
     assert 'bob' == calls[1][0][0].id
     assert 'tata' == calls[2][0][0].id
