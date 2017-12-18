@@ -118,7 +118,7 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
-    job.update(state="running", step=step)
+    job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
@@ -180,10 +180,9 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
-            context.job = context.job.update(state="running",
-                                             step="building preprocesses context")
+            context.job = context.job.update(step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
-            context.job = context.job.update(state="running", step="preprocess")
+            context.job = context.job.update(step="preprocess")
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
@@ -204,11 +203,11 @@ def contributor_export_finalization(context: Context) -> Optional[ContributorExp
     context.job.update(state="running", step="merge")
     context = contributor_export_functions.merge(contributor, context)
 
-    context.job.update(state="running", step="postprocess")
+    context.job.update(step="postprocess")
     context = contributor_export_functions.postprocess(contributor, context)
 
     # insert export in mongo db
-    context.job.update(state="running", step="save_contributor_export")
+    context.job.update(step="save_contributor_export")
     export = contributor_export_functions.save_export(contributor, context)
     finish_job(context)
     return export
@@ -223,7 +222,7 @@ def coverage_export(context: Context) -> Context:
     context.job.update(state="running", step="fetching context")
     context.fill_contributor_contexts(coverage)
 
-    context.job.update(state="running", step="preprocess")
+    context.job.update(step="preprocess")
     launch(coverage.preprocesses, context)
 
 
@@ -232,14 +231,14 @@ def coverage_export_finalization(context: Context) -> Context:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export_finalization from job {action}'.format(action=job.action_type))
-    context.job.update(state="running", step="merge")
+    context.job.update(step="merge")
     context = coverage_export_functions.merge(coverage, context)
 
-    context.job.update(state="running", step="postprocess")
+    context.job.update(step="postprocess")
     coverage_export_functions.postprocess(coverage, context)
 
     # insert export in mongo db
-    context.job.update(state="running", step="save_coverage_export")
+    context.job.update(step="save_coverage_export")
     export = coverage_export_functions.save_export(coverage, context)
     if export:
         # launch publish for all environment
