@@ -84,7 +84,7 @@ class CallbackTask(tartare.ContextTask):
     def update_job(self, job: Job, exc: Exception) -> None:
         if job:
             with tartare.app.app_context():
-                models.Job.update(job_id=job.id, state="failed", error_message=str(exc))
+                job.update(state="failed", error_message=str(exc))
 
 
 def _get_publisher(platform: Platform) -> AbstractPublisher:
@@ -109,7 +109,7 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
     }
     if platform.protocol not in publishers_by_protocol:
         error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
-        models.Job.update(job_id=job.id, state="failed", error_message=error_message)
+        job.update(state="failed", error_message=error_message)
         logger.error(error_message)
         raise Exception(error_message)
 
@@ -118,7 +118,7 @@ def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
 
 def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
-    models.Job.update(job_id=job.id, state="running", step=step)
+    job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
     gridfs_handler = GridFsHandler()
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
@@ -137,7 +137,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
 
 
 def finish_job(context: Context) -> None:
-    context.job = models.Job.update(job_id=context.job.id, state="done")
+    context.job = context.job.update(state="done")
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -170,7 +170,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 def contributor_export(self: Task, context: Context, contributor: Contributor,
                        check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
-        context.job = models.Job.update(job_id=context.job.id, state="running", step="fetching data")
+        context.job = context.job.update(state="running", step="fetching data")
         logger.info('contributor_export from job {action}'.format(action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
@@ -180,10 +180,9 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
-            context.job = models.Job.update(job_id=context.job.id, state="running",
-                                            step="building preprocesses context")
+            context.job = context.job.update(step="building preprocesses context")
             context = contributor_export_functions.build_context(contributor, context)
-            context.job = models.Job.update(job_id=context.job.id, state="running", step="preprocess")
+            context.job = context.job.update(step="preprocess")
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
@@ -201,14 +200,14 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
 def contributor_export_finalization(context: Context) -> Optional[ContributorExport]:
     logger.info('contributor_export_finalization from job {action}'.format(action=context.job.action_type))
     contributor = context.contributor_contexts[0].contributor
-    models.Job.update(job_id=context.job.id, state="running", step="merge")
+    context.job.update(state="running", step="merge")
     context = contributor_export_functions.merge(contributor, context)
 
-    models.Job.update(job_id=context.job.id, state="running", step="postprocess")
+    context.job.update(step="postprocess")
     context = contributor_export_functions.postprocess(contributor, context)
 
     # insert export in mongo db
-    models.Job.update(job_id=context.job.id, state="running", step="save_contributor_export")
+    context.job.update(step="save_contributor_export")
     export = contributor_export_functions.save_export(contributor, context)
     finish_job(context)
     return export
@@ -220,10 +219,10 @@ def coverage_export(context: Context) -> Context:
     job = context.job
     logger.info('coverage_export from job {action}'.format(action=job.action_type))
     context.instance = 'coverage'
-    models.Job.update(job_id=job.id, state="running", step="fetching context")
+    context.job.update(state="running", step="fetching context")
     context.fill_contributor_contexts(coverage)
 
-    models.Job.update(job_id=job.id, state="running", step="preprocess")
+    context.job.update(step="preprocess")
     launch(coverage.preprocesses, context)
 
 
@@ -232,14 +231,14 @@ def coverage_export_finalization(context: Context) -> Context:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export_finalization from job {action}'.format(action=job.action_type))
-    models.Job.update(job_id=job.id, state="running", step="merge")
+    context.job.update(step="merge")
     context = coverage_export_functions.merge(coverage, context)
 
-    models.Job.update(job_id=job.id, state="running", step="postprocess")
+    context.job.update(step="postprocess")
     coverage_export_functions.postprocess(coverage, context)
 
     # insert export in mongo db
-    models.Job.update(job_id=job.id, state="running", step="save_coverage_export")
+    context.job.update(step="save_coverage_export")
     export = coverage_export_functions.save_export(coverage, context)
     if export:
         # launch publish for all environment
