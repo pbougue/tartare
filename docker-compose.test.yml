@@ -7,7 +7,7 @@ services:
       - RETRY_NUMBER_WHEN_FAILED_TASK=0
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
-    command: celery -A tartare.tasks.celery worker -Q tartare
+    command: celery -A tartare.tasks.celery worker -Q tartare -c 1
     links:
       - rabbitmq
       - mongo-server
@@ -19,7 +19,7 @@ services:
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
-    command: celery -A tartare.tasks worker -Q process_ruspell
+    command: celery -A tartare.tasks worker -Q process_ruspell -c 1
     links:
       - rabbitmq
       - mongo-server

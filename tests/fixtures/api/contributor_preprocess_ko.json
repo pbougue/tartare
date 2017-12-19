@@ -1,0 +1,26 @@
+{
+  "data_prefix": "contributor_preprocess_ko",
+  "data_sources": [
+    {
+      "data_format": "gtfs",
+      "id": "contributor_preprocess_ko_data_source",
+      "input": {
+        "type": "url",
+        "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name_missing_routes.zip"
+      },
+      "name": "données gtfs"
+    }
+  ],
+  "id": "contributor_preprocess_ko",
+  "name": "contributor_preprocess_ko",
+  "preprocesses": [
+    {
+      "id": "id",
+      "type": "HeadsignShortName",
+      "sequence": 1,
+      "data_source_ids": [
+        "contributor_preprocess_ko_data_source"
+      ]
+    }
+  ]
+}

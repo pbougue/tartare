@@ -35,11 +35,12 @@ import mock
 import pytest
 
 from tartare import app
+from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.context import Context
 from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
-from tartare.core.models import DataSource, Contributor, Input
+from tartare.core.models import DataSource, Contributor, Input, Job
 from tartare.exceptions import ParameterException, FetcherException
-from tests.utils import mock_urlretrieve, mock_zip_file
+from tests.utils import mock_urlretrieve
 
 
 class TestFetcher:
@@ -47,7 +48,7 @@ class TestFetcher:
     def test_build_no_data_set(self, urlretrieve_func):
         data_source = DataSource(666, 'Bib', 'gtfs', Input('url', 'bob'))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
-        context = Context()
+        context = Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT))
         with app.app_context():
             with pytest.raises(ParameterException) as excinfo:
                 build_context(contrib, context)

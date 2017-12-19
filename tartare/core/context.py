@@ -27,11 +27,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+from datetime import date
 from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer
+    ValidityPeriodContainer, Job
 from tartare.exceptions import IntegrityException
 
 
@@ -58,13 +59,15 @@ class ContributorContext(ValidityPeriodContainer):
 
 
 class Context:
-    def __init__(self, instance: str='contributor', coverage: Coverage=None,
+    def __init__(self, instance: str, job: Job, coverage: Coverage=None, current_date: date=date.today(),
                  validity_period: ValidityPeriod=None, contributor_contexts: List[ContributorContext]=None) -> None:
         self.instance = instance
         self.coverage = coverage
         self.contributor_contexts = contributor_contexts if contributor_contexts else []
         self.validity_period = validity_period
         self.global_gridfs_id = ''
+        self.current_date = current_date
+        self.job = job
 
     def get_data_source_context_in_links(self, links: List[dict],
                                          data_format: Optional[str]=None) -> Optional[DataSourceContext]:

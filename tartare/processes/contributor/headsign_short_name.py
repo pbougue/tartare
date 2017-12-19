@@ -27,6 +27,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+
+import os
 import tempfile
 from functools import partial
 
@@ -37,7 +39,7 @@ from tartare.core import zip
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.readers import CsvReader
-from tartare.exceptions import ParameterException
+from tartare.exceptions import ParameterException, ColumnNotFound, RuntimeException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -70,10 +72,14 @@ class HeadsignShortName(AbstractContributorProcess):
         reader = CsvReader()
         reader.load_csv_data(filename, keep_default_na=False, low_memory=False)
 
-        reader.apply(column_name='trip_short_name',
-                     callback=lambda row: self.get_trip_short_name(row, map_route_modes))
-        # For All modes
-        reader.apply(column_name='trip_headsign', callback=lambda _: '')
+        try:
+            reader.apply(column_name='trip_short_name',
+                         callback=lambda row: self.get_trip_short_name(row, map_route_modes))
+            # For All modes
+            reader.apply(column_name='trip_headsign', callback=lambda _: '')
+        except ColumnNotFound as e:
+            msg = 'error in file "{}": {}'.format(os.path.basename(filename), str(e))
+            raise RuntimeException(self.format_error_message(msg))
         reader.save_as_csv(filename)
 
     def do(self) -> Context:
@@ -85,7 +91,7 @@ class HeadsignShortName(AbstractContributorProcess):
                 msg = 'impossible to build preprocess HeadsignShortName : ' \
                       'data source {} does not exist for contributor {}'.format(data_source_id, contributor.id)
                 logging.getLogger(__name__).error(msg)
-                raise ParameterException(msg)
+                raise ParameterException(self.format_error_message(msg))
 
             grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
             map_route_modes = self.get_map_route_modes(grid_out)

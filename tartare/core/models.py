@@ -890,32 +890,26 @@ class Job(object):
         lasts = MongoJobSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
 
-    @classmethod
-    def update(cls, job_id: str, state: str = None, step: str = None, error_message: str = None) -> Optional['Job']:
-        logger = logging.getLogger(__name__)
-        if not job_id:
-            logger.error('job_id cannot be empty')
-            return None
-        job = cls.get_one(job_id)
-        if not job:
-            logger.error("Cannot find job to update %s", job_id)
-            return None
+    def update(self, state: str = None, step: str = None, error_message: str = None) -> Optional['Job']:
         if state is not None:
-            job.state = state
+            self.state = state
         if step is not None:
-            job.step = step
+            self.step = step
         if error_message is not None:
-            job.error_message = error_message
+            self.error_message = error_message
 
-        job.updated_at = datetime.utcnow()
+            self.updated_at = datetime.utcnow()
 
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': job_id}, {'$set': MongoJobSchema().dump(job).data})
+        raw = mongo.db[Job.mongo_collection].update_one({'_id': self.id}, {'$set': MongoJobSchema().dump(self).data})
         if raw.matched_count == 0:
             return None
-        return job
+        return self
 
     def has_failed(self) -> bool:
         return self.state == "failed"
+
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class MongoJobSchema(Schema):

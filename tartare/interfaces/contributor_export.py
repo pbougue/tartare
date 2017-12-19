@@ -49,8 +49,7 @@ class ContributorExportResource(Resource, CommonArgs):
         job = Job(contributor_id=contributor.id, action_type=ACTION_TYPE_CONTRIBUTOR_EXPORT)
         job.save()
         try:
-            chain(contributor_export.si(Context(), contributor, job, current_date, False),
-                  finish_job.si(job.id)).delay()
+            contributor_export.si(Context('contributor', job, current_date=current_date), contributor, False).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
