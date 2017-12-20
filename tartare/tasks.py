@@ -71,8 +71,6 @@ class CallbackTask(tartare.ContextTask):
         # if contributor_export or coverage_export is failing we clean the context
         if isinstance(args[0], Context):
             context = args[0]
-            with tartare.app.app_context():
-                context.cleanup()
             self.update_job(context.job, exc)
             self.send_mail(context.job)
             super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
