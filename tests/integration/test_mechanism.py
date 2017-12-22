@@ -178,6 +178,7 @@ class TartareFixture(object):
                             params={'file': file},
                             headers={})
             self.assert_sucessful_call(raw, 201)
+            return raw
 
     def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None, expected_filename=None):
         metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(coverage_id=coverage_id)

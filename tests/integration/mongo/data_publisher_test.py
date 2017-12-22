@@ -239,27 +239,7 @@ class TestDataPublisher(TartareFixture):
 
         self.full_export(contributor_id, coverage_id)
 
-        # check if the file was successfully uploaded
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
-                             init_ftp_upload_server.password)
-        directory_content = session.nlst()
-        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
-        assert len(directory_content) == 1
-        assert expected_filename in directory_content
-        # check that meta data from file on ftp server are correct
-        with tempfile.TemporaryDirectory() as tmp_dirname:
-            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
-            with open(transfered_full_name, 'wb') as dest_file:
-                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
-                                   dest_file.write)
-                session.delete(expected_filename)
-            with ZipFile(transfered_full_name, 'r') as ods_zip:
-                metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
-                ods_zip.extract(metadata_file_name, tmp_dirname)
-                fixture = os.path.join(fixture_dir, 'metadata', metadata_file_name)
-                metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_files_equals(metadata, fixture)
-        session.quit()
+        self.assert_metadata_equals_to_fixture(init_ftp_upload_server, coverage_id)
 
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'

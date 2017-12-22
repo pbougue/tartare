@@ -75,11 +75,7 @@ class TestDatasetApi(TartareFixture):
         assert ds['updated_at'] is None
         assert ds['validity_period'] is None
 
-        with open(fixtures_path, 'rb') as file:
-            raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')),
-                            params={'file': file},
-                            headers={})
-        assert raw.status_code == 201
+        raw = self.post_manual_data_set('id_test', data_source.get('id'), 'gtfs/some_archive.zip')
         r = self.json_to_dict(raw)
         assert len(r["data_sets"]) == 1
         assert 'id' in r['data_sets'][0]

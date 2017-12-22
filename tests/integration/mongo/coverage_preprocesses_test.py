@@ -336,10 +336,7 @@ class TestFusioExportPreprocess(TartareFixture):
         raw = self.post('/coverages', self.dict_to_json(coverage))
         self.assert_sucessful_call(raw, 201)
 
-        post_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>42</ActionId>
-                        </serverfusio>"""
+        post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         get_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
         <Info>
