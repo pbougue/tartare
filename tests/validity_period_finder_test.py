@@ -251,7 +251,7 @@ def test_get_validity_period_union_empty():
          ValidityPeriod(date(2017, 1, 20), date(2017, 7, 14))),
         # one contributor more than one year now inside
         ([(date(2017, 1, 1), date(2018, 3, 15))],
-         ValidityPeriod(date(2017, 1, 15), date(2018, 1, 14))),
+         ValidityPeriod(date(2017, 1, 8), date(2018, 1, 7))),
         # one contributor more than one year now outside
         ([(date(2018, 1, 15), date(2020, 1, 15))],
          ValidityPeriod(date(2018, 1, 15), date(2019, 1, 14))),
@@ -269,7 +269,7 @@ def test_get_validity_period_union_empty():
          ValidityPeriod(date(2017, 1, 1), date(2017, 12, 1))),
         # more than one year now inside
         ([(date(2017, 1, 1), date(2017, 7, 1)), (date(2018, 3, 1), date(2018, 9, 1))],
-         ValidityPeriod(date(2017, 1, 15), date(2018, 1, 14))),
+         ValidityPeriod(date(2017, 1, 8), date(2018, 1, 7))),
         # more than one year now outside
         ([(date(2018, 1, 1), date(2018, 7, 1)), (date(2019, 3, 1), date(2019, 9, 1))],
          ValidityPeriod(date(2018, 1, 1), date(2018, 12, 31))),

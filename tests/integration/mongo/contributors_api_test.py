@@ -517,7 +517,6 @@ class TestContributors(TartareFixture):
                 }
             }
         ]
-        print("patching data with ", json.dumps(data_source_list))
         raw = self.patch('/contributors/id_test', json.dumps(data_source_list))
         r = self.json_to_dict(raw)
         self.assert_sucessful_call(raw)

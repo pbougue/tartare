@@ -26,9 +26,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from collections import Counter
 from io import StringIO
+
 from mock import mock, ANY
+
 from tartare.core.calendar_handler import dic_to_memory_csv
 
 
@@ -39,14 +40,14 @@ class TestCalendarHandler:
     @mock.patch('csv.DictWriter')
     def test_dic_to_memory_csv_argument_keys(self, dict_writer):
         csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
-        dict_writer.assert_called_with(ANY, ['att1', 'att2'])
+        assert dict_writer.call_args_list[0][0][1] == ['att1', 'att2']
         assert isinstance(csv, StringIO)
 
     @mock.patch('csv.DictWriter')
     def test_dic_to_memory_csv_keys(self, dict_writer):
         expected_keys = ['att_1', 'att_b', 'att_bob']
         dic_to_memory_csv([{"att_1": "val1", "att_b": "val2", "att_bob": "val2"}])
-        dict_writer.assert_called_with(ANY, expected_keys)
+        assert dict_writer.call_args_list[0][0][1] == expected_keys
 
     def test_dic_to_memory_csv_return_type(self):
         csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}])

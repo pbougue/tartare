@@ -179,6 +179,6 @@ class ValidityPeriodFinder(object):
         if abs(begin_date - end_date).days > 365:
             logging.getLogger(__name__).warning(
                 'period bounds for union of validity periods exceed one year')
-            begin_date = max(begin_date, now_date)
+            begin_date = max(begin_date, now_date - timedelta(days=7))
             end_date = min(begin_date + timedelta(days=364), end_date)
         return ValidityPeriod(begin_date, end_date)
