@@ -99,10 +99,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                    <serverfusio>
-                        <ActionId>1607281547155684</ActionId>
-                    </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -136,10 +133,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>1607281547155684</ActionId>
-                        </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -168,10 +162,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>1607281547155684</ActionId>
-                        </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -212,10 +203,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>1607281547155684</ActionId>
-                        </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -255,10 +243,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>1607281547155684</ActionId>
-                        </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -310,10 +295,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         ])
         self.__init_coverage("jdr", ["id_test"])
 
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                            <serverfusio>
-                                <ActionId>1607281547155684</ActionId>
-                            </serverfusio>"""
+        content = self.get_fusio_response_from_action_id(42)
 
         fusio_call.return_value = get_response(200, content)
         self.full_export('id_test', 'jdr', '2017-08-10')
@@ -354,10 +336,7 @@ class TestFusioExportPreprocess(TartareFixture):
         raw = self.post('/coverages', self.dict_to_json(coverage))
         self.assert_sucessful_call(raw, 201)
 
-        post_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                        <serverfusio>
-                            <ActionId>42</ActionId>
-                        </serverfusio>"""
+        post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         get_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
         <Info>

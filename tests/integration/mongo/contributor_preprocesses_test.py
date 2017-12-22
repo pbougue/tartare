@@ -300,12 +300,7 @@ class TestComputeDirectionsProcess(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
         if add_data_source_config:
-            with open(_get_file_fixture_full_path('compute_directions/config.json'), 'rb') as file:
-                raw = self.post('/contributors/id_test/data_sources/ds-config/data_sets',
-                                params={'file': file},
-                                headers={})
-                self.assert_sucessful_call(raw, 201)
-
+            self.post_manual_data_set('id_test', 'ds-config', 'compute_directions/config.json')
         if do_export:
             return self.__do_export()
 
@@ -415,12 +410,7 @@ class TestComputeExternalSettings(TartareFixture):
         self.assert_sucessful_call(raw, 201)
 
         for name, value in links.items():
-            with open(_get_file_fixture_full_path('prepare_external_settings/{id}.json'.format(id=value)),
-                      'rb') as file:
-                raw = self.post('/contributors/id_test/data_sources/{id}/data_sets'.format(id=value),
-                                params={'file': file},
-                                headers={})
-                self.assert_sucessful_call(raw, 201)
+            self.post_manual_data_set('id_test', value, 'prepare_external_settings/{id}.json'.format(id=value))
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
         r = self.json_to_dict(raw)

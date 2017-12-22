@@ -71,7 +71,7 @@ def dic_to_memory_csv(list_of_dict: List[Dict[str, str]], keys: Optional[Iterabl
     if not keys:
         keys = sorted(list_of_dict[0].keys())
     f = StringIO()
-    w = csv.DictWriter(f, sorted(keys))
+    w = csv.DictWriter(f, sorted(keys), lineterminator="\n")
     w.writeheader()
     w.writerows(list_of_dict)
     return f

@@ -57,5 +57,6 @@ class FusioImport(AbstractFusioProcess):
                                    'DateFin': Fusio.format_date(validity_period.end_date),
                                    'action': 'regionalimport',
                                })
+        self.context.validity_period = validity_period
         self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context
