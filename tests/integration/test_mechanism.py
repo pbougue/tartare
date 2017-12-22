@@ -28,11 +28,15 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
+import ftplib
 import json
+import os
+import tempfile
+from zipfile import ZipFile
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
+from tests.utils import _get_file_fixture_full_path, assert_files_equals
 
 
 class TartareFixture(object):
@@ -113,15 +117,17 @@ class TartareFixture(object):
         return self.coverage_export(coverage_id)
 
     def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
-                         data_type=DATA_TYPE_DEFAULT):
+                         data_type=DATA_TYPE_DEFAULT, manual=False):
+        input = {'type': 'manual'} if manual else {
+            "type": "url",
+            "url": url
+        }
+
         data_source = {
             "id": data_source_id,
             "name": data_source_id,
             "data_format": data_format,
-            "input": {
-                "type": "url",
-                "url": url
-            }
+            "input": input
         }
         contributor = {
             "data_type": data_type,
@@ -159,3 +165,39 @@ class TartareFixture(object):
         raw = self.get('/jobs')
         self.assert_sucessful_call(raw, 200)
         return self.json_to_dict(raw)['jobs']
+
+    def get_fusio_response_from_action_id(self, action_id):
+        return """<?xml version="1.0" encoding="ISO-8859-1"?>
+                            <serverfusio>
+                                <ActionId>{action_id}</ActionId>
+                            </serverfusio>""".format(action_id=action_id)
+
+    def post_manual_data_set(self, cid, dsid, path):
+        with open(_get_file_fixture_full_path(path), 'rb') as file:
+            raw = self.post('/contributors/{}/data_sources/{}/data_sets'.format(cid, dsid),
+                            params={'file': file},
+                            headers={})
+            self.assert_sucessful_call(raw, 201)
+
+    def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None, expected_filename=None):
+        metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(coverage_id=coverage_id)
+        expected_filename = expected_filename if expected_filename else '{coverage_id}.zip'.format(coverage_id=coverage_id)
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
+
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        assert expected_filename in directory_content
+        # check that meta data from file on ftp server are correct
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete(expected_filename)
+            with ZipFile(transfered_full_name, 'r') as ods_zip:
+                ods_zip.extract(metadata_file_name, tmp_dirname)
+                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
+                metadata = os.path.join(tmp_dirname, metadata_file_name)
+                assert_files_equals(metadata, fixture)
+        session.quit()
