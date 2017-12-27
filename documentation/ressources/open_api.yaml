@@ -828,6 +828,11 @@ paths:
       tags:
         - contributors
       parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor of the preprocess
+          required: true
         - in: body
           name: body
           description: Preprocess object that needs to be added to given contributor
