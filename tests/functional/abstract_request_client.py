@@ -27,12 +27,13 @@
 # www.navitia.io
 import json
 import os
+import tempfile
 from time import sleep
+from zipfile import ZipFile
 
 import requests
+
 from tests.utils import assert_files_equals
-import tempfile
-from zipfile import ZipFile
 
 
 class AbstractRequestClient:
@@ -60,9 +61,9 @@ class AbstractRequestClient:
     def post(self, uri, payload=None, files=None, headers=None):
         return requests.post(self.get_url() + uri, json=payload, files=files, headers=headers)
 
-    def patch(self, url, params=None, headers={'Content-Type': 'application/json'}):
+    def patch(self, uri, params=None, headers={'Content-Type': 'application/json'}):
         data = params if params else {}
-        return requests.patch(url, data=data, headers=headers)
+        return requests.patch(self.get_url() + uri, data=data, headers=headers)
 
     def get_json_from_dict(self, dict):
         return json.dumps(dict)
@@ -86,7 +87,8 @@ class AbstractRequestClient:
         exports = self.get_dict_from_response(raw)
         assert "exports" in exports
         assert len(exports["exports"]) == 1
-        gridfs_id = next(ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
+        gridfs_id = next(
+            ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
         assert gridfs_id
         export_id = exports["exports"][0]["id"]
         assert export_id
@@ -104,7 +106,8 @@ class AbstractRequestClient:
             with open(dest_zip_res, 'wb') as f:
                 f.write(content)
 
-            with ZipFile(dest_zip_res, 'r') as files_zip_res, ZipFile(self.get_fixtures_relative_path(ref_zip_file), 'r') as files_zip:
+            with ZipFile(dest_zip_res, 'r') as files_zip_res, ZipFile(self.get_fixtures_relative_path(ref_zip_file),
+                                                                      'r') as files_zip:
                 except_files_list = files_zip.namelist()
                 response_files_list = files_zip_res.namelist()
 
@@ -124,7 +127,12 @@ class AbstractRequestClient:
                         HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         return json_file
 
-    def wait_for_job_to_be_done(self, job_id, step, nb_retries_max=15, break_if='done'):
+    def wait_for_all_jobs_to_be_done(self):
+        jobs = self.get_dict_from_response(self.get('/jobs'))['jobs']
+        for job in jobs:
+            self.wait_for_job_to_be_done(job['id'])
+
+    def wait_for_job_to_be_done(self, job_id, step=None, nb_retries_max=15, break_if='done'):
         retry = 0
         while retry < nb_retries_max:
             raw = self.get('jobs/' + job_id)
@@ -139,7 +147,8 @@ class AbstractRequestClient:
         raw = self.get('jobs/' + job_id)
         job = self.get_dict_from_response(raw)['jobs'][0]
         assert job['state'] == break_if
-        assert job['step'] == step
+        if step:
+            assert job['step'] == step
 
     def assert_status_is(self, raw, status):
         assert raw.status_code == status, print(self.get_dict_from_response(raw))
