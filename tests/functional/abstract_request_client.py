@@ -127,10 +127,17 @@ class AbstractRequestClient:
                         HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         return json_file
 
-    def wait_for_all_jobs_to_be_done(self):
-        jobs = self.get_dict_from_response(self.get('/jobs'))['jobs']
-        for job in jobs:
-            self.wait_for_job_to_be_done(job['id'])
+    def wait_for_jobs_to_exist(self, action_type, number, nb_retries_max=20):
+        retry = 0
+        while retry < nb_retries_max:
+            jobs = self.get_dict_from_response(self.get('/jobs'))['jobs']
+            jobs_matching = [job for job in jobs if job['action_type'] == action_type]
+            if len(jobs_matching) != number:
+                sleep(1)
+                retry += 1
+            else:
+                break
+        assert retry < nb_retries_max
 
     def wait_for_job_to_be_done(self, job_id, step=None, nb_retries_max=15, break_if='done'):
         retry = 0
