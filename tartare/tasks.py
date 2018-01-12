@@ -31,13 +31,15 @@ import datetime
 import logging
 import os
 import tempfile
-from typing import Optional, List
+from typing import Optional, List, Union
 from zipfile import ZipFile
 
 from billiard.einfo import ExceptionInfo
 from celery import chain, chord, group
+from celery.apps.worker import Worker
 from celery.result import AsyncResult
 from celery.task import Task
+from celery.utils.dispatch import Signal
 
 import tartare
 from tartare import celery
@@ -166,10 +168,11 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor,
-                       check_for_update: bool = True) -> Optional[ContributorExport]:
+                       check_for_update: bool = True) -> Union[Optional[ContributorExport], bool]:
     try:
         context.job = context.job.update(state="running", step="fetching data")
-        logger.info('contributor_export from job {action}'.format(action=context.job.action_type))
+        logger.info(
+            'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
             contributor)
@@ -184,6 +187,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
+            return False
 
     except FetcherException as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
@@ -196,8 +200,9 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
 
 @celery.task(base=CallbackTask)
 def contributor_export_finalization(context: Context) -> Optional[ContributorExport]:
-    logger.info('contributor_export_finalization from job {action}'.format(action=context.job.action_type))
     contributor = context.contributor_contexts[0].contributor
+    logger.info('contributor_export_finalization of {cid} from job {action}'.format(cid=contributor.id,
+                                                                                    action=context.job.action_type))
     context.job.update(state="running", step="merge")
     context = contributor_export_functions.merge(contributor, context)
 
@@ -215,7 +220,7 @@ def contributor_export_finalization(context: Context) -> Optional[ContributorExp
 def coverage_export(context: Context) -> Context:
     coverage = context.coverage
     job = context.job
-    logger.info('coverage_export from job {action}'.format(action=job.action_type))
+    logger.info('coverage_export of {cov} from job {action}'.format(cov=coverage.id, action=job.action_type))
     context.instance = 'coverage'
     context.job.update(state="running", step="fetching context")
     context.fill_contributor_contexts(coverage)
@@ -228,7 +233,7 @@ def coverage_export(context: Context) -> Context:
 def coverage_export_finalization(context: Context) -> Context:
     coverage = context.coverage
     job = context.job
-    logger.info('coverage_export_finalization from job {action}'.format(action=job.action_type))
+    logger.info('coverage_export_finalization of {cov} from job {action}'.format(cov=coverage, action=job.action_type))
     context.job.update(step="merge")
     context = coverage_export_functions.merge(coverage, context)
 
@@ -309,14 +314,28 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
         logger.info("no contributors found")
 
 
-@celery.task()
-def automatic_update_launch_coverage_exports(contributor_export_results: List[AsyncResult]) -> None:
+@celery.task(bind=True, default_retry_delay=tartare.app.config.get('RETRY_DELAY_COVERAGE_EXPORT_TRIGGER'),
+             max_retries=None)
+def automatic_update_launch_coverage_exports(self: Task,
+                                             contributor_export_results: List[Optional[AsyncResult]]) -> None:
     logger.info('automatic_update_launch_coverage_exports')
+    logger.debug('default_retry_delay={}'.format(tartare.app.config.get('RETRY_DELAY_COVERAGE_EXPORT_TRIGGER')))
+    logger.debug("{}".format(contributor_export_results))
     updated_contributors = []
     for contributor_export_result in contributor_export_results:
-        # if contributor_export action generated an export in database (new data set fetched)
-        if contributor_export_result and isinstance(contributor_export_result.info, ContributorExport):
-            updated_contributors.append(contributor_export_result.info.contributor_id)
+        if isinstance(contributor_export_result, AsyncResult):
+            logger.debug('subtask launched {} with info {} is ready ? {}'.format(contributor_export_result,
+                                                                                 contributor_export_result.info,
+                                                                                 contributor_export_result.ready()))
+            if not contributor_export_result.ready():
+                logger.debug('retrying callback...')
+                self.retry()
+            else:
+                logger.debug('subtask finished with {}'.format(contributor_export_result.info))
+                # if contributor_export action generated an export in database (new data set fetched)
+                if contributor_export_result and isinstance(contributor_export_result.info, ContributorExport):
+                    updated_contributors.append(contributor_export_result.info.contributor_id)
+    logger.debug("{}".format(updated_contributors))
     if updated_contributors:
         coverages = models.Coverage.all()
         logger.info("updated_contributors = " + (','.join(updated_contributors)))
@@ -331,3 +350,14 @@ def automatic_update_launch_coverage_exports(contributor_export_results: List[As
             group(actions).delay()
     else:
         logger.info("none of the contributors have been updated")
+
+
+from celery.signals import worker_init
+
+
+@worker_init.connect
+def limit_chord_unlock_retry_delay(signal: Signal, sender: Worker, **kwargs: dict) -> None:
+    task = sender.app.tasks['celery.chord_unlock']
+    task.default_retry_delay = tartare.app.config.get('RETRY_DELAY_UNLOCK_CHORD')
+    logger.debug('limit_chord_unlock_retry_delay made celery.chord_unlock.default_retry_delay = {}'.format(
+        task.default_retry_delay))

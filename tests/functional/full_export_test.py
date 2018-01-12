@@ -28,6 +28,7 @@
 # www.navitia.io
 import json
 import os
+from time import sleep
 
 import pytest
 
@@ -158,11 +159,14 @@ class TestFullExport(AbstractRequestClient):
             self.assert_sucessful_create(raw)
 
         self.post('/actions/automatic_update?current_date=2017-08-15')
+        sleep(5)
+        self.wait_for_all_jobs_to_be_done()
         self.patch(
             '/contributors/{}/data_sources/{}'.format('contributor_id_sleeping', 'data_source_to_process_id_sleeping'),
-            json.dumps({'input': {'url': "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs.zip".format(
+            json.dumps({'input': {'url': "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
                 HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))}}))
         self.post('/actions/automatic_update?current_date=2017-08-15')
+        sleep(5)
         # here there should be 2 coverage exports:
         # - one for the first automatic update because all data set were new
         # - one other triggered by contributor_sleeping data set updated
