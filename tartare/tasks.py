@@ -168,7 +168,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: Context, contributor: Contributor,
-                       check_for_update: bool = True) -> Union[Optional[ContributorExport], bool]:
+                       check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
         context.job = context.job.update(state="running", step="fetching data")
         logger.info(
@@ -187,7 +187,6 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
-            return False
 
     except FetcherException as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
@@ -333,7 +332,7 @@ def automatic_update_launch_coverage_exports(self: Task,
             else:
                 logger.debug('subtask finished with {}'.format(contributor_export_result.info))
                 # if contributor_export action generated an export in database (new data set fetched)
-                if contributor_export_result and isinstance(contributor_export_result.info, ContributorExport):
+                if isinstance(contributor_export_result.info, ContributorExport):
                     updated_contributors.append(contributor_export_result.info.contributor_id)
     logger.debug("{}".format(updated_contributors))
     if updated_contributors:
