@@ -27,6 +27,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+import os
+from time import sleep
+
 import pytest
 
 from tests.functional.abstract_request_client import AbstractRequestClient
@@ -62,7 +65,8 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
-        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id', data_source_id='data_source_to_process_id',
+        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
+                                                data_source_id='data_source_to_process_id',
                                                 ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
@@ -85,7 +89,8 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
-        self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip', data_source_id="Google-1")
+        self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip',
+                                                data_source_id="Google-1")
 
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
@@ -100,7 +105,8 @@ class TestFullExport(AbstractRequestClient):
         self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
-                                                ref_file='compute_directions/functional.zip', data_source_id="data_source_to_process_id")
+                                                ref_file='compute_directions/functional.zip',
+                                                data_source_id="data_source_to_process_id")
 
     def test_exports_combined_two_coverages(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
@@ -139,3 +145,29 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
+    def test_coverage_exports_callback_waits_for_contributor_full_export(self):
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_sleeping.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        with open(self.get_api_fixture_path('coverage_triggered.json'), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            self.assert_sucessful_create(raw)
+
+        self.post('/actions/automatic_update?current_date=2017-08-15')
+        self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
+        self.patch(
+            '/contributors/{}/data_sources/{}'.format('contributor_id_sleeping', 'data_source_to_process_id_sleeping'),
+            json.dumps({'input': {'url': "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
+                HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))}}))
+        self.post('/actions/automatic_update?current_date=2017-08-15')
+        # here there should be 2 coverage exports:
+        # - one for the first automatic update because all data set were new
+        # - one other triggered by contributor_sleeping data set updated
+        self.wait_for_jobs_to_exist('automatic_update_coverage_export', 2)
+        exports = self.get_dict_from_response(self.get('coverages/coverage_id_triggered/exports'))['exports']
+        assert len(exports) == 2

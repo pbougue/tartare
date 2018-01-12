@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -28,9 +26,16 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.contributor.compute_directions import ComputeDirections
-from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
-from tartare.processes.contributor.headsign_short_name import HeadsignShortName
-from tartare.processes.contributor.compute_external_settings import ComputeExternalSettings
-from tartare.processes.contributor.ruspell import Ruspell
-from tartare.processes.contributor.sleeping import Sleeping
+import logging
+
+import random
+from time import sleep
+from tartare.core.context import Context
+from tartare.processes.abstract_preprocess import AbstractContributorProcess
+
+class Sleeping(AbstractContributorProcess):
+    def do(self) -> Context:
+        wait = random.randint(2, 5)
+        logging.getLogger(__name__).debug('Sleeping preprocess is sleeping for {}s'.format(wait))
+        sleep(wait)
+        return self.context
