@@ -62,10 +62,9 @@ class HttpProtocol(AbstractProtocol):
         if self.options:
             response = requests.post(self.url,
                                      auth=(self.options['authent']['username'], self.options['authent']['password']),
-                                     files={'file': file, 'filename': filename}, timeout=timeout)
+                                     files={'file': (filename, file)}, timeout=timeout)
         else:
-            response = requests.post(self.url, files={'file': file, 'filename': filename},
-                                     timeout=timeout)
+            response = requests.post(self.url, files={'file': (filename, file)}, timeout=timeout)
         if response.status_code != 200:
             message = 'error during publishing on {url}, status code => {status_code}'.format(
                 url=self.url, status_code=response.status_code)
