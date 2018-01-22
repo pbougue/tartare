@@ -252,13 +252,16 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]['id'] == "id_test"
         assert r["contributors"][0]['name'] == "new_name_test"
 
-    def test_update_contributor_data_prefix_error(self):
+    def test_update_contributor_data_prefix(self):
         raw = self.post('/contributors', '{"id": "id_test", "name": "name_test", "data_prefix":"AAA"}')
         assert raw.status_code == 201
 
-        raw = self.patch('/contributors/id_test', '{"data_prefix": "AAB"}')
+        raw = self.patch('/contributors/id_test', '{"data_prefix": "BBB"}')
+        r = self.json_to_dict(raw)
 
-        assert raw.status_code == 400
+        assert raw.status_code == 200
+        assert r["contributors"][0]['id'] == "id_test"
+        assert r["contributors"][0]['data_prefix'] == "BBB"
 
     def test_update_unknown_coverage(self):
         raw = self.patch('/contributors/unknown', '{"name": "new_name_test"}')
