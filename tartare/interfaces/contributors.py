@@ -121,9 +121,6 @@ class Contributor(flask_restful.Resource):
         if errors:
             raise InvalidArguments(errors)
 
-        if 'data_prefix' in request_data and contributor.data_prefix != request_data['data_prefix']:
-            raise InvalidArguments('the modification of the data_prefix is not possible ({} => {})'.format(
-                contributor.data_prefix, request_data['data_prefix']))
         if 'id' in request_data and contributor.id != request_data['id']:
             raise InvalidArguments('the modification of the id is not possible')
 
