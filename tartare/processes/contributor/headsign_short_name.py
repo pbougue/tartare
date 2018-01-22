@@ -102,5 +102,5 @@ class HeadsignShortName(AbstractContributorProcess):
                                                                                 map_route_modes=map_route_modes)
                                                                )
                 data_source_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                    data_source_context.gridfs_id, gtfs_computed_path, computed_file_name=grid_out.filename)
+                    data_source_context.gridfs_id, gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0])
         return self.context
