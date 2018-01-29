@@ -1467,6 +1467,7 @@ definitions:
           - Ruspell
           - ComputeDirections
           - GtfsAgencyFile
+          - HeadsignShortName
       data_source_ids:
         type: array
         items:
