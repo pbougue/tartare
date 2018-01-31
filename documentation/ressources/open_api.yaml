@@ -606,18 +606,18 @@ paths:
             $ref: "#/definitions/job"
 
   /contributors/{contributor_id}/data_sources:
+    parameters:
+      - in: path
+        name: contributor_id
+        type: string
+        description: Identifier of the contributor
+        required: true
     get:
       summary: Display contributor data sources
       tags:
         - contributors
       produces:
         - application/json
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor
-          required: true
       responses:
         200:
           description: Requested contributor data source
@@ -926,18 +926,18 @@ paths:
 
 
   /coverages/{coverage_id}/preprocesses:
+    parameters:
+      - in: path
+        name: coverage_id
+        type: string
+        description: Identifier of the coverage
+        required: true
     get:
       summary: Display coverage preprocesses
       tags:
         - coverages
       produces:
         - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage
-          required: true
       responses:
         200:
           description: Requested coverage preprocesses
