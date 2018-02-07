@@ -87,14 +87,14 @@ class TestGtfsAgencyProcess(TartareFixture):
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2015-08-23')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
@@ -128,14 +128,14 @@ class TestGtfsAgencyProcess(TartareFixture):
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
@@ -162,14 +162,14 @@ class TestGtfsAgencyProcess(TartareFixture):
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
@@ -204,14 +204,14 @@ class TestGtfsAgencyProcess(TartareFixture):
         contrib_payload = self.__contributor_creator(url)
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
         preprocesses = r["contributors"][0]["preprocesses"]
         assert len(preprocesses) == 1
 
         raw = self.post('/contributors/contrib_id/actions/export?current_date=2017-03-30')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
 
         job = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
@@ -255,7 +255,7 @@ class TestComputeDirectionsProcess(TartareFixture):
     def __do_export(self):
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-01-15')
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.json_to_dict(raw)
@@ -297,7 +297,7 @@ class TestComputeDirectionsProcess(TartareFixture):
             })
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         if add_data_source_config:
             self.post_manual_data_set('id_test', 'ds-config', 'compute_directions/config.json')
@@ -407,14 +407,14 @@ class TestComputeExternalSettings(TartareFixture):
 
         contrib_payload['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         for name, value in links.items():
             self.post_manual_data_set('id_test', value, 'prepare_external_settings/{id}.json'.format(id=value))
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.json_to_dict(raw)
@@ -519,11 +519,11 @@ class TestHeadsignShortNameProcess(TartareFixture):
         }
 
         raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.json_to_dict(raw)
@@ -580,11 +580,11 @@ class TestRuspellProcess(TartareFixture):
         }
 
         raw = self.post('/contributors', json.dumps(contrib_geographic))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         if export_contrib_geo:
             raw = self.post('/contributors/bano/actions/export?current_date=2017-09-11')
-            self.assert_sucessful_call(raw, 201)
+            self.assert_sucessful_create(raw)
 
         # Create contributor public_transport
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr,
@@ -622,11 +622,11 @@ class TestRuspellProcess(TartareFixture):
 
         contrib_public_transport['data_sources'] = data_sources
         raw = self.post('/contributors', json.dumps(contrib_public_transport))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.post('/contributors/id_test/actions/export?current_date=2017-09-11')
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/jobs/{jid}'.format(jid=r['job']['id']))
         r = self.json_to_dict(raw)

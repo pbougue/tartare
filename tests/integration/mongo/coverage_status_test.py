@@ -42,7 +42,7 @@ class TestCoverageStatus(TartareFixture):
 
     def __run_coverage_export(self, coverage_id):
         raw = self.post('/coverages/' + coverage_id + '/actions/export?current_date=2015-08-10')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/coverages')
         self.assert_sucessful_call(raw, 200)
@@ -65,7 +65,7 @@ class TestCoverageStatus(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def __create_coverage(self, contributor_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
         coverage = {
@@ -88,7 +88,7 @@ class TestCoverageStatus(TartareFixture):
             }
 
         raw = self.post('coverages', json.dumps(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def test_status_after_success_coverage_export_without_contributor(self):
         coverage_id = 'cov_id'

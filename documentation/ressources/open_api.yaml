@@ -548,8 +548,46 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
+    put:
+      summary: Modify contributor info using full resource
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: body
+          name: body
+          description: All the attributes of the contributor {contributor_id}.
+          required: true
+          schema:
+            $ref: "#/definitions/contributor_type"
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
     patch:
-      summary: Modify contributor info
+      deprecated: true
+      summary: Modify contributor info (use PUT instead)
       tags:
         - contributors
       produces:

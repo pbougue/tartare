@@ -205,7 +205,7 @@ class TestContributorPreProcesses(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         raw = self.delete('/contributors/id_test/preprocesses/{}'.format(preprocess_id))
@@ -271,7 +271,7 @@ class TestContributorPreProcesses(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
         new_preprocess = {

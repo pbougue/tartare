@@ -58,14 +58,14 @@ class TestHistorical(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_gtfs))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_config))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def __init_coverage_config(self):
         coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}
         raw = self.post('/coverages', json.dumps(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     @pytest.mark.parametrize("exports_number", [1, 2, 3, 4, 5])

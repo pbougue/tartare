@@ -123,8 +123,8 @@ class ValidateContributorPrepocessesDataSourceIds(object):
 
 
 class CheckContributorIntegrity(object):
-    def __init__(self, contributor_id_required: bool = False) -> None:
-        self.contributor_id_required = contributor_id_required
+    def __init__(self, method: str) -> None:
+        self.method = method
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
@@ -132,7 +132,7 @@ class CheckContributorIntegrity(object):
             post_data = request.json
             contributor_id = kwargs.get('contributor_id', None)
 
-            if self.contributor_id_required and not contributor_id:
+            if not self.method == 'POST' and not contributor_id:
                 msg = "contributor_id not present in request"
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
@@ -149,8 +149,9 @@ class CheckContributorIntegrity(object):
                 data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
                 existing_data_sources = []
             data_sources = post_data.get('data_sources', [])
-            for existing_data_source in existing_data_sources:
-                check_excepted_data_format(existing_data_source.data_format, data_type)
+            if self.method == 'PATCH':
+                for existing_data_source in existing_data_sources:
+                    check_excepted_data_format(existing_data_source.data_format, data_type)
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
