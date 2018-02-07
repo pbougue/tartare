@@ -133,3 +133,10 @@ class Contributor(flask_restful.Resource):
             raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
 
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200
+
+    def put(self, contributor_id: str) -> Response:
+        self.delete(contributor_id)
+        request.json['id'] = contributor_id
+        body, code = self.post()
+        return body, 200
+
