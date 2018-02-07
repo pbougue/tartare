@@ -48,7 +48,7 @@ from tartare.processes.processes import PreProcessManager
 class Contributor(flask_restful.Resource):
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
-    @CheckContributorIntegrity()
+    @CheckContributorIntegrity('POST')
     def post(self) -> Response:
         post_data = request.json
         if 'data_prefix' not in post_data:
@@ -98,7 +98,7 @@ class Contributor(flask_restful.Resource):
         return "", 204
 
     @JsonDataValidate()
-    @CheckContributorIntegrity(True)
+    @CheckContributorIntegrity('PATCH')
     def patch(self, contributor_id: str) -> Response:
         # "data_prefix" field is not modifiable, impacts of the modification
         # need to be checked. The previous value needs to be checked for an error
@@ -134,9 +134,13 @@ class Contributor(flask_restful.Resource):
 
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200
 
+    @JsonDataValidate()
+    @ValidateContributorPrepocessesDataSourceIds()
+    @CheckContributorIntegrity('PUT')
     def put(self, contributor_id: str) -> Response:
         self.delete(contributor_id)
         request.json['id'] = contributor_id
-        body, code = self.post()
-        return body, 200
+        post_return = self.post()
+        contributor_schema = schema.ContributorSchema(strict=True)
+        return contributor_schema.dump(models.Contributor.get(contributor_id)).data, 200
 
