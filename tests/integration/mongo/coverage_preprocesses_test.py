@@ -58,7 +58,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             "data_sources": data_sources
         }
         raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def __init_coverage(self, coverage_id, contributor_ids):
         coverage = {
@@ -77,7 +77,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             ]
         }
         raw = self.post('/coverages', json.dumps(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
@@ -178,7 +178,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', json.dumps(new_data_source))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
@@ -217,7 +217,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', json.dumps(new_data_source))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
@@ -250,7 +250,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         self.__init_contributor("id_test_2", [self.__create_data_source("my_gtfs_2",  url)], 'BBB')
         raw = self.post('/coverages/jdr/contributors', json.dumps({'id': 'id_test_2'}))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test_2', 'jdr', '2017-08-10')
 
@@ -334,7 +334,7 @@ class TestFusioExportPreprocess(TartareFixture):
 
         }
         raw = self.post('/coverages', self.dict_to_json(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')

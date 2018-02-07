@@ -591,7 +591,7 @@ class TestDataPublisher(TartareFixture):
         mock_get_export_url.return_value = export_url
         mock_fetch.return_value = _get_file_fixture_full_path('gtfs/sample_2.zip'), 'sample_2.zip'
         raw = self.coverage_export('cA')
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         job = self.get_job_from_export_response(raw)
         job = self.get_job_details(job['id'])
         assert job['state'] == 'done'
