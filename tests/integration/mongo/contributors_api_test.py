@@ -897,3 +897,83 @@ class TestContributors(TartareFixture):
             'contributors': [
                 {'data_sources': [], 'data_prefix': 'data_prefix_updated', 'name': 'name_updated', 'preprocesses': [],
                  'data_type': DATA_TYPE_GEOGRAPHIC, 'id': 'id_test'}]}
+
+    def test_put_contributor_data_sources(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_GEOGRAPHIC,
+                  'data_sources': [
+                      {
+                          "id": 'dsid',
+                          "name": 'dsname_updated',
+                          "data_format": DATA_FORMAT_BANO_FILE,
+                          "input": {'type': 'manual'}
+                      },
+                      {
+                          "id": 'dsid_2',
+                          "name": 'dsname_2',
+                          "data_format": DATA_FORMAT_OSM_FILE,
+                          "input": {'type': 'manual'}
+                      },
+                  ]
+                  }
+        raw = self.put('/contributors/cid', self.dict_to_json(update))
+        self.assert_sucessful_call(raw)
+        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
+        assert contrib_dict == {'contributors': [
+            {'name': 'cid_name', 'data_sources': [
+                {'name': 'dsname_updated', 'data_format': 'bano_file',
+                 'license': {'name': 'Private (unspecified)', 'url': ''},
+                 'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
+                 'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'fetch_started_at': None},
+                {'name': 'dsname_2', 'data_format': 'osm_file', 'license': {'name': 'Private (unspecified)', 'url': ''},
+                 'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None,
+                 'id': 'dsid_2',
+                 'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'fetch_started_at': None}
+            ],
+             'preprocesses': [],
+             'data_prefix': 'cid_prefix',
+             'id': 'cid',
+             'data_type': 'geographic'}
+        ]}
+
+    def test_put_contributor_preprocesses(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_PUBLIC_TRANSPORT,
+                  'data_sources': [{'id': 'dsid', 'name': 'dsid',
+                                    'input': {
+                                        'type': 'url', 'url': self.format_url(init_http_download_server.ip_addr,
+                                                                              'some_archive.zip')}}],
+                  'preprocesses': [
+                      {
+                          "id": 'p1',
+                          "sequence": 0,
+                          "type": 'HeadsignShortName',
+                          "data_source_ids": ['dsid']
+                      },
+                      {
+                          "id": 'p2',
+                          "sequence": 1,
+                          "type": 'GtfsAgencyFile',
+                          "data_source_ids": ['dsid'],
+                          "params": {'data': {'agency_name': 'my_agency'}}
+                      }
+                  ]
+                  }
+        raw = self.put('/contributors/cid', self.dict_to_json(update))
+        self.assert_sucessful_call(raw)
+        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
+        assert contrib_dict == {'contributors': [
+            {'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
+             'preprocesses': [
+                 {'params': {}, 'sequence': 0, 'data_source_ids': ['dsid'], 'id': 'p1', 'type': 'HeadsignShortName'},
+                 {'params': {'data': {'agency_name': 'my_agency'}}, 'sequence': 1, 'data_source_ids': ['dsid'],
+                  'id': 'p2', 'type': 'GtfsAgencyFile'}
+             ], 'data_sources': [
+                {'license': {'name': 'Private (unspecified)', 'url': ''}, 'service_id': None, 'name': 'dsid',
+                 'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
+                                                                              'some_archive.zip'), 'type': 'url'},
+                 'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'fetch_started_at': None,
+                 'status': 'never_fetched', 'updated_at': None}
+            ],
+             'id': 'cid'}
+        ]}
