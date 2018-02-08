@@ -38,7 +38,8 @@ import requests
 
 from tartare import app
 from tartare.core.calendar_handler import dic_to_memory_csv
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
+    PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Coverage, CoverageExport, DataSource, Platform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException
@@ -107,8 +108,8 @@ class FtpProtocol(AbstractProtocol):
 
 class ProtocolManager:
     publishers_by_protocol = {
-        "http": HttpProtocol,
-        "ftp": FtpProtocol
+        PLATFORM_PROTOCOL_HTTP: HttpProtocol,
+        PLATFORM_PROTOCOL_FTP: FtpProtocol
     }
 
     @classmethod
@@ -197,9 +198,9 @@ class StopAreaPublisher(AbstractPublisher):
 
 class PublisherManager:
     publishers_by_type = {
-        "navitia": NavitiaPublisher(),
-        "ods": ODSPublisher(),
-        "stop_area": StopAreaPublisher()
+        PLATFORM_TYPE_NAVITIA: NavitiaPublisher(),
+        PLATFORM_TYPE_ODS: ODSPublisher(),
+        PLATFORM_TYPE_STOP_AREA: StopAreaPublisher()
     }
 
     @classmethod
