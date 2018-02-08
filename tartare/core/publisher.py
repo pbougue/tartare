@@ -40,8 +40,8 @@ from tartare import app
 from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Coverage, CoverageExport, DataSource
-from tartare.exceptions import ProtocolException
+from tartare.core.models import Coverage, CoverageExport, DataSource, Platform
+from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,21 @@ class FtpProtocol(AbstractProtocol):
                                                                                            full_code=full_code)
             logger.error(error_message)
             raise ProtocolException(error_message)
+
+
+class ProtocolManager:
+    publishers_by_protocol = {
+        "http": HttpProtocol,
+        "ftp": FtpProtocol
+    }
+
+    @classmethod
+    def select_from_platform(cls, platform: Platform) -> AbstractProtocol:
+        if platform.protocol not in cls.publishers_by_protocol:
+            error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
+            raise ProtocolManagerException(error_message)
+        publisher_class = cls.publishers_by_protocol[platform.protocol]
+        return publisher_class(platform.url, platform.options)
 
 
 class AbstractPublisher(metaclass=ABCMeta):
@@ -178,3 +193,19 @@ class StopAreaPublisher(AbstractPublisher):
             gtfs_zip.extract(source_filename, tmp_dirname)
             with open(dest_file_path, 'rb') as fp:
                 protocol_uploader.publish(fp, dest_filename)
+
+
+class PublisherManager:
+    publishers_by_type = {
+        "navitia": NavitiaPublisher(),
+        "ods": ODSPublisher(),
+        "stop_area": StopAreaPublisher()
+    }
+
+    @classmethod
+    def select_from_platform(cls, platform: Platform) -> AbstractPublisher:
+        if platform.type not in cls.publishers_by_type:
+            error_message = 'unknown platform type "{type}"'.format(type=platform.type)
+            raise PublisherManagerException(error_message)
+
+        return cls.publishers_by_type[platform.type]
