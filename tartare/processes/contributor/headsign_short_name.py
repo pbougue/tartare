@@ -83,6 +83,7 @@ class HeadsignShortName(AbstractContributorProcess):
         reader.save_as_csv(filename)
 
     def do(self) -> Context:
+        self.check_expected_files(['routes.txt', 'trips.txt'])
         contributor = self.context.contributor_contexts[0].contributor
         for data_source_id in self.data_source_ids:
             data_source_context = self.context.get_contributor_data_source_context(contributor_id=contributor.id,
