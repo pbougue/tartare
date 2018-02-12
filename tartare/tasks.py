@@ -52,8 +52,9 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
     ContributorExport
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol
-from tartare.exceptions import FetcherException
+from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol, \
+    ProtocolManager, PublisherManager
+from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
 
@@ -87,35 +88,6 @@ class CallbackTask(tartare.ContextTask):
                 job.update(state="failed", error_message=str(exc))
 
 
-def _get_publisher(platform: Platform) -> AbstractPublisher:
-    from tartare import navitia_publisher, stop_area_publisher, ods_publisher
-    publishers_by_type = {
-        "navitia": navitia_publisher,
-        "ods": ods_publisher,
-        "stop_area": stop_area_publisher
-    }
-    if platform.type not in publishers_by_type:
-        error_message = 'unknown platform type "{type}"'.format(type=platform.type)
-        logger.error(error_message)
-        raise Exception(error_message)
-
-    return publishers_by_type[platform.type]
-
-
-def _get_protocol_uploader(platform: Platform, job: Job) -> AbstractProtocol:
-    publishers_by_protocol = {
-        "http": HttpProtocol,
-        "ftp": FtpProtocol
-    }
-    if platform.protocol not in publishers_by_protocol:
-        error_message = 'unknown platform protocol "{protocol}"'.format(protocol=platform.protocol)
-        job.update(state="failed", error_message=error_message)
-        logger.error(error_message)
-        raise Exception(error_message)
-
-    return publishers_by_protocol[platform.protocol](platform.url, platform.options)
-
-
 def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
     job.update(step=step)
@@ -124,13 +96,14 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
     try:
-        publisher = _get_publisher(platform)
-        publisher.publish(_get_protocol_uploader(platform, job), file, coverage, coverage_export)
+        publisher = PublisherManager.select_from_platform(platform)
+        protocol_uploader = ProtocolManager.select_from_platform(platform)
+        publisher.publish(protocol_uploader, file, coverage, coverage_export)
         # Upgrade current_ntfs_id
         current_ntfs_id = coverage_export.gridfs_id
         coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except ProtocolException as exc:
-        msg = 'publish data on platform "{type}" failed, {error}'.format(
+    except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
+        msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
             error=str(exc), url=platform.url, type=platform.type)
         logger.error(msg)
         raise exc

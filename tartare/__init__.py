@@ -77,12 +77,6 @@ celery.Task = ContextTask
 
 from tartare import api
 
-from tartare.core.publisher import NavitiaPublisher, ODSPublisher, StopAreaPublisher
-
-navitia_publisher = NavitiaPublisher()
-ods_publisher = ODSPublisher()
-stop_area_publisher = StopAreaPublisher()
-
 from tartare.core.mailer import Mailer
 
 mailer = Mailer(app.config.get('MAILER'), app.config.get('PLATFORM'))
