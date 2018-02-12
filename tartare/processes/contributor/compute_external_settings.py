@@ -110,6 +110,10 @@ class ComputeExternalSettings(AbstractContributorProcess):
         stop_extensions_file_name = os.path.join(tmp_dir_name, "stop_extensions.txt")
         stop_extensions_reader = CsvReader()
         stop_extensions_reader.load_csv_data(stop_extensions_file_name)
+        # if no value for stop extension, skip line
+        stop_extensions_reader.data = stop_extensions_reader.data.dropna()
+        stop_extensions_reader.data[self.stop_extensions_object_code_column] = \
+            stop_extensions_reader.data[self.stop_extensions_object_code_column].astype(int)
         for row in stop_extensions_reader.data.to_dict('records'):
             object_id = self.__get_navitia_code_from_gtfs_stop_point(row['stop_id'])
             self.__write_row_for_codes(writer_codes, "stop_point", self.stop_extensions_object_code_column, object_id,
