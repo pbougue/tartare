@@ -130,7 +130,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
         for row in reader.data.to_dict('records'):
             object_id = self.route_id_to_navitia_code.get(row['fields.externalcode_line'])
             if not object_id:
-                object_id = 'line not found'
+                object_id = 'line_not_found'
                 nb_lines_not_in_gtfs += 1
             self.__write_row_for_codes(writer_codes, "line", self.codif_ligne_object_system, object_id,
                                        row['fields.id_line'])
@@ -148,7 +148,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])
         lines_list = []  # type: List[str]
         for row in reader.data.to_dict('records'):
-            object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line not found')
+            object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line_not_found')
             self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
                                        row['fields.lineref'])
             if object_id not in lines_list:
