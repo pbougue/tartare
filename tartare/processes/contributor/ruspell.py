@@ -98,6 +98,7 @@ class Ruspell(AbstractContributorProcess):
         shutil.copy(stops_output_path, file_path)
 
     def do(self) -> Context:
+        self.check_expected_files(['stops.txt'])
         with tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as ruspell_dir_path:
             stops_output_path = os.path.join(ruspell_dir_path, self.stops_output_filename)
             from tartare.core.constants import DATA_FORMAT_BANO_FILE, DATA_FORMAT_RUSPELL_CONFIG

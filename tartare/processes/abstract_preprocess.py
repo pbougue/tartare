@@ -30,6 +30,7 @@ import logging
 import os
 import shutil
 import tempfile
+import zipfile
 from abc import ABCMeta, abstractmethod
 from typing import Any, List
 from zipfile import is_zipfile
@@ -37,7 +38,7 @@ from zipfile import is_zipfile
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess, DataSource
-from tartare.exceptions import ParameterException
+from tartare.exceptions import ParameterException, RuntimeException
 from tartare.processes.fusio import Fusio
 
 
@@ -80,6 +81,18 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
+
+    def check_expected_files(self, expected_files: List[str]) -> None:
+        for data_source_id_to_process in self.data_source_ids:
+            data_source_to_process_context = self.context.get_contributor_data_source_context(
+                contributor_id=self.contributor_id,
+                data_source_id=data_source_id_to_process)
+            data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
+            with zipfile.ZipFile(data_source_gridout, 'r') as zip_file:
+                if not set(expected_files).issubset(set(zip_file.namelist())):
+                    raise RuntimeException('data source {dsid} does not contains required files {files}'.format(
+                        dsid=data_source_id_to_process, files=', '.join(expected_files)
+                    ))
 
     def __replace_in_grid_fs(self, old_gridfs_id: str, zip_file: str, computed_file_name: str) -> str:
         with open(zip_file, 'rb') as new_archive_file:

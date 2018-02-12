@@ -27,11 +27,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+import os
+import tempfile
 from zipfile import ZipFile
 
-import os
 import pytest
-import tempfile
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
@@ -48,6 +48,20 @@ class TestGtfsAgencyProcess(TartareFixture):
     excepted_headers = ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang",
                         "agency_phone", "agency_fare_url", "agency_email"]
     excepted_headers.sort()
+
+    def test_expected_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'))
+        preprocess = {
+            "id": "plop",
+            "sequence": 0,
+            "data_source_ids": ['dsid'],
+            "type": "HeadsignShortName",
+        }
+        self.post('/contributors/cid/preprocesses', self.dict_to_json(preprocess))
+        resp = self.contributor_export('cid', check_done=False)
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'failed'
+        assert job['error_message'] == 'data source dsid does not contains required files routes.txt, trips.txt'
 
     def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
         contrib_payload = {
@@ -226,7 +240,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
 
         with app.app_context():
-
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
@@ -557,7 +570,8 @@ class TestHeadsignShortNameProcess(TartareFixture):
         job = self.__contributor_creator(url)
 
         assert job['state'] == 'failed'
-        assert job['error_message'] == '[process "headsign_short_name"] error in file "trips.txt": column "trip_short_name" missing'
+        assert job[
+                   'error_message'] == '[process "headsign_short_name"] error in file "trips.txt": column "trip_short_name" missing'
 
 
 class TestRuspellProcess(TartareFixture):
@@ -650,7 +664,8 @@ class TestRuspellProcess(TartareFixture):
         job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           params)
         assert job['state'] == 'failed'
-        assert job['error_message'] == '[process "ruspell_id"] data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
+        assert job[
+                   'error_message'] == '[process "ruspell_id"] data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
             data_source_id, contributor_id)
 
     def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):

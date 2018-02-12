@@ -199,6 +199,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 self.params['target_data_source_id']))
 
     def do(self) -> Context:
+        self.check_expected_files(['routes.txt', 'stop_extensions.txt'])
         self.__check_target_data_source()
         self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:

@@ -57,6 +57,7 @@ class ComputeDirections(AbstractContributorProcess):
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:
+        self.check_expected_files(['stop_times.txt', 'trips.txt'])
         self.check_links([DATA_FORMAT_DIRECTION_CONFIG])
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
         for data_source_id_to_process in self.data_source_ids:
