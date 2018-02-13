@@ -147,3 +147,12 @@ def test_wait_for_action_terminated_retry(action_status):
         Fusio(url='bob').wait_for_action_terminated('1607281547155684')
     assert wait_for_action_terminated_retry_count == app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER']
 
+
+@pytest.mark.parametrize("export_url,fusio_url,expected_url", [
+        ("http://fusio.fr/file/ntfs.zip", "http://new_fusio.com/cgi-bin/fusio.dll/", "http://new_fusio.com/file/ntfs.zip"),
+        ("https://fusio.fr/file/ntfs.zip", "http://new_fusio.com:8080/cgi-bin/fusio.dll/", "https://new_fusio.com:8080/file/ntfs.zip"),
+        ("http://fusio.fr/file/download", "http://new_fusio.com/cgi-bin/fusio.dll/", "http://new_fusio.com/file/download"),
+        ("http://fusio.fr/file/download?param1=1&param2=2", "https://new_fusio.com/cgi-bin/fusio.dll/", "http://new_fusio.com/file/download?param1=1&param2=2"),
+    ])
+def test_replace_url_hostname(export_url, fusio_url, expected_url):
+    assert Fusio.replace_url_hostname_from_url(export_url, fusio_url) == expected_url

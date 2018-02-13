@@ -99,6 +99,21 @@ class Fusio(object):
             raise FusioException('fusio query failed: {}'.format(response))
         return response
 
+    @staticmethod
+    def replace_url_hostname_from_url(export_url: str, fusio_url: str) -> str:
+        '''
+        url = http://foo.com/bar
+        fusio_url = https://baz.com/quz
+        result = http://baz.com/bar
+        '''
+        from urllib.parse import urlsplit, urlunsplit
+
+        fusio_url_list = list(urlsplit(fusio_url))
+        export_url_list = list(urlsplit(export_url))
+        export_url_list[1] = fusio_url_list[1]
+
+        return urlunsplit(export_url_list)
+
     @retry(retry_on_result=is_running,
            stop_max_attempt_number=app.config['FUSIO_STOP_MAX_ATTEMPT_NUMBER'],
            wait_fixed=app.config['FUSIO_WAIT_FIXED'])

@@ -306,10 +306,16 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
 
 class TestFusioExportPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
     @mock.patch('requests.get')
-    def test_fusio_export_avoid_merge_and_use_fusio_export_file(self, fusio_get, fusio_post, wait_for_action_terminated, init_http_download_server):
+    def test_fusio_export_avoid_merge_and_use_fusio_export_file(self,
+                                                                fusio_get,
+                                                                fusio_post,
+                                                                wait_for_action_terminated,
+                                                                replace_url_hostname_from_url,
+                                                                init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -345,12 +351,13 @@ class TestFusioExportPreprocess(TartareFixture):
                 <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
                         ActionId="42" LastError="">
                     <ActionProgression Status="Terminated"
-                                       Description="{url}"
+                                       Description="http://fusio/ntfs.zip"
                                        StepCount="10" CurrentStep="10"/>
                 </Action>
             </ActionList>
-        </Info>""".format(url=fetch_url)
+        </Info>"""
 
+        replace_url_hostname_from_url.return_value = fetch_url
         fusio_post.return_value = get_response(200, post_content)
         fusio_get.return_value = get_response(200, get_content)
         expected_data = {
