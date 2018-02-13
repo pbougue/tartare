@@ -103,7 +103,7 @@ class TestFusioProcesses:
                     <ActionId>1607281547155684</ActionId>
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
-        get_export_url.return_value = 'abcd.zip'
+        get_export_url.return_value = 'http://vip_fusio/abcd.zip'
         params = {
             'url': 'http://fusio_host',
             "export_type": "Ntfs"
@@ -119,7 +119,7 @@ class TestFusioProcesses:
         fusio_call.assert_called_with(requests.post, api='api', data=data)
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
         get_export_url.assert_called_with('1607281547155684')
-        save_export.assert_called_with('abcd.zip')
+        save_export.assert_called_with('http://fusio_host/abcd.zip')
 
     def test_call_fusio_export_unkown_export_type(self):
         params = {
