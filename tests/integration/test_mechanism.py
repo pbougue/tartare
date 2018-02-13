@@ -63,6 +63,12 @@ class TartareFixture(object):
                                  headers=headers,
                                  data=data)
 
+    def put(self, url, params=None, headers={'Content-Type': 'application/json'}):
+        data = params if params else {}
+        return self.tester.put(url,
+                                 headers=headers,
+                                 data=data)
+
     def delete(self, url):
         return self.tester.delete(url)
 
@@ -75,6 +81,9 @@ class TartareFixture(object):
 
     def format_url(self, ip, filename, path='gtfs', method='http'):
         return "{method}://{ip}/{path}/{filename}".format(method=method, ip=ip, filename=filename, path=path)
+
+    def assert_sucessful_create(self, raw):
+        self.assert_sucessful_call(raw, 201)
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
         debug = self.json_to_dict(raw) if status_code_expected != 204 else 'no body'
@@ -137,7 +146,7 @@ class TartareFixture(object):
             "data_sources": [data_source]
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
         data_source = {
@@ -150,7 +159,7 @@ class TartareFixture(object):
             }
         }
         raw = self.post('/contributors/{}/data_sources'.format(contrib_id), self.dict_to_json(data_source))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def update_data_source_url(self, contrib_id, ds_id, url):
         raw = self.patch('/contributors/{}/data_sources/{}'.format(contrib_id, ds_id),
@@ -177,7 +186,7 @@ class TartareFixture(object):
             raw = self.post('/contributors/{}/data_sources/{}/data_sets'.format(cid, dsid),
                             params={'file': file},
                             headers={})
-            self.assert_sucessful_call(raw, 201)
+            self.assert_sucessful_create(raw)
             return raw
 
     def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None, expected_filename=None):

@@ -1,5 +1,6 @@
 [
   {"datasetid": "referentiel-des-lignes-stif", "fields": {"id_line": "C01849", "externalcode_line": "800:C"}},
   {"datasetid": "referentiel-des-lignes-stif", "fields": {"id_line": "C01743", "externalcode_line": "800:C"}},
-  {"datasetid": "referentiel-des-lignes-stif", "fields": {"id_line": "C01666", "externalcode_line": "800:D"}}
+  {"datasetid": "referentiel-des-lignes-stif", "fields": {"id_line": "C01666", "externalcode_line": "800:D"}},
+  {"datasetid": "referentiel-des-lignes-stif", "fields": {"id_line": "C01667", "externalcode_line": "not_found_for_object_codes"}}
 ]

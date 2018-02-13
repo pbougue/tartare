@@ -58,7 +58,7 @@ class TestAutomaticUpdate(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def __assert_job_is_automatic_update_contributor_export(self, job, cid='auto_update_contrib'):
         assert job['state'] == 'done'
@@ -104,7 +104,7 @@ class TestAutomaticUpdate(TartareFixture):
             'contributors': contributor_ids,
         }
         raw = self.post('coverages', json.dumps(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def test_automatic_update_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)

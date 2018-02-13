@@ -144,7 +144,7 @@ class TestCoveragePreProcesses(TartareFixture):
         }]
         raw = self.post('/coverages', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         raw = self.delete('/coverages/jdr/preprocesses/{}'.format(preprocess_id))
@@ -191,7 +191,7 @@ class TestCoveragePreProcesses(TartareFixture):
         }]
         raw = self.post('/coverages', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         preprocess_id = r["coverages"][0]["preprocesses"][0]["id"]
         new_preprocess = {

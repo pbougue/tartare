@@ -548,8 +548,46 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
+    put:
+      summary: Modify contributor info using full resource
+      tags:
+        - contributors
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: contributor_id
+          type: string
+          description: Identifier of the contributor
+          required: true
+        - in: body
+          name: body
+          description: All the attributes of the contributor {contributor_id}.
+          required: true
+          schema:
+            $ref: "#/definitions/contributor_type"
+      responses:
+        200:
+          description: Requested contributor
+          schema:
+            $ref: '#/definitions/contributor_obj'
+        400:
+          description: Invalid arguments
+          schema :
+            $ref: '#/definitions/error_400'
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        415:
+          description: Unsupported Media Type
+          schema :
+            $ref: '#/definitions/error_415'
     patch:
-      summary: Modify contributor info
+      deprecated: true
+      summary: Modify contributor info (use PUT instead)
       tags:
         - contributors
       produces:
@@ -606,18 +644,18 @@ paths:
             $ref: "#/definitions/job"
 
   /contributors/{contributor_id}/data_sources:
+    parameters:
+      - in: path
+        name: contributor_id
+        type: string
+        description: Identifier of the contributor
+        required: true
     get:
       summary: Display contributor data sources
       tags:
         - contributors
       produces:
         - application/json
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor
-          required: true
       responses:
         200:
           description: Requested contributor data source
@@ -926,18 +964,18 @@ paths:
 
 
   /coverages/{coverage_id}/preprocesses:
+    parameters:
+      - in: path
+        name: coverage_id
+        type: string
+        description: Identifier of the coverage
+        required: true
     get:
       summary: Display coverage preprocesses
       tags:
         - coverages
       produces:
         - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage
-          required: true
       responses:
         200:
           description: Requested coverage preprocesses
@@ -1436,8 +1474,6 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/data_source_type"
-
-
       preprocesses:
         type: array
         items:
@@ -1465,11 +1501,17 @@ definitions:
       type:
         type: string
         example: Ruspell
+        enum:
+          - Ruspell
+          - ComputeDirections
+          - GtfsAgencyFile
+          - HeadsignShortName
       data_source_ids:
         type: array
         items:
           type: string
           example: datasource_stif_id
+        uniqueItems: true
       sequence:
         type: integer
         example: 1
@@ -1484,6 +1526,39 @@ definitions:
             }
           ]
         }
+
+  Ruspell:
+    type: object
+    properties:
+      links:
+        $ref: "#/definitions/params_links"
+  GtfsAgencyFile:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          agency_id:
+            type: string
+          agency_name:
+            type: string
+          agency_url:
+            type: string
+  ComputeDirections:
+    type: object
+    properties:
+      links:
+        $ref: "#/definitions/params_links"
+  params_links:
+    type: array
+    items:
+      type: object
+      properties:
+        contributor_id:
+          type: string
+        data_source_id:
+          type: string
+
 
   coverage_preprocess_list:
     type: object

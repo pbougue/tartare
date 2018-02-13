@@ -110,6 +110,10 @@ class ComputeExternalSettings(AbstractContributorProcess):
         stop_extensions_file_name = os.path.join(tmp_dir_name, "stop_extensions.txt")
         stop_extensions_reader = CsvReader()
         stop_extensions_reader.load_csv_data(stop_extensions_file_name)
+        # if no value for stop extension, skip line
+        stop_extensions_reader.data = stop_extensions_reader.data.dropna()
+        stop_extensions_reader.data[self.stop_extensions_object_code_column] = \
+            stop_extensions_reader.data[self.stop_extensions_object_code_column].astype(int)
         for row in stop_extensions_reader.data.to_dict('records'):
             object_id = self.__get_navitia_code_from_gtfs_stop_point(row['stop_id'])
             self.__write_row_for_codes(writer_codes, "stop_point", self.stop_extensions_object_code_column, object_id,
@@ -130,7 +134,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
         for row in reader.data.to_dict('records'):
             object_id = self.route_id_to_navitia_code.get(row['fields.externalcode_line'])
             if not object_id:
-                object_id = 'line not found'
+                object_id = 'line_not_found'
                 nb_lines_not_in_gtfs += 1
             self.__write_row_for_codes(writer_codes, "line", self.codif_ligne_object_system, object_id,
                                        row['fields.id_line'])
@@ -148,7 +152,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                                       ['fields.codifligne_line_externalcode', 'fields.lineref'])
         lines_list = []  # type: List[str]
         for row in reader.data.to_dict('records'):
-            object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line not found')
+            object_id = self.route_id_to_navitia_code.get(row['fields.codifligne_line_externalcode'], 'line_not_found')
             self.__write_row_for_codes(writer_codes, "line", self.siri_stif_object_system, object_id,
                                        row['fields.lineref'])
             if object_id not in lines_list:
@@ -199,6 +203,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 self.params['target_data_source_id']))
 
     def do(self) -> Context:
+        self.check_expected_files(['routes.txt', 'stop_extensions.txt'])
         self.__check_target_data_source()
         self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:

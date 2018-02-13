@@ -28,11 +28,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.constants import DATA_TYPE_GEOGRAPHIC
-from tartare.core import models
-from tests.integration.test_mechanism import TartareFixture
 import pytest
+
 import tartare
+from tartare.core import models
+from tartare.core.constants import DATA_TYPE_GEOGRAPHIC
+from tests.integration.test_mechanism import TartareFixture
+
 
 class TestCoverageApi(TartareFixture):
     def test_get_coverage_empty_success(self):
@@ -107,7 +109,7 @@ class TestCoverageApi(TartareFixture):
 
     def test_add_coverage_with_name(self):
         raw = self.post('/coverages',
-                   '{"id": "id_test", "name": "name of the coverage"}')
+                        '{"id": "id_test", "name": "name of the coverage"}')
         assert raw.status_code == 201
         raw = self.get('/coverages')
         r = self.json_to_dict(raw)
@@ -118,8 +120,8 @@ class TestCoverageApi(TartareFixture):
 
     def test_add_coverage_with_pre_env(self):
         raw = self.post('/coverages',
-                   '''{"id": "id_test", "name": "name of the coverage",
-                   "environments" : {"preproduction": {"name": "pre", "sequence": 0}}}''')
+                        '''{"id": "id_test", "name": "name of the coverage",
+                        "environments" : {"preproduction": {"name": "pre", "sequence": 0}}}''')
         assert raw.status_code == 201
         raw = self.get('/coverages')
         r = self.json_to_dict(raw)
@@ -136,8 +138,8 @@ class TestCoverageApi(TartareFixture):
 
     def test_add_coverage_with_no_env(self):
         raw = self.post('/coverages',
-                '''{"id": "id_test", "name": "name of the coverage",
-                    "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
+                        '''{"id": "id_test", "name": "name of the coverage",
+                            "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
 
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
@@ -312,7 +314,6 @@ class TestCoverageApi(TartareFixture):
         assert platform["protocol"] == 'ftp'
         assert platform["type"] == 'navitia'
         assert platform["url"] == 'ftp.ods.com'
-
 
     def test_patch_simple_coverage(self):
         raw = self.post('/coverages',
@@ -525,7 +526,7 @@ class TestCoverageApi(TartareFixture):
             "name": cov_id
         }
         raw = self.post("/coverages", self.dict_to_json(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
@@ -539,7 +540,6 @@ class TestCoverageApi(TartareFixture):
         r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
-
     def __create_geo_contributor(self, id):
         post_data = {
             "id": id,
@@ -548,14 +548,13 @@ class TestCoverageApi(TartareFixture):
             "data_prefix": id
         }
         raw = self.post('/contributors', self.dict_to_json(post_data))
-        self.assert_sucessful_call(raw, 201)
-
+        self.assert_sucessful_create(raw)
 
     def test_post_coverage_multiple_geo_contrib(self, coverage):
         self.__create_geo_contributor('geo-1')
         self.__create_geo_contributor('geo-2')
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-1'}))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
         assert raw.status_code == 400
         r = self.json_to_dict(raw)

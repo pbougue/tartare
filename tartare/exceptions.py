@@ -48,6 +48,14 @@ class ProtocolException(Exception):
     pass
 
 
+class ProtocolManagerException(Exception):
+    pass
+
+
+class PublisherManagerException(Exception):
+    pass
+
+
 class GuessFileNameFromUrlException(Exception):
     pass
 

@@ -58,7 +58,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             "data_sources": data_sources
         }
         raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     def __init_coverage(self, coverage_id, contributor_ids):
         coverage = {
@@ -77,7 +77,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             ]
         }
         raw = self.post('/coverages', json.dumps(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
@@ -178,7 +178,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', json.dumps(new_data_source))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
@@ -217,7 +217,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', json.dumps(new_data_source))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
@@ -250,7 +250,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         self.__init_contributor("id_test_2", [self.__create_data_source("my_gtfs_2",  url)], 'BBB')
         raw = self.post('/coverages/jdr/contributors', json.dumps({'id': 'id_test_2'}))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         self.full_export('id_test_2', 'jdr', '2017-08-10')
 
@@ -306,10 +306,16 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
 
 class TestFusioExportPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
     @mock.patch('requests.get')
-    def test_fusio_export_avoid_merge_and_use_fusio_export_file(self, fusio_get, fusio_post, wait_for_action_terminated, init_http_download_server):
+    def test_fusio_export_avoid_merge_and_use_fusio_export_file(self,
+                                                                fusio_get,
+                                                                fusio_post,
+                                                                wait_for_action_terminated,
+                                                                replace_url_hostname_from_url,
+                                                                init_http_download_server):
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -334,7 +340,7 @@ class TestFusioExportPreprocess(TartareFixture):
 
         }
         raw = self.post('/coverages', self.dict_to_json(coverage))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
@@ -345,12 +351,13 @@ class TestFusioExportPreprocess(TartareFixture):
                 <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
                         ActionId="42" LastError="">
                     <ActionProgression Status="Terminated"
-                                       Description="{url}"
+                                       Description="http://fusio/ntfs.zip"
                                        StepCount="10" CurrentStep="10"/>
                 </Action>
             </ActionList>
-        </Info>""".format(url=fetch_url)
+        </Info>"""
 
+        replace_url_hostname_from_url.return_value = fetch_url
         fusio_post.return_value = get_response(200, post_content)
         fusio_get.return_value = get_response(200, get_content)
         expected_data = {

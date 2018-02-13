@@ -73,7 +73,7 @@ class TestJsonReader:
         reader = JsonReader()
         with open(_get_file_fixture_full_path('prepare_external_settings/tr_perimeter_id.json')) as perimeter_file:
             reader.load_json_data_from_io(perimeter_file)
-            assert reader.count_rows() == 4
+            assert reader.count_rows() == 5
 
     def __load_sample(self):
         json_reader = JsonReader()

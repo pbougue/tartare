@@ -130,4 +130,3 @@ def display_files_content(result_file_name, expected_file_name):
 def assert_files_equals(result_file_name, expected_file_name):
     assert get_md5_content_file(result_file_name) == get_md5_content_file(expected_file_name), \
         display_files_content(result_file_name, expected_file_name)
-

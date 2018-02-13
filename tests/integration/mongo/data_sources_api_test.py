@@ -249,7 +249,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         post_ds = {
             "id": "ds2_id",
@@ -262,7 +262,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         modif_ds = {
             "name": "name_modified",
@@ -286,7 +286,7 @@ class TestDataSources(TartareFixture):
             }
         }
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
 
         raw = self.get('/contributors/id_test/data_sources')
         r = self.json_to_dict(raw)
@@ -604,13 +604,13 @@ class TestDataSources(TartareFixture):
             'data_type': DATA_TYPE_GEOGRAPHIC,
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         data_sources = [
             {'id': 'id1', 'name': 'id1', 'data_format': data_format},
             {'id': 'id2', 'name': 'id2', 'data_format': data_format},
         ]
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(data_sources[0]))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(data_sources[1]))
         response = self.assert_failed_call(raw)
         assert response['error'] == 'contributor contains more than one {} data source'.format(data_format)
@@ -633,7 +633,7 @@ class TestDataSources(TartareFixture):
             'data_sources': data_sources,
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.patch('/contributors/id_test/data_sources/id2', self.dict_to_json({'data_format': data_format}))
         response = self.assert_failed_call(raw)
         assert response['error'] == 'contributor contains more than one {} data source'.format(data_format)
@@ -656,6 +656,6 @@ class TestDataSources(TartareFixture):
             'data_sources': data_sources,
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.patch('/contributors/id_test/data_sources/id1', self.dict_to_json({'name': 'name-updated'}))
         self.assert_sucessful_call(raw)

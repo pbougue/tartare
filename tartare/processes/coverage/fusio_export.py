@@ -38,6 +38,7 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import FusioException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.utils import preprocess_registry
+from tartare.processes.fusio import Fusio
 
 
 @preprocess_registry('coverage')
@@ -72,4 +73,11 @@ class FusioExport(AbstractFusioProcess):
         resp = self.fusio.call(requests.post, api='api', data=data)
         action_id = self.fusio.get_action_id(resp.content)
         self.fusio.wait_for_action_terminated(action_id)
-        return self.save_export(self.fusio.get_export_url(action_id))
+
+        export_url = self.fusio.get_export_url(action_id)
+
+        # fusio hostname is replaced by the one configured in the preprocess
+        # avoid to access to a private ip from outside
+        new_export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
+
+        return self.save_export(new_export_url)

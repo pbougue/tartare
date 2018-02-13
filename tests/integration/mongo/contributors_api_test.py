@@ -435,7 +435,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         r["contributors"][0]["data_sources"][0]["name"] = "name_modified"
         raw = self.patch('/contributors/id_test', json.dumps(r["contributors"][0]))
         r = self.json_to_dict(raw)
@@ -499,7 +499,7 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         new_data_source = {
             "id": r["contributors"][0]["data_sources"][1]["id"],
             "name": "name_modified",
@@ -715,7 +715,7 @@ class TestContributors(TartareFixture):
             "data_sources": data_sources
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         payload = {
             "preprocesses": [
                 {
@@ -781,13 +781,13 @@ class TestContributors(TartareFixture):
         for data_type in DATA_TYPE_VALUES:
             for data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
                 raw = self.__create_contributor(data_type, data_format)
-                self.assert_sucessful_call(raw, 201)
+                self.assert_sucessful_create(raw)
 
     def test_patch_contrib_public_transport_with_data_format_invalid(self):
         for data_type in DATA_TYPE_VALUES:
             contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             raw = self.__create_contributor(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
-            self.assert_sucessful_call(raw, 201)
+            self.assert_sucessful_create(raw)
             for other_data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
                 raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
                 self.assert_sucessful_call(raw, 400)
@@ -802,7 +802,7 @@ class TestContributors(TartareFixture):
         for data_type in DATA_TYPE_VALUES:
             contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             raw = self.__create_contributor(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
-            self.assert_sucessful_call(raw, 201)
+            self.assert_sucessful_create(raw)
             for other_data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
                 raw = self.__patch_contributor(contributor_id, data_type, other_data_format)
                 self.assert_sucessful_call(raw)
@@ -810,7 +810,7 @@ class TestContributors(TartareFixture):
     def test_patch_data_type_with_wrong_data_source(self):
         raw = self.__create_contributor(DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE)
         contributor_id = 'id-{}-{}'.format(DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE)
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         raw = self.patch('/contributors/{}'.format(contributor_id),
                          self.dict_to_json({"data_type": DATA_TYPE_PUBLIC_TRANSPORT}))
         resp = self.assert_failed_call(raw)
@@ -859,7 +859,7 @@ class TestContributors(TartareFixture):
             'data_sources': data_sources,
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         data_source = {'id': 'id3', 'name': 'id3', 'data_format': data_format}
         raw = self.patch('/contributors/id_test', self.dict_to_json({'data_sources': [data_source]}))
         response = self.assert_failed_call(raw)
@@ -883,7 +883,98 @@ class TestContributors(TartareFixture):
             'data_sources': data_sources,
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw, 201)
+        self.assert_sucessful_create(raw)
         data_source = {'id': 'id1', 'name': 'id1-updated', 'data_format': data_format}
         raw = self.patch('/contributors/id_test', self.dict_to_json({'data_sources': [data_source]}))
         self.assert_sucessful_call(raw)
+
+    def test_put_contributor_simple(self, contributor):
+        update = {"name": "name_updated", "data_prefix": "data_prefix_updated", "data_type": DATA_TYPE_GEOGRAPHIC}
+        expected = {'data_sources': [], 'data_prefix': 'data_prefix_updated', 'name': 'name_updated',
+                                'preprocesses': [],
+                                'data_type': DATA_TYPE_GEOGRAPHIC, 'id': 'id_test'}
+        raw = self.put('/contributors/id_test', self.dict_to_json(update))
+        assert self.assert_sucessful_call(raw) == expected
+        contrib_dict = self.json_to_dict(self.get('/contributors/id_test'))
+        assert contrib_dict == {'contributors': [expected]}
+
+    def test_put_contributor_data_sources(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_GEOGRAPHIC,
+                  'data_sources': [
+                      {
+                          "id": 'dsid',
+                          "name": 'dsname_updated',
+                          "data_format": DATA_FORMAT_BANO_FILE,
+                          "input": {'type': 'manual'}
+                      },
+                      {
+                          "id": 'dsid_2',
+                          "name": 'dsname_2',
+                          "data_format": DATA_FORMAT_OSM_FILE,
+                          "input": {'type': 'manual'}
+                      },
+                  ]
+                  }
+        raw = self.put('/contributors/cid', self.dict_to_json(update))
+        expected = {'name': 'cid_name', 'data_sources': [
+            {'name': 'dsname_updated', 'data_format': 'bano_file',
+             'license': {'name': 'Private (unspecified)', 'url': ''},
+             'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
+             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'fetch_started_at': None},
+            {'name': 'dsname_2', 'data_format': 'osm_file', 'license': {'name': 'Private (unspecified)', 'url': ''},
+             'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None,
+             'id': 'dsid_2',
+             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'fetch_started_at': None}
+        ],
+                    'preprocesses': [],
+                    'data_prefix': 'cid_prefix',
+                    'id': 'cid',
+                    'data_type': 'geographic'}
+        assert self.assert_sucessful_call(raw) == expected
+        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
+        assert contrib_dict == {'contributors': [expected]}
+
+
+    def test_put_contributor_preprocesses(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_PUBLIC_TRANSPORT,
+                  'data_sources': [{'id': 'dsid', 'name': 'dsid',
+                                    'input': {
+                                        'type': 'url', 'url': self.format_url(init_http_download_server.ip_addr,
+                                                                              'some_archive.zip')}}],
+                  'preprocesses': [
+                      {
+                          "id": 'p1',
+                          "sequence": 0,
+                          "type": 'HeadsignShortName',
+                          "data_source_ids": ['dsid']
+                      },
+                      {
+                          "id": 'p2',
+                          "sequence": 1,
+                          "type": 'GtfsAgencyFile',
+                          "data_source_ids": ['dsid'],
+                          "params": {'data': {'agency_name': 'my_agency'}}
+                      }
+                  ]
+                  }
+        raw = self.put('/contributors/cid', self.dict_to_json(update))
+        expected = {'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
+                                'preprocesses': [
+                                    {'params': {}, 'sequence': 0, 'data_source_ids': ['dsid'], 'id': 'p1',
+                                     'type': 'HeadsignShortName'},
+                                    {'params': {'data': {'agency_name': 'my_agency'}}, 'sequence': 1,
+                                     'data_source_ids': ['dsid'],
+                                     'id': 'p2', 'type': 'GtfsAgencyFile'}
+                                ], 'data_sources': [
+                {'license': {'name': 'Private (unspecified)', 'url': ''}, 'service_id': None, 'name': 'dsid',
+                 'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
+                                                                              'some_archive.zip'), 'type': 'url'},
+                 'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'fetch_started_at': None,
+                 'status': 'never_fetched', 'updated_at': None}
+            ],
+                                'id': 'cid'}
+        assert self.assert_sucessful_call(raw) == expected
+        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
+        assert contrib_dict == {'contributors': [expected]}
