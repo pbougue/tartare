@@ -47,6 +47,7 @@ services:
               uwsgi --mount /=tartare:app --http 0.0.0.0:5000 --wsgi-disable-file-wrapper
               --add-header Access-Control-Allow-Origin:*
               --add-header Access-Control-Allow-Headers:Content-Type
+              --add-header Access-Control-Allow-Methods:"POST, GET, PUT, PATCH, DELETE, OPTIONS"
     ports:
       - 5000:5000
     links:
