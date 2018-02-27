@@ -301,8 +301,8 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         self.full_export('id_test', 'jdr', '2017-08-10')
 
         assert fusio_call.call_count == 2
-        assert fusio_call.call_args_list[0][1]['data']['serviceexternalcode'] == 'Google-1'
-        assert fusio_call.call_args_list[1][1]['data']['serviceexternalcode'] == 'Google-2'
+        assert fusio_call.call_args_list[0][1]['data']['serviceid'] == 'Google-1'
+        assert fusio_call.call_args_list[1][1]['data']['serviceid'] == 'Google-2'
 
 
 class TestFusioExportPreprocess(TartareFixture):
