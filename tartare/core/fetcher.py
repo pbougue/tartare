@@ -28,8 +28,10 @@
 # www.navitia.io
 import logging
 import os
+import re
 import urllib.request
 from abc import ABCMeta, abstractmethod
+from http.client import HTTPResponse
 from typing import Tuple
 from urllib.error import ContentTooShortError, URLError
 from urllib.parse import urlparse
@@ -76,8 +78,17 @@ class AbstractFetcher(metaclass=ABCMeta):
             if parsed.path:
                 last_part = os.path.basename(parsed.path)
                 filename, file_extension = os.path.splitext(last_part)
-                if filename and file_extension:
+                if filename and file_extension and not parsed.query:
                     return last_part
+            request = urllib.request.Request(method='HEAD', url=url)
+            response = urllib.request.build_opener().open(request)
+            if isinstance(response, HTTPResponse) and response.status is 200:
+                content_disposition = response.getheader('Content-Disposition')
+                if content_disposition and 'filename=' in content_disposition:
+                    match = re.search(r"attachment; filename=(.+)", content_disposition)
+                    if match and len(match.groups()) == 1:
+                        return match.groups()[0]
+
         raise GuessFileNameFromUrlException('unable to guess file name from url {}'.format(url))
 
 

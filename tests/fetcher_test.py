@@ -26,13 +26,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from http.client import HTTPResponse
 from urllib.error import ContentTooShortError, URLError
 
 import mock
 import pytest
 from requests import HTTPError
 
-from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_GTFS
 from tartare.core.fetcher import HttpFetcher, FetcherManager
 from tartare.exceptions import FetcherException, GuessFileNameFromUrlException
 
@@ -73,6 +73,21 @@ class TestFetcher:
 
     @pytest.mark.parametrize(
         "url", [
+            ('http://download.wherever.fr/resources/my_page.aspx?param=value'),
+            ('http://download.canaltp.fr/resources/my_download_page.php?user=bob')
+        ])
+    @mock.patch('urllib.request.OpenerDirector.open')
+    def test_guess_file_name_from_url_ok_mocked(self, mock_response, url):
+        response = mock.Mock(spec=HTTPResponse)
+        attrs = {'getheader.return_value': 'Content-Disposition attachment; filename=ACCM.GTFS.zip'}
+        response.configure_mock(**attrs)
+        response.status = 200
+        mock_response.return_value = response
+        file_name = HttpFetcher().guess_file_name_from_url(url)
+        assert 'ACCM.GTFS.zip' == file_name, print(file_name)
+
+    @pytest.mark.parametrize(
+        "url", [
             '123',
             'bob',
             'ftp://upload.canaltp.fr',
@@ -80,7 +95,11 @@ class TestFetcher:
             'http://download.canaltp.fr/resources',
             'http://download.wherever.fr/resources/my_file_without_extension',
         ])
-    def test_guess_file_name_from_url_error(self, url):
+    @mock.patch('urllib.request.OpenerDirector.open')
+    def test_guess_file_name_from_url_error(self, mock_response, url):
+        response = mock.MagicMock()
+        response.status = 404
+        mock_response.return_value = response
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
             HttpFetcher().guess_file_name_from_url(url)
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
@@ -122,7 +141,11 @@ class TestFetcher:
         assert expected_file_name == 'config.json'
 
     @mock.patch('urllib.request.urlretrieve')
-    def test_fetch_ok_expected_file_name_missing(self, mock_url_retrieve):
+    @mock.patch('urllib.request.OpenerDirector.open')
+    def test_fetch_ok_expected_file_name_missing(self, mock_response, mock_url_retrieve):
+        response = mock.MagicMock()
+        response.status = 404
+        mock_response.return_value = response
         url = 'http://whatever.com/resource'
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
             HttpFetcher().fetch(url, '/tmp/whatever')
