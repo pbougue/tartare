@@ -56,7 +56,7 @@ class FusioDataUpdate(AbstractFusioProcess):
             'contributorexternalcode': contributor.data_prefix,
             'isadapted': 0,
             'dutype': 'update',
-            'serviceexternalcode': data_source.service_id,
+            'serviceid': data_source.service_id,
             'libelle': 'unlibelle',
             'DateDebut': Fusio.format_date(validity_period.start_date),
             'DateFin': Fusio.format_date(validity_period.end_date),
