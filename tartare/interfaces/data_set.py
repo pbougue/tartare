@@ -31,15 +31,17 @@
 # www.navitia.io
 
 import os
+
 from flask import Response
 from flask.globals import request
 from flask_restful import Resource
+
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_WITH_VALIDITY
 from tartare.core.models import DataSource
-from tartare.interfaces import schema
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.decorators import validate_post_data_set
-from tartare.validity_period_finder import ValidityPeriodFinder
+from tartare.interfaces import schema
 
 
 class DataSet(Resource):
@@ -51,7 +53,7 @@ class DataSet(Resource):
         data_source_fetched.save()
         data_source = DataSource.get_one(contributor_id, data_source_id)
 
-        validity_period = ValidityPeriodFinder().get_validity_period(file=file.filename) \
+        validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename) \
             if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
         data_source_fetched.validity_period = validity_period
 

@@ -42,7 +42,7 @@ from tests.utils import get_response
 
 class TestFusioProcesses:
     # /!\following patches are parameters reversed in function signature
-    @mock.patch('tartare.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
+    @mock.patch('tartare.core.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     @mock.patch('tartare.processes.fusio.Fusio.get_action_id')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
@@ -68,7 +68,7 @@ class TestFusioProcesses:
         fusio_get_action_id.assert_called_with(keep_response_content)
         wait_for_action_terminated.assert_called_with(action_id)
 
-    @mock.patch('tartare.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
+    @mock.patch('tartare.core.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
     def test_fusio_invalid_or_empty_dates(self, get_validity_period_union):
         with pytest.raises(IntegrityException) as excinfo:
             subcall_details = 'sub call details'

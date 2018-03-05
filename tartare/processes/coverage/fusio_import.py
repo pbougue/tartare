@@ -31,11 +31,11 @@ import requests
 
 from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
-from tartare.validity_period_finder import ValidityPeriodFinder
 
 
 @preprocess_registry('coverage')
