@@ -30,19 +30,17 @@
 import logging
 import tempfile
 import zipfile
-from datetime import date
 from typing import Optional
 
 from tartare.core import models
-from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
-from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +118,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
             contributor_id, data_source.id
         ))
-        validity_period = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name) \
-            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
+        validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)

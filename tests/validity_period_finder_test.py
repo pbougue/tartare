@@ -29,106 +29,95 @@
 from datetime import date
 
 import pytest
+
 from tartare.core.models import ValidityPeriod
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import InvalidFile, ValidityPeriodException
-from tartare.validity_period_finder import ValidityPeriodFinder
 from tests.utils import _get_file_fixture_full_path
 
 
 def test_zip_file_only_calendar():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('gtfs/some_archive.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2015, 3, 25)
     assert validity_period.end_date == date(2015, 8, 26)
 
 
 def test_zip_file_only_feed_info():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2016, 4, 11)
     assert validity_period.end_date == date(2016, 12, 31)
 
 
 def test_zip_file_only_feed_info_invalid():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_invalid.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "header not found in file feed_info.txt, error : 'feed_start_date' is not in list"
 
 
 def test_zip_file_only_feed_info_missing_dates():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_missing_dates.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2016, 10, 4), print(validity_period.start_date)
     assert validity_period.end_date == date(2016, 12, 24), print(validity_period.end_date)
 
 
 def test_zip_file_invalid():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('gtfs/bob.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "{} is not a zip file or not exist".format(file)
 
 
 def test_not_zipfile():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('ntfs/calendar.txt')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "{} is not a zip file or not exist".format(file)
 
 
 def test_calendar_without_end_date_column():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_without_end_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "header not found in file calendar.txt, error : 'end_date' is not in list"
 
 
 def test_calendar_without_start_date_column():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_without_start_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "header not found in file calendar.txt, error : 'start_date' is not in list"
 
 
 def test_gtfs_without_calendar():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_without_calendar.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2016, 10, 4)
     assert validity_period.end_date == date(2016, 12, 24)
 
 
 def test_calendar_with_not_date():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_invalid_end_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "impossible to parse file calendar.txt, " \
                                  "error time data 'AAAA' does not match format '%Y%m%d' (match)"
 
 
 def test_calendar_dates_without_exception_type():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_without_exception_type.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "header not found in file calendar_dates.txt, error : 'exception_type' is not in list"
 
 
 def test_calendar_dates_without_dates():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_without_dates.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == "header not found in file calendar_dates.txt, error : 'date' is not in list"
 
 
@@ -141,9 +130,9 @@ def test_add_dates():
 
                 production date : 20170101 to 20170215
     """
-    finder = ValidityPeriodFinder()
+
     file = _get_file_fixture_full_path('validity_period/add_dates.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 1)
     assert validity_period.end_date == date(2017, 2, 15)
 
@@ -157,66 +146,59 @@ def test_remove_dates():
 
                 production date : 20170104 to 20170130
     """
-    finder = ValidityPeriodFinder()
+
     file = _get_file_fixture_full_path('validity_period/remove_dates.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 4)
     assert validity_period.end_date == date(2017, 1, 30)
 
 
 def test_calendar_with_many_periods():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_many_periods.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 2)
     assert validity_period.end_date == date(2017, 7, 20)
 
 
 def test_calendar_dates_with_headers_only():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_with_headers_only.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 2)
     assert validity_period.end_date == date(2017, 1, 20)
 
 
 def test_calendar_with_headers_only():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_with_headers_only.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value).startswith('impossible to find validity period')
 
 
 def test_calendar_dates_with_empty_line():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_dates_with_empty_line.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 2)
     assert validity_period.end_date == date(2017, 1, 20)
 
 
 def test_calendar_with_empty_line_and_remove_date_only():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_with_empty_line_remove_dates_only.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value).startswith('impossible to find validity period')
 
 
 def test_calendar_with_empty_line_and_add_date_only():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/calendar_with_empty_line_add_dates_only.zip')
-    validity_period = finder.get_validity_period(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     assert validity_period.start_date == date(2017, 1, 2)
     assert validity_period.end_date == date(2017, 1, 31)
 
 
 def test_gtfs_feed_info_with_2_rows():
-    finder = ValidityPeriodFinder()
     file = _get_file_fixture_full_path('validity_period/gtfs_feed_info_with_2_rows.zip')
     with pytest.raises(InvalidFile) as excinfo:
-        finder.get_validity_period(file)
+        ValidityPeriodFinder.select_computer_and_find(file)
     assert str(excinfo.value) == 'impossible to find validity period, invalid file feed_info.txt'
 
 
@@ -232,13 +214,13 @@ def test_gtfs_feed_info_with_2_rows():
           ValidityPeriod(date(2016, 2, 20), date(2016, 11, 14))],
          "calculating validity period union on past periods (end_date: 01/01/2017 < now: 15/01/2017)")
     ])
-def test_get_validity_period_union_past(validity_periods, expected_message):
+def test_compute_for_data_format_union_past(validity_periods, expected_message):
     with pytest.raises(ValidityPeriodException) as excinfo:
         ValidityPeriodFinder.get_validity_period_union(validity_periods, current_date=date(year=2017, month=1, day=15))
     assert str(excinfo.value) == expected_message
 
 
-def test_get_validity_period_union_empty():
+def test_compute_for_data_format_union_empty():
     with pytest.raises(ValidityPeriodException) as excinfo:
         ValidityPeriodFinder.get_validity_period_union([])
     assert str(excinfo.value) == 'empty validity period list given to calculate union'
@@ -278,7 +260,7 @@ def test_get_validity_period_union_empty():
           (date(2018, 8, 11), date(2018, 10, 13))],
          ValidityPeriod(date(2018, 1, 1), date(2018, 12, 11))),
     ])
-def test_get_validity_period_union_valid(validity_period_dates, expected_period):
+def test_compute_for_data_format_union_valid(validity_period_dates, expected_period):
     validity_period_containers = []
     for contrib_begin_date, contrib_end_date in validity_period_dates:
         validity_period_containers.append(ValidityPeriod(contrib_begin_date, contrib_end_date))
