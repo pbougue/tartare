@@ -37,7 +37,6 @@ from flask.globals import request
 from flask_restful import Resource
 
 from tartare.core import models
-from tartare.core.constants import DATA_FORMAT_WITH_VALIDITY
 from tartare.core.models import DataSource
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.decorators import validate_post_data_set
@@ -53,8 +52,7 @@ class DataSet(Resource):
         data_source_fetched.save()
         data_source = DataSource.get_one(contributor_id, data_source_id)
 
-        validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename) \
-            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
+        validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename, data_source.data_format)
         data_source_fetched.validity_period = validity_period
 
         data_source_fetched.update_dataset_from_io(file.stream, os.path.basename(file.filename))

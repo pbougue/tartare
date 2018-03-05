@@ -33,7 +33,7 @@ import zipfile
 from typing import Optional
 
 from tartare.core import models
-from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
@@ -118,8 +118,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
             contributor_id, data_source.id
         ))
-        validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format) \
-            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
+        validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
