@@ -31,9 +31,10 @@ import logging
 from datetime import timedelta, date
 from typing import List
 
-from tartare.core.constants import DATA_FORMAT_GTFS
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_TITAN
 from tartare.core.models import ValidityPeriod
-from tartare.core.validity_period_computers import AbstractValidityPeriodComputer, GtfsValidityPeriodComputer
+from tartare.core.validity_period_computers import AbstractValidityPeriodComputer, GtfsValidityPeriodComputer, \
+    TitanValidityPeriodComputer
 from tartare.exceptions import ValidityPeriodException, IntegrityException
 
 
@@ -42,13 +43,14 @@ class ValidityPeriodFinder:
     def select_computer_from_data_format(cls, data_format: str) -> AbstractValidityPeriodComputer:
         computers_mapping = {
             DATA_FORMAT_GTFS: GtfsValidityPeriodComputer(),
+            DATA_FORMAT_TITAN: TitanValidityPeriodComputer(),
         }
         if data_format not in computers_mapping:
             raise IntegrityException('cannot determine validity period computer for data format {}'.format(data_format))
         return computers_mapping[data_format]
 
     @classmethod
-    def select_computer_and_find(cls, file_name: str, data_format: str=DATA_FORMAT_GTFS) -> ValidityPeriod:
+    def select_computer_and_find(cls, file_name: str, data_format: str = DATA_FORMAT_GTFS) -> ValidityPeriod:
         try:
             computer = cls.select_computer_from_data_format(data_format)
             return computer.compute(file_name)

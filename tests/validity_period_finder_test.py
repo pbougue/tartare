@@ -289,5 +289,5 @@ def test_compute_for_data_format_union_valid(validity_period_dates, expected_per
 def test_titan_data_set():
     file = _get_file_fixture_full_path('validity_period/other_data_formats/titan.zip')
     validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_TITAN)
-    assert validity_period.start_date == date(2017, 1, 2)
-    assert validity_period.end_date == date(2017, 1, 20)
+    assert validity_period.start_date == date(2018, 1, 2)
+    assert validity_period.end_date == date(2018, 6, 18)

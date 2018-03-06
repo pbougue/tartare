@@ -90,12 +90,13 @@ class JsonReader(AbstractPandaReader):
 
 
 class CsvReader(AbstractPandaReader):
-    def file_in_zip_files(self, zip_file: str, filename: str) -> bool:
+    @classmethod
+    def file_in_zip_files(cls, zip_file: str, filename: str) -> bool:
         with ZipFile(zip_file, 'r') as files_zip:
             return filename in files_zip.namelist()
 
     def load_csv_data_from_zip_file(self, zip_file: GridOut, filename: str, sep: str = ',',
-                                    usecols: Optional[List[str]] = None,
+                                    usecols: Optional[list] = None,
                                     **kwargs: Any) -> None:
         if not is_zipfile(zip_file):
             msg = '{} is not a zip file or does not exist'.format(zip_file)

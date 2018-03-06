@@ -31,8 +31,8 @@ from abc import ABCMeta, abstractmethod
 from datetime import date, timedelta
 from zipfile import is_zipfile
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from pandas._libs.tslib import NaTType
 
 from tartare.core.models import ValidityPeriod
@@ -45,40 +45,18 @@ class AbstractValidityPeriodComputer(metaclass=ABCMeta):
     def compute(self, file_name: str) -> ValidityPeriod:
         pass
 
-
-class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
-    feed_info_filename = 'feed_info.txt'
-    calendar_filename = 'calendar.txt'
-    calendar_dates_filename = 'calendar_dates.txt'
-
-    def compute(self, file_name: str) -> ValidityPeriod:
+    @classmethod
+    def check_zip_file(cls, file_name: str) -> None:
         if not is_zipfile(file_name):
             msg = '{} is not a zip file or not exist'.format(file_name)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
-        if not self.reader.file_in_zip_files(file_name, self.calendar_filename) and \
-                not self.reader.file_in_zip_files(file_name, self.calendar_dates_filename):
-            msg = 'file zip {} without at least one of {}'.format(file_name, ','.join(
-                [self.calendar_filename, self.calendar_dates_filename]))
-            logging.getLogger(__name__).error(msg)
-            raise InvalidFile(msg)
-        if self.reader.file_in_zip_files(file_name, self.feed_info_filename):
-            self._parse_feed_info(file_name)
-            if self.is_start_date_valid() and self.is_end_date_valid():
-                return ValidityPeriod(self.start_date, self.end_date)
 
-        if self.reader.file_in_zip_files(file_name, self.calendar_filename):
-            self._parse_calendar(file_name)
-
-        if self.reader.file_in_zip_files(file_name, self.calendar_dates_filename):
-            self._parse_calendar_dates(file_name)
-
-        if not self.is_start_date_valid() or not self.is_end_date_valid():
-            msg = 'impossible to find validity period'
-            logging.getLogger(__name__).error(msg)
-            raise InvalidFile(msg)
-        return ValidityPeriod(self.start_date, self.end_date)
+class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
+    feed_info_filename = 'feed_info.txt'
+    calendar_file_name = 'calendar.txt'
+    calendar_dates_file_name = 'calendar_dates.txt'
 
     def __init__(self, date_format: str = '%Y%m%d') -> None:
         self.start_date = date.max
@@ -87,6 +65,32 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
         self.reader = CsvReader()
         self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
 
+    def compute(self, file_name: str) -> ValidityPeriod:
+        self.check_zip_file(file_name)
+
+        if not self.reader.file_in_zip_files(file_name, self.calendar_file_name) and \
+                not self.reader.file_in_zip_files(file_name, self.calendar_dates_file_name):
+            msg = 'file zip {} without at least one of {}'.format(file_name, ','.join(
+                [self.calendar_file_name, self.calendar_dates_file_name]))
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
+        if self.reader.file_in_zip_files(file_name, self.feed_info_filename):
+            self._parse_feed_info(file_name)
+            if self.is_start_date_valid() and self.is_end_date_valid():
+                return ValidityPeriod(self.start_date, self.end_date)
+
+        if self.reader.file_in_zip_files(file_name, self.calendar_file_name):
+            self._parse_calendar(file_name)
+
+        if self.reader.file_in_zip_files(file_name, self.calendar_dates_file_name):
+            self._parse_calendar_dates(file_name)
+
+        if not self.is_start_date_valid() or not self.is_end_date_valid():
+            msg = 'impossible to find validity period'
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
+        return ValidityPeriod(self.start_date, self.end_date)
+
     def is_start_date_valid(self) -> bool:
         return self.start_date != date.max
 
@@ -94,7 +98,7 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
         return self.end_date != date.min
 
     def _parse_calendar(self, files_zip: str) -> None:
-        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_filename,
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_file_name,
                                                 usecols=['start_date', 'end_date'],
                                                 parse_dates=['start_date', 'end_date'],
                                                 date_parser=self.date_parser)
@@ -140,7 +144,7 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
                 break
 
     def _parse_calendar_dates(self, files_zip: str) -> None:
-        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_filename,
+        self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_file_name,
                                                 usecols=['date', 'exception_type'],
                                                 parse_dates=['date'],
                                                 date_parser=self.date_parser)
@@ -165,3 +169,26 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
         # NaTType correspond to an empty column
         self.start_date = start_date if not isinstance(start_date, NaTType) else self.start_date
         self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
+
+
+class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
+    calendar_file_name = 'CALENDRIER_VERSION_LIGNE.txt'
+
+    def __init__(self, date_format: str = '%Y%m%d') -> None:
+        self.date_format = date_format
+        self.reader = CsvReader()
+        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+
+    def compute(self, file_name: str) -> ValidityPeriod:
+        self.check_zip_file(file_name)
+        self.reader = CsvReader()
+        if not self.reader.file_in_zip_files(file_name, self.calendar_file_name):
+            msg = 'file zip {} without {}'.format(file_name, self.calendar_file_name)
+            logging.getLogger(__name__).error(msg)
+            raise InvalidFile(msg)
+        self.reader.load_csv_data_from_zip_file(file_name, 'CALENDRIER_VERSION_LIGNE.txt', sep=';', header=None,
+                                                usecols=[1, 2], parse_dates=['begin_date', 'end_date'],
+                                                names=['begin_date', 'end_date'], date_parser=self.date_parser)
+        min_begin = self.reader.data['begin_date'].min().date()
+        max_end = self.reader.data['end_date'].max().date()
+        return ValidityPeriod(min_begin, max_end)
