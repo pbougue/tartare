@@ -72,7 +72,7 @@ class AbstractPandaReader(metaclass=ABCMeta):
         for key, value in self.data.iterrows():
             yield {value[key_column]: value_apply_function(value)}
 
-    def apply(self, column_name: str, callback: Callable[..., Any], fillna: str='') -> None:
+    def apply(self, column_name: str, callback: Callable[..., Any], fillna: str = '') -> None:
         try:
             self.data[column_name] = self.data.apply(callback, axis=1).fillna(fillna)
         except KeyError:
@@ -94,12 +94,6 @@ class CsvReader(AbstractPandaReader):
         with ZipFile(zip_file, 'r') as files_zip:
             return filename in files_zip.namelist()
 
-    def __get_columns_not_in_file(self, filename: str, columns: List[str], sep: str = ',') -> List[str]:
-        if not columns:
-            return []
-        data = pd.read_csv(filename, sep=sep)
-        return list(set(columns) - set(data.columns.tolist()))
-
     def load_csv_data_from_zip_file(self, zip_file: GridOut, filename: str, sep: str = ',',
                                     usecols: Optional[List[str]] = None,
                                     **kwargs: Any) -> None:
@@ -114,14 +108,10 @@ class CsvReader(AbstractPandaReader):
 
     def load_csv_data(self, csv_full_filename: str, sep: str = ',', usecols: Optional[List[str]] = None,
                       **kwargs: Any) -> None:
-        filename = csv_full_filename.split(os.path.sep)[-1]
-        not_in = self.__get_columns_not_in_file(csv_full_filename, usecols, sep)
-        if not_in:
-            raise InvalidFile("header not found in file {}, error : '{}' is not in list".
-                              format(filename, ", ".join(not_in)))
         try:
             self.data = pd.read_csv(csv_full_filename, sep=sep, usecols=usecols, **kwargs)
         except ValueError as e:
+            filename = csv_full_filename.split(os.path.sep)[-1]
             raise InvalidFile('impossible to parse file {}, error {}'.format(filename, str(e)))
 
     def save_as_csv(self, csv_full_filename: str) -> None:
