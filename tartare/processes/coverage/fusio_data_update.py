@@ -29,6 +29,7 @@
 import logging
 
 import requests
+from gridfs import NoFile
 
 from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
@@ -82,9 +83,15 @@ class FusioDataUpdate(AbstractFusioProcess):
         # data source id of contributor may have changed => data update because no way to know if data has changed too
         if not previous_contributor_data_source_grid_fs_id:
             return True
-        previous_gtfs = GridFsHandler().get_file_from_gridfs(previous_contributor_data_source_grid_fs_id)
-        current_gtfs = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
-        return previous_gtfs.md5 != current_gtfs.md5
+        try:
+            previous_gtfs = GridFsHandler().get_file_from_gridfs(previous_contributor_data_source_grid_fs_id)
+            current_gtfs = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
+            return previous_gtfs.md5 != current_gtfs.md5
+        except NoFile as ex:
+            logging.getLogger(__name__).warning(
+                'trying to access unexisting grid_fs_id reference, error: {}'.format(str(ex))
+            )
+            return True
 
     def do(self) -> Context:
         for contributor_context in self.context.contributor_contexts:
