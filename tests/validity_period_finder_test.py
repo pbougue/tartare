@@ -30,6 +30,7 @@ from datetime import date
 
 import pytest
 
+from tartare.core.constants import DATA_FORMAT_TITAN, DATA_FORMAT_GTFS
 from tartare.core.models import ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import InvalidFile, ValidityPeriodException
@@ -54,7 +55,7 @@ def test_zip_file_only_feed_info_invalid():
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_invalid.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "header not found in file feed_info.txt, error : 'feed_start_date' is not in list"
+    assert str(excinfo.value) == "impossible to parse file feed_info.txt, error Usecols do not match names."
 
 
 def test_zip_file_only_feed_info_missing_dates():
@@ -71,25 +72,40 @@ def test_zip_file_invalid():
     assert str(excinfo.value) == "{} is not a zip file or not exist".format(file)
 
 
-def test_not_zipfile():
+@pytest.mark.parametrize("data_format", [
+    DATA_FORMAT_GTFS,
+    DATA_FORMAT_TITAN,
+])
+def test_not_zipfile(data_format):
     file = _get_file_fixture_full_path('ntfs/calendar.txt')
     with pytest.raises(InvalidFile) as excinfo:
-        ValidityPeriodFinder.select_computer_and_find(file)
+        ValidityPeriodFinder.select_computer_and_find(file, data_format)
     assert str(excinfo.value) == "{} is not a zip file or not exist".format(file)
+
+
+@pytest.mark.parametrize("data_format,message", [
+    (DATA_FORMAT_GTFS, 'file zip {file} without at least one of calendar.txt,calendar_dates.txt'),
+    (DATA_FORMAT_TITAN, 'file zip {file} without CALENDRIER_VERSION_LIGNE.txt')
+])
+def test_empty_zipfile(data_format, message):
+    file = _get_file_fixture_full_path('validity_period/empty_archive.zip')
+    with pytest.raises(InvalidFile) as excinfo:
+        ValidityPeriodFinder.select_computer_and_find(file, data_format)
+    assert str(excinfo.value) == message.format(file=file)
 
 
 def test_calendar_without_end_date_column():
     file = _get_file_fixture_full_path('validity_period/calendar_without_end_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "header not found in file calendar.txt, error : 'end_date' is not in list"
+    assert str(excinfo.value) == "impossible to parse file calendar.txt, error Usecols do not match names."
 
 
 def test_calendar_without_start_date_column():
     file = _get_file_fixture_full_path('validity_period/calendar_without_start_date.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "header not found in file calendar.txt, error : 'start_date' is not in list"
+    assert str(excinfo.value) == "impossible to parse file calendar.txt, error Usecols do not match names."
 
 
 def test_gtfs_without_calendar():
@@ -111,14 +127,14 @@ def test_calendar_dates_without_exception_type():
     file = _get_file_fixture_full_path('validity_period/calendar_dates_without_exception_type.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "header not found in file calendar_dates.txt, error : 'exception_type' is not in list"
+    assert str(excinfo.value) == "impossible to parse file calendar_dates.txt, error Usecols do not match names."
 
 
 def test_calendar_dates_without_dates():
     file = _get_file_fixture_full_path('validity_period/calendar_dates_without_dates.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "header not found in file calendar_dates.txt, error : 'date' is not in list"
+    assert str(excinfo.value) == "impossible to parse file calendar_dates.txt, error Usecols do not match names."
 
 
 def test_add_dates():
@@ -268,3 +284,10 @@ def test_compute_for_data_format_union_valid(validity_period_dates, expected_per
                                                                    current_date=date(year=2017, month=1, day=15))
     assert expected_period.start_date == result_period.start_date
     assert expected_period.end_date == result_period.end_date
+
+
+def test_titan_data_set():
+    file = _get_file_fixture_full_path('validity_period/other_data_formats/titan.zip')
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_TITAN)
+    assert validity_period.start_date == date(2018, 1, 2)
+    assert validity_period.end_date == date(2018, 6, 18)
