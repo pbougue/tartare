@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import logging
 
 from gridfs import GridFS
 from bson.objectid import ObjectId
@@ -53,6 +54,7 @@ class GridFsHandler(object):
         return self.gridfs.get(ObjectId(id))
 
     def delete_file_from_gridfs(self, id: str) -> None:
+        logging.getLogger(__name__).info('deleting file from gridfs with id "{}"'.format(id))
         self.gridfs.delete(ObjectId(id))
 
     def copy_file(self, id: str) -> str:
