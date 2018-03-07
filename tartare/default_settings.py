@@ -26,7 +26,8 @@ exchange = Exchange(CELERY_DEFAULT_EXCHANGE)
 
 CELERY_QUEUES = (
     Queue(CELERY_DEFAULT_QUEUE, exchange=exchange, routing_key='celery'),
-    Queue('process_ruspell', exchange=exchange, routing_key='process.ruspell'),
+    Queue('tartare_ruspell', exchange=exchange, routing_key='process.ruspell'),
+    Queue('tartare_gtfs2ntfs', exchange=exchange, routing_key='process.gtfs2ntfs'),
 )
 
 

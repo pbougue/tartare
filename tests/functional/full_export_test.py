@@ -171,3 +171,14 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_jobs_to_exist('automatic_update_coverage_export', 2)
         exports = self.get_dict_from_response(self.get('coverages/coverage_id_triggered/exports'))['exports']
         assert len(exports) == 2
+
+    def test_contrib_export_with_gtfs2ntfs(self):
+        # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
+        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_gtfs2ntfs.json')
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+        # launch gtfs2ntfs preprocess
+        raw = self.post('contributors/AMI/actions/export?current_date=2017-03-20')
+        job_id = self.get_dict_from_response(raw)['job']['id']
+        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)

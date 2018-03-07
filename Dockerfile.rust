@@ -1,6 +1,6 @@
 ARG TAG=master
 FROM par-vm221.srv.canaltp.fr:5000/ruspell as ruspell
-
+FROM par-vm221.srv.canaltp.fr:5000/navitia_model as navitia_model
 
 FROM par-vm221.srv.canaltp.fr:5000/tartare:${TAG}
 USER root
@@ -8,5 +8,4 @@ RUN apk --update add aspell aspell-fr && rm -rf /var/apk/cache/
 USER tartare
 
 COPY --from=ruspell /app/ruspell /usr/src/app/bin/ruspell
-
-CMD ["celery", "-A", "tartare.tasks.celery", "worker", "-Q", "process_ruspell"]
+COPY --from=navitia_model /app/gtfs2ntfs /usr/src/app/bin/gtfs2ntfs

@@ -1502,6 +1502,7 @@ definitions:
         type: string
         example: Ruspell
         enum:
+          - Gtfs2Ntfs
           - Ruspell
           - ComputeDirections
           - GtfsAgencyFile
@@ -1526,7 +1527,8 @@ definitions:
             }
           ]
         }
-
+  Gtfs2Ntfs:
+    type: object
   Ruspell:
     type: object
     properties:

@@ -240,7 +240,11 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
 
     # Do better
     def get_queue(preprocess: PreProcess) -> str:
-        return 'process_ruspell' if preprocess.type == 'Ruspell' else 'tartare'
+        return {
+            "Ruspell": "tartare_ruspell",
+            "Gtfs2Ntfs": "tartare_gtfs2ntfs",
+
+        }.get(preprocess.type, "tartare")
     if not sorted_preprocesses:
         if context.instance == 'contributor':
             return contributor_export_finalization.s(context).delay()

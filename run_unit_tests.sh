@@ -9,7 +9,7 @@ case "$1" in
         ;;
 esac
 
-echo -e "\e[93mLooking for dupplicate tests...\e[0m"
+echo -e "\e[93mLooking for duplicate tests...\e[0m"
 grep "def test_" tests/ -R | cut -d':' -f2 | awk '{print $2}' | uniq -c | grep -v " 1 test_"
 RESULT=$?
 if [ $RESULT == 0 ] ; then

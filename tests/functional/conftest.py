@@ -35,7 +35,7 @@ import docker
 @pytest.fixture(scope="function", autouse=True)
 def empty_mongo():
     client = docker.from_env()
-    mongo_server = client.containers(filters={"name": "mongo-server"})
+    mongo_server = client.containers(filters={"name": "tartare_test_mongo"})
     if not len(mongo_server) == 1:
         exit('expect one and only one mongo instance')
     mongo_server = mongo_server[0]

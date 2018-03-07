@@ -21,7 +21,7 @@ services:
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
-    command: celery -A tartare.tasks worker -Q process_ruspell
+    command: celery -A tartare.tasks worker -Q tartare_ruspell
     links:
       - rabbitmq
       - mongo-server

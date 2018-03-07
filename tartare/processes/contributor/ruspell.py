@@ -33,7 +33,6 @@ import tempfile
 from functools import partial
 
 from tartare.core import zip
-from tartare.core.constants import DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_GEOGRAPHIC
 from tartare.core.context import Context
 from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
@@ -122,7 +121,7 @@ class Ruspell(AbstractContributorProcess):
                                                                     config_path=config_path
                                                                     )
                                                    )
-
+                
                 data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                     old_gridfs_id=data_source_to_process_context.gridfs_id,
                     files=extract_dir_path,
