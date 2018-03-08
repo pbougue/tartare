@@ -25,44 +25,44 @@ The date format is `DD/MM/YYYY`.
 
 1. Collect used Validity Patterns and periodes and active days couples
 
-For each line of the **vehiclejourney.csv** file, collect :
+For each line of the **vehiclejourney.csv** file, collect:
 * the `IDREGIME` values (ignore if empty or `-1`)
 * the `IDPERIODE` values (ignore if empty or `-1`). For the moment, active day (LU, MA, ME, JE, VE, SA, DI) and exceptions won't be taken into account. 
 
 2. Get start date and end date from Validity Patterns
 
-In the **validitypattern.csv**, validity patterns are represented by :
-* a start date, 
-* a 254 characters long string containing only '0' and '1' caracters. Each character show if a particular day is active ('1' value) or inactive ('0' value). This particular day is defined by the position in the string starting from the specified start date. 
-* an other 100 characters long string representing the next 100 days
+In the **validitypattern.csv**, validity patterns are represented by:
+* a start date: the `DDEBUT` column, 
+* a 254 characters long string containing only '0' and '1' caracters: `J_ACTIF1` column. Each character show if a particular day is active ('1' value) or inactive ('0' value). This particular day is defined by the position in the string starting from the specified start date. 
+* an other 100 characters long string representing the next 100 days: `J_ACTIF2` column.
 
-For the collected `IDREGIME`, in the **validitypattern.csv** file : 
-* find the smallest date from the DDEBUT column
-* find the greatest active day by reading `J_ACTIF1` and `J_ACTIF2` 
+For all the collected `IDREGIME`, in the **validitypattern.csv** file: 
+* find the smallest active date 
+* find the greatest active day
 
 3. Get start date and end date from periodes and active days
 
-For the collected `IDPERIODE` (and corresponding active days), read the **periode.csv** file and :
+For the collected `IDPERIODE` (and corresponding active days), read the **periode.csv** file and:
 * collect the corresponding start date from `DDEBUT` and end date from `DFIN`
-* gest the smallest start date and the greatest end date 
+* get the smallest start date and the greatest end date 
 
 4. Combine collected dates
 
 Be carefull, there could be only one method used in a data source.
-* validity start date : Get the smallest start date of the two methods
-* validity end date : Get the greatest end date of the two methods 
+* validity start date: Get the smallest start date of the two methods
+* validity end date: Get the greatest end date of the two methods 
 
 ## Computing validity period of a Neptune data set
 A Neptune data set is a Zip file containing an XML file for each transport line. 
-For each XML File,for each `Timetable` node :
+For each XML File,for each `Timetable` node:
 * if there is a `period` node :
   * get the `startOfPeriod` as a start date
   * get the `endOfPeriod` as a and date  
 * search the smallest and the greatest `calendarDay` as the start date and and date  
 
 Then :
-* validity start date : Get the smallest start date
-* validity end date : Get the greatest end date
+* validity start date: Get the smallest start date
+* validity end date: Get the greatest end date
 
 
 ## Multiple data sources with different validity periods for a data set.
@@ -70,13 +70,13 @@ A contributor can have more than one data source to create their data set (a Tra
 Currently, we take the oldest start date and the farthest end date.   
 
 Example :  
-Data source #1 : Mai 2017 - Aout 2017   
-Data source #2 : Juillet 2017  - Novembre 2017  
-Period used : Mai 2017 - Novembre 2017  
+Data source #1: Mai 2017 - Aout 2017   
+Data source #2: Juillet 2017  - Novembre 2017  
+Period used: Mai 2017 - Novembre 2017  
 
 ## Validity period > 365 days forbidden.
 A validity period can't be longer than 365 days.   
-If the addition of the validity periods of two data sources is more than 365 days, then :  
+If the addition of the validity periods of two data sources is more than 365 days, then:  
   * If the start date is older than today, we use today as start date. Else, if the start date is in the future, we take the start date.  
   * As end date, we take the lowest value between the end date and the new start date + 364 days.  
 
