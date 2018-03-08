@@ -192,3 +192,61 @@ class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
         min_begin = self.reader.data['begin_date'].min().date()
         max_end = self.reader.data['end_date'].max().date()
         return ValidityPeriod(min_begin, max_end)
+
+
+class ObitiValidityPeriodComputer(AbstractValidityPeriodComputer):
+    vehicule_journey_file = 'vehiclejourney.csv'
+    periode_file = 'periode.csv'
+    validity_pattern_file = 'validitypattern.csv'
+    separator = ';'
+
+    def __init__(self, date_format: str = '%d/%m/%Y') -> None:
+        self.date_format = date_format
+        self.reader = CsvReader()
+        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+
+    def __check_file_exists_and_return_right_case(self, zip_file: str, file_to_check: str) -> str:
+        if not self.reader.file_in_zip_files(zip_file, file_to_check):
+            if not self.reader.file_in_zip_files(zip_file, file_to_check.upper()):
+                msg = 'file zip {} without {}'.format(zip_file, file_to_check)
+                logging.getLogger(__name__).error(msg)
+                raise InvalidFile(msg)
+            else:
+                file_to_check = file_to_check.upper()
+        return file_to_check
+
+    def compute(self, file_name: str) -> ValidityPeriod:
+        self.check_zip_file(file_name)
+        vehicule_journey_file = self.__check_file_exists_and_return_right_case(file_name, self.vehicule_journey_file)
+
+        self.reader.load_csv_data_from_zip_file(file_name, vehicule_journey_file, sep=self.separator)
+        id_regime_list = [int(id_regime) for id_regime in set(self.reader.data['IDREGIME'].dropna().tolist()) if
+                          id_regime != -1]
+        id_periode_list = [int(id_periode) for id_periode in set(self.reader.data['IDPERIODE'].dropna().tolist()) if
+                           id_periode != -1]
+        validity_periods = []
+        if id_periode_list:
+            periode_file = self.__check_file_exists_and_return_right_case(file_name, self.periode_file)
+            self.reader.load_csv_data_from_zip_file(file_name, periode_file, sep=self.separator,
+                                                    parse_dates=['DDEBUT', 'DFIN'], date_parser=self.date_parser)
+            self.reader.data = self.reader.data[self.reader.data['IDPERIODE'].isin(id_periode_list)]
+            validity_periods.append(
+                ValidityPeriod(self.reader.data['DDEBUT'].min().date(), self.reader.data['DFIN'].max().date()))
+        if id_regime_list:
+            validity_pattern_file = self.__check_file_exists_and_return_right_case(file_name,
+                                                                                   self.validity_pattern_file)
+            self.reader.load_csv_data_from_zip_file(file_name, validity_pattern_file, sep=self.separator,
+                                                    parse_dates=['DDEBUT'], date_parser=self.date_parser)
+            self.reader.data = self.reader.data[self.reader.data['IDREGIME'].isin(id_regime_list)]
+            for regime_row in self.reader.data.to_dict('records'):
+                period_bits = regime_row['J_ACTIF1'] + regime_row['J_ACTIF2']
+                try:
+                    start_date = regime_row['DDEBUT'].date() + timedelta(days=period_bits.index('1'))
+                    end_date = regime_row['DDEBUT'].date() + timedelta(days=period_bits.rindex('1'))
+                    validity_periods.append(ValidityPeriod(start_date, end_date))
+                except ValueError as err:
+                    msg = 'skipping line: file {} for IDREGIME={} does not contain any bits set to 1, error: {}'.format(
+                        validity_pattern_file, regime_row['IDREGIME'], err)
+                    logging.getLogger(__name__).warning(msg)
+
+        return ValidityPeriod.union(validity_periods)

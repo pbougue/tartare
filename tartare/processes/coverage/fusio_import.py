@@ -31,7 +31,6 @@ import requests
 
 from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod
-from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -44,7 +43,7 @@ class FusioImport(AbstractFusioProcess):
         validity_periods = [ceds.validity_period for ceds in self.context.contributor_contexts if
                             ceds.validity_period]
         try:
-            validity_period_union = ValidityPeriodFinder.get_validity_period_union(validity_periods)
+            validity_period_union = ValidityPeriod.union(validity_periods).to_valid()
         except ValidityPeriodException as exception:
             raise IntegrityException('bounds date for fusio import incorrect: {detail}'.format(detail=str(exception)))
         return validity_period_union

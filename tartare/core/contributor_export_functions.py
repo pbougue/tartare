@@ -38,7 +38,8 @@ from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, 
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched, \
+    ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 
@@ -71,9 +72,8 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
-            validity_periods, context.current_date
-        ) if len(validity_periods) else None
+        contributor_export_validity_period = ValidityPeriod.union(validity_periods).to_valid(
+            context.current_date) if len(validity_periods) else None
 
         export = ContributorExport(contributor_id=contributor.id,
                                    validity_period=contributor_export_validity_period,

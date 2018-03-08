@@ -42,16 +42,18 @@ from tests.utils import get_response
 
 class TestFusioProcesses:
     # /!\following patches are parameters reversed in function signature
-    @mock.patch('tartare.core.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
+    @mock.patch('tartare.core.models.ValidityPeriod.to_valid')
+    @mock.patch('tartare.core.models.ValidityPeriod.union')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     @mock.patch('tartare.processes.fusio.Fusio.get_action_id')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     def test_fusio_import_valid_dates(self, wait_for_action_terminated, fusio_get_action_id, fusio_call,
-                                      get_validity_period_union):
+                                      get_validity_period_union, get_validity_period_valid):
         begin_date = date(1986, 1, 15)
         end_date = date(2017, 1, 15)
         expected_period = ValidityPeriod(begin_date, end_date)
         get_validity_period_union.return_value = expected_period
+        get_validity_period_valid.return_value = expected_period
         context = Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT))
         keep_response_content = 'fusio_response'
         action_id = 42
@@ -68,11 +70,13 @@ class TestFusioProcesses:
         fusio_get_action_id.assert_called_with(keep_response_content)
         wait_for_action_terminated.assert_called_with(action_id)
 
-    @mock.patch('tartare.core.validity_period_finder.ValidityPeriodFinder.get_validity_period_union')
-    def test_fusio_invalid_or_empty_dates(self, get_validity_period_union):
+    @mock.patch('tartare.core.models.ValidityPeriod.to_valid')
+    @mock.patch('tartare.core.models.ValidityPeriod.union')
+    def test_fusio_invalid_or_empty_dates(self, get_validity_period_union, get_validity_period_valid):
         with pytest.raises(IntegrityException) as excinfo:
             subcall_details = 'sub call details'
-            get_validity_period_union.side_effect = ValidityPeriodException(subcall_details)
+            get_validity_period_union.return_value = ValidityPeriod(date(2018, 1, 1), date(2018, 3, 1))
+            get_validity_period_valid.side_effect = ValidityPeriodException(subcall_details)
             fusio_import = FusioImport(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                        PreProcess(params={"url": "whatever"}))
             fusio_import.do()
