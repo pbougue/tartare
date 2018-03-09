@@ -26,10 +26,14 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import calendar
 import logging
+import tempfile
 from abc import ABCMeta, abstractmethod
-from datetime import date, timedelta
-from zipfile import is_zipfile
+from datetime import date, timedelta, datetime
+from typing import List
+from xml.etree import ElementTree
+from zipfile import is_zipfile, ZipFile
 
 import numpy as np
 import pandas as pd
@@ -41,6 +45,12 @@ from tartare.exceptions import InvalidFile
 
 
 class AbstractValidityPeriodComputer(metaclass=ABCMeta):
+    def __init__(self, date_format: str = '%Y%m%d', use_pandas: bool=True) -> None:
+        self.date_format = date_format
+        if use_pandas:
+            self.reader = CsvReader()
+            self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+
     @abstractmethod
     def compute(self, file_name: str) -> ValidityPeriod:
         pass
@@ -58,12 +68,10 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
     calendar_file_name = 'calendar.txt'
     calendar_dates_file_name = 'calendar_dates.txt'
 
-    def __init__(self, date_format: str = '%Y%m%d') -> None:
+    def __init__(self) -> None:
+        super().__init__()
         self.start_date = date.max
         self.end_date = date.min
-        self.date_format = date_format
-        self.reader = CsvReader()
-        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
 
     def compute(self, file_name: str) -> ValidityPeriod:
         self.check_zip_file(file_name)
@@ -174,10 +182,8 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
 class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
     calendar_file_name = 'CALENDRIER_VERSION_LIGNE.txt'
 
-    def __init__(self, date_format: str = '%Y%m%d') -> None:
-        self.date_format = date_format
-        self.reader = CsvReader()
-        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+    def __init__(self) -> None:
+        super().__init__()
 
     def compute(self, file_name: str) -> ValidityPeriod:
         self.check_zip_file(file_name)
@@ -200,10 +206,8 @@ class ObitiValidityPeriodComputer(AbstractValidityPeriodComputer):
     validity_pattern_file = 'validitypattern.csv'
     separator = ';'
 
-    def __init__(self, date_format: str = '%d/%m/%Y') -> None:
-        self.date_format = date_format
-        self.reader = CsvReader()
-        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+    def __init__(self) -> None:
+        super().__init__('%d/%m/%Y')
 
     def __check_file_exists_and_return_right_case(self, zip_file: str, file_to_check: str) -> str:
         if not self.reader.file_in_zip_files(zip_file, file_to_check):
@@ -249,4 +253,50 @@ class ObitiValidityPeriodComputer(AbstractValidityPeriodComputer):
                         validity_pattern_file, regime_row['IDREGIME'], err)
                     logging.getLogger(__name__).warning(msg)
 
+        return ValidityPeriod.union(validity_periods)
+
+
+class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
+    def __init__(self) -> None:
+        super().__init__('%Y-%m-%d', use_pandas=False)
+
+    @classmethod
+    def __change_day_until_weekday_reached(cls, period_date: date, weekdays: List[int], nb_days: int) -> date:
+        while period_date.weekday() not in weekdays:
+            period_date += timedelta(days=nb_days)
+        return period_date
+
+    def __parse_xml_file_into_unique_validity_period(self, xml_file_name: str) -> ValidityPeriod:
+        try:
+            root = ElementTree.parse(xml_file_name).getroot()
+            namespace = root.tag.replace('ChouettePTNetwork', '')
+            validity_periods = []
+            for time_table in root.iter('{}Timetable'.format(namespace)):
+                period = time_table.find('{}period'.format(namespace))
+                if period:
+                    start_period = datetime.strptime(period.find('{}startOfPeriod'.format(namespace)).text,
+                                                     self.date_format).date()
+                    end_period = datetime.strptime(period.find('{}endOfPeriod'.format(namespace)).text,
+                                                   self.date_format).date()
+                    if start_period and end_period:
+                        day_types = [list(calendar.day_name).index(day_type.text) for day_type in
+                                     time_table.findall('{}dayType'.format(namespace))]
+                        start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
+                        end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
+                        validity_periods.append(ValidityPeriod(start_period, end_period))
+            return ValidityPeriod.union(validity_periods)
+        except (ElementTree.ParseError, TypeError) as e:
+            raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))
+
+    def compute(self, file_name: str) -> ValidityPeriod:
+        self.check_zip_file(file_name)
+        validity_periods = []
+        with ZipFile(file_name, 'r') as files_zip, tempfile.TemporaryDirectory() as tmp_path:
+            if not any(one_file_in_zip.endswith('.xml') for one_file_in_zip in files_zip.namelist()):
+                raise InvalidFile('file zip {} without at least one xml'.format(file_name))
+            files_zip.extractall(tmp_path)
+            for file_in_zip in files_zip.namelist():
+                if file_in_zip.endswith('.xml'):
+                    validity_periods.append(
+                        self.__parse_xml_file_into_unique_validity_period('{}/{}'.format(tmp_path, file_in_zip)))
         return ValidityPeriod.union(validity_periods)
