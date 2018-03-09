@@ -29,7 +29,7 @@
 import logging
 import uuid
 from abc import ABCMeta
-from datetime import date
+from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
 from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tuple
@@ -45,7 +45,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import IntegrityException
+from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -154,6 +154,30 @@ class ValidityPeriod(object):
 
     def __repr__(self) -> str:
         return str(vars(self))
+
+    @classmethod
+    def union(cls, validity_period_list: List['ValidityPeriod']) -> 'ValidityPeriod':
+        if not validity_period_list:
+            raise ValidityPeriodException('empty validity period list given to calculate union')
+
+        begin_date = min([d.start_date for d in validity_period_list])
+        end_date = max([d.end_date for d in validity_period_list])
+        return ValidityPeriod(begin_date, end_date)
+
+    def to_valid(self, current_date: date = None) -> 'ValidityPeriod':
+        begin_date = self.start_date
+        end_date = self.end_date
+        now_date = current_date if current_date else date.today()
+        if self.end_date < now_date:
+            raise ValidityPeriodException(
+                'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
+                    end=end_date.strftime('%d/%m/%Y'), now=current_date.strftime('%d/%m/%Y')))
+        if abs(begin_date - end_date).days > 365:
+            logging.getLogger(__name__).warning(
+                'period bounds for union of validity periods exceed one year')
+            begin_date = max(begin_date, now_date - timedelta(days=7))
+            end_date = min(begin_date + timedelta(days=364), end_date)
+        return ValidityPeriod(begin_date, end_date)
 
 
 class ValidityPeriodContainer(object):

@@ -110,7 +110,7 @@ class Context:
     def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
                                             data_format_list: Optional[List[str]]=None) -> Optional[DataSourceContext]:
         data_source_contexts = self.get_contributor_data_source_contexts(contributor_id, data_format_list)
-        if len(data_source_contexts) == 0:
+        if not data_source_contexts:
             return None
         return next((data_source_context
                      for data_source_context in data_source_contexts

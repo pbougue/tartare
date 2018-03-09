@@ -30,7 +30,7 @@ from datetime import date
 
 import pytest
 
-from tartare.core.constants import DATA_FORMAT_TITAN, DATA_FORMAT_GTFS
+from tartare.core.constants import DATA_FORMAT_TITAN, DATA_FORMAT_GTFS, DATA_FORMAT_OBITI
 from tartare.core.models import ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import InvalidFile, ValidityPeriodException
@@ -75,6 +75,7 @@ def test_zip_file_invalid():
 @pytest.mark.parametrize("data_format", [
     DATA_FORMAT_GTFS,
     DATA_FORMAT_TITAN,
+    DATA_FORMAT_OBITI,
 ])
 def test_not_zipfile(data_format):
     file = _get_file_fixture_full_path('ntfs/calendar.txt')
@@ -85,7 +86,8 @@ def test_not_zipfile(data_format):
 
 @pytest.mark.parametrize("data_format,message", [
     (DATA_FORMAT_GTFS, 'file zip {file} without at least one of calendar.txt,calendar_dates.txt'),
-    (DATA_FORMAT_TITAN, 'file zip {file} without CALENDRIER_VERSION_LIGNE.txt')
+    (DATA_FORMAT_TITAN, 'file zip {file} without CALENDRIER_VERSION_LIGNE.txt'),
+    (DATA_FORMAT_OBITI, 'file zip {file} without vehiclejourney.csv'),
 ])
 def test_empty_zipfile(data_format, message):
     file = _get_file_fixture_full_path('validity_period/empty_archive.zip')
@@ -232,13 +234,13 @@ def test_gtfs_feed_info_with_2_rows():
     ])
 def test_compute_for_data_format_union_past(validity_periods, expected_message):
     with pytest.raises(ValidityPeriodException) as excinfo:
-        ValidityPeriodFinder.get_validity_period_union(validity_periods, current_date=date(year=2017, month=1, day=15))
+        ValidityPeriod.union(validity_periods).to_valid(current_date=date(year=2017, month=1, day=15))
     assert str(excinfo.value) == expected_message
 
 
 def test_compute_for_data_format_union_empty():
     with pytest.raises(ValidityPeriodException) as excinfo:
-        ValidityPeriodFinder.get_validity_period_union([])
+        ValidityPeriod.union([])
     assert str(excinfo.value) == 'empty validity period list given to calculate union'
 
 
@@ -280,8 +282,8 @@ def test_compute_for_data_format_union_valid(validity_period_dates, expected_per
     validity_period_containers = []
     for contrib_begin_date, contrib_end_date in validity_period_dates:
         validity_period_containers.append(ValidityPeriod(contrib_begin_date, contrib_end_date))
-    result_period = ValidityPeriodFinder.get_validity_period_union(validity_period_containers,
-                                                                   current_date=date(year=2017, month=1, day=15))
+    result_period = ValidityPeriod.union(validity_period_containers).to_valid(
+        current_date=date(year=2017, month=1, day=15))
     assert expected_period.start_date == result_period.start_date
     assert expected_period.end_date == result_period.end_date
 
@@ -291,3 +293,21 @@ def test_titan_data_set():
     validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_TITAN)
     assert validity_period.start_date == date(2018, 1, 2)
     assert validity_period.end_date == date(2018, 6, 18)
+
+
+def test_obiti_data_set():
+    file = _get_file_fixture_full_path('validity_period/other_data_formats/obiti.zip')
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_OBITI)
+    assert validity_period.start_date == date(2017, 8, 28)
+    assert validity_period.end_date == date(2019, 1, 2)
+
+
+@pytest.mark.parametrize("fixture,message", [
+    ('obiti_invalid_regime.zip', 'file zip {file} without validitypattern.csv'),
+    ('obiti_invalid_period.zip', 'file zip {file} without periode.csv'),
+])
+def test_obiti_data_set_invalid(fixture, message):
+    file = _get_file_fixture_full_path('validity_period/other_data_formats/{}'.format(fixture))
+    with pytest.raises(InvalidFile) as excinfo:
+        ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_OBITI)
+    assert str(excinfo.value) == message.format(file=file)
