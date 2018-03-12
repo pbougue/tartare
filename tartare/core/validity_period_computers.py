@@ -45,11 +45,8 @@ from tartare.exceptions import InvalidFile
 
 
 class AbstractValidityPeriodComputer(metaclass=ABCMeta):
-    def __init__(self, date_format: str = '%Y%m%d', use_pandas: bool=True) -> None:
+    def __init__(self, date_format: str = '%Y%m%d') -> None:
         self.date_format = date_format
-        if use_pandas:
-            self.reader = CsvReader()
-            self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
 
     @abstractmethod
     def compute(self, file_name: str) -> ValidityPeriod:
@@ -63,7 +60,17 @@ class AbstractValidityPeriodComputer(metaclass=ABCMeta):
             raise InvalidFile(msg)
 
 
-class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
+class ValidityPeriodFromCsvComputer(AbstractValidityPeriodComputer):
+    def compute(self, file_name: str) -> ValidityPeriod:
+        pass
+
+    def __init__(self, date_format: str = '%Y%m%d') -> None:
+        super().__init__(date_format)
+        self.reader = CsvReader()
+        self.date_parser = lambda x: pd.to_datetime(x, format=date_format)
+
+
+class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     feed_info_filename = 'feed_info.txt'
     calendar_file_name = 'calendar.txt'
     calendar_dates_file_name = 'calendar_dates.txt'
@@ -179,7 +186,7 @@ class GtfsValidityPeriodComputer(AbstractValidityPeriodComputer):
         self.end_date = end_date if not isinstance(end_date, NaTType) else self.end_date
 
 
-class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
+class TitanValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     calendar_file_name = 'CALENDRIER_VERSION_LIGNE.txt'
 
     def __init__(self) -> None:
@@ -187,7 +194,6 @@ class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
 
     def compute(self, file_name: str) -> ValidityPeriod:
         self.check_zip_file(file_name)
-        self.reader = CsvReader()
         if not self.reader.file_in_zip_files(file_name, self.calendar_file_name):
             msg = 'file zip {} without {}'.format(file_name, self.calendar_file_name)
             logging.getLogger(__name__).error(msg)
@@ -200,7 +206,7 @@ class TitanValidityPeriodComputer(AbstractValidityPeriodComputer):
         return ValidityPeriod(min_begin, max_end)
 
 
-class ObitiValidityPeriodComputer(AbstractValidityPeriodComputer):
+class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     vehicule_journey_file = 'vehiclejourney.csv'
     periode_file = 'periode.csv'
     validity_pattern_file = 'validitypattern.csv'
@@ -258,7 +264,7 @@ class ObitiValidityPeriodComputer(AbstractValidityPeriodComputer):
 
 class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
     def __init__(self) -> None:
-        super().__init__('%Y-%m-%d', use_pandas=False)
+        super().__init__('%Y-%m-%d')
 
     @classmethod
     def __change_day_until_weekday_reached(cls, period_date: date, weekdays: List[int], nb_days: int) -> date:
