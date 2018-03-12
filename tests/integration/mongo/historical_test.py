@@ -117,7 +117,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == min(tartare.app.config.get('HISTORICAL'), exports_number) * 5
+        assert raw.count() == min(tartare.app.config.get('HISTORICAL'), exports_number) * 7
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_source_fetched_histo_and_cleaning(self, init_http_download_server):
