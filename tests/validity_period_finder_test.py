@@ -30,7 +30,7 @@ from datetime import date
 
 import pytest
 
-from tartare.core.constants import DATA_FORMAT_TITAN, DATA_FORMAT_GTFS, DATA_FORMAT_OBITI
+from tartare.core.constants import DATA_FORMAT_TITAN, DATA_FORMAT_GTFS, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE
 from tartare.core.models import ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import InvalidFile, ValidityPeriodException
@@ -76,6 +76,7 @@ def test_zip_file_invalid():
     DATA_FORMAT_GTFS,
     DATA_FORMAT_TITAN,
     DATA_FORMAT_OBITI,
+    DATA_FORMAT_NEPTUNE,
 ])
 def test_not_zipfile(data_format):
     file = _get_file_fixture_full_path('ntfs/calendar.txt')
@@ -88,6 +89,7 @@ def test_not_zipfile(data_format):
     (DATA_FORMAT_GTFS, 'file zip {file} without at least one of calendar.txt,calendar_dates.txt'),
     (DATA_FORMAT_TITAN, 'file zip {file} without CALENDRIER_VERSION_LIGNE.txt'),
     (DATA_FORMAT_OBITI, 'file zip {file} without vehiclejourney.csv'),
+    (DATA_FORMAT_NEPTUNE, 'file zip {file} without at least one xml'),
 ])
 def test_empty_zipfile(data_format, message):
     file = _get_file_fixture_full_path('validity_period/empty_archive.zip')
@@ -311,3 +313,10 @@ def test_obiti_data_set_invalid(fixture, message):
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_OBITI)
     assert str(excinfo.value) == message.format(file=file)
+
+
+def test_neptune_data_set():
+    file = _get_file_fixture_full_path('validity_period/other_data_formats/neptune.zip')
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_NEPTUNE)
+    assert validity_period.start_date == date(2017, 12, 21)
+    assert validity_period.end_date == date(2018, 2, 23)
