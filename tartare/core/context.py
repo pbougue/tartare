@@ -140,7 +140,7 @@ class Context:
                 for data_source in contributor_export.data_sources:
                     data_source_contexts.append(
                         DataSourceContext(data_source_id=data_source.data_source_id,
-                                          gridfs_id=data_source.gridfs_id,
+                                          gridfs_id=GridFsHandler().copy_file(data_source.gridfs_id),
                                           validity_period=data_source.validity_period)
                     )
                 if data_source_contexts:
