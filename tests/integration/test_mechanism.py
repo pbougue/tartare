@@ -148,6 +148,15 @@ class TartareFixture(object):
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
 
+    def init_coverage(self, id, contributor_ids):
+        coverage = {
+            "id": id,
+            "name": id,
+            "contributors": contributor_ids
+        }
+        raw = self.post('/coverages', json.dumps(coverage))
+        self.assert_sucessful_create(raw)
+
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
         data_source = {
             "id": data_source_id,
