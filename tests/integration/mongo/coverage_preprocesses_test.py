@@ -29,7 +29,9 @@
 import json
 
 import mock
+import pytest
 
+from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import get_response, assert_files_equals, _get_file_fixture_full_path
 
@@ -50,7 +52,6 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         }
 
     def __init_contributor(self, contributor_id, data_sources, data_prefix='AAA'):
-
         contributor = {
             "id": contributor_id,
             "name": "name_test",
@@ -96,7 +97,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
 
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = self.get_fusio_response_from_action_id(42)
@@ -130,7 +131,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = self.get_fusio_response_from_action_id(42)
@@ -159,7 +160,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = self.get_fusio_response_from_action_id(42)
@@ -200,7 +201,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = self.get_fusio_response_from_action_id(42)
@@ -240,7 +241,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
         self.__init_coverage("jdr", ["id_test"])
 
         content = self.get_fusio_response_from_action_id(42)
@@ -248,7 +249,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         self.full_export('id_test', 'jdr', '2017-08-10')
 
-        self.__init_contributor("id_test_2", [self.__create_data_source("my_gtfs_2",  url)], 'BBB')
+        self.__init_contributor("id_test_2", [self.__create_data_source("my_gtfs_2", url)], 'BBB')
         raw = self.post('/coverages/jdr/contributors', json.dumps({'id': 'id_test_2'}))
         self.assert_sucessful_create(raw)
 
@@ -265,7 +266,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs",  url, service_id=None)])
+        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url, service_id=None)])
         self.__init_coverage("jdr", ["id_test"])
 
         response = self.full_export('id_test', 'jdr', '2017-08-10')
@@ -274,7 +275,8 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         job_details = self.get_job_details(self.json_to_dict(response)['job']['id'])
 
         assert job_details['state'] == 'failed'
-        assert job_details['error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'
+        assert job_details[
+                   'error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'
 
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
@@ -284,7 +286,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # Then  I can see that Fusio has been called twice
     # And   Each data source service id is used
     def test_data_update_one_contributor_with_two_data_sources(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
+                                                               init_http_download_server):
         filename = 'gtfs-{number}.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
@@ -303,6 +305,32 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         assert fusio_call.call_count == 2
         assert fusio_call.call_args_list[0][1]['data']['serviceid'] == 'Google-1'
         assert fusio_call.call_args_list[1][1]['data']['serviceid'] == 'Google-2'
+
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    @pytest.mark.parametrize("data_format,file_name", [
+        (DATA_FORMAT_TITAN, 'titan.zip'),
+        (DATA_FORMAT_OBITI, 'obiti.zip'),
+        (DATA_FORMAT_NEPTUNE, 'neptune.zip'),
+    ])
+    def test_data_update_other_data_formats(self, fusio_call, wait_for_action_terminated, init_http_download_server,
+                                            data_format, file_name):
+        sid = 'my_sid'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=file_name,
+                              path='validity_period/other_data_formats')
+        self.init_contributor('cid', 'dsid', url, data_format=data_format, service_id=sid)
+        self.init_coverage("jdr", ["cid"])
+
+        content = self.get_fusio_response_from_action_id(42)
+
+        fusio_call.return_value = get_response(200, content)
+        self.full_export('cid', 'jdr', '2017-08-10')
+
+        assert fusio_call.call_count == 1
+        assert fusio_call.call_args_list[0][1]['data'] == {
+
+        }
 
 
 class TestFusioExportPreprocess(TartareFixture):
@@ -327,16 +355,16 @@ class TestFusioExportPreprocess(TartareFixture):
             "name": "my_cov",
             "contributors": ['id_test'],
             "preprocesses":
-            [
-                {
-                    "id": "fusio_export",
-                    "type": "FusioExport",
-                    "params": {
-                        "url": fusio_end_point
-                    },
-                    "sequence": 0
-                }
-            ]
+                [
+                    {
+                        "id": "fusio_export",
+                        "type": "FusioExport",
+                        "params": {
+                            "url": fusio_end_point
+                        },
+                        "sequence": 0
+                    }
+                ]
 
         }
         raw = self.post('/coverages', self.dict_to_json(coverage))

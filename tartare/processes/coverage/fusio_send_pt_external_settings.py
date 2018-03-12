@@ -41,8 +41,8 @@ class FusioSendPtExternalSettings(AbstractFusioProcess):
     def do(self) -> Context:
         for contributor_context in self.context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
-                if data_source_context.gridfs_id and DataSource.is_type_data_format(data_source_context.data_source_id,
-                                                                                    DATA_FORMAT_PT_EXTERNAL_SETTINGS):
+                if data_source_context.gridfs_id and DataSource.get_one(data_source_context.data_source_id)\
+                        .has_data_format(DATA_FORMAT_PT_EXTERNAL_SETTINGS):
                     resp = self.fusio.call(requests.post, api='api',
                                            data={'action': 'externalstgupdate'},
                                            files=self.get_files_from_gridfs(data_source_context.gridfs_id))

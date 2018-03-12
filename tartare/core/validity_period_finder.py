@@ -40,13 +40,22 @@ from tartare.exceptions import ValidityPeriodException, IntegrityException
 
 class ValidityPeriodFinder:
     @classmethod
-    def select_computer_from_data_format(cls, data_format: str) -> AbstractValidityPeriodComputer:
-        computers_mapping = {
+    def get_data_format_with_validity(cls):
+        return list(cls.get_computers_mapping().keys())
+
+    @classmethod
+    def get_computers_mapping(cls):
+        return {
             DATA_FORMAT_GTFS: GtfsValidityPeriodComputer(),
             DATA_FORMAT_TITAN: TitanValidityPeriodComputer(),
             DATA_FORMAT_OBITI: ObitiValidityPeriodComputer(),
             DATA_FORMAT_NEPTUNE: NeptuneValidityPeriodComputer(),
         }
+
+    @classmethod
+    def select_computer_from_data_format(cls, data_format: str) -> AbstractValidityPeriodComputer:
+        computers_mapping = cls.get_computers_mapping()
+        cls.get_data_format_with_validity()
         if data_format not in computers_mapping:
             raise IntegrityException('cannot determine validity period computer for data format {}'.format(data_format))
         return computers_mapping[data_format]

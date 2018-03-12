@@ -86,7 +86,7 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input.url and data_source.is_type(INPUT_TYPE_URL):
+        if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
             nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
 
     return nb_updated_datasets

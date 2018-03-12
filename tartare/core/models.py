@@ -32,7 +32,7 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar, Tuple
+from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
 
 import pymongo
 from gridfs import GridOut
@@ -204,7 +204,8 @@ class License(object):
 
 
 class Input(object):
-    def __init__(self, type: str=INPUT_TYPE_DEFAULT, url: Optional[str] = None, expected_file_name: str=None) -> None:
+    def __init__(self, type: str = INPUT_TYPE_DEFAULT, url: Optional[str] = None,
+                 expected_file_name: str = None) -> None:
         self.type = type
         self.url = url
         self.expected_file_name = expected_file_name
@@ -216,7 +217,7 @@ class DataSource(object):
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
                  input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
                  license: Optional[License] = None,
-                 service_id: str=None) -> None:
+                 service_id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
@@ -295,15 +296,13 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
-    @classmethod
-    def is_type_data_format(cls, data_source_id: str, data_format: str) -> bool:
-        data_sources = cls.get(data_source_id=data_source_id)
-        if not data_sources:
-            return False
-        else:
-            return data_sources[0].data_format == data_format
+    def has_data_format(self, data_format: str) -> bool:
+        return self.data_format == data_format
 
-    def is_type(self, type: str) -> bool:
+    def has_one_of_data_format(self, data_format_list: List[str]) -> bool:
+        return any(self.has_data_format(data_format) for data_format in data_format_list)
+
+    def has_type(self, type: str) -> bool:
         return self.input.type == type
 
 
@@ -444,8 +443,8 @@ class Contributor(PreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
-    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource]=None,
-                 preprocesses: List[PreProcess]=None, data_type: str=DATA_TYPE_DEFAULT) -> None:
+    def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
+                 preprocesses: List[PreProcess] = None, data_type: str = DATA_TYPE_DEFAULT) -> None:
         super(Contributor, self).__init__(preprocesses)
         self.id = id
         self.name = name
@@ -482,7 +481,7 @@ class Contributor(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id: str=None, dataset: dict=None) -> Optional['Contributor']:
+    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
         tmp_dataset = dataset if dataset else {}
         raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
         if raw.matched_count == 0:
@@ -538,7 +537,7 @@ class Coverage(PreProcessContainer):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str=None) -> 'Coverage':
+    def get(cls, coverage_id: str = None) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
             return None
@@ -700,8 +699,8 @@ class DataSourceFetched(Historisable):
 
     def __init__(self, contributor_id: str, data_source_id: str,
                  validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None, status: str=DATA_SOURCE_STATUS_FETCHING,
-                 saved_at: Optional[datetime]=None) -> None:
+                 created_at: datetime = None, id: str = None, status: str = DATA_SOURCE_STATUS_FETCHING,
+                 saved_at: Optional[datetime] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.data_source_id = data_source_id
         self.contributor_id = contributor_id
@@ -726,7 +725,7 @@ class DataSourceFetched(Historisable):
         return self
 
     @classmethod
-    def get_last(cls, data_source_id: str, status: Optional[str]=DATA_SOURCE_STATUS_UPDATED) \
+    def get_last(cls, data_source_id: str, status: Optional[str] = DATA_SOURCE_STATUS_UPDATED) \
             -> Optional['DataSourceFetched']:
         where = {
             'data_source_id': data_source_id
@@ -869,9 +868,9 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str=None, coverage_id: str=None, state: str='pending',
-                 step: str=None, id: str=None, started_at: datetime=None, updated_at: Optional[datetime]=None,
-                 error_message: str="") -> None:
+    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
+                 step: str = None, id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
+                 error_message: str = "") -> None:
         self.id = id if id else str(uuid.uuid4())
         self.action_type = action_type
         self.contributor_id = contributor_id
@@ -893,7 +892,7 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def get_some(cls, contributor_id: str=None, coverage_id: str=None) -> List['Job']:
+    def get_some(cls, contributor_id: str = None, coverage_id: str = None) -> List['Job']:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
@@ -957,9 +956,9 @@ class ContributorExport(Historisable):
 
     def __init__(self, contributor_id: str,
                  validity_period: ValidityPeriod,
-                 data_sources: List[ContributorExportDataSource]=None,
-                 id: str=None,
-                 created_at: datetime=None) -> None:
+                 data_sources: List[ContributorExportDataSource] = None,
+                 id: str = None,
+                 created_at: datetime = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
         self.created_at = created_at if created_at else datetime.utcnow()
@@ -1079,6 +1078,7 @@ class CoverageStatus(object):
        - updated_at: datetime at which the last fetched data set was valid and inserted in database
        - validity_period: validity period of the data source
    """
+
     def __init__(self, data_source_id: str) -> None:
         last_data_set = DataSourceFetched.get_last(data_source_id, None)
         self.status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED

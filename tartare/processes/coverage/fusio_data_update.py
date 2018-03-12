@@ -98,7 +98,7 @@ class FusioDataUpdate(AbstractFusioProcess):
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
-                if not DataSource.is_type_data_format(data_source_context.data_source_id, DATA_FORMAT_GTFS):
+                if not DataSource.get_one(data_source_context.data_source_id).has_data_format(DATA_FORMAT_GTFS):
                     continue
                 if self.__is_update_needed(contributor_context.contributor.id, data_source_context):
                     resp = self.fusio.call(requests.post, api='api',
