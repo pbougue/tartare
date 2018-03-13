@@ -308,19 +308,19 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
-    @pytest.mark.parametrize("data_format,file_name", [
-        (DATA_FORMAT_TITAN, 'titan.zip'),
-        (DATA_FORMAT_OBITI, 'obiti.zip'),
-        (DATA_FORMAT_NEPTUNE, 'neptune.zip'),
+    @pytest.mark.parametrize("data_format,file_name,begin_date,end_date", [
+        (DATA_FORMAT_TITAN, 'titan.zip', '02/01/2018', '18/06/2018'),
+        (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '02/01/2019'),
+        (DATA_FORMAT_NEPTUNE, 'neptune.zip', '21/12/2017', '23/02/2018'),
     ])
     def test_data_update_other_data_formats(self, fusio_call, wait_for_action_terminated, init_http_download_server,
-                                            data_format, file_name):
+                                            data_format, file_name, begin_date, end_date):
         sid = 'my_sid'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=file_name,
                               path='validity_period/other_data_formats')
         self.init_contributor('cid', 'dsid', url, data_format=data_format, service_id=sid)
-        self.init_coverage("jdr", ["cid"])
+        self.__init_coverage("jdr", ["cid"])
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -329,7 +329,15 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         assert fusio_call.call_count == 1
         assert fusio_call.call_args_list[0][1]['data'] == {
-
+            'DateDebut': begin_date,
+            'DateFin': end_date,
+            'action': 'dataupdate',
+            'content-type': 'multipart/form-data',
+            'contributorexternalcode': 'cid_prefix',
+            'dutype': 'update',
+            'isadapted': 0,
+            'libelle': 'unlibelle',
+            'serviceid': sid
         }
 
 

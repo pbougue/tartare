@@ -35,6 +35,7 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource, \
     DataSource
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import IntegrityException
 
 logger = logging.getLogger(__name__)
@@ -48,8 +49,8 @@ def merge(coverage: Coverage, context: Context) -> Context:
     if not context.global_gridfs_id:
         for contributor_context in context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
-                if DataSource.get_one(contributor_context.contributor.id,
-                                      data_source_context.data_source_id).data_format == DATA_FORMAT_GTFS:
+                if DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id) \
+                        .has_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                     context.global_gridfs_id = GridFsHandler().copy_file(data_source_context.gridfs_id)
                     context.validity_period = contributor_context.validity_period
                     return context

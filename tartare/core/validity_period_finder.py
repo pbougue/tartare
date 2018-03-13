@@ -40,11 +40,11 @@ from tartare.exceptions import ValidityPeriodException, IntegrityException
 
 class ValidityPeriodFinder:
     @classmethod
-    def get_data_format_with_validity(cls):
+    def get_data_format_with_validity(cls) -> List[str]:
         return list(cls.get_computers_mapping().keys())
 
     @classmethod
-    def get_computers_mapping(cls):
+    def get_computers_mapping(cls) -> dict:
         return {
             DATA_FORMAT_GTFS: GtfsValidityPeriodComputer(),
             DATA_FORMAT_TITAN: TitanValidityPeriodComputer(),
