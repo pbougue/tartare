@@ -29,12 +29,13 @@
 import json
 
 import pytest
+from bson import ObjectId
 
 import tartare
 from tartare import app, mongo
 from tartare.core import models
 from tartare.core.constants import DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
-from tartare.core.models import MongoDataSourceFetchedSchema
+from tartare.core.models import MongoDataSourceFetchedSchema, MongoContributorExportSchema
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -116,7 +117,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == min(tartare.app.config.get('HISTORICAL'), exports_number) * 5
+        assert raw.count() == min(tartare.app.config.get('HISTORICAL'), exports_number) * 7
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_source_fetched_histo_and_cleaning(self, init_http_download_server):
@@ -156,3 +157,19 @@ class TestHistorical(TartareFixture):
             raw = mongo.db['fs.files'].find({})
             assert raw.count() == 2 * tartare.app.config.get('HISTORICAL')
 
+    def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
+        url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
+        self.init_contributor('cid', 'dsid', url_gtfs)
+        self.contributor_export('cid', '2018-01-01')
+        self.init_coverage('covid', ['cid'])
+        self.coverage_export('covid')
+        self.coverage_export('covid')
+        self.coverage_export('covid')
+        with app.app_context():
+            raw = mongo.db[models.ContributorExport.mongo_collection].find({
+                'contributor_id': 'cid'
+            })
+            cont_ex = MongoContributorExportSchema(many=True, strict=True).load(raw).data
+            gridfs_referenced = cont_ex[0].data_sources[0].gridfs_id
+            raw = mongo.db['fs.files'].find({'_id': ObjectId(gridfs_referenced)})
+            assert raw.count() == 1

@@ -110,7 +110,7 @@ class Context:
     def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
                                             data_format_list: Optional[List[str]]=None) -> Optional[DataSourceContext]:
         data_source_contexts = self.get_contributor_data_source_contexts(contributor_id, data_format_list)
-        if len(data_source_contexts) == 0:
+        if not data_source_contexts:
             return None
         return next((data_source_context
                      for data_source_context in data_source_contexts
@@ -140,7 +140,7 @@ class Context:
                 for data_source in contributor_export.data_sources:
                     data_source_contexts.append(
                         DataSourceContext(data_source_id=data_source.data_source_id,
-                                          gridfs_id=data_source.gridfs_id,
+                                          gridfs_id=GridFsHandler().copy_file(data_source.gridfs_id),
                                           validity_period=data_source.validity_period)
                     )
                 if data_source_contexts:

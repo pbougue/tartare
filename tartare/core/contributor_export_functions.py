@@ -30,19 +30,18 @@
 import logging
 import tempfile
 import zipfile
-from datetime import date
 from typing import Optional
 
 from tartare.core import models
-from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, DATA_FORMAT_WITH_VALIDITY, \
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
 from tartare.core.context import Context
 from tartare.core.fetcher import FetcherManager
-from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched, \
+    ValidityPeriod
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
-from tartare.validity_period_finder import ValidityPeriodFinder
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +72,8 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        contributor_export_validity_period = ValidityPeriodFinder.get_validity_period_union(
-            validity_periods, context.current_date
-        ) if len(validity_periods) else None
+        contributor_export_validity_period = ValidityPeriod.union(validity_periods).to_valid(
+            context.current_date) if len(validity_periods) else None
 
         export = ContributorExport(contributor_id=contributor.id,
                                    validity_period=contributor_export_validity_period,
@@ -88,7 +86,7 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
 def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input.url and data_source.is_type(INPUT_TYPE_URL):
+        if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
             nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
 
     return nb_updated_datasets
@@ -120,8 +118,7 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
             contributor_id, data_source.id
         ))
-        validity_period = ValidityPeriodFinder().get_validity_period(file=dest_full_file_name) \
-            if data_source.data_format in DATA_FORMAT_WITH_VALIDITY else None
+        validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
         new_data_source_fetched.validity_period = validity_period
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)

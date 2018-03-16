@@ -177,7 +177,7 @@ class TestContributorExport(TartareFixture):
         self.assert_sucessful_create(raw)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 3
+            assert grid_fs_list.count() == 4
 
     @pytest.mark.parametrize("filename,path,data_format", [
         ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),
