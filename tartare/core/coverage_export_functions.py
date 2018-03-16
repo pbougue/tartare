@@ -50,7 +50,7 @@ def merge(coverage: Coverage, context: Context) -> Context:
         for contributor_context in context.contributor_contexts:
             for data_source_context in contributor_context.data_source_contexts:
                 if DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id) \
-                        .has_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
+                        .is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                     context.global_gridfs_id = GridFsHandler().copy_file(data_source_context.gridfs_id)
                     context.validity_period = contributor_context.validity_period
                     return context

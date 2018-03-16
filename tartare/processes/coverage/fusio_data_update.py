@@ -99,7 +99,7 @@ class FusioDataUpdate(AbstractFusioProcess):
                 if not data_source_context.gridfs_id:
                     continue
                 if not DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id)\
-                        .has_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
+                        .is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                     continue
                 if self.__is_update_needed(contributor_context.contributor.id, data_source_context):
                     resp = self.fusio.call(requests.post, api='api',

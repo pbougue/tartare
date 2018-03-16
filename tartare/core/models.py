@@ -296,11 +296,11 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
-    def has_data_format(self, data_format: str) -> bool:
+    def is_of_data_format(self, data_format: str) -> bool:
         return self.data_format == data_format
 
-    def has_one_of_data_format(self, data_format_list: List[str]) -> bool:
-        return any(self.has_data_format(data_format) for data_format in data_format_list)
+    def is_of_one_of_data_format(self, data_format_list: List[str]) -> bool:
+        return any(self.is_of_data_format(data_format) for data_format in data_format_list)
 
     def has_type(self, type: str) -> bool:
         return self.input.type == type
