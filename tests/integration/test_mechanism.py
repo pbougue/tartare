@@ -126,7 +126,7 @@ class TartareFixture(object):
         return self.coverage_export(coverage_id)
 
     def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
-                         data_type=DATA_TYPE_DEFAULT, manual=False):
+                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None):
         input = {'type': 'manual'} if manual else {
             "type": "url",
             "url": url
@@ -136,6 +136,7 @@ class TartareFixture(object):
             "id": data_source_id,
             "name": data_source_id,
             "data_format": data_format,
+            "service_id": service_id,
             "input": input
         }
         contributor = {

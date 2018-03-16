@@ -31,10 +31,10 @@ import logging
 import requests
 from gridfs import NoFile
 
-from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource, CoverageExport
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -98,7 +98,8 @@ class FusioDataUpdate(AbstractFusioProcess):
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
-                if not DataSource.is_type_data_format(data_source_context.data_source_id, DATA_FORMAT_GTFS):
+                if not DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id)\
+                        .is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                     continue
                 if self.__is_update_needed(contributor_context.contributor.id, data_source_context):
                     resp = self.fusio.call(requests.post, api='api',

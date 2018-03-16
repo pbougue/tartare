@@ -43,7 +43,7 @@ class DataSourceFetch(flask_restful.Resource):
         except ValueError as e:
             raise ObjectNotFound(str(e))
 
-        if not data_source.is_type(INPUT_TYPE_URL) or not data_source.input.url:
+        if not data_source.has_type(INPUT_TYPE_URL) or not data_source.input.url:
             raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_URL))
 
         try:
