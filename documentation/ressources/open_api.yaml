@@ -1748,7 +1748,10 @@ definitions:
         default: manual
       url:
         type: string
-        example: "http://stif.com/od.zip"
+        example:
+          - "http://stif.com/od.zip"
+          - "http://bob@domain.tld:password@stif.com/od.zip"
+          - "https://user:password@stif.com/get.php?param=value"
       expected_file_name:
         type: string
         example: "config.json"
