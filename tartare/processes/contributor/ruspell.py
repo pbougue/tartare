@@ -121,7 +121,7 @@ class Ruspell(AbstractContributorProcess):
                                                                     config_path=config_path
                                                                     )
                                                    )
-                
+
                 data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                     old_gridfs_id=data_source_to_process_context.gridfs_id,
                     files=extract_dir_path,

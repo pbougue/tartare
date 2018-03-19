@@ -28,16 +28,14 @@
 # www.navitia.io
 import logging
 import os
-import shutil
 import tempfile
-from functools import partial
+import json
 
-from tartare.core import zip
+from zipfile import ZipFile
+
 from tartare.core.context import Context
-from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
-from tartare.exceptions import ParameterException, RuntimeException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -82,7 +80,6 @@ class Gtfs2Ntfs(AbstractContributorProcess):
 
         config_file_path = os.path.join(config_dir_path, self.config_filename)
 
-        import json
         with open(config_file_path, 'w') as f:
             json.dump(config, f)
 
@@ -101,7 +98,6 @@ class Gtfs2Ntfs(AbstractContributorProcess):
 
                 data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
 
-                from zipfile import ZipFile
                 with ZipFile(data_source_gridout, 'r') as files_zip:
                     files_zip.extractall(extract_dir_path)
 

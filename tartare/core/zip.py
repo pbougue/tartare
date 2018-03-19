@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
-                          new_zip_path: str, callback: Union[partial, Callable[[str], None]],
-                          computed_file_name: str='gtfs-processed') -> str:
+                          callback: Union[partial, Callable[[str], None]]) -> None:
     if not is_zipfile(zip_file):
         msg = '{} is not a zip file or does not exist.'.format(zip_file)
         logger.error(msg)
@@ -51,7 +50,14 @@ def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
         file_path = '{}/{}'.format(extract_zip_path, filename)
         callback(file_path)
 
-        return create_zip_file(extract_zip_path, new_zip_path, computed_file_name)
+
+def edit_file_in_zip_file_and_pack(zip_file: str, filename: str, extract_zip_path: str,
+                                   new_zip_path: str, callback: Union[partial, Callable[[str], None]],
+                                   computed_file_name: str='gtfs-processed') -> str:
+
+    edit_file_in_zip_file(zip_file, filename, extract_zip_path, callback)
+
+    return create_zip_file(extract_zip_path, new_zip_path, computed_file_name)
 
 
 def create_zip_file(from_dir: str, to_dir: str, filename: str='gtfs-processed') -> str:
