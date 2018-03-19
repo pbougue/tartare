@@ -35,7 +35,7 @@ from abc import ABCMeta, abstractmethod
 from http.client import HTTPResponse
 from typing import Tuple
 from urllib.error import ContentTooShortError, URLError
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, ParseResult
 
 from requests import HTTPError
 
@@ -119,6 +119,10 @@ class FtpFetcher(AbstractFetcher):
 
 class HttpFetcher(AbstractFetcher):
     @classmethod
+    def recompose_url_without_authent_from_parsed_result(cls, parsed: ParseResult) -> str:
+        return urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6])
+
+    @classmethod
     def check_authent_and_fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
         parsed = urlparse(url)
         if parsed.username:
@@ -127,9 +131,9 @@ class HttpFetcher(AbstractFetcher):
                 top_level = '{}://{}'.format(parsed.scheme, parsed.hostname)
                 password_manager.add_password(None, top_level, parsed.username, parsed.password)
                 opener = urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(password_manager))
-                opener.open(urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6]))
-                with opener.open(top_level + parsed.path) as response, open(dest_full_file_name, 'wb') as out_file:
-                    shutil.copyfileobj(response, out_file)
+                with opener.open(cls.recompose_url_without_authent_from_parsed_result(parsed)) as response, \
+                        open(dest_full_file_name, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)  # type: ignore
             except urllib.error.HTTPError as e:
                 raise FetcherException('error during download of file: {}'.format(str(e)))
         else:

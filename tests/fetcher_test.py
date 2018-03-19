@@ -28,6 +28,7 @@
 # www.navitia.io
 from http.client import HTTPResponse
 from urllib.error import ContentTooShortError, URLError
+from urllib.parse import urlparse
 
 import mock
 import pytest
@@ -150,3 +151,12 @@ class TestFetcher:
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
             HttpFetcher().fetch(url, '/tmp/whatever')
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
+
+    @pytest.mark.parametrize(
+        "url,expected", [
+            ('http://bob:tata@canaltp.fr/upload.php?param=value', 'http://canaltp.fr/upload.php?param=value'),
+            ('https://toto:bar@canaltp.fr/get.aspx', 'https://canaltp.fr/get.aspx'),
+            ('http://foo@domain.tld:password@kisio.com/get.php?name=titi&country=fr', 'http://kisio.com/get.php?name=titi&country=fr'),
+        ])
+    def test_fetch_recompose_url(self, url, expected):
+        assert expected == HttpFetcher.recompose_url_without_authent_from_parsed_result(urlparse(url))
