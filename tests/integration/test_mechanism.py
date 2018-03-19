@@ -66,8 +66,8 @@ class TartareFixture(object):
     def put(self, url, params=None, headers={'Content-Type': 'application/json'}):
         data = params if params else {}
         return self.tester.put(url,
-                                 headers=headers,
-                                 data=data)
+                               headers=headers,
+                               data=data)
 
     def delete(self, url):
         return self.tester.delete(url)
@@ -198,9 +198,12 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
-    def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None, expected_filename=None):
-        metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(coverage_id=coverage_id)
-        expected_filename = expected_filename if expected_filename else '{coverage_id}.zip'.format(coverage_id=coverage_id)
+    def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None,
+                                          expected_filename=None):
+        metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(
+            coverage_id=coverage_id)
+        expected_filename = expected_filename if expected_filename else '{coverage_id}.zip'.format(
+            coverage_id=coverage_id)
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
                              init_ftp_upload_server.password)
 
@@ -220,3 +223,10 @@ class TartareFixture(object):
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
                 assert_files_equals(metadata, fixture)
         session.quit()
+
+    def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
+        response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor_id, data_source_id))
+        if check_success:
+            self.assert_sucessful_call(response, 204)
+        else:
+            return response

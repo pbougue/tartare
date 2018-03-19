@@ -26,12 +26,15 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app, mongo
-import pytest
-from tartare.core import models
-from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker
-from tests.utils import to_json
 from datetime import date
+
+import pytest
+
+from tartare import app, mongo
+from tartare.core import models
+from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker, \
+    DownloadHttpServerAuthentDocker
+from tests.utils import to_json
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -66,10 +69,18 @@ def init_http_download_server():
     with DownloadHttpServerDocker() as download_server:
         yield download_server
 
+
+@pytest.yield_fixture(scope="session", autouse=False)
+def init_http_download_authent_server():
+    with DownloadHttpServerAuthentDocker() as download_server:
+        yield download_server
+
+
 @pytest.yield_fixture(scope="session", autouse=False)
 def init_ftp_upload_server():
     with UploadFtpServerDocker() as upload_server:
         yield upload_server
+
 
 @pytest.yield_fixture(scope="session", autouse=False)
 def init_ftp_download_server():
@@ -86,15 +97,16 @@ def get_app_context():
 @pytest.fixture(scope="function")
 def coverage_with_data_source_tram_lyon(app):
     coverage = app.post('/coverages',
-                headers={'Content-Type': 'application/json'},
-               data='{"id": "jdr", "name": "name of the coverage jdr", "data_sources": ["tram_lyon"]}')
+                        headers={'Content-Type': 'application/json'},
+                        data='{"id": "jdr", "name": "name of the coverage jdr", "data_sources": ["tram_lyon"]}')
     return to_json(coverage)['coverages'][0]
+
 
 @pytest.fixture(scope="function")
 def coverage(app):
     coverage = app.post('/coverages',
-                headers={'Content-Type': 'application/json'},
-               data='{"id": "jdr", "name": "name of the coverage jdr"}')
+                        headers={'Content-Type': 'application/json'},
+                        data='{"id": "jdr", "name": "name of the coverage jdr"}')
     return to_json(coverage)['coverages'][0]
 
 
@@ -104,6 +116,7 @@ def contributor(app):
                            headers={'Content-Type': 'application/json'},
                            data='{"id": "id_test", "name": "name_test", "data_prefix": "AAA"}')
     return to_json(contributor)['contributors'][0]
+
 
 @pytest.fixture(scope="function")
 def data_source(app, contributor):
@@ -116,6 +129,7 @@ def data_source(app, contributor):
     for calculated_field in calculated_fields:
         ds.pop(calculated_field, None)
     return ds
+
 
 @pytest.fixture(scope="function")
 def coverage_obj(tmpdir, get_app_context):

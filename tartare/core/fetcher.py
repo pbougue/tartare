@@ -29,12 +29,13 @@
 import logging
 import os
 import re
+import shutil
 import urllib.request
 from abc import ABCMeta, abstractmethod
 from http.client import HTTPResponse
 from typing import Tuple
 from urllib.error import ContentTooShortError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from requests import HTTPError
 
@@ -64,11 +65,9 @@ class AbstractFetcher(metaclass=ABCMeta):
     def fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
         try:
             urllib.request.urlretrieve(url, dest_full_file_name)
-        except HTTPError as e:
-            raise FetcherException('error during download of file: {}'.format(str(e)))
         except ContentTooShortError:
             raise FetcherException('downloaded file size was shorter than exepected for url {}'.format(url))
-        except URLError as e:
+        except (HTTPError, URLError) as e:
             raise FetcherException('error during download of file: {}'.format(str(e)))
 
     @classmethod
@@ -119,8 +118,25 @@ class FtpFetcher(AbstractFetcher):
 
 
 class HttpFetcher(AbstractFetcher):
+    @classmethod
+    def check_authent_and_fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
+        parsed = urlparse(url)
+        if parsed.username:
+            try:
+                password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+                top_level = '{}://{}'.format(parsed.scheme, parsed.hostname)
+                password_manager.add_password(None, top_level, parsed.username, parsed.password)
+                opener = urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(password_manager))
+                opener.open(urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6]))
+                with opener.open(top_level + parsed.path) as response, open(dest_full_file_name, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
+            except urllib.error.HTTPError as e:
+                raise FetcherException('error during download of file: {}'.format(str(e)))
+        else:
+            cls.fetch_to_target(url, dest_full_file_name)
+
     def fetch(self, url: str, destination_path: str, expected_file_name: str = None) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(url) if not expected_file_name else expected_file_name
         dest_full_file_name = os.path.join(destination_path, expected_file_name)
-        self.fetch_to_target(url, dest_full_file_name)
+        self.check_authent_and_fetch_to_target(url, dest_full_file_name)
         return dest_full_file_name, expected_file_name
