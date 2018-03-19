@@ -80,7 +80,7 @@ class AbstractRequestClient:
                 raw = self.delete(resource + '/' + contributor['id'])
                 self.assert_sucessful_call(raw, 204)
 
-    def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file):
+    def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file, expected_filename=None):
         # list of exports
         raw = self.get('contributors/{contributor_id}/exports'.format(contributor_id=contributor_id))
         self.assert_sucessful_call(raw)
@@ -97,12 +97,17 @@ class AbstractRequestClient:
         raw = self.get('contributors/{contributor_id}/exports/{export_id}/files/{gridfs_id}'.format(export_id=export_id,
                                                                                                     gridfs_id=gridfs_id,
                                                                                                     contributor_id=contributor_id))
+        if expected_filename:
+            import re
+            d = raw.headers['Content-Disposition']
+            fname = re.findall("filename=(.+)", d)
+            assert fname[0] == expected_filename
 
         self.assert_content_equals_ref_file(raw.content, ref_file)
 
     def assert_content_equals_ref_file(self, content, ref_zip_file):
-        with tempfile.TemporaryDirectory() as extarct_result_tmp, tempfile.TemporaryDirectory() as ref_tmp:
-            dest_zip_res = '{}/gtfs.zip'.format(extarct_result_tmp)
+        with tempfile.TemporaryDirectory() as extract_result_tmp, tempfile.TemporaryDirectory() as ref_tmp:
+            dest_zip_res = '{}/gtfs.zip'.format(extract_result_tmp)
             with open(dest_zip_res, 'wb') as f:
                 f.write(content)
 
@@ -112,11 +117,11 @@ class AbstractRequestClient:
                 response_files_list = files_zip_res.namelist()
 
                 assert len(except_files_list) == len(response_files_list)
-                files_zip_res.extractall(extarct_result_tmp)
+                files_zip_res.extractall(extract_result_tmp)
                 files_zip.extractall(ref_tmp)
 
                 for f in except_files_list:
-                    assert_files_equals('{}/{}'.format(ref_tmp, f), '{}/{}'.format(extarct_result_tmp, f))
+                    assert_files_equals('{}/{}'.format(ref_tmp, f), '{}/{}'.format(extract_result_tmp, f))
 
     def replace_server_id_in_input_data_source_fixture(self, fixture_path):
         with open(self.get_api_fixture_path(fixture_path), 'rb') as file:
