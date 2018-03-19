@@ -69,7 +69,7 @@ class AbstractPandaReader(metaclass=ABCMeta):
                 {"value_of_key_column_row_n": value_apply_function(columns_used, rown)}
             ]
         """
-        for key, value in self.data.iterrows():
+        for _, value in self.data.iterrows():
             yield {value[key_column]: value_apply_function(value)}
 
     def apply(self, column_name: str, callback: Callable[..., Any], fillna: str = '') -> None:

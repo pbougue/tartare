@@ -90,7 +90,7 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip',
-                                                data_source_id="Google-1")
+                                                data_source_id="Google-1", expected_filename='gtfs-processed.zip')
 
     def test_exports_combined(self):
         json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')

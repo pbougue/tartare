@@ -114,18 +114,18 @@ class Ruspell(AbstractContributorProcess):
                     data_source_id=data_source_id_to_process)
 
                 data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
-                gtfs_computed_path = zip.edit_file_in_zip_file(data_source_gridout,
-                                                               self.stops_filename,
-                                                               extract_dir_path,
-                                                               ruspell_dir_path,
-                                                               callback=partial(self.do_ruspell,
-                                                                                stops_output_path=stops_output_path,
-                                                                                config_path=config_path)
-                                                               )
+                zip.edit_file_in_zip_file(data_source_gridout,
+                                                   self.stops_filename,
+                                                   extract_dir_path,
+                                                   callback=partial(self.do_ruspell,
+                                                                    stops_output_path=stops_output_path,
+                                                                    config_path=config_path
+                                                                    )
+                                                   )
 
                 data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                     old_gridfs_id=data_source_to_process_context.gridfs_id,
-                    files=gtfs_computed_path,
-                    computed_file_name=os.path.basename(gtfs_computed_path))
+                    files=extract_dir_path,
+                )
 
         return self.context

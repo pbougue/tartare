@@ -138,7 +138,7 @@ class ComputeDirections(AbstractContributorProcess):
     def __process_file_from_gridfs_id(self, gridfs_id_to_process: str, config: Dict[str, List[str]]) -> str:
         self.file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         with tempfile.TemporaryDirectory() as tmp_dir_name, tempfile.TemporaryDirectory() as new_tmp_dir_name:
-            gtfs_computed_path = zip.edit_file_in_zip_file(self.file_to_process, 'trips.txt', tmp_dir_name,
+            gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(self.file_to_process, 'trips.txt', tmp_dir_name,
                                                            new_tmp_dir_name,
                                                            callback=partial(self.do_compute_directions,
                                                                             config=("compute-direction", config))
