@@ -1,0 +1,27 @@
+{
+  "data_prefix": "bob",
+  "data_sources": [
+    {
+      "data_format": "gtfs",
+      "id": "Google-1",
+      "input": {
+        "type": "url",
+        "url": "http://{HTTP_SERVER_IP}/gtfs/gtfs_valid.zip"
+      },
+      "name": "données gtfs"
+    }
+  ],
+  "id": "AMI",
+  "name": "AMI",
+  "preprocesses": [
+    {
+      "id": "gtfs2ntfs",
+      "type": "Gtfs2Ntfs",
+      "sequence": 1,
+      "data_source_ids": [
+        "Google-1"
+      ],
+      "params": {}
+    }
+  ]
+}

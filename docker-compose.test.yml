@@ -3,6 +3,7 @@ version: '2'
 services:
   tartare_worker:
     image: tartare_functional_tests
+    container_name: tartare_test_worker
     environment:
       - RETRY_NUMBER_WHEN_FAILED_TASK=0
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
@@ -17,11 +18,25 @@ services:
       - rabbitmq
 
   ruspell_worker:
-    image: tartare_ruspell_functional_tests
+    image: tartare_rust_functional_tests
+    container_name: tartare_test_ruspell_worker
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
-    command: celery -A tartare.tasks worker -Q process_ruspell -c 1
+    command: celery -A tartare.tasks worker -Q tartare_ruspell -c 1
+    links:
+      - rabbitmq
+      - mongo-server
+    depends_on:
+      - rabbitmq
+
+  gtfs2ntfs_worker:
+    image: tartare_rust_functional_tests
+    container_name: tartare_test_gtfs2ntfs_worker
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks worker -Q tartare_gtfs2ntfs -c 1
     links:
       - rabbitmq
       - mongo-server
@@ -30,6 +45,7 @@ services:
 
   tartare_beat:
     image: tartare_functional_tests
+    container_name: tartare_test_beat
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
     command: celery -A tartare.tasks.celery beat
@@ -38,6 +54,7 @@ services:
 
   tartare_webservice:
     image: tartare_functional_tests
+    container_name: tartare_test_webservice
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
@@ -48,9 +65,12 @@ services:
 
   mongo-server:
     image: mongo
+    container_name: tartare_test_mongo
 
   rabbitmq:
     image: rabbitmq:management
+    container_name: tartare_test_rabbitmq
 
   http_download_server:
     image: visity/webdav
+    container_name: tartare_test_webdav

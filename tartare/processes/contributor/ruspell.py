@@ -33,7 +33,6 @@ import tempfile
 from functools import partial
 
 from tartare.core import zip
-from tartare.core.constants import DATA_FORMAT_BY_DATA_TYPE, DATA_TYPE_GEOGRAPHIC
 from tartare.core.context import Context
 from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
