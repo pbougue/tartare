@@ -278,18 +278,18 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
             namespace = root.tag.replace('ChouettePTNetwork', '')
             validity_periods = []
             for time_table in root.iter('{}Timetable'.format(namespace)):
-                period = time_table.find('{}period'.format(namespace))
-                if period:
-                    start_period = datetime.strptime(period.find('{}startOfPeriod'.format(namespace)).text,
-                                                     self.date_format).date()
-                    end_period = datetime.strptime(period.find('{}endOfPeriod'.format(namespace)).text,
-                                                   self.date_format).date()
-                    if start_period and end_period:
-                        day_types = [list(calendar.day_name).index(day_type.text) for day_type in
-                                     time_table.findall('{}dayType'.format(namespace))]
-                        start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
-                        end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
-                        validity_periods.append(ValidityPeriod(start_period, end_period))
+                for period in time_table.iter('{}period'.format(namespace)):
+                    if period:
+                        start_period = datetime.strptime(period.find('{}startOfPeriod'.format(namespace)).text,
+                                                         self.date_format).date()
+                        end_period = datetime.strptime(period.find('{}endOfPeriod'.format(namespace)).text,
+                                                       self.date_format).date()
+                        if start_period and end_period:
+                            day_types = [list(calendar.day_name).index(day_type.text) for day_type in
+                                         time_table.findall('{}dayType'.format(namespace))]
+                            start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
+                            end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
+                            validity_periods.append(ValidityPeriod(start_period, end_period))
             return ValidityPeriod.union(validity_periods)
         except (ElementTree.ParseError, TypeError) as e:
             raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))

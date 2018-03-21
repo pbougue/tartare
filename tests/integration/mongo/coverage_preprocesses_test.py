@@ -311,7 +311,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @pytest.mark.parametrize("data_format,file_name,begin_date,end_date", [
         (DATA_FORMAT_TITAN, 'titan.zip', '02/01/2018', '18/06/2018'),
         (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '02/01/2019'),
-        (DATA_FORMAT_NEPTUNE, 'neptune.zip', '21/12/2017', '23/02/2018'),
+        (DATA_FORMAT_NEPTUNE, 'neptune.zip', '21/12/2017', '27/02/2018'),
     ])
     def test_data_update_other_data_formats(self, fusio_call, wait_for_action_terminated, init_http_download_server,
                                             data_format, file_name, begin_date, end_date):
