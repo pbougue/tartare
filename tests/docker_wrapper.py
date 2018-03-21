@@ -110,9 +110,10 @@ class AbstractDocker(metaclass=ABCMeta):
         )
 
         try:
-            self.container_id = self.docker.create_container(self.image_name, name=self.container_name, ports=self.ports,
-                                                         environment=self.env_vars,
-                                                         volumes=self.volumes, host_config=host_config).get('Id')
+            self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
+                                                             ports=self.ports,
+                                                             environment=self.env_vars,
+                                                             volumes=self.volumes, host_config=host_config).get('Id')
             self.logger.info("docker id is {}".format(self.container_id))
             self.logger.info("starting the temporary docker for image {}".format(self.image_name))
             self.docker.start(self.container_id)
@@ -123,7 +124,8 @@ class AbstractDocker(metaclass=ABCMeta):
             self.logger.info("IP addr is {}".format(self.ip_addr))
             self.wait_until_available()
         except APIError as e:
-            pytest.exit("error during setup of docker container {}, aborting. Details:\n{}".format(self.container_name, str(e)))
+            pytest.exit(
+                "error during setup of docker container {}, aborting. Details:\n{}".format(self.container_name, str(e)))
 
     def __exit__(self, *args, **kwargs):
         if self.volumes:
@@ -140,14 +142,12 @@ class AbstractDocker(metaclass=ABCMeta):
                     exit(2)
 
 
-class DownloadHttpServerDocker(AbstractDocker):
-    @property
-    def working_dir(self):
-        return '/var/www'
+class AbstractHttpServerDocker(AbstractDocker):
+    def container_name(self):
+        pass
 
-    @property
-    def volumes(self):
-        return [self.working_dir]
+    def image_name(self):
+        pass
 
     def wait_until_available(self):
         self.logger.info("Waiting for container to be available")
@@ -156,6 +156,16 @@ class DownloadHttpServerDocker(AbstractDocker):
         output, error = process.communicate()
         if process.returncode != 0:
             raise str(error)
+
+
+class DownloadHttpServerDocker(AbstractHttpServerDocker):
+    @property
+    def working_dir(self):
+        return '/var/www'
+
+    @property
+    def volumes(self):
+        return [self.working_dir]
 
     @property
     def container_name(self):
@@ -178,6 +188,42 @@ class DownloadHttpServerDocker(AbstractDocker):
         exec_id = self.docker.exec_create(container=self.container_id,
                                           cmd='rm -rf {working_dir}/.temp'.format(working_dir=self.working_dir))
         self.docker.exec_start(exec_id=exec_id)
+
+
+class DownloadHttpServerAuthentDocker(AbstractHttpServerDocker):
+    @property
+    def working_dir(self):
+        return '/var/webdav'
+
+    @property
+    def volumes(self):
+        return [self.working_dir]
+
+    @property
+    def container_name(self):
+        return 'http_download_authent_server'
+
+    @property
+    def image_name(self):
+        return 'morrisjobke/webdav'
+
+    @property
+    def volumes_bindings(self):
+        return {
+            self.fixtures_directory: {
+                'bind': self.working_dir,
+                'mode': 'ro',
+            },
+        }
+    @property
+    def env_vars(self):
+        return {'USERNAME': 'user@domain.com', 'PASSWORD': 'myPassword*'}
+
+    @property
+    def properties(self):
+        props = self.env_vars
+        props['ROOT'] = 'webdav/'
+        return props
 
 
 class DownloadFtpServerDocker(AbstractDocker):
@@ -205,9 +251,6 @@ class DownloadFtpServerDocker(AbstractDocker):
                 'mode': 'rw',
             },
         }
-
-    def _remove_temporary_files(self):
-        pass
 
 
 class UploadFtpServerDocker(AbstractDocker):
@@ -259,9 +302,6 @@ class UploadFtpServerDocker(AbstractDocker):
                 'mode': 'ro',
             },
         }
-
-    def _remove_temporary_files(self):
-        pass
 
 
 class MongoDocker(AbstractDocker):

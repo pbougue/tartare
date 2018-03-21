@@ -32,5 +32,6 @@ from tartare.processes.contributor.compute_directions import ComputeDirections
 from tartare.processes.contributor.gtfs_agency_file import GtfsAgencyFile
 from tartare.processes.contributor.headsign_short_name import HeadsignShortName
 from tartare.processes.contributor.compute_external_settings import ComputeExternalSettings
+from tartare.processes.contributor.gtfs2ntfs import Gtfs2Ntfs
 from tartare.processes.contributor.ruspell import Ruspell
 from tartare.processes.contributor.sleeping import Sleeping

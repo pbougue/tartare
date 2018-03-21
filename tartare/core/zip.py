@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
-                          new_zip_path: str, callback: Union[partial, Callable[[str], None]],
-                          computed_file_name: str='gtfs-processed') -> str:
+                          callback: Union[partial, Callable[[str], None]]) -> None:
     if not is_zipfile(zip_file):
         msg = '{} is not a zip file or does not exist.'.format(zip_file)
         logger.error(msg)
@@ -50,6 +49,18 @@ def edit_file_in_zip_file(zip_file: str, filename: str, extract_zip_path: str,
         files_zip.extractall(extract_zip_path)
         file_path = '{}/{}'.format(extract_zip_path, filename)
         callback(file_path)
-        new_archive_file_name = os.path.join(new_zip_path, computed_file_name)
 
-        return shutil.make_archive(new_archive_file_name, 'zip', extract_zip_path)
+
+def edit_file_in_zip_file_and_pack(zip_file: str, filename: str, extract_zip_path: str,
+                                   new_zip_path: str, callback: Union[partial, Callable[[str], None]],
+                                   computed_file_name: str='gtfs-processed') -> str:
+
+    edit_file_in_zip_file(zip_file, filename, extract_zip_path, callback)
+
+    return create_zip_file(extract_zip_path, new_zip_path, computed_file_name)
+
+
+def create_zip_file(from_dir: str, to_dir: str, filename: str='gtfs-processed') -> str:
+    new_archive_file_name = os.path.join(to_dir, filename)
+
+    return shutil.make_archive(new_archive_file_name, 'zip', from_dir)

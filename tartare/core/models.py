@@ -210,6 +210,9 @@ class Input(object):
         self.url = url
         self.expected_file_name = expected_file_name
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
 class DataSource(object):
     def __init__(self, id: Optional[str] = None,
@@ -488,6 +491,9 @@ class Contributor(PreProcessContainer):
             return None
 
         return cls.get(contributor_id)
+
+    def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
+        return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
 
 
 def get_contributor(contributor_id: str) -> Contributor:
