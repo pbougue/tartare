@@ -18,10 +18,25 @@ services:
   ruspell_worker:
     build:
       context: .
+      dockerfile: Dockerfile.rust
     environment:
       - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
       - MONGO_URI=mongodb://mongo-server/tartare?connect=false
     command: celery -A tartare.tasks worker -Q tartare_ruspell
+    links:
+      - rabbitmq
+      - mongo-server
+    depends_on:
+      - rabbitmq
+
+  gtfs2ntfs_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.rust
+    environment:
+      - TARTARE_RABBITMQ_HOST=amqp://guest:guest@rabbitmq:5672//
+      - MONGO_URI=mongodb://mongo-server/tartare?connect=false
+    command: celery -A tartare.tasks worker -Q tartare_gtfs2ntfs
     links:
       - rabbitmq
       - mongo-server
