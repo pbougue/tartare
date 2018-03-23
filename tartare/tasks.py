@@ -52,8 +52,7 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
     ContributorExport
-from tartare.core.publisher import HttpProtocol, FtpProtocol, ProtocolException, AbstractPublisher, AbstractProtocol, \
-    ProtocolManager, PublisherManager
+from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
 from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
@@ -245,6 +244,7 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
             "Gtfs2Ntfs": "tartare_gtfs2ntfs",
 
         }.get(preprocess.type, "tartare")
+
     if not sorted_preprocesses:
         if context.instance == 'contributor':
             return contributor_export_finalization.s(context).delay()
@@ -293,10 +293,14 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
 @celery.task(bind=True, default_retry_delay=tartare.app.config.get('RETRY_DELAY_COVERAGE_EXPORT_TRIGGER'),
              max_retries=None)
 def automatic_update_launch_coverage_exports(self: Task,
-                                             contributor_export_results: List[Optional[AsyncResult]]) -> None:
+                                             contributor_export_results: Union[
+                                                 List[Optional[AsyncResult]], Optional[AsyncResult]
+                                             ]) -> None:
     logger.info('automatic_update_launch_coverage_exports')
     logger.debug('default_retry_delay={}'.format(tartare.app.config.get('RETRY_DELAY_COVERAGE_EXPORT_TRIGGER')))
     logger.debug("{}".format(contributor_export_results))
+    contributor_export_results = contributor_export_results if isinstance(contributor_export_results, list) \
+        else [contributor_export_results]
     updated_contributors = []
     for contributor_export_result in contributor_export_results:
         if isinstance(contributor_export_result, AsyncResult):
