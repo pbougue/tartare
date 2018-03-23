@@ -38,22 +38,14 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
     def test_contrib_export_with_invalid_dates(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_invalid_dates.json')
-        raw = self.post('contributors', json_file)
-
-        self.assert_sucessful_create(raw)
-
+        self.init_contributor('contributor_invalid_dates.json')
         raw = self.post('contributors/contributor_id/actions/export?current_date=2017-12-14')
         self.assert_sucessful_create(raw)
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', break_if='failed')
 
     def test_contrib_export_with_compute_directions(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor.json')
-        raw = self.post('contributors', json_file)
-
-        self.assert_sucessful_create(raw)
-
+        self.init_contributor('contributor.json')
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
             raw = self.post(
                 '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
@@ -71,18 +63,14 @@ class TestFullExport(AbstractRequestClient):
 
     def test_contrib_export_with_ruspell(self):
         # create contributor with data_type : geographic
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_geographic.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_geographic.json')
 
         raw = self.post('contributors/geo/actions/export?current_date=2017-10-02')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_ruspell.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_ruspell.json')
 
         # launch ruspell preprocess
         raw = self.post('contributors/AMI/actions/export?current_date=2017-10-02')
@@ -93,15 +81,8 @@ class TestFullExport(AbstractRequestClient):
                                                 data_source_id="Google-1", expected_filename='gtfs-processed.zip')
 
     def test_exports_combined(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
-
-        with open(self.get_api_fixture_path('coverage.json'), 'rb') as file:
-            json_file = json.load(file)
-            raw = self.post('coverages', json_file)
-            self.assert_sucessful_create(raw)
-
+        self.init_contributor('contributor_light.json')
+        self.init_coverage('coverage.json')
         self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
@@ -109,36 +90,22 @@ class TestFullExport(AbstractRequestClient):
                                                 data_source_id="data_source_to_process_id")
 
     def test_exports_combined_two_coverages(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
-
-        with open(self.get_api_fixture_path('coverage.json'), 'rb') as file:
-            json_file = json.load(file)
-            raw = self.post('coverages', json_file)
-            self.assert_sucessful_create(raw)
-
-        with open(self.get_api_fixture_path('other_coverage.json'), 'rb') as file:
-            json_file = json.load(file)
-            raw = self.post('coverages', json_file)
-            self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_light.json')
+        self.init_coverage('coverage.json')
+        self.init_coverage('other_coverage.json')
 
         self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
         self.full_export('contributor_id', 'coverage_id_2', current_date='2017-12-14')
 
     def test_contrib_export_preprocess_ko_before_ok(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_preprocess_ko.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_preprocess_ko.json')
 
         # launch export with a preprocess generating error => should end up being failed
         raw = self.post('contributors/contributor_preprocess_ko/actions/export?current_date=2017-12-14')
         job_id = self.get_dict_from_response(raw)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'preprocess', break_if='failed')
 
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_headsign_short_name.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_headsign_short_name.json')
 
         # launch export generating success => should end up being done
         raw = self.post('contributors/AMI/actions/export?current_date=2017-12-14')
@@ -146,17 +113,9 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_coverage_exports_callback_waits_for_contributor_full_export(self):
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_sleeping.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_light.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
-
-        with open(self.get_api_fixture_path('coverage_triggered.json'), 'rb') as file:
-            json_file = json.load(file)
-            raw = self.post('coverages', json_file)
-            self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_sleeping.json')
+        self.init_contributor('contributor_light.json')
+        self.init_coverage('coverage_triggered.json')
 
         self.post('/actions/automatic_update?current_date=2017-08-15')
         self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
@@ -174,9 +133,7 @@ class TestFullExport(AbstractRequestClient):
 
     def test_contrib_export_with_gtfs2ntfs(self):
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
-        json_file = self.replace_server_id_in_input_data_source_fixture('contributor_gtfs2ntfs.json')
-        raw = self.post('contributors', json_file)
-        self.assert_sucessful_create(raw)
+        self.init_contributor('contributor_gtfs2ntfs.json')
 
         # launch gtfs2ntfs preprocess
         raw = self.post('contributors/AMI/actions/export?current_date=2017-03-20')
