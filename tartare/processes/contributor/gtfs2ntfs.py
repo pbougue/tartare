@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class Gtfs2Ntfs(AbstractContributorProcess):
     stops_filename = 'stops.txt'
     config_filename = 'config.json'
-    command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
+    command_pattern = '{binary_path} -c {config} -i {input} -o {output} -p {prefix}'
 
     def __init__(self, context: Context, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
@@ -54,11 +54,12 @@ class Gtfs2Ntfs(AbstractContributorProcess):
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/gtfs2ntfs')
         self.contributor = self.context.contributor_contexts[0].contributor
 
-    def do_gtfs2ntfs(self, config_path: str, input_dir: str, output_dir: str) -> str:
+    def do_gtfs2ntfs(self, config_path: str, input_dir: str, output_dir: str, prefix: str) -> str:
         command = self.command_pattern.format(binary_path=self._binary_path,
                                               config=config_path,
                                               input=input_dir,
-                                              output=output_dir)
+                                              output=output_dir,
+                                              prefix=prefix)
         subprocess_wrapper = SubProcessWrapper('gtfs2ntfs')
         subprocess_wrapper.run_cmd(command)
 
@@ -86,8 +87,6 @@ class Gtfs2Ntfs(AbstractContributorProcess):
         return config_file_path
 
     def do(self) -> Context:
-        logger.info("GTFS 2 NTFS")
-
         # TODO: Check every files in a gtfs?
         with tempfile.TemporaryDirectory() as config_dir_path, \
                 tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as dst_dir_path:
@@ -101,9 +100,12 @@ class Gtfs2Ntfs(AbstractContributorProcess):
                 with ZipFile(data_source_gridout, 'r') as files_zip:
                     files_zip.extractall(extract_dir_path)
 
+                    logger.info("Converting GTFS {} from contributor {}, to NTFS".format(data_source_id_to_process,
+                                                                                         self.contributor.id))
                     self.do_gtfs2ntfs(self.__create_config(config_dir_path, data_source_id_to_process),
                                       extract_dir_path,
-                                      dst_dir_path)
+                                      dst_dir_path,
+                                      self.contributor.data_prefix)
 
                     data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
                         old_gridfs_id=data_source_to_process_context.gridfs_id,
