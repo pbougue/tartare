@@ -229,7 +229,7 @@ class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
         self.check_zip_file(file_name)
         vehicule_journey_file = self.__check_file_exists_and_return_right_case(file_name, self.vehicule_journey_file)
 
-        self.reader.load_csv_data_from_zip_file(file_name, vehicule_journey_file, sep=self.separator)
+        self.reader.load_csv_data_from_zip_file(file_name, vehicule_journey_file, sep=self.separator, encoding='latin1')
         id_regime_list = [int(id_regime) for id_regime in set(self.reader.data['IDREGIME'].dropna().tolist()) if
                           id_regime != -1]
         id_periode_list = [int(id_periode) for id_periode in set(self.reader.data['IDPERIODE'].dropna().tolist()) if
@@ -237,7 +237,7 @@ class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
         validity_periods = []
         if id_periode_list:
             periode_file = self.__check_file_exists_and_return_right_case(file_name, self.periode_file)
-            self.reader.load_csv_data_from_zip_file(file_name, periode_file, sep=self.separator,
+            self.reader.load_csv_data_from_zip_file(file_name, periode_file, sep=self.separator, encoding='latin1',
                                                     parse_dates=['DDEBUT', 'DFIN'], date_parser=self.date_parser)
             self.reader.data = self.reader.data[self.reader.data['IDPERIODE'].isin(id_periode_list)]
             validity_periods.append(
@@ -246,7 +246,8 @@ class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
             validity_pattern_file = self.__check_file_exists_and_return_right_case(file_name,
                                                                                    self.validity_pattern_file)
             self.reader.load_csv_data_from_zip_file(file_name, validity_pattern_file, sep=self.separator,
-                                                    parse_dates=['DDEBUT'], date_parser=self.date_parser)
+                                                    parse_dates=['DDEBUT'], date_parser=self.date_parser,
+                                                    encoding='latin1')
             self.reader.data = self.reader.data[self.reader.data['IDREGIME'].isin(id_regime_list)]
             for regime_row in self.reader.data.to_dict('records'):
                 period_bits = regime_row['J_ACTIF1'] + regime_row['J_ACTIF2']
@@ -278,18 +279,18 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
             namespace = root.tag.replace('ChouettePTNetwork', '')
             validity_periods = []
             for time_table in root.iter('{}Timetable'.format(namespace)):
-                period = time_table.find('{}period'.format(namespace))
-                if period:
-                    start_period = datetime.strptime(period.find('{}startOfPeriod'.format(namespace)).text,
-                                                     self.date_format).date()
-                    end_period = datetime.strptime(period.find('{}endOfPeriod'.format(namespace)).text,
-                                                   self.date_format).date()
-                    if start_period and end_period:
-                        day_types = [list(calendar.day_name).index(day_type.text) for day_type in
-                                     time_table.findall('{}dayType'.format(namespace))]
-                        start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
-                        end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
-                        validity_periods.append(ValidityPeriod(start_period, end_period))
+                for period in time_table.iter('{}period'.format(namespace)):
+                    if period:
+                        start_period = datetime.strptime(period.find('{}startOfPeriod'.format(namespace)).text,
+                                                         self.date_format).date()
+                        end_period = datetime.strptime(period.find('{}endOfPeriod'.format(namespace)).text,
+                                                       self.date_format).date()
+                        if start_period and end_period:
+                            day_types = [list(calendar.day_name).index(day_type.text) for day_type in
+                                         time_table.findall('{}dayType'.format(namespace))]
+                            start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
+                            end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
+                            validity_periods.append(ValidityPeriod(start_period, end_period))
             return ValidityPeriod.union(validity_periods)
         except (ElementTree.ParseError, TypeError) as e:
             raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))

@@ -142,7 +142,7 @@ class AbstractRequestClient:
                 retry += 1
             else:
                 break
-        assert retry < nb_retries_max
+        assert retry < nb_retries_max, print('job {} reached max waiting time ({})'.format(action_type, nb_retries_max))
 
     def wait_for_job_to_be_done(self, job_id, step=None, nb_retries_max=15, break_if='done'):
         retry = 0
@@ -182,3 +182,14 @@ class AbstractRequestClient:
         job_id = self.get_dict_from_response(resp)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_coverage_export')
         return resp
+
+    def init_contributor(self, fixture):
+        json_file = self.replace_server_id_in_input_data_source_fixture(fixture)
+        raw = self.post('contributors', json_file)
+        self.assert_sucessful_create(raw)
+
+    def init_coverage(self, fixture):
+        with open(self.get_api_fixture_path(fixture), 'rb') as file:
+            json_file = json.load(file)
+            raw = self.post('coverages', json_file)
+            self.assert_sucessful_create(raw)

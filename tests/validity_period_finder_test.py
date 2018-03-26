@@ -319,4 +319,4 @@ def test_neptune_data_set():
     file = _get_file_fixture_full_path('validity_period/other_data_formats/neptune.zip')
     validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_NEPTUNE)
     assert validity_period.start_date == date(2017, 12, 21)
-    assert validity_period.end_date == date(2018, 2, 23)
+    assert validity_period.end_date == date(2018, 2, 27)
