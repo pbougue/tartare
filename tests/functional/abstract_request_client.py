@@ -141,6 +141,8 @@ class AbstractRequestClient:
                 sleep(1)
                 retry += 1
             else:
+                if number == 1:
+                    return jobs_matching[0]
                 break
         assert retry < nb_retries_max, print('job {} reached max waiting time ({})'.format(action_type, nb_retries_max))
 
