@@ -31,7 +31,7 @@ import logging
 import tempfile
 from abc import ABCMeta, abstractmethod
 from datetime import date, timedelta, datetime
-from typing import List
+from typing import List, Optional
 from xml.etree import ElementTree
 from zipfile import is_zipfile, ZipFile
 
@@ -273,7 +273,7 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
             period_date += timedelta(days=nb_days)
         return period_date
 
-    def __parse_xml_file_into_unique_validity_period(self, xml_file_name: str) -> ValidityPeriod:
+    def __parse_xml_file_into_unique_validity_period(self, xml_file_name: str) -> Optional[ValidityPeriod]:
         try:
             root = ElementTree.parse(xml_file_name).getroot()
             namespace = root.tag.replace('ChouettePTNetwork', '')
@@ -291,7 +291,7 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
                             start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
                             end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
                             validity_periods.append(ValidityPeriod(start_period, end_period))
-            return ValidityPeriod.union(validity_periods)
+            return ValidityPeriod.union(validity_periods) if validity_periods else None
         except (ElementTree.ParseError, TypeError) as e:
             raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))
 
@@ -304,6 +304,8 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
             files_zip.extractall(tmp_path)
             for file_in_zip in files_zip.namelist():
                 if file_in_zip.endswith('.xml'):
-                    validity_periods.append(
-                        self.__parse_xml_file_into_unique_validity_period('{}/{}'.format(tmp_path, file_in_zip)))
+                    validity_period = self.__parse_xml_file_into_unique_validity_period(
+                        '{}/{}'.format(tmp_path, file_in_zip))
+                    if validity_period:
+                        validity_periods.append(validity_period)
         return ValidityPeriod.union(validity_periods)
