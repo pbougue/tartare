@@ -1,8 +1,8 @@
 ARG TAG=master
-FROM par-vm221.srv.canaltp.fr:5000/ruspell as ruspell
-FROM par-vm221.srv.canaltp.fr:5000/navitia_model as navitia_model
+FROM navitia/ruspell as ruspell
+FROM navitia/navitia_model as navitia_model
 
-FROM par-vm221.srv.canaltp.fr:5000/tartare:${TAG}
+FROM navitia/tartare:${TAG}
 USER root
 RUN apk --update add aspell aspell-fr && rm -rf /var/apk/cache/
 USER tartare
