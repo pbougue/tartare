@@ -10,7 +10,8 @@
 [FusioDataUpdate](#FusioDataUpdate)  
 [FusioImport](#FusioImport)  
 [FusioPreprod](#FusioPreprod)  
-[FusioExport](#FusioExport)  
+[FusioExport](#FusioExport)
+[FusioExportContributor](#FusioExportContributor)  
 
 **COUPLED PREPROCESSES**  
 [ExternalSettings](#ExternalSettings)  
@@ -123,6 +124,10 @@ Binaries are created and sent to Navitia 1 if FUSIO is configured for it.
 FUSIO loads binaries and convert them as a NTFS file.  
 This file is sent back to Tartare for publishing.  
 FUSIO doesn't provide Tyr with this NTFS file when asked from this coverage preprocess.  
+
+#### <a id="FusioExportContributor" name="FusioExportContributor"></a>FusioExportContributor
+FUSIO loads binaries and convert them as a GTFS file for one contributor specified by its trigram.  
+The URL or this file is sent back to Tartare and logged.  
 
 
 ## Coupled preprocesses

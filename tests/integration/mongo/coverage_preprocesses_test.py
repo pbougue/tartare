@@ -399,7 +399,8 @@ class TestFusioExportPreprocess(TartareFixture):
         expected_data = {
             'action': 'Export',
             'ExportType': 32,
-            'Source': 4}
+            'Source': 4
+        }
 
         resp = self.full_export('id_test', 'my_cov', '2017-08-10')
 
@@ -423,3 +424,65 @@ class TestFusioExportPreprocess(TartareFixture):
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         self.assert_sucessful_call(raw)
         assert_files_equals(resp.data, fixtures_file)
+
+
+class TestFusioExportContributorPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
+    def test_fusio_export_contributor(self,
+                                      fusio_get,
+                                      fusio_post,
+                                      wait_for_action_terminated,
+                                      replace_url_hostname_from_url,
+                                      init_http_download_server):
+        filename = 'gtfs-1.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename,
+                              path='gtfs/historisation')
+        self.init_contributor("id_test", "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        trigram = 'LOL'
+        coverage = {
+            "id": "my_cov",
+            "name": "my_cov",
+            "contributors": ['id_test'],
+            "preprocesses":
+                [
+                    {
+                        "id": "fusio_export_contributor",
+                        "type": "FusioExportContributor",
+                        "params": {
+                            "url": fusio_end_point,
+                            'trigram': trigram
+                        },
+                        "sequence": 0
+                    }
+                ]
+
+        }
+        raw = self.post('/coverages', self.dict_to_json(coverage))
+        self.assert_sucessful_create(raw)
+
+        post_content = self.get_fusio_response_from_action_id(42)
+
+        replace_url_hostname_from_url.return_value = 'whatever'
+        fusio_post.return_value = get_response(200, post_content)
+        expected_data = {
+            'action': 'Export',
+            'ExportType': 36,
+            'Source': 4,
+            'ContributorList': 'LOL;',
+            'Libelle': 'Export auto Tartare LOL',
+            'isadapted': 0
+        }
+
+        resp = self.full_export('id_test', 'my_cov', '2017-08-10')
+
+        fusio_post.assert_called_with(fusio_end_point + 'api', data=expected_data, files=None)
+
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_coverage_export', print(job)
+        assert job['error_message'] == '', print(job)
