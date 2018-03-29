@@ -153,6 +153,19 @@ List of preprocesses for coverages
 ```
 values possibles for export_type: ntfs, gtfsv2 and googletransit
 
+### FusioExportContributor
+```json
+{
+   "id": "fusio_export_contributor",
+   "params": {
+      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+      "trigram": "AMI"
+   },
+   "type": "FusioExportContributor",
+   "sequence": 4
+}
+```
+
 ## Contributor coupled with Coverage preprocess
 
 ### ComputeExternalSettings and FusioSendPtExternalSettings

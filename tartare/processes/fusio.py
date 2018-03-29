@@ -29,6 +29,8 @@
 
 import logging
 from datetime import date
+from urllib.parse import urlencode
+
 from retrying import retry
 import requests
 from tartare.exceptions import FusioException
@@ -60,7 +62,7 @@ class Fusio(object):
         try:
             root = ElementTree.fromstring(raw_xml)
         except (ElementTree.ParseError, TypeError) as e:
-            raise FusioException("invalid xml: {}".format(str(e)))
+            raise FusioException("invalid xml: {}, content: {}".format(str(e), raw_xml))
         return root
 
     def get_action_id(self, raw_xml: bytes) -> Optional[str]:
@@ -85,7 +87,10 @@ class Fusio(object):
              data: Optional[dict] = None,
              files: Optional[dict] = None) -> requests.Response:
         try:
-            response = method(self.url.rstrip('/') + '/' + api, data=data, files=files)
+            endpoint = self.url.rstrip('/') + '/' + api
+            if data:
+                logging.getLogger(__name__).info('calling fusio: {}?{}'.format(endpoint, urlencode(data)))
+            response = method(endpoint, data=data, files=files)
         except requests.exceptions.Timeout as e:
             msg = 'call to fusio timeout, error: {}'.format(str(e))
             logging.getLogger(__name__).error(msg)

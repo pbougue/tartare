@@ -1229,7 +1229,7 @@ definitions:
     properties:
       preprocesses:
         type: object
-        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport']}
+        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport', 'FusioPreprod', 'FusioExportContributor']}
 
   job_list:
     type: object
