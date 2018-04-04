@@ -39,7 +39,7 @@ from flask_restful import Resource
 from tartare.core import models
 from tartare.core.models import DataSource
 from tartare.core.validity_period_finder import ValidityPeriodFinder
-from tartare.decorators import validate_post_data_set, validate_get_data_sets
+from tartare.decorators import validate_post_data_set
 from tartare.interfaces import schema
 
 
@@ -58,9 +58,3 @@ class DataSet(Resource):
         data_source_fetched.update_dataset_from_io(file.stream, os.path.basename(file.filename))
 
         return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
-
-    @validate_get_data_sets
-    def get(self, contributor_id: str, data_source_id: str) -> Response:
-        data_source_fetched = models.DataSourceFetched.get_all(contributor_id, data_source_id)
-
-        return {'data_sets': schema.DataSourceFetchedSchema().dump(data_source_fetched, many=True).data}, 200

@@ -391,7 +391,7 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
-  /files/{file_id}/actions/download:
+  /files/{file_id}/download:
     get:
       summary: download file {file_id}
       tags:
@@ -761,11 +761,13 @@ paths:
           description: "Object not found"
           schema:
             $ref: "#/definitions/error_404"
+
+  /contributors/{contributor_id}/data_sources/{data_source_id}/data_source_fetches:
     get:
       tags:
       - "contributors"
-      summary: "List all the data sets of a contributor"
-      description: "List all the data sets of a contributor"
+      summary: "List all the data sources fetches of a contributor"
+      description: "List all the data sources fetches of a contributor"
       produces:
       - "application/json"
       parameters:
@@ -779,9 +781,9 @@ paths:
         type: "string"
       responses:
         200:
-          description: "List of data sets"
+          description: "List of data source fetches"
           schema:
-            $ref: "#/definitions/data_sets"
+            $ref: "#/definitions/data_source_fetches"
         404:
           description: "Object not found"
           schema:
@@ -1762,37 +1764,51 @@ definitions:
         example: An error occured
 
   data_sets:
+    description: "List of data sets"
     type: "object"
     properties:
       data_sets:
         type: "array"
         items:
-          type: "object"
-          properties:
-            data_source_id:
-              type: "string"
-              description: "Data source id"
-              example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
-            created_at:
-              type: "string"
-              format: date-time
-              description: "Creation date"
-              example: "2017-08-08T13:43:53.601089+00:00"
-            gridfs_id:
-              type: "string"
-              description: "GridFS id"
-              example: "5989c01909467413b7e7c59f"
-            validity_period:
-              $ref: "#/definitions/validity_period"
-            id:
-              type: "string"
-              description: "Unique id"
-              example: "966a5da4-cccb-4b33-8814-7b6a2ce4f6cf"
-            contributor_id:
-              type: "string"
-              description: "Contributor id"
-              example: "fr-idf"
-    description: "Data source "
+          $ref: "#/definitions/data_source_fetch"
+
+  data_source_fetches:
+    description: "List of data sets"
+    type: "object"
+    properties:
+      data_source_fetches:
+        type: "array"
+        items:
+          $ref: "#/definitions/data_source_fetch"
+
+  data_source_fetch:
+    type: "object"
+    properties:
+      data_source_id:
+        type: "string"
+        description: "Data source id"
+        example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
+      created_at:
+        type: "string"
+        format: date-time
+        description: "Creation date"
+        example: "2017-08-08T13:43:53.601089+00:00"
+      gridfs_id:
+        type: "string"
+        description: "GridFS id"
+        example: "5989c01909467413b7e7c59f"
+      validity_period:
+        $ref: "#/definitions/validity_period"
+      id:
+        type: "string"
+        description: "Unique id"
+        example: "966a5da4-cccb-4b33-8814-7b6a2ce4f6cf"
+      contributor_id:
+        type: "string"
+        description: "Contributor id"
+        example: "fr-idf"
+
+
   validity_period:
     type: "object"
     properties:

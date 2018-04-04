@@ -30,7 +30,6 @@
 # www.navitia.io
 
 
-import os
 import json
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import assert_files_equals, _get_file_fixture_full_path
@@ -42,7 +41,7 @@ fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(file_used))
 class TestGetFiles(TartareFixture):
 
     def test_get_files_invalid_file_id(self):
-        resp = self.get('/files/aa/actions/download', follow_redirects=True)
+        resp = self.get('/files/aa/download', follow_redirects=True)
         assert resp.status_code == 400
         json_resp = self.json_to_dict(resp)
         assert json_resp.get('error') == 'invalid file id, you give aa'
@@ -103,7 +102,7 @@ class TestGetFiles(TartareFixture):
         exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
-        resp = self.get('/files/{gridfs_id}/actions/download'.format(gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
+        resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
 
@@ -115,7 +114,7 @@ class TestGetFiles(TartareFixture):
         exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
-        resp = self.get('/files/{gridfs_id}/actions/download'.format(gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
+        resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)
 
@@ -124,7 +123,7 @@ class TestGetFiles(TartareFixture):
         coverages = self.json_to_dict(resp).get('coverages')
         assert len(exports) == 1
         environments = coverages[0]['environments']
-        resp = self.get('/files/{gridfs_id}/actions/download'.
+        resp = self.get('/files/{gridfs_id}/download'.
                         format(gridfs_id=environments['production']['current_ntfs_id']), follow_redirects=True)
         assert resp.status_code == 200
         assert_files_equals(resp.data, fixtures_file)

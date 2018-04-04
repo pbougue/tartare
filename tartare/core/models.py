@@ -722,14 +722,6 @@ class DataSourceFetched(Historisable):
         )
         return raw.matched_count == 1
 
-    @classmethod
-    def get(cls, data_set_id: str = None) -> 'DataSourceFetched':
-        raw = mongo.db[cls.mongo_collection].find_one({'_id': data_set_id})
-        if raw is None:
-            return None
-
-        return MongoDataSourceFetchedSchema(strict=True).load(raw).data
-
     def save(self) -> None:
         raw = MongoDataSourceFetchedSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
@@ -751,9 +743,7 @@ class DataSourceFetched(Historisable):
         return lasts[0] if lasts else None
 
     @classmethod
-    def get_all(cls, contributor_id: str, data_source_id: str) -> Optional['DataSourceFetched']:
-        if not contributor_id:
-            return None
+    def get_all(cls, contributor_id: str, data_source_id: str) -> 'DataSourceFetched':
         where = {
             'contributor_id': contributor_id,
             'data_source_id': data_source_id

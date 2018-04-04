@@ -46,7 +46,7 @@ from tartare.interfaces.contributor_export import ContributorExportResource
 from tartare.interfaces.coverage_export import CoverageExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
-from tartare.interfaces.files import File
+from tartare.interfaces.files_download import FileDownload
 from tartare.interfaces.preprocesses import PreProcesses
 
 api = Api(app)
@@ -62,7 +62,7 @@ api.add_resource(Status,
                  '/status',
                  endpoint='status')
 
-api.add_resource(File, '/files/<string:file_id>/actions/download', endpoint='files')
+api.add_resource(FileDownload, '/files/<string:file_id>/download', endpoint='files')
 
 api.add_resource(Coverage,
                  '/coverages',
@@ -83,7 +83,8 @@ api.add_resource(DataSource,
                  '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>')
 
 api.add_resource(DataSourceFetch,
-                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/actions/fetch')
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/actions/fetch',
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_source_fetches')
 
 api.add_resource(DataSet,
                  '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_sets')

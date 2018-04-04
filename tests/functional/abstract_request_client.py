@@ -94,7 +94,7 @@ class AbstractRequestClient:
         assert export_id
 
         # get export file
-        raw = self.get('/files/{gridfs_id}/actions/download'.format(export_id=export_id,
+        raw = self.get('/files/{gridfs_id}/download'.format(export_id=export_id,
                                                                                                     gridfs_id=gridfs_id,
                                                                                                     contributor_id=contributor_id))
         if expected_filename:
