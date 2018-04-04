@@ -34,7 +34,7 @@ import requests
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.models import Platform
-from tartare.core.publisher import ProtocolManager
+from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
@@ -46,7 +46,7 @@ class FusioExportContributor(AbstractFusioProcess):
     is_adapted_value_no_strike = 0
     data_exported_type_preprod = 4
 
-    def publish(self, protocol_uploader, url):
+    def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
             with open(dest_full_file_name, 'rb') as file:
