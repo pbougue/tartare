@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import ftplib
 import json
 
 import mock
@@ -436,7 +437,9 @@ class TestFusioExportContributorPreprocess(TartareFixture):
                                       fusio_post,
                                       wait_for_action_terminated,
                                       replace_url_hostname_from_url,
-                                      init_http_download_server):
+                                      init_http_download_server, init_ftp_upload_server):
+        ftp_username = 'tartare_user'
+        ftp_password = 'tartare_password'
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
@@ -444,6 +447,23 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         self.init_contributor("id_test", "my_gtfs", url)
         fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
         trigram = 'LOL'
+
+        directory = 'my_dir'
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        # Create a directory in the ftp
+        session.mkd(directory)
+
+        publication_platform = {
+            "protocol": "ftp",
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                },
+                "directory": directory
+            }
+        }
         coverage = {
             "id": "my_cov",
             "name": "my_cov",
@@ -455,7 +475,8 @@ class TestFusioExportContributorPreprocess(TartareFixture):
                         "type": "FusioExportContributor",
                         "params": {
                             "url": fusio_end_point,
-                            'trigram': trigram
+                            'trigram': trigram,
+                            'publication_platform': publication_platform,
                         },
                         "sequence": 0
                     }
@@ -467,7 +488,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
 
         post_content = self.get_fusio_response_from_action_id(42)
 
-        replace_url_hostname_from_url.return_value = 'whatever'
+        replace_url_hostname_from_url.return_value = url
         fusio_post.return_value = get_response(200, post_content)
         expected_data = {
             'action': 'Export',
@@ -486,3 +507,10 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         assert job['state'] == 'done', print(job)
         assert job['step'] == 'save_coverage_export', print(job)
         assert job['error_message'] == '', print(job)
+
+        # check if the file was successfully uploaded
+        directory_content = session.nlst(directory)
+        assert len(directory_content) == 1
+        assert filename in directory_content
+        session.delete('{directory}/{filename}'.format(directory=directory, filename=filename))
+        session.rmd(directory)
