@@ -128,6 +128,7 @@ FUSIO doesn't provide Tyr with this NTFS file when asked from this coverage prep
 #### <a id="FusioExportContributor" name="FusioExportContributor"></a>FusioExportContributor
 FUSIO loads binaries and convert them as a GTFS file for one contributor specified by its trigram.  
 The URL or this file is sent back to Tartare and logged.  
+The file is then sent to the publication platform provided in the parameters.
 
 
 ## Coupled preprocesses

@@ -59,7 +59,7 @@ class FusioExport(AbstractFusioProcess):
 
     def save_export(self, url: str) -> Context:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
-            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name, DATA_FORMAT_GTFS)
+            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
             with open(dest_full_file_name, 'rb') as file:
                 self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
         return self.context

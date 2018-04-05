@@ -27,10 +27,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import logging
+import tempfile
 
 import requests
 
 from tartare.core.context import Context
+from tartare.core.fetcher import HttpFetcher
+from tartare.core.models import Platform
+from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
@@ -41,6 +45,12 @@ class FusioExportContributor(AbstractFusioProcess):
     gtfs_export_type = 36
     is_adapted_value_no_strike = 0
     data_exported_type_preprod = 4
+
+    def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
+            with open(dest_full_file_name, 'rb') as file:
+                protocol_uploader.publish(file, expected_file_name)
 
     def do(self) -> Context:
         trigram = self.params.get('trigram')
@@ -65,4 +75,10 @@ class FusioExportContributor(AbstractFusioProcess):
 
         logging.getLogger(__name__).info('fusio export contributor has generated url {}'.format(export_url))
 
+        publication_platform_dict = self.params.get('publication_platform')
+        publication_platform_object = Platform(publication_platform_dict.get('protocol'), '',
+                                               publication_platform_dict.get('url'),
+                                               publication_platform_dict.get('options'))
+        protocol_uploader = ProtocolManager.select_from_platform(publication_platform_object)
+        self.publish(protocol_uploader, export_url)
         return self.context
