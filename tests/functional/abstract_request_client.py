@@ -174,11 +174,11 @@ class AbstractRequestClient:
         self.assert_status_is(raw, 201)
 
     def full_export(self, contributor_id, coverage_id, current_date=None):
-        date_option = '?current_date=' + current_date if current_date else ''
-        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         self.assert_sucessful_create(resp)
         job_id = self.get_dict_from_response(resp)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        date_option = '?current_date=' + current_date if current_date else ''
         resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
         self.assert_sucessful_create(resp)
         job_id = self.get_dict_from_response(resp)['job']['id']
@@ -195,3 +195,8 @@ class AbstractRequestClient:
             json_file = json.load(file)
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
+
+    def contributor_export(self, contributor_id):
+        raw = self.post('contributors/{}/actions/export'.format(contributor_id))
+        self.assert_sucessful_create(raw)
+        return self.get_dict_from_response(raw)['job']['id']

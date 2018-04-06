@@ -480,10 +480,8 @@ class TestDataSources(TartareFixture):
             response = self.post('/contributors/{}/data_sources'.format(contributor['id']),
                                  self.dict_to_json({"name": "ds-name", "input": {"type": "url", "url": url}}))
             self.assert_sucessful_call(response, 201)
-        response = self.post('/contributors/{}/actions/export?current_date=2015-08-23'.format(contributor.get('id')))
-        self.assert_sucessful_call(response, 201)
-
-        job_details = self.get_job_details(self.json_to_dict(response)['job']['id'])
+        resp = self.contributor_export(contributor.get('id'), check_done=False)
+        job_details = self.get_job_from_export_response(resp)
         response = self.get('/contributors/{}/data_sources'.format(contributor.get('id')))
         self.assert_sucessful_call(response)
         return job_details, self.json_to_dict(response)['data_sources'][0]

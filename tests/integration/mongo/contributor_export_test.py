@@ -116,13 +116,8 @@ class TestContributorExport(TartareFixture):
                                '"input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
-        assert raw.status_code == 201
-        job = self.json_to_dict(raw).get('job')
-
-        raw_job = self.get(
-            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = self.json_to_dict(raw_job)['jobs'][0]
+        resp = self.contributor_export(contributor['id'], check_done=False)
+        job = self.get_job_from_export_response(resp)
         assert job['state'] == state
         assert job['step'] == step
         if error_message:
@@ -141,13 +136,7 @@ class TestContributorExport(TartareFixture):
                                '"agency_url":"http://stif.com"}}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
-        assert raw.status_code == 201
-        job = self.json_to_dict(raw).get('job')
-
-        raw_job = self.get(
-            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=contributor['id'], job_id=job['id']))
-        job = self.json_to_dict(raw_job)['jobs'][0]
+        job = self.contributor_export(contributor['id'])
         assert job['state'] == 'done', print(job)
 
     def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
@@ -156,8 +145,7 @@ class TestContributorExport(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
-        assert raw.status_code == 201
+        self.contributor_export(contributor['id'])
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 2, print(grid_fs_list)
@@ -166,15 +154,13 @@ class TestContributorExport(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        self.assert_sucessful_create(raw)
         raw = self.post('/coverages',
                         params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
-        assert raw.status_code == 201
+        self.assert_sucessful_create(raw)
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(contributor['id'], "2015-08-10"), {})
-        self.assert_sucessful_create(raw)
-        raw = self.post('/coverages/jdr/actions/export?current_date={}'.format("2015-08-10"), {})
-        self.assert_sucessful_create(raw)
+        self.contributor_export(contributor['id'])
+        self.coverage_export('jdr')
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 4
@@ -193,12 +179,7 @@ class TestContributorExport(TartareFixture):
                         params='{"name": "bobette", "data_format": "' + data_format + '", "input": {"type": "url", "url": "' + url + '"}}')
         assert raw.status_code == 201
 
-        raw = self.post('/contributors/{}/actions/export?current_date={}'.format(cid, "2015-08-10"), {})
-        assert raw.status_code == 201
-        job = self.json_to_dict(raw).get('job')
-        raw_job = self.get(
-            'contributors/{contrib_id}/jobs/{job_id}'.format(contrib_id=cid, job_id=job['id']))
-        job = self.json_to_dict(raw_job)['jobs'][0]
+        job = self.contributor_export(cid)
         assert job['state'] == 'done', print(job)
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()

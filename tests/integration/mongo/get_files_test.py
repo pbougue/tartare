@@ -86,15 +86,7 @@ class TestGetFiles(TartareFixture):
         json_coverage = self.json_to_dict(raw)
         assert len(json_coverage['coverages']) == 1
 
-        raw = self.post('/contributors/{}/actions/export?current_date=2015-08-10'.format(contributor['id']), {})
-        assert raw.status_code == 201
-        job = self.json_to_dict(raw).get('job')
-
-        raw_job = self.get('contributors/{contrib_id}/jobs/{job_id}'.
-                           format(contrib_id=contributor['id'], job_id=job['id']))
-
-        job = self.json_to_dict(raw_job)['jobs'][0]
-        assert job['state'] == 'done', print(job)
+        self.contributor_export(contributor['id'])
 
         # Get file for contributor export
         raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))

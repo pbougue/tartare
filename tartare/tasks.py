@@ -283,7 +283,7 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
             # launch contributor export
             job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
             job.save()
-            action_export = contributor_export.si(Context('contributor', job, current_date=current_date), contributor)
+            action_export = contributor_export.si(Context('contributor', job), contributor)
             actions_header.append(action_export)
         chord(actions_header)(automatic_update_launch_coverage_exports.s())
     else:

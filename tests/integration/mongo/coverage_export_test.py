@@ -118,8 +118,7 @@ class TestCoverageExport(TartareFixture):
         self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors": ["id_test"]}')
         # launch contributor export
         with mock.patch('requests.post', mock_requests_post):
-            job = self.post('/contributors/id_test/actions/export?current_date=2015-08-10', {})
-            self.assert_sucessful_call(job, 201)
+            self.contributor_export('id_test')
             job = self.post('/coverages/coverage1/actions/export?current_date=2015-08-10', {})
             self.assert_sucessful_call(job, 201)
 
