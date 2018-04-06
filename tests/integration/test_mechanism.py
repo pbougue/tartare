@@ -99,16 +99,15 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw, 200)
         return self.json_to_dict(raw)['jobs'][0]
 
-    def contributor_export(self, contributor_id, current_date=None, check_done=True):
-        date_option = '?current_date=' + current_date if current_date else ''
-        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+    def contributor_export(self, contributor_id, check_done=True):
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         self.assert_sucessful_call(resp, 201)
         if check_done:
-            resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
-            job = self.json_to_dict(resp)['jobs'][0]
+            job = self.get_job_from_export_response(resp)
             assert job['state'] == 'done', print(job)
             assert job['step'] == 'save_contributor_export', print(job)
             assert job['error_message'] == '', print(job)
+            return job
         return resp
 
     def get_job_from_export_response(self, response):
@@ -116,14 +115,15 @@ class TartareFixture(object):
         resp = self.get("/jobs/{}".format(self.json_to_dict(response)['job']['id']))
         return self.json_to_dict(resp)['jobs'][0]
 
-    def coverage_export(self, coverage_id):
-        resp = self.post("/coverages/{}/actions/export".format(coverage_id))
+    def coverage_export(self, coverage_id, current_date=None):
+        date_option = '?current_date=' + current_date if current_date else ''
+        resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
         self.assert_sucessful_call(resp, 201)
         return resp
 
     def full_export(self, contributor_id, coverage_id, current_date=None):
-        self.contributor_export(contributor_id, current_date)
-        return self.coverage_export(coverage_id)
+        self.contributor_export(contributor_id)
+        return self.coverage_export(coverage_id, current_date)
 
     def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
                          data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None):
@@ -156,6 +156,10 @@ class TartareFixture(object):
             "contributors": contributor_ids
         }
         raw = self.post('/coverages', json.dumps(coverage))
+        self.assert_sucessful_create(raw)
+
+    def add_preprocess_to_coverage(self, preprocess, coverage_id):
+        raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
         self.assert_sucessful_create(raw)
 
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):

@@ -125,7 +125,7 @@ class TestCoverageStatus(TartareFixture):
     def test_status_after_success_coverage_export_with_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')
         self.__create_coverage(['contributor_export'], 'coverage_export')
-        self.contributor_export('contributor_export', '2015-08-10')
+        self.contributor_export('contributor_export')
         coverages = self.__run_coverage_export('coverage_export')
 
         assert len(coverages) == 1

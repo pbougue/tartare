@@ -29,6 +29,7 @@ import logging
 import os
 import subprocess
 from abc import ABCMeta, abstractmethod
+from time import sleep
 
 import docker
 import pytest
@@ -302,6 +303,9 @@ class UploadFtpServerDocker(AbstractDocker):
                 'mode': 'ro',
             },
         }
+
+    def wait_until_available(self):
+        sleep(3)
 
 
 class MongoDocker(AbstractDocker):

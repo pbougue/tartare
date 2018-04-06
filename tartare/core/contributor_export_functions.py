@@ -72,8 +72,7 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
             validity_periods.append(data_source_context.validity_period)
 
     if contrib_export_data_sources:
-        contributor_export_validity_period = ValidityPeriod.union(validity_periods).to_valid(
-            context.current_date) if len(validity_periods) else None
+        contributor_export_validity_period = ValidityPeriod.union(validity_periods) if len(validity_periods) else None
 
         export = ContributorExport(contributor_id=contributor.id,
                                    validity_period=contributor_export_validity_period,

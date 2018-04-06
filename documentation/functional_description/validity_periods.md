@@ -85,3 +85,9 @@ If the addition of the validity periods of two data sources is more than 365 day
 * Mono contributor and mono data source right now.
 * If more than one publisher in *feed_info.txt*, only the first one is taken into account.
 * Some contributors may want to have the intersection between two data sources' validity period. This is not supported right now.
+
+## Validity periods workflow
+At a contributor export level, all validity periods stored are not truncated.
+At a coverage export level:
+- Fusio DataUpdate uses a data source validity period truncated and valid
+- Fusio Import uses a contributor validity period (union of all data sources periods) truncated and valid

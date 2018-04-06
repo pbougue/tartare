@@ -87,7 +87,7 @@ class TestHistorical(TartareFixture):
             ))
             self.assert_sucessful_call(raw)
 
-            self.full_export('id_test', 'jdr', '2018-01-01')
+            self.full_export('id_test', 'jdr')
 
         with app.app_context():
             self.assert_data_source_fetched_number('data_source_gtfs', exports_number)
@@ -125,17 +125,17 @@ class TestHistorical(TartareFixture):
         dsid = 'dsid'
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
         self.init_contributor(cid, dsid, url_gtfs.format(number=1))
-        self.contributor_export(cid, '2018-01-01')  # -> updated
-        self.contributor_export(cid, '2018-01-01')  # -> unchanged
+        self.contributor_export(cid)  # -> updated
+        self.contributor_export(cid)  # -> unchanged
         self.update_data_source_url(cid, dsid, url_gtfs.format(number=2))
-        self.contributor_export(cid, '2018-01-01')  # -> updated and purge last unchanged
+        self.contributor_export(cid)  # -> updated and purge last unchanged
         self.update_data_source_url(cid, dsid, 'fail-url')
-        self.contributor_export(cid, '2018-01-01', check_done=False)  # -> failed
+        self.contributor_export(cid, check_done=False)  # -> failed
         self.update_data_source_url(cid, dsid, url_gtfs.format(number=3))
-        self.contributor_export(cid, '2018-01-01')  # -> updated and purge last failed and 1st updated
-        self.contributor_export(cid, '2018-01-01')  # -> unchanged
+        self.contributor_export(cid)  # -> updated and purge last failed and 1st updated
+        self.contributor_export(cid)  # -> unchanged
         self.update_data_source_url(cid, dsid, 'fail-url')  # -> failed
-        self.contributor_export(cid, '2018-01-01', check_done=False)
+        self.contributor_export(cid, check_done=False)
         # there should remain 4 DataSourceFetched: 2 updated, 1 unchanged happened after last update and
         # 1 failed happened after last update
         with app.app_context():
@@ -160,7 +160,7 @@ class TestHistorical(TartareFixture):
     def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
         self.init_contributor('cid', 'dsid', url_gtfs)
-        self.contributor_export('cid', '2018-01-01')
+        self.contributor_export('cid')
         self.init_coverage('covid', ['cid'])
         self.coverage_export('covid')
         self.coverage_export('covid')
