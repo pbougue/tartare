@@ -48,7 +48,9 @@ class FusioExportContributor(AbstractFusioProcess):
 
     def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
-            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
+            dest_full_file_name, expected_file_name = HttpFetcher().fetch(
+                url, tmp_dir_name, self.params.get('expected_file_name')
+            )
             with open(dest_full_file_name, 'rb') as file:
                 protocol_uploader.publish(file, expected_file_name)
 

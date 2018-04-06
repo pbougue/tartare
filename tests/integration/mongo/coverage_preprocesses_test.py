@@ -447,6 +447,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         self.init_contributor("id_test", "my_gtfs", url)
         fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
         trigram = 'LOL'
+        expected_file_name = 'my_formatted_gtfs.zip'
 
         directory = 'my_dir'
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
@@ -474,6 +475,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
                         "id": "fusio_export_contributor",
                         "type": "FusioExportContributor",
                         "params": {
+                            "expected_file_name": expected_file_name,
                             "url": fusio_end_point,
                             'trigram': trigram,
                             'publication_platform': publication_platform,
@@ -511,6 +513,6 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         # check if the file was successfully uploaded
         directory_content = session.nlst(directory)
         assert len(directory_content) == 1
-        assert filename in directory_content
-        session.delete('{directory}/{filename}'.format(directory=directory, filename=filename))
+        assert expected_file_name in directory_content
+        session.delete('{directory}/{filename}'.format(directory=directory, filename=expected_file_name))
         session.rmd(directory)

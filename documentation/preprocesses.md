@@ -160,6 +160,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
    "params": {
       "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
       "trigram": "AMI",
+      "expected_file_name": "my_export.zip",
       "publication_platform": {
         "protocol": "ftp",
             "url": "ftp://canaltp.fr",
