@@ -37,11 +37,6 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
-    def test_contrib_export_with_invalid_dates(self):
-        self.init_contributor('contributor_invalid_dates.json')
-        job_id = self.contributor_export('contributor_id')
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', break_if='failed')
-
     def test_contrib_export_with_compute_directions(self):
         self.init_contributor('contributor.json')
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
