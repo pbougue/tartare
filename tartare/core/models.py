@@ -171,7 +171,7 @@ class ValidityPeriod(object):
         if self.end_date < now_date:
             raise ValidityPeriodException(
                 'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
-                    end=end_date.strftime('%d/%m/%Y'), now=current_date.strftime('%d/%m/%Y')))
+                    end=end_date.strftime('%d/%m/%Y'), now=now_date.strftime('%d/%m/%Y')))
         if abs(begin_date - end_date).days > 365:
             logging.getLogger(__name__).warning(
                 'period bounds for union of validity periods exceed one year')
