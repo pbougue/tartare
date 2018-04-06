@@ -43,7 +43,7 @@ class FusioImport(AbstractFusioProcess):
         validity_periods = [ceds.validity_period for ceds in self.context.contributor_contexts if
                             ceds.validity_period]
         try:
-            validity_period_union = ValidityPeriod.union(validity_periods).to_valid()
+            validity_period_union = ValidityPeriod.union(validity_periods).to_valid(self.context.current_date)
         except ValidityPeriodException as exception:
             raise IntegrityException('bounds date for fusio import incorrect: {detail}'.format(detail=str(exception)))
         return validity_period_union

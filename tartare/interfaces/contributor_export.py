@@ -42,7 +42,7 @@ from tartare.interfaces.common_argrs import CommonArgs
 from datetime import date
 
 
-class ContributorExportResource(Resource, CommonArgs):
+class ContributorExportResource(Resource):
 
     @staticmethod
     def _export(contributor: Contributor, current_date: date) -> Job:

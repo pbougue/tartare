@@ -44,7 +44,7 @@ from tartare.processes.utils import preprocess_registry
 @preprocess_registry('coverage')
 class FusioDataUpdate(AbstractFusioProcess):
     def __get_data(self, contributor: Contributor, data_source_context: DataSourceContext) -> dict:
-        validity_period = data_source_context.validity_period
+        validity_period = data_source_context.validity_period.to_valid(self.context.current_date)
 
         # TODO data_source_context should be the entire data source model
         data_source = DataSource.get_one(contributor.id, data_source_context.data_source_id)

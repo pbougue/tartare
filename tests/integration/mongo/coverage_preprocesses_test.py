@@ -311,7 +311,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.call')
     @pytest.mark.parametrize("data_format,file_name,begin_date,end_date", [
         (DATA_FORMAT_TITAN, 'titan.zip', '02/01/2018', '18/06/2018'),
-        (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '02/01/2019'),
+        (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '27/08/2018'),
         (DATA_FORMAT_NEPTUNE, 'neptune.zip', '21/12/2017', '27/02/2018'),
     ])
     def test_data_update_other_data_formats(self, fusio_call, wait_for_action_terminated, init_http_download_server,
@@ -339,6 +339,37 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             'isadapted': 0,
             'libelle': 'unlibelle',
             'serviceid': sid
+        }
+
+
+class TestFusioImportPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_import_period(self, fusio_call, wait_for_action_terminated, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='gtfs_with_feed_info_more_than_one_year.zip')
+        self.init_contributor('cid', 'dsid', url)
+        self.init_coverage('jdr', ['cid'])
+        preprocess = {
+            "id": "fusio_import",
+            "type": "FusioImport",
+            "params": {
+                "url": "http://fusio_host/cgi-bin/fusio.dll/"
+            },
+            "sequence": 0
+        }
+        self.add_preprocess_to_coverage(preprocess, 'jdr')
+
+        content = self.get_fusio_response_from_action_id(42)
+
+        fusio_call.return_value = get_response(200, content)
+        self.full_export('cid', 'jdr', '2016-05-10')
+
+        assert fusio_call.call_count == 1
+        assert fusio_call.call_args_list[0][1]['data'] == {
+            'DateDebut': '03/05/2016',
+            'DateFin': '02/05/2017',
+            'action': 'regionalimport',
         }
 
 
@@ -438,8 +469,8 @@ class TestFusioExportContributorPreprocess(TartareFixture):
                                       wait_for_action_terminated,
                                       replace_url_hostname_from_url,
                                       init_http_download_server, init_ftp_upload_server):
-        ftp_username = 'tartare_user'
-        ftp_password = 'tartare_password'
+        ftp_username = init_ftp_upload_server.user
+        ftp_password = init_ftp_upload_server.password
         filename = 'gtfs-1.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename,
