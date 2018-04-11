@@ -34,9 +34,9 @@ from tartare.decorators import validate_file_params
 from typing import Any
 
 
-class File(flask_restful.Resource):
+class FileDownload(flask_restful.Resource):
     @validate_file_params()
-    def get(self, file_id: str, **kwargs: Any) -> Response:
+    def get(self, file_id: str) -> Response:
         file = GridFsHandler().get_file_from_gridfs(id=file_id)
         return send_file(file, as_attachment=True,
                          attachment_filename=file.filename,

@@ -1,5 +1,5 @@
-FROM par-vm221.srv.canaltp.fr:5000/ruspell as ruspell
-FROM par-vm221.srv.canaltp.fr:5000/navitia_model as navitia_model
+FROM navitia/ruspell as ruspell
+FROM navitia/navitia_model as navitia_model
 FROM tartare_functional_tests
 
 USER root

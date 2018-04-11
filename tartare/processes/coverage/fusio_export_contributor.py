@@ -31,45 +31,40 @@ import tempfile
 
 import requests
 
-from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
-from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import FusioException
+from tartare.core.models import Platform
+from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
-from tartare.processes.utils import preprocess_registry
 from tartare.processes.fusio import Fusio
+from tartare.processes.utils import preprocess_registry
 
 
 @preprocess_registry('coverage')
-class FusioExport(AbstractFusioProcess):
-    def get_export_type(self) -> int:
-        export_type = self.params.get('export_type', "ntfs")
-        map_export_type = {
-            "ntfs": 32,
-            "gtfsv2": 36,
-            "googletransit": 37
-        }
-        lower_export_type = export_type.lower()
-        if lower_export_type not in map_export_type:
-            msg = 'export_type {} not found'.format(lower_export_type)
-            logging.getLogger(__name__).exception(msg)
-            raise FusioException(msg)
-        return map_export_type.get(lower_export_type)
+class FusioExportContributor(AbstractFusioProcess):
+    gtfs_export_type = 36
+    is_adapted_value_no_strike = 0
+    data_exported_type_preprod = 4
 
-    def save_export(self, url: str) -> Context:
+    def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
-            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
+            dest_full_file_name, expected_file_name = HttpFetcher().fetch(
+                url, tmp_dir_name, self.params.get('expected_file_name')
+            )
             with open(dest_full_file_name, 'rb') as file:
-                self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
-        return self.context
+                protocol_uploader.publish(file, expected_file_name)
 
     def do(self) -> Context:
+        trigram = self.params.get('trigram')
         data = {
             'action': 'Export',
-            'ExportType': self.get_export_type(),
-            'Source': 4
+            'ExportType': self.gtfs_export_type,
+            'Source': self.data_exported_type_preprod,
+            'ContributorList': trigram,
+            'Libelle': 'Export auto Tartare {}'.format(trigram),
+            'isadapted': self.is_adapted_value_no_strike
         }
+        logging.getLogger(__name__).info('fusio export contributor called with {}'.format(data))
         resp = self.fusio.call(requests.post, api='api', data=data)
         action_id = self.fusio.get_action_id(resp.content)
         self.fusio.wait_for_action_terminated(action_id)
@@ -78,6 +73,14 @@ class FusioExport(AbstractFusioProcess):
 
         # fusio hostname is replaced by the one configured in the preprocess
         # avoid to access to a private ip from outside
-        new_export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
+        export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
 
-        return self.save_export(new_export_url)
+        logging.getLogger(__name__).info('fusio export contributor has generated url {}'.format(export_url))
+
+        publication_platform_dict = self.params.get('publication_platform')
+        publication_platform_object = Platform(publication_platform_dict.get('protocol'), '',
+                                               publication_platform_dict.get('url'),
+                                               publication_platform_dict.get('options'))
+        protocol_uploader = ProtocolManager.select_from_platform(publication_platform_object)
+        self.publish(protocol_uploader, export_url)
+        return self.context

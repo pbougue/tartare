@@ -241,61 +241,35 @@ def validate_post_data_set(func: Callable) -> Any:
     return wrapper
 
 
+def validate_get_data_sets(func: Callable) -> Any:
+    @wraps(func)
+    def wrapper(*args: list, **kwargs: str) -> Any:
+        contributor_id = kwargs['contributor_id']
+        data_source_id = kwargs['data_source_id']
+
+        try:
+            data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
+        except ValueError as e:
+            raise ObjectNotFound(str(e))
+
+        if data_source is None:
+            raise ObjectNotFound("data source {} not found for contributor {}".format(data_source_id, contributor_id))
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class validate_file_params(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
-            contributor_id = kwargs.get("contributor_id")
-            coverage_id = kwargs.get("coverage_id")
-            export_id = kwargs.get("export_id")
             file_id = kwargs.get("file_id")
-            environment_id = kwargs.get("environment_id")
 
             if not id_gridfs.match(file_id):
                 msg = "invalid file id, you give {}".format(file_id)
                 logging.getLogger(__name__).error(msg)
                 raise InvalidArguments(msg)
-
-            if export_id and not id_format.match(export_id):
-                msg = "invalid export id, you give {}".format(export_id)
-                logging.getLogger(__name__).error(msg)
-                raise InvalidArguments(msg)
-
-            if not coverage_id and not contributor_id:
-                msg = "invalid argument, required argument contributor_id or coverage_id"
-                logging.getLogger(__name__).error(msg)
-                raise InvalidArguments(msg)
-
-            if coverage_id:
-                coverage = models.Coverage.get(coverage_id)
-                if not coverage:
-                    msg = "coverage not found"
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
-                if environment_id:
-                    environment = coverage.get_environment(environment_id)
-                    if not environment:
-                        msg = "environment not found"
-                        logging.getLogger(__name__).error(msg)
-                        raise ObjectNotFound(msg)
-                    if environment.current_ntfs_id != file_id:
-                        msg = "environment file not found"
-                        logging.getLogger(__name__).error(msg)
-                        raise ObjectNotFound(msg)
-                else:
-                    coverage_export = models.CoverageExport.get(coverage_id)
-                    if not coverage_export or not next((ce for ce in coverage_export if ce.gridfs_id == file_id), None):
-                        msg = "coverage export not found"
-                        logging.getLogger(__name__).error(msg)
-                        raise ObjectNotFound(msg)
-
-            if contributor_id:
-                contributor_exports = models.ContributorExport.get(contributor_id)
-                if not contributor_exports or not next((ce for ce in contributor_exports if any(
-                                data_source.gridfs_id == file_id for data_source in ce.data_sources)), None):
-                    msg = "contributor export not found"
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
 
             return func(*args, **kwargs)
 

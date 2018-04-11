@@ -171,7 +171,7 @@ class ValidityPeriod(object):
         if self.end_date < now_date:
             raise ValidityPeriodException(
                 'calculating validity period union on past periods (end_date: {end} < now: {now})'.format(
-                    end=end_date.strftime('%d/%m/%Y'), now=current_date.strftime('%d/%m/%Y')))
+                    end=end_date.strftime('%d/%m/%Y'), now=now_date.strftime('%d/%m/%Y')))
         if abs(begin_date - end_date).days > 365:
             logging.getLogger(__name__).warning(
                 'period bounds for union of validity periods exceed one year')
@@ -741,6 +741,19 @@ class DataSourceFetched(Historisable):
         raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
         lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
         return lasts[0] if lasts else None
+
+    @classmethod
+    def get_all(cls, contributor_id: str, data_source_id: str) -> 'DataSourceFetched':
+        where = {
+            'contributor_id': contributor_id,
+            'data_source_id': data_source_id
+        }
+        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1)
+        return MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 
     def get_md5(self) -> str:
         if not self.gridfs_id:

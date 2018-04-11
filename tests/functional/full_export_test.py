@@ -37,13 +37,6 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 
 @pytest.mark.functional
 class TestFullExport(AbstractRequestClient):
-    def test_contrib_export_with_invalid_dates(self):
-        self.init_contributor('contributor_invalid_dates.json')
-        raw = self.post('contributors/contributor_id/actions/export?current_date=2017-12-14')
-        self.assert_sucessful_create(raw)
-        job_id = self.get_dict_from_response(raw)['job']['id']
-        self.wait_for_job_to_be_done(job_id, 'save_contributor_export', break_if='failed')
-
     def test_contrib_export_with_compute_directions(self):
         self.init_contributor('contributor.json')
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
@@ -52,9 +45,7 @@ class TestFullExport(AbstractRequestClient):
                 files={'file': file})
             self.assert_sucessful_create(raw)
 
-        raw = self.post('contributors/contributor_with_preprocess_id/actions/export?current_date=2017-12-14')
-        self.assert_sucessful_create(raw)
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('contributor_with_preprocess_id')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
@@ -65,16 +56,14 @@ class TestFullExport(AbstractRequestClient):
         # create contributor with data_type : geographic
         self.init_contributor('contributor_geographic.json')
 
-        raw = self.post('contributors/geo/actions/export?current_date=2017-10-02')
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('geo')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
         self.init_contributor('contributor_ruspell.json')
 
         # launch ruspell preprocess
-        raw = self.post('contributors/AMI/actions/export?current_date=2017-10-02')
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('AMI')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip',
@@ -101,15 +90,13 @@ class TestFullExport(AbstractRequestClient):
         self.init_contributor('contributor_preprocess_ko.json')
 
         # launch export with a preprocess generating error => should end up being failed
-        raw = self.post('contributors/contributor_preprocess_ko/actions/export?current_date=2017-12-14')
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('contributor_preprocess_ko')
         self.wait_for_job_to_be_done(job_id, 'preprocess', break_if='failed')
 
         self.init_contributor('contributor_headsign_short_name.json')
 
         # launch export generating success => should end up being done
-        raw = self.post('contributors/AMI/actions/export?current_date=2017-12-14')
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('AMI')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_coverage_exports_callback_waits_for_contributor_full_export(self):
@@ -136,14 +123,14 @@ class TestFullExport(AbstractRequestClient):
         self.init_contributor('contributor_gtfs2ntfs.json')
 
         # launch gtfs2ntfs preprocess
-        raw = self.post('contributors/AMI/actions/export?current_date=2017-03-20')
-        job_id = self.get_dict_from_response(raw)['job']['id']
+        job_id = self.contributor_export('AMI')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
     def test_auto_update_one_contributor(self):
         self.init_contributor('contributor_light.json')
         self.init_coverage('coverage.json')
         self.post('/actions/automatic_update?current_date=2017-08-15')
-        self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
+        job = self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
+        self.wait_for_job_to_be_done(job['id'], 'save_coverage_export')
         exports = self.get_dict_from_response(self.get('coverages/coverage_id/exports'))['exports']
         assert len(exports) == 1

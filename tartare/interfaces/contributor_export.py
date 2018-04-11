@@ -42,14 +42,14 @@ from tartare.interfaces.common_argrs import CommonArgs
 from datetime import date
 
 
-class ContributorExportResource(Resource, CommonArgs):
+class ContributorExportResource(Resource):
 
     @staticmethod
-    def _export(contributor: Contributor, current_date: date) -> Job:
+    def _export(contributor: Contributor) -> Job:
         job = Job(contributor_id=contributor.id, action_type=ACTION_TYPE_CONTRIBUTOR_EXPORT)
         job.save()
         try:
-            contributor_export.si(Context('contributor', job, current_date=current_date), contributor, False).delay()
+            contributor_export.si(Context('contributor', job), contributor, False).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
@@ -62,7 +62,7 @@ class ContributorExportResource(Resource, CommonArgs):
             logging.getLogger(__name__).error(msg)
             raise ObjectNotFound(msg)
 
-        job = self._export(contributor, self.get_current_date())
+        job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 

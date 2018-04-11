@@ -38,7 +38,7 @@ from zipfile import is_zipfile
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess, DataSource
-from tartare.exceptions import ParameterException, RuntimeException
+from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
 from tartare.processes.fusio import Fusio
 
 
@@ -87,6 +87,10 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
             data_source_to_process_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
+            if not data_source_to_process_context:
+                raise IntegrityException('data source to process {}.{} not found in contributor context'.format(
+                    self.contributor_id, data_source_id_to_process
+                ))
             data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
             with zipfile.ZipFile(data_source_gridout, 'r') as zip_file:
                 if not set(expected_files).issubset(set(zip_file.namelist())):

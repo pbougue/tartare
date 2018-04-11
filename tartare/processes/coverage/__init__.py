@@ -30,6 +30,7 @@
 # www.navitia.io
 from tartare.processes.coverage.fusio_data_update import FusioDataUpdate
 from tartare.processes.coverage.fusio_export import FusioExport
+from tartare.processes.coverage.fusio_export_contributor import FusioExportContributor
 from tartare.processes.coverage.fusio_import import FusioImport
 from tartare.processes.coverage.fusio_preprod import FusioPreProd
 from tartare.processes.coverage.fusio_send_pt_external_settings import FusioSendPtExternalSettings

@@ -46,27 +46,12 @@ from tartare.interfaces.contributor_export import ContributorExportResource
 from tartare.interfaces.coverage_export import CoverageExportResource
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocess import PreProcess
-from tartare.interfaces.files import File
+from tartare.interfaces.files_download import FileDownload
 from tartare.interfaces.preprocesses import PreProcesses
 
 api = Api(app)
 
 api.app.url_map.strict_slashes = False
-
-coverage = '/coverages'
-coverage_and_id = coverage + '/<string:coverage_id>'
-
-contributor = '/contributors'
-contributor_and_id = contributor + '/<string:contributor_id>'
-environment = "/environments"
-environment_and_id = environment + "/<string:environment_id>"
-environment_and_type = environment + "/<string:environment_type>"
-
-export = '/exports'
-export_and_id = export + '/<string:export_id>'
-
-
-file_and_id = '/files/<string:file_id>'
 
 
 api.add_resource(Index,
@@ -77,65 +62,62 @@ api.add_resource(Status,
                  '/status',
                  endpoint='status')
 
-api.add_resource(File,
-                 coverage_and_id + environment_and_id + file_and_id,
-                 coverage_and_id + export_and_id + file_and_id,
-                 contributor_and_id + export_and_id + file_and_id,
-                 endpoint='files')
+api.add_resource(FileDownload, '/files/<string:file_id>/download', endpoint='files')
 
 api.add_resource(Coverage,
-                 coverage,
-                 coverage_and_id,
+                 '/coverages',
+                 '/coverages/<string:coverage_id>',
                  endpoint='coverages')
 
 api.add_resource(GridCalendar,
-                 coverage_and_id + '/grid_calendar',
+                 '/coverages/<string:coverage_id>/grid_calendar',
                  endpoint='grid_calendar')
 
 api.add_resource(Contributor,
-                 contributor,
-                 contributor_and_id,
+                 '/contributors',
+                 '/contributors/<string:contributor_id>',
                  endpoint='contributors')
 
 api.add_resource(DataSource,
-                 contributor_and_id + '/data_sources',
-                 contributor_and_id + '/data_sources/<string:data_source_id>')
+                 '/contributors/<string:contributor_id>/data_sources',
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>')
 
 api.add_resource(DataSourceFetch,
-                 contributor_and_id + '/data_sources/<string:data_source_id>/actions/fetch')
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/actions/fetch',
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_source_fetches')
 
 api.add_resource(DataSet,
-                 contributor_and_id + '/data_sources/<string:data_source_id>/data_sets')
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_sets')
 
 api.add_resource(PreProcess,
-                 contributor_and_id + '/preprocesses',
-                 contributor_and_id + '/preprocesses/<string:preprocess_id>',
-                 coverage_and_id + '/preprocesses',
-                 coverage_and_id + '/preprocesses/<string:preprocess_id>')
+                 '/contributors/<string:contributor_id>/preprocesses',
+                 '/contributors/<string:contributor_id>/preprocesses/<string:preprocess_id>',
+                 '/coverages/<string:coverage_id>/preprocesses',
+                 '/coverages/<string:coverage_id>/preprocesses/<string:preprocess_id>')
 
 api.add_resource(CoverageContributorSubscription,
-                 coverage_and_id + contributor,
-                 coverage_and_id + contributor_and_id)
+                 '/coverages/<string:coverage_id>/contributors',
+                 '/coverages/<string:coverage_id>/contributors/<string:contributor_id>')
 
 api.add_resource(ContributorExportResource,
-                 contributor_and_id + export,
-                 contributor_and_id + export_and_id,
-                 contributor_and_id + '/actions/export')
+                 '/contributors/<string:contributor_id>/exports',
+                 '/contributors/<string:contributor_id>/exports/<string:export_id>',
+                 '/contributors/<string:contributor_id>/actions/export')
 
 api.add_resource(AutomaticUpdateResource,
                  '/actions/automatic_update')
 
 api.add_resource(Job,
                  '/jobs',
-                 contributor_and_id + '/jobs',
-                 contributor_and_id + '/jobs/<string:job_id>',
-                 coverage_and_id + '/jobs',
-                 coverage_and_id + '/jobs/<string:job_id>',
+                 '/contributors/<string:contributor_id>/jobs',
+                 '/contributors/<string:contributor_id>/jobs/<string:job_id>',
+                 '/coverages/<string:coverage_id>/jobs',
+                 '/coverages/<string:coverage_id>/jobs/<string:job_id>',
                  '/jobs/<string:job_id>',
                  endpoint='jobs')
 
 api.add_resource(CoverageExportResource,
-                 coverage_and_id + '/exports',
-                 coverage_and_id + '/actions/export')
+                 '/coverages/<string:coverage_id>/exports',
+                 '/coverages/<string:coverage_id>/actions/export')
 
 api.add_resource(PreProcesses, '/preprocesses')

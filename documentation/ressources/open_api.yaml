@@ -44,6 +44,9 @@ tags:
   -
     name: "preprocesses"
     description: "Display preprocesses"
+  -
+    name: "files"
+    description: "Download files"
 
 paths:
   /:
@@ -388,61 +391,14 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
-  /coverages/{coverage_id}/exports/{export_id}/files/{file_id}:
+  /files/{file_id}/download:
     get:
-      summary: returns the file {file_id} of the coverage export identified by {coverage_id} and [export_id}
+      summary: download file {file_id}
       tags:
-        - coverages
+        - files
       produces:
         - multipart/form-data
       parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage
-          required: true
-        - in: path
-          name: export_id
-          type: string
-          description: Identifier of the export
-          required: true
-        - in: path
-          name: file_id
-          type: string
-          description: Identifier of the file
-          required: true
-      responses:
-        200:
-          description: Requested file
-          schema:
-            type: file
-        400:
-          description: invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/environments/{environment_id}/files/{file_id}:
-    get:
-      summary: returns the file {file_id} of the environment identified by {coverage_id} and [environment_id}
-      tags:
-        - coverages
-      produces:
-        - multipart/form-data
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage
-          required: true
-        - in: path
-          name: environment_id
-          type: string
-          description: Identifier of the environment
-          required: true
         - in: path
           name: file_id
           type: string
@@ -806,6 +762,32 @@ paths:
           schema:
             $ref: "#/definitions/error_404"
 
+  /contributors/{contributor_id}/data_sources/{data_source_id}/data_source_fetches:
+    get:
+      tags:
+      - "contributors"
+      summary: "List all the data sources fetches of a contributor"
+      description: "List all the data sources fetches of a contributor"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "contributor_id"
+        in: "path"
+        required: true
+        type: "string"
+      - name: "data_source_id"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "List of data source fetches"
+          schema:
+            $ref: "#/definitions/data_source_fetches"
+        404:
+          description: "Object not found"
+          schema:
+            $ref: "#/definitions/error_404"
 
   /contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch:
     post:
@@ -1132,43 +1114,6 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
 
-  /contributors/{contributor_id}/exports/{export_id}/files/{file_id}:
-    get:
-      summary: returns the file {file_id} of the contributor export identified by {contributor_id} and [export_id}
-      tags:
-        - contributors
-      produces:
-        - multipart/form-data
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor
-          required: true
-        - in: path
-          name: export_id
-          type: string
-          description: Identifier of the export
-          required: true
-        - in: path
-          name: file_id
-          type: string
-          description: Identifier of the file
-          required: true
-      responses:
-        200:
-          description: Requested file
-          schema:
-            type: file
-        400:
-          description: invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
   /jobs:
     get:
       summary: Display list of jobs
@@ -1229,7 +1174,7 @@ definitions:
     properties:
       preprocesses:
         type: object
-        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport']}
+        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport', 'FusioPreprod', 'FusioExportContributor']}
 
   job_list:
     type: object
@@ -1819,37 +1764,51 @@ definitions:
         example: An error occured
 
   data_sets:
+    description: "List of data sets"
     type: "object"
     properties:
       data_sets:
         type: "array"
         items:
-          type: "object"
-          properties:
-            data_source_id:
-              type: "string"
-              description: "Data source id"
-              example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
-            created_at:
-              type: "string"
-              format: date-time
-              description: "Creation date"
-              example: "2017-08-08T13:43:53.601089+00:00"
-            gridfs_id:
-              type: "string"
-              description: "GridFS id"
-              example: "5989c01909467413b7e7c59f"
-            validity_period:
-              $ref: "#/definitions/validity_period"
-            id:
-              type: "string"
-              description: "Unique id"
-              example: "966a5da4-cccb-4b33-8814-7b6a2ce4f6cf"
-            contributor_id:
-              type: "string"
-              description: "Contributor id"
-              example: "fr-idf"
-    description: "Data source "
+          $ref: "#/definitions/data_source_fetch"
+
+  data_source_fetches:
+    description: "List of data sets"
+    type: "object"
+    properties:
+      data_source_fetches:
+        type: "array"
+        items:
+          $ref: "#/definitions/data_source_fetch"
+
+  data_source_fetch:
+    type: "object"
+    properties:
+      data_source_id:
+        type: "string"
+        description: "Data source id"
+        example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
+      created_at:
+        type: "string"
+        format: date-time
+        description: "Creation date"
+        example: "2017-08-08T13:43:53.601089+00:00"
+      gridfs_id:
+        type: "string"
+        description: "GridFS id"
+        example: "5989c01909467413b7e7c59f"
+      validity_period:
+        $ref: "#/definitions/validity_period"
+      id:
+        type: "string"
+        description: "Unique id"
+        example: "966a5da4-cccb-4b33-8814-7b6a2ce4f6cf"
+      contributor_id:
+        type: "string"
+        description: "Contributor id"
+        example: "fr-idf"
+
+
   validity_period:
     type: "object"
     properties:

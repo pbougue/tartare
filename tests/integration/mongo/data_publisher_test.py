@@ -31,9 +31,6 @@
 import copy
 import ftplib
 import json
-import os
-import tempfile
-from zipfile import ZipFile
 
 import mock
 import pytest
@@ -42,7 +39,7 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_urlretrieve, mock_requests_post, assert_files_equals, get_response, \
+from tests.utils import mock_requests_post, get_response, \
     _get_file_fixture_full_path
 
 
@@ -115,8 +112,8 @@ class TestDataPublisher(TartareFixture):
         r = self.json_to_dict(self.get("/contributors/fr-idf/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-08-03"
-        assert exports[0]["validity_period"]["end_date"] == "2016-08-01"
+        assert exports[0]["validity_period"]["start_date"] == "2015-02-16"
+        assert exports[0]["validity_period"]["end_date"] == "2017-01-15"
 
         assert exports[0]['data_sources'][0]["gridfs_id"]
         data_sources = exports[0]["data_sources"]
@@ -127,8 +124,8 @@ class TestDataPublisher(TartareFixture):
         r = self.json_to_dict(self.get("/coverages/default/exports"))
         exports = r["exports"]
         assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-08-03"
-        assert exports[0]["validity_period"]["end_date"] == "2016-08-01"
+        assert exports[0]["validity_period"]["start_date"] == "2015-02-16"
+        assert exports[0]["validity_period"]["end_date"] == "2017-01-15"
         assert exports[0]["gridfs_id"]
         contributors = exports[0]["contributors"]
         assert len(contributors) == 1
@@ -213,8 +210,8 @@ class TestDataPublisher(TartareFixture):
         (None, None, 'sample_1.zip', 'my-coverage-id')
     ])
     @freeze_time("2015-08-10")
-    def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, fixture_dir,
-                                           license_url, license_name, sample_data, coverage_id):
+    def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, license_url,
+                                           license_name, sample_data, coverage_id):
         contributor_id = 'whatever'
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
         self._create_contributor(contributor_id, url)
@@ -458,8 +455,8 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
 
-        self.contributor_export(contributor_id, '2015-08-10')
-        self.contributor_export(contributor_geo, '2015-08-10')
+        self.contributor_export(contributor_id)
+        self.contributor_export(contributor_geo)
         resp = self.coverage_export(coverage_id)
 
         assert post_mock.call_count == 2
@@ -469,7 +466,6 @@ class TestDataPublisher(TartareFixture):
         assert job['step'].startswith('publish_data production navitia on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
-
 
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
     def test_publish_navitia_with_osm_and_poly(self, post_mock, init_http_download_server):
@@ -482,8 +478,9 @@ class TestDataPublisher(TartareFixture):
         self.init_contributor(contributor_id, 'gtfs_ds_id', fetch_url)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
         self.init_contributor(contributor_geo, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
-                                 data_type=DATA_TYPE_GEOGRAPHIC)
-        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='ile-de-france.poly')
+                              data_type=DATA_TYPE_GEOGRAPHIC)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data',
+                                    filename='ile-de-france.poly')
         self.add_data_source_to_contributor(contributor_geo, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
         publication_platform = {
             "sequence": 0,
@@ -493,8 +490,8 @@ class TestDataPublisher(TartareFixture):
         }
         self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
 
-        self.contributor_export(contributor_id, '2015-08-10')
-        self.contributor_export(contributor_geo, '2015-08-10')
+        self.contributor_export(contributor_id)
+        self.contributor_export(contributor_geo)
         resp = self.coverage_export(coverage_id)
 
         assert post_mock.call_count == 3
@@ -532,7 +529,9 @@ class TestDataPublisher(TartareFixture):
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'merge', print(job)
-        assert job['error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(job)
+        assert job[
+                   'error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(
+            job)
         assert job['state'] == 'failed', print(job)
 
     @freeze_time("2015-08-10")
@@ -540,7 +539,8 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('tartare.core.fetcher.HttpFetcher.fetch')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
-    def test_osm_publication_uses_fusio(self, mock_wait_for_action_terminated, mock_call, mock_fetch, mock_get_export_url, init_http_download_server, init_ftp_upload_server):
+    def test_osm_publication_uses_fusio(self, mock_wait_for_action_terminated, mock_call, mock_fetch,
+                                        mock_get_export_url, init_http_download_server, init_ftp_upload_server):
         filename_c1 = 'sample_1.zip'
         filename_c2 = 'sample_2.zip'
         export_url = 'http://export.whatever.com'
@@ -584,8 +584,8 @@ class TestDataPublisher(TartareFixture):
         ]
         raw = self.patch('coverages/cA', self.dict_to_json({"preprocesses": preprocesses}))
         self.assert_sucessful_call(raw)
-        self.contributor_export('c1', '2015-08-10')
-        self.contributor_export('c2', '2015-08-10')
+        self.contributor_export('c1')
+        self.contributor_export('c2')
         content = self.get_fusio_response_from_action_id(42)
         mock_call.return_value = get_response(200, content)
         mock_get_export_url.return_value = export_url
@@ -595,7 +595,10 @@ class TestDataPublisher(TartareFixture):
         job = self.get_job_from_export_response(raw)
         job = self.get_job_details(job['id'])
         assert job['state'] == 'done'
-        assert mock_call.call_args_list[0][1] == {'api': 'api', 'data': {'DateDebut': '03/08/2015', 'DateFin': '01/08/2016', 'action': 'regionalimport'}}
-        assert mock_call.call_args_list[1][1] == {'api': 'api', 'data': {'action': 'Export', 'ExportType': 32, 'Source': 4}}
+        assert mock_call.call_args_list[0][1] == {'api': 'api',
+                                                  'data': {'DateDebut': '03/08/2015', 'DateFin': '01/08/2016',
+                                                           'action': 'regionalimport'}}
+        assert mock_call.call_args_list[1][1] == {'api': 'api',
+                                                  'data': {'action': 'Export', 'ExportType': 32, 'Source': 4}}
 
         self.assert_metadata_equals_to_fixture(init_ftp_upload_server, 'cA')

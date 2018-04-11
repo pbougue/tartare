@@ -94,7 +94,7 @@ class AbstractRequestClient:
         assert export_id
 
         # get export file
-        raw = self.get('contributors/{contributor_id}/exports/{export_id}/files/{gridfs_id}'.format(export_id=export_id,
+        raw = self.get('/files/{gridfs_id}/download'.format(export_id=export_id,
                                                                                                     gridfs_id=gridfs_id,
                                                                                                     contributor_id=contributor_id))
         if expected_filename:
@@ -141,6 +141,8 @@ class AbstractRequestClient:
                 sleep(1)
                 retry += 1
             else:
+                if number == 1:
+                    return jobs_matching[0]
                 break
         assert retry < nb_retries_max, print('job {} reached max waiting time ({})'.format(action_type, nb_retries_max))
 
@@ -172,11 +174,11 @@ class AbstractRequestClient:
         self.assert_status_is(raw, 201)
 
     def full_export(self, contributor_id, coverage_id, current_date=None):
-        date_option = '?current_date=' + current_date if current_date else ''
-        resp = self.post("/contributors/{}/actions/export{}".format(contributor_id, date_option))
+        resp = self.post("/contributors/{}/actions/export".format(contributor_id))
         self.assert_sucessful_create(resp)
         job_id = self.get_dict_from_response(resp)['job']['id']
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
+        date_option = '?current_date=' + current_date if current_date else ''
         resp = self.post("/coverages/{}/actions/export{}".format(coverage_id, date_option))
         self.assert_sucessful_create(resp)
         job_id = self.get_dict_from_response(resp)['job']['id']
@@ -193,3 +195,8 @@ class AbstractRequestClient:
             json_file = json.load(file)
             raw = self.post('coverages', json_file)
             self.assert_sucessful_create(raw)
+
+    def contributor_export(self, contributor_id):
+        raw = self.post('contributors/{}/actions/export'.format(contributor_id))
+        self.assert_sucessful_create(raw)
+        return self.get_dict_from_response(raw)['job']['id']

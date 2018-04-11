@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import ftplib
 import json
 
 import mock
@@ -310,7 +311,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.call')
     @pytest.mark.parametrize("data_format,file_name,begin_date,end_date", [
         (DATA_FORMAT_TITAN, 'titan.zip', '02/01/2018', '18/06/2018'),
-        (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '02/01/2019'),
+        (DATA_FORMAT_OBITI, 'obiti.zip', '28/08/2017', '27/08/2018'),
         (DATA_FORMAT_NEPTUNE, 'neptune.zip', '21/12/2017', '27/02/2018'),
     ])
     def test_data_update_other_data_formats(self, fusio_call, wait_for_action_terminated, init_http_download_server,
@@ -338,6 +339,37 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             'isadapted': 0,
             'libelle': 'unlibelle',
             'serviceid': sid
+        }
+
+
+class TestFusioImportPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_import_period(self, fusio_call, wait_for_action_terminated, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='gtfs_with_feed_info_more_than_one_year.zip')
+        self.init_contributor('cid', 'dsid', url)
+        self.init_coverage('jdr', ['cid'])
+        preprocess = {
+            "id": "fusio_import",
+            "type": "FusioImport",
+            "params": {
+                "url": "http://fusio_host/cgi-bin/fusio.dll/"
+            },
+            "sequence": 0
+        }
+        self.add_preprocess_to_coverage(preprocess, 'jdr')
+
+        content = self.get_fusio_response_from_action_id(42)
+
+        fusio_call.return_value = get_response(200, content)
+        self.full_export('cid', 'jdr', '2016-05-10')
+
+        assert fusio_call.call_count == 1
+        assert fusio_call.call_args_list[0][1]['data'] == {
+            'DateDebut': '03/05/2016',
+            'DateFin': '02/05/2017',
+            'action': 'regionalimport',
         }
 
 
@@ -399,7 +431,8 @@ class TestFusioExportPreprocess(TartareFixture):
         expected_data = {
             'action': 'Export',
             'ExportType': 32,
-            'Source': 4}
+            'Source': 4
+        }
 
         resp = self.full_export('id_test', 'my_cov', '2017-08-10')
 
@@ -418,8 +451,99 @@ class TestFusioExportPreprocess(TartareFixture):
         exports = self.json_to_dict(raw).get('exports')
         assert len(exports) == 1
 
-        resp = self.get('/coverages/{coverage_id}/exports/{export_id}/files/{gridfs_id}'.
+        resp = self.get('/files/{gridfs_id}/download'.
                         format(coverage_id=coverage['id'], export_id=exports[0]['id'],
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         self.assert_sucessful_call(raw)
         assert_files_equals(resp.data, fixtures_file)
+
+
+class TestFusioExportContributorPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
+    def test_fusio_export_contributor(self,
+                                      fusio_get,
+                                      fusio_post,
+                                      wait_for_action_terminated,
+                                      replace_url_hostname_from_url,
+                                      init_http_download_server, init_ftp_upload_server):
+        ftp_username = init_ftp_upload_server.user
+        ftp_password = init_ftp_upload_server.password
+        filename = 'gtfs-1.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename,
+                              path='gtfs/historisation')
+        self.init_contributor("id_test", "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        trigram = 'LOL'
+        expected_file_name = 'my_formatted_gtfs.zip'
+
+        directory = 'my_dir'
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, ftp_username, ftp_password)
+        # Create a directory in the ftp
+        session.mkd(directory)
+
+        publication_platform = {
+            "protocol": "ftp",
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": ftp_username,
+                    "password": ftp_password
+                },
+                "directory": directory
+            }
+        }
+        coverage = {
+            "id": "my_cov",
+            "name": "my_cov",
+            "contributors": ['id_test'],
+            "preprocesses":
+                [
+                    {
+                        "id": "fusio_export_contributor",
+                        "type": "FusioExportContributor",
+                        "params": {
+                            "expected_file_name": expected_file_name,
+                            "url": fusio_end_point,
+                            'trigram': trigram,
+                            'publication_platform': publication_platform,
+                        },
+                        "sequence": 0
+                    }
+                ]
+
+        }
+        raw = self.post('/coverages', self.dict_to_json(coverage))
+        self.assert_sucessful_create(raw)
+
+        post_content = self.get_fusio_response_from_action_id(42)
+
+        replace_url_hostname_from_url.return_value = url
+        fusio_post.return_value = get_response(200, post_content)
+        expected_data = {
+            'action': 'Export',
+            'ExportType': 36,
+            'Source': 4,
+            'ContributorList': 'LOL',
+            'Libelle': 'Export auto Tartare LOL',
+            'isadapted': 0
+        }
+
+        resp = self.full_export('id_test', 'my_cov', '2017-08-10')
+
+        fusio_post.assert_called_with(fusio_end_point + 'api', data=expected_data, files=None)
+
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'done', print(job)
+        assert job['step'] == 'save_coverage_export', print(job)
+        assert job['error_message'] == '', print(job)
+
+        # check if the file was successfully uploaded
+        directory_content = session.nlst(directory)
+        assert len(directory_content) == 1
+        assert expected_file_name in directory_content
+        session.delete('{directory}/{filename}'.format(directory=directory, filename=expected_file_name))
+        session.rmd(directory)
