@@ -32,6 +32,7 @@ from flask import Response
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import Context
+from tartare.interfaces.common_argrs import CommonArgs
 from tartare.tasks import coverage_export, finish_job
 from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
@@ -41,13 +42,12 @@ import logging
 from celery import chain
 
 
-class CoverageExportResource(flask_restful.Resource):
-    @staticmethod
-    def _export(coverage: Coverage) -> Job:
+class CoverageExportResource(flask_restful.Resource, CommonArgs):
+    def _export(self, coverage: Coverage) -> Job:
         job = Job(coverage_id=coverage.id, action_type=ACTION_TYPE_COVERAGE_EXPORT)
         job.save()
         try:
-            coverage_export.si(Context('coverage', job, coverage)).delay()
+            coverage_export.si(Context('coverage', job, coverage, current_date=self.get_current_date())).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))
