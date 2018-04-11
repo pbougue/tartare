@@ -73,6 +73,7 @@ CALENDAR_FILE = 'export_calendars.zip'
 
 HISTORICAL = 3
 
+SEND_MAIL_ON_FAILURE = False if os.getenv('SEND_MAIL_ON_FAILURE', 'True') == 'False' else True
 MAILER = {
     'smtp': {
         'host': os.getenv('MAILER_SMTP_HOST', 'smtp.canaltp.local'),
