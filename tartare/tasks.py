@@ -74,7 +74,8 @@ class CallbackTask(tartare.ContextTask):
         if isinstance(args[0], Context):
             context = args[0]
             self.update_job(context.job, exc)
-            self.send_mail(context.job)
+            if tartare.app.config.get('SEND_MAIL_ON_FAILURE'):
+                self.send_mail(context.job)
             super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
     def send_mail(self, job: Job) -> None:
