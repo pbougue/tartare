@@ -527,7 +527,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
             'action': 'Export',
             'ExportType': 36,
             'Source': 4,
-            'ContributorList': 'LOL;',
+            'ContributorList': 'LOL',
             'Libelle': 'Export auto Tartare LOL',
             'isadapted': 0
         }

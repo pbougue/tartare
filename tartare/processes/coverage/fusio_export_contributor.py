@@ -60,7 +60,7 @@ class FusioExportContributor(AbstractFusioProcess):
             'action': 'Export',
             'ExportType': self.gtfs_export_type,
             'Source': self.data_exported_type_preprod,
-            'ContributorList': '{};'.format(trigram),
+            'ContributorList': trigram,
             'Libelle': 'Export auto Tartare {}'.format(trigram),
             'isadapted': self.is_adapted_value_no_strike
         }
