@@ -341,6 +341,18 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             'serviceid': sid
         }
 
+    def test_data_update_past_period(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='gtfs_with_feed_info_more_than_one_year.zip')
+        self.init_contributor('cid', 'dsid', url, service_id='1')
+        self.__init_coverage("jdr", ["cid"])
+        # end date is 31/12/2018
+        resp = self.full_export('cid', 'jdr', '2019-03-10')
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'done'
+        assert job['step'] == 'save_coverage_export'
+        assert job['error_message'] == ''
+
 
 class TestFusioImportPreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
