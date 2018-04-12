@@ -35,7 +35,7 @@ from tartare.core.context import Context, DataSourceContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor, DataSource, CoverageExport
 from tartare.core.validity_period_finder import ValidityPeriodFinder
-from tartare.exceptions import ParameterException
+from tartare.exceptions import ParameterException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
 from tartare.processes.utils import preprocess_registry
@@ -98,14 +98,21 @@ class FusioDataUpdate(AbstractFusioProcess):
             for data_source_context in contributor_context.data_source_contexts:
                 if not data_source_context.gridfs_id:
                     continue
-                if not DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id)\
+                if not DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id) \
                         .is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                     continue
                 if self.__is_update_needed(contributor_context.contributor.id, data_source_context):
-                    resp = self.fusio.call(requests.post, api='api',
-                                           data=self.__get_data(contributor_context.contributor, data_source_context),
-                                           files=self.get_files_from_gridfs(data_source_context.gridfs_id))
-                    self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+                    try:
+                        resp = self.fusio.call(requests.post, api='api',
+                                               data=self.__get_data(contributor_context.contributor,
+                                                                    data_source_context),
+                                               files=self.get_files_from_gridfs(data_source_context.gridfs_id))
+                        self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+                    except ValidityPeriodException as exception:
+                        # validity period in past may happen so we just skip data update instead of crash
+                        logging.getLogger(__name__).warning('skipping data update for data source {}, error: {}'.format(
+                            data_source_context.data_source_id, str(exception)
+                        ))
                 else:
                     logging.getLogger(__name__).info(
                         'data update for {dsid} is not needed since corresponding gtfs has not changed'.format(
