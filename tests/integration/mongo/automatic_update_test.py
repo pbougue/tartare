@@ -38,7 +38,7 @@ from tests.integration.test_mechanism import TartareFixture
 
 class TestAutomaticUpdate(TartareFixture):
     def test_automatic_update_nothing_done(self):
-        jobs = self.run_automatic_update('2015-08-10')
+        jobs = self.run_automatic_update()
         assert jobs == []
 
     def __create_contributor(self, ip, id="auto_update_contrib"):
@@ -92,7 +92,7 @@ class TestAutomaticUpdate(TartareFixture):
 
     def test_automatic_update_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        jobs = self.run_automatic_update('2015-08-10')
+        jobs = self.run_automatic_update()
         assert len(jobs) == 1
         job = jobs[0]
         self.__assert_job_is_automatic_update_contributor_export(job)
@@ -109,7 +109,7 @@ class TestAutomaticUpdate(TartareFixture):
     def test_automatic_update_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
         self.__create_coverage(['auto_update_contrib'])
-        jobs = self.run_automatic_update('2015-08-10')
+        jobs = self.run_automatic_update()
         assert len(jobs) == 2
         for job in jobs:
             if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
@@ -124,8 +124,8 @@ class TestAutomaticUpdate(TartareFixture):
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
         self.__create_coverage(['auto_update_contrib'])
-        jobs_first_run = self.run_automatic_update('2015-08-10')
-        jobs_second_run = self.run_automatic_update('2015-08-10')
+        jobs_first_run = self.run_automatic_update()
+        jobs_second_run = self.run_automatic_update()
         assert len(jobs_first_run) == 2
         assert len(jobs_second_run) == 3
         for job in jobs_second_run:
@@ -157,7 +157,7 @@ class TestAutomaticUpdate(TartareFixture):
             self.__create_contributor(init_http_download_server.ip_addr, contributor)
         for cov, contribs in coverages.items():
             self.__create_coverage(contribs, cov)
-        jobs_first_run = self.run_automatic_update('2015-08-10')
+        jobs_first_run = self.run_automatic_update()
         assert len(jobs_first_run) == 6
         contributor_export_jobs = list(
             filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT and job['step'] == 'save_contributor_export', jobs_first_run))
@@ -173,7 +173,7 @@ class TestAutomaticUpdate(TartareFixture):
         # update c1 data source
         self.patch('/contributors/{}/data_sources/{}'.format('c1', 'ds_c1'),
                    json.dumps({'input': {'url': self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')}}))
-        jobs_second_run = self.run_automatic_update('2015-08-10')
+        jobs_second_run = self.run_automatic_update()
         contributor_export_jobs = list(
             filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))
         coverage_export_jobs = list(
@@ -188,13 +188,13 @@ class TestAutomaticUpdate(TartareFixture):
     def test_data_format_generate_export(self, init_http_download_server):
         url = self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')
         self.init_contributor('contrib_id', 'ds_id', url)
-        jobs_first_run = self.run_automatic_update('2015-08-10')
+        jobs_first_run = self.run_automatic_update()
         assert len(jobs_first_run) == 1
         first_job = jobs_first_run[0]
         self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
 
         self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
-        jobs_first_and_second_run = self.run_automatic_update('2015-08-10')
+        jobs_first_and_second_run = self.run_automatic_update()
         assert len(jobs_first_and_second_run) == 2
         for job in jobs_first_and_second_run:
             if job['id'] != first_job['id']:

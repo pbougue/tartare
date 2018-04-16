@@ -71,7 +71,7 @@ class Mailer(object):
         str_message = "\n".join(message)
         return str_message
 
-    def format_mail(self, message, subject) -> MIMEMultipart:
+    def format_mail(self, message: str, subject: str) -> MIMEMultipart:
         attachment = MIMEBase('application', "text/html")
 
         mail = MIMEMultipart("alternative")

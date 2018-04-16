@@ -911,7 +911,7 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def cancel_pending_updated_before(cls, nb_hours, statuses: List[str], current_date: datetime = datetime.today()) -> List['Job']:
+    def cancel_pending_updated_before(cls, nb_hours: int, statuses: List[str], current_date: datetime = datetime.today()) -> List['Job']:
         filter_statuses = [{'state': status}for status in statuses]
         filter = {
             '$or': filter_statuses,
