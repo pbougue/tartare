@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import copy
 import logging
 import uuid
 from abc import ABCMeta
@@ -754,7 +755,6 @@ class DataSourceFetched(Historisable):
     def __repr__(self) -> str:
         return str(vars(self))
 
-
     def get_md5(self) -> str:
         if not self.gridfs_id:
             return None
@@ -911,6 +911,20 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
+    def cancel_pending_updated_before(cls, nb_hours, statuses: List[str], current_date: datetime = datetime.today()) -> List['Job']:
+        filter_statuses = [{'state': status}for status in statuses]
+        filter = {
+            '$or': filter_statuses,
+            'updated_at': {'$lt': (current_date - timedelta(hours=nb_hours)).isoformat()}
+        }
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        pending_jobs = MongoJobSchema(many=True).load(raw).data
+        pending_jobs_before_update = copy.deepcopy(pending_jobs)
+        for pending_job in pending_jobs:
+            pending_job.update('failed', error_message='automatically cancelled')
+        return pending_jobs_before_update
+
+    @classmethod
     def get_some(cls, contributor_id: str = None, coverage_id: str = None) -> List['Job']:
         find_filter = {}
         if contributor_id:
@@ -940,8 +954,7 @@ class Job(object):
         if error_message is not None:
             self.error_message = error_message
 
-            self.updated_at = datetime.utcnow()
-
+        self.updated_at = datetime.utcnow()
         raw = mongo.db[Job.mongo_collection].update_one({'_id': self.id}, {'$set': MongoJobSchema().dump(self).data})
         if raw.matched_count == 0:
             return None

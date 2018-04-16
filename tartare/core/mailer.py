@@ -69,18 +69,18 @@ class Mailer(object):
                              "Automatic email from Tartare",
                              "=" * 75]
         str_message = "\n".join(message)
-        return str_message.format(job=job)
+        return str_message
 
-    def format_mail(self, job: Job) -> MIMEMultipart:
+    def format_mail(self, message, subject) -> MIMEMultipart:
         attachment = MIMEBase('application', "text/html")
 
         mail = MIMEMultipart("alternative")
         mail["From"] = self.from_
         mail["To"] = self.to
         mail["Cc"] = self.cc
-        mail["Subject"] = 'Problem Tartare'
+        mail["Subject"] = subject
         mail['X-MSMail-Priority'] = 'High'
-        mail.attach(MIMEText(self.get_message(job), 'plain', "utf-8"))
+        mail.attach(MIMEText(message, 'plain', "utf-8"))
         mail.attach(attachment)
         return mail
 
@@ -105,5 +105,17 @@ class Mailer(object):
 
     def build_msg_and_send_mail(self, job: Job) -> None:
         if job:
-            mail = self.format_mail(job)
+            mail = self.format_mail(self.get_message(job), 'Problem Tartare')
             self.send(mail)
+
+    def build_purge_report_and_send_mail(self, cancelled_jobs: List[Job], nb_hours: int, statuses: List[str]) -> None:
+        logging.getLogger(__name__).info('sending report mail for {} cancelled jobs'.format(len(cancelled_jobs)))
+        message_lines = [
+            "List of {} jobs not updated for at least {} days cancelled: ".format('/'.join(statuses), nb_hours), ""
+        ]
+        jobs_details = ['{id}: {action} - {step} ({state}) since {date}'.format(
+            id=job.id, action=job.action_type, step=job.step, state=job.state, date=job.updated_at
+        ) for job in cancelled_jobs]
+        message_lines += jobs_details
+        mail = self.format_mail("\n".join(message_lines), 'Purge Pending Jobs Tartare for {}'.format(self.platform))
+        self.send(mail)
