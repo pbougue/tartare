@@ -29,7 +29,7 @@
 
 import requests
 
-from tartare.core.context import Context
+from tartare.core.context import Context, CoverageContext
 from tartare.core.models import ValidityPeriod
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
@@ -56,6 +56,7 @@ class FusioImport(AbstractFusioProcess):
                                    'DateFin': Fusio.format_date(validity_period.end_date),
                                    'action': 'regionalimport',
                                })
+
         self.context.validity_period = validity_period
         self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context

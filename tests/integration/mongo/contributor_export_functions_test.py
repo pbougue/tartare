@@ -36,8 +36,8 @@ import pytest
 
 from tartare import app
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
-from tartare.core.context import Context
-from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number, build_context
+from tartare.core.context import ContributorContext
+from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number
 from tartare.core.models import DataSource, Contributor, Input, Job
 from tartare.exceptions import ParameterException, FetcherException
 from tests.utils import mock_urlretrieve
@@ -48,10 +48,10 @@ class TestFetcher:
     def test_build_no_data_set(self, urlretrieve_func):
         data_source = DataSource(666, 'Bib', 'gtfs', Input('url', 'bob'))
         contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
-        context = Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT))
+        context = ContributorContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT))
         with app.app_context():
             with pytest.raises(ParameterException) as excinfo:
-                build_context(contrib, context)
+                context.fill_context(contrib)
             assert str(excinfo.value) == 'data source 666 has no data set'
 
     @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com/config.json", "bib"))

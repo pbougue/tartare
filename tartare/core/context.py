@@ -26,14 +26,14 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
+
 from datetime import date
 from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer, Job
-from tartare.exceptions import IntegrityException
+from tartare.core.models import ContributorExport, ValidityPeriod, Contributor as ContributorModel, Coverage, DataSource, \
+    ValidityPeriodContainer, Job, DataSourceFetched
+from tartare.exceptions import IntegrityException, ParameterException
 
 
 class DataSourceContext:
@@ -47,8 +47,8 @@ class DataSourceContext:
         return str(vars(self))
 
 
-class ContributorContext(ValidityPeriodContainer):
-    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]]=None,
+class Contributor(ValidityPeriodContainer):
+    def __init__(self, contributor: ContributorModel, data_source_contexts: Optional[List[DataSourceContext]]=None,
                  validity_period: ValidityPeriod=None) -> None:
         super().__init__(validity_period)
         self.contributor = contributor
@@ -59,18 +59,21 @@ class ContributorContext(ValidityPeriodContainer):
 
 
 class Context:
-    def __init__(self, instance: str, job: Job, coverage: Coverage=None, current_date: date=date.today(),
-                 validity_period: ValidityPeriod=None, contributor_contexts: List[ContributorContext]=None) -> None:
-        self.instance = instance
-        self.coverage = coverage
-        self.contributor_contexts = contributor_contexts if contributor_contexts else []
-        self.validity_period = validity_period
-        self.global_gridfs_id = ''
+    def __init__(self, job: Job, current_date: date=date.today()) -> None:
+        self.contributor_contexts = []  # type: Optional[List[Contributor]]
         self.current_date = current_date
         self.job = job
 
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class ContributorContext(Context):
+    def __init__(self, job: Job, current_date: date=date.today()) -> None:
+        super().__init__(job, current_date)
+
     def get_data_source_context_in_links(self, links: List[dict],
-                                         data_format: Optional[str]=None) -> Optional[DataSourceContext]:
+                                         data_format: Optional[str] = None) -> Optional[DataSourceContext]:
         for link in links:
             contributor_id = link.get('contributor_id')
             data_source_id = link.get('data_source_id')
@@ -80,23 +83,9 @@ class Context:
                 return data_source_context
         return None
 
-    def contributor_has_datasources(self, contributor_id: str) -> bool:
-        return len(self.get_contributor_data_source_contexts(contributor_id=contributor_id)) > 0
-
-    def add_contributor_context(self, contributor: Contributor) -> None:
-        contributor_context = next((contributor_context
-                                    for contributor_context in self.contributor_contexts
-                                    if contributor_context.contributor.id == contributor.id), None)
-        if not contributor_context:
-            self.contributor_contexts.append(ContributorContext(contributor))
-
-    def get_contributor_data_sources(self, contributor_id: str) -> Optional[List[DataSource]]:
-        return next((contributor_context.contributor.data_sources for contributor_context in self.contributor_contexts
-                     if contributor_context.contributor.id == contributor_id), None)
-
     def get_contributor_data_source_contexts(self, contributor_id: str,
-                                             data_format_list: Optional[List[str]]=None) -> List[DataSourceContext]:
-        contributor_data_source_context_list = []   # type: List[DataSourceContext]
+                                             data_format_list: Optional[List[str]] = None) -> List[DataSourceContext]:
+        contributor_data_source_context_list = []  # type: List[DataSourceContext]
         for contributor_context in self.contributor_contexts:
             if contributor_context.contributor.id == contributor_id:
                 if not data_format_list:
@@ -108,13 +97,20 @@ class Context:
         return contributor_data_source_context_list
 
     def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
-                                            data_format_list: Optional[List[str]]=None) -> Optional[DataSourceContext]:
+                                            data_format_list: Optional[List[str]] = None) -> Optional[DataSourceContext]:
         data_source_contexts = self.get_contributor_data_source_contexts(contributor_id, data_format_list)
         if not data_source_contexts:
             return None
         return next((data_source_context
                      for data_source_context in data_source_contexts
                      if data_source_context.data_source_id == data_source_id), None)
+
+    def add_contributor_context(self, contributor: ContributorModel) -> None:
+        contributor_context = next((contributor_context
+                                    for contributor_context in self.contributor_contexts
+                                    if contributor_context.contributor.id == contributor.id), None)
+        if not contributor_context:
+            self.contributor_contexts.append(Contributor(contributor))
 
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
                                             validity_period: Optional[ValidityPeriod],
@@ -126,6 +122,46 @@ class Context:
             contributor_context.data_source_contexts.append(
                 DataSourceContext(data_source_id=data_source_id,
                                   gridfs_id=new_gridfs_id, validity_period=validity_period))
+
+    def fill_context(self, contributor: ContributorModel) -> None:
+        self.add_contributor_context(contributor)
+        for data_source in contributor.data_sources:
+            if data_source.input.type != 'computed':
+                data_set = DataSourceFetched.get_last(data_source.id)
+                if not data_set:
+                    raise ParameterException(
+                        'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+                self.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
+                                                            data_set.gridfs_id)
+            else:
+                self.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
+
+        # links data added
+        for preprocess in contributor.preprocesses:
+            for link in preprocess.params.get('links', []):
+                contributor_id = link.get('contributor_id')
+                data_source_id = link.get('data_source_id')
+                if contributor_id and data_source_id and contributor_id != contributor.id:
+                    tmp_contributor = ContributorModel.get(contributor_id)
+                    if not tmp_contributor:
+                        continue
+                    data_set = DataSourceFetched.get_last(data_source_id)
+                    if not data_set:
+                        continue
+                    self.add_contributor_context(tmp_contributor)
+                    self.add_contributor_data_source_context(contributor_id, data_source_id, None,
+                                                             data_set.gridfs_id)
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class CoverageContext(Context, ValidityPeriodContainer):
+    def __init__(self, job: Job, coverage: Coverage=None, current_date: date=date.today()) -> None:
+        super().__init__(job=job, current_date=current_date)
+        self.validity_period = None
+        self.coverage = coverage
+        self.global_gridfs_id = ''
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
         self.contributor_contexts = []
@@ -145,7 +181,10 @@ class Context:
                     )
                 if data_source_contexts:
                     self.contributor_contexts.append(
-                        ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
-                                           validity_period=contributor_export.validity_period,
-                                           data_source_contexts=data_source_contexts))
+                        Contributor(contributor=ContributorModel.get(contributor_id=contributor_id),
+                                    validity_period=contributor_export.validity_period,
+                                    data_source_contexts=data_source_contexts))
         self.coverage = coverage
+
+    def __repr__(self) -> str:
+        return str(vars(self))

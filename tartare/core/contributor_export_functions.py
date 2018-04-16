@@ -35,28 +35,26 @@ from typing import Optional
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
-from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
-from tartare.core.context import Context
+from tartare.core.context import ContributorContext
 from tartare.core.fetcher import FetcherManager
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched, \
-    ValidityPeriod
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 
 logger = logging.getLogger(__name__)
 
 
-def merge(contributor: Contributor, context: Context) -> Context:
+def merge(contributor: Contributor, context: ContributorContext) -> ContributorContext:
     logger.info("Merge for contributor_id : %s", contributor.id)
     return context
 
 
-def postprocess(contributor: Contributor, context: Context) -> Context:
+def postprocess(contributor: Contributor, context: ContributorContext) -> ContributorContext:
     logger.info("Post process for contributor_id : %s", contributor.id)
     return context
 
 
-def save_export(contributor: Contributor, context: Context) -> Optional[ContributorExport]:
+def save_export(contributor: Contributor, context: ContributorContext) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -122,34 +120,3 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) 
 
         new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
         return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
-
-
-def build_context(contributor: Contributor, context: Context) -> Context:
-    context.add_contributor_context(contributor)
-    for data_source in contributor.data_sources:
-        if data_source.input.type != 'computed':
-            data_set = DataSourceFetched.get_last(data_source.id)
-            if not data_set:
-                raise ParameterException(
-                    'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
-            context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                        data_set.gridfs_id)
-        else:
-            context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
-    # links data added
-    if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
-        for preprocess in contributor.preprocesses:
-            for link in preprocess.params.get('links', []):
-                contributor_id = link.get('contributor_id')
-                data_source_id = link.get('data_source_id')
-                if contributor_id and data_source_id and contributor_id != contributor.id:
-                    tmp_contributor = Contributor.get(contributor_id)
-                    if not tmp_contributor:
-                        continue
-                    data_set = DataSourceFetched.get_last(data_source_id)
-                    if not data_set:
-                        continue
-                    context.add_contributor_context(tmp_contributor)
-                    context.add_contributor_data_source_context(contributor_id, data_source_id, None,
-                                                                data_set.gridfs_id)
-    return context

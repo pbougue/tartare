@@ -35,7 +35,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, List
 from zipfile import is_zipfile
 
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorContext, CoverageContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess, DataSource
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
@@ -43,8 +43,7 @@ from tartare.processes.fusio import Fusio
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        self.context = context
+    def __init__(self, preprocess: PreProcess) -> None:
         self.params = preprocess.params if preprocess else {}  # type: dict
         self.data_source_ids = preprocess.data_source_ids
         self.process_id = preprocess.id
@@ -64,8 +63,9 @@ class AbstractProcess(metaclass=ABCMeta):
 
 
 class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: CoverageContext, preprocess: PreProcess) -> None:
+        super().__init__(preprocess)
+        self.context = context
         if 'url' not in self.params:
             raise ParameterException('params.url not present in fusio preprocess')
         self.fusio = Fusio(self.params['url'])
@@ -76,8 +76,9 @@ class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: ContributorContext, preprocess: PreProcess) -> None:
+        super().__init__(preprocess)
+        self.context = context
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()

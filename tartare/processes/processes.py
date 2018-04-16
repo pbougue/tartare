@@ -30,7 +30,7 @@
 import logging
 from typing import List, Dict
 
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorContext
 from tartare.core.models import PreProcess
 from tartare.http_exceptions import InvalidArguments
 from tartare.processes import contributor
@@ -61,13 +61,11 @@ class PreProcessManager(object):
         :param preprocess: preprocess model object (api)
         :return: preprocess instance to run (worker)
         """
-        attr = cls.get_preprocess_class(preprocess.type, context.instance)
-        try:
-            return attr(context, preprocess)  # call to the contructor, with all the args
-        except TypeError as e:
-            msg = 'impossible to build preprocess {}, wrong arguments: {}'.format(preprocess.type, str(e))
-            logging.getLogger(__name__).error(msg)
-            raise InvalidArguments(msg)
+        instance = 'contributor' if isinstance(context, ContributorContext) else 'coverage'
+        attr = cls.get_preprocess_class(preprocess.type, instance)
+
+        return attr(context, preprocess)  # call to the constructor, with all the args
+
 
     @classmethod
     def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:

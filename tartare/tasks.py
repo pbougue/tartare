@@ -48,7 +48,7 @@ from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorContext, CoverageContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
     ContributorExport
@@ -140,7 +140,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 @celery.task(bind=True, default_retry_delay=180,
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
-def contributor_export(self: Task, context: Context, contributor: Contributor,
+def contributor_export(self: Task, context: ContributorContext, contributor: Contributor,
                        check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
         context.job = context.job.update(state="running", step="fetching data")
@@ -155,12 +155,11 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
             context.job = context.job.update(step="building preprocesses context")
-            context = contributor_export_functions.build_context(contributor, context)
+            context.fill_context(contributor)
             context.job = context.job.update(step="preprocess")
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
-
     except FetcherException as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
             error=str(exc),
@@ -171,7 +170,7 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
 
 
 @celery.task(base=CallbackTask)
-def contributor_export_finalization(context: Context) -> Optional[ContributorExport]:
+def contributor_export_finalization(context: ContributorContext) -> Optional[ContributorExport]:
     contributor = context.contributor_contexts[0].contributor
     logger.info('contributor_export_finalization of {cid} from job {action}'.format(cid=contributor.id,
                                                                                     action=context.job.action_type))
@@ -189,11 +188,10 @@ def contributor_export_finalization(context: Context) -> Optional[ContributorExp
 
 
 @celery.task(base=CallbackTask)
-def coverage_export(context: Context) -> Context:
+def coverage_export(context: CoverageContext) -> CoverageContext:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export of {cov} from job {action}'.format(cov=coverage.id, action=job.action_type))
-    context.instance = 'coverage'
     context.job.update(state="running", step="fetching context")
     context.fill_contributor_contexts(coverage)
 
@@ -202,7 +200,7 @@ def coverage_export(context: Context) -> Context:
 
 
 @celery.task(base=CallbackTask)
-def coverage_export_finalization(context: Context) -> Context:
+def coverage_export_finalization(context: CoverageContext) -> CoverageContext:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export_finalization of {cov} from job {action}'.format(cov=coverage, action=job.action_type))
@@ -247,7 +245,7 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
         }.get(preprocess.type, "tartare")
 
     if not sorted_preprocesses:
-        if context.instance == 'contributor':
+        if isinstance(context, ContributorContext):
             return contributor_export_finalization.s(context).delay()
         else:
             return coverage_export_finalization.s(context).delay()
@@ -258,7 +256,7 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
         for p in sorted_preprocesses[1:]:
             actions.append(run_preprocess.s(p).set(queue=get_queue(p)))
 
-        if context.instance == 'contributor':
+        if isinstance(context, ContributorContext):
             actions.append(contributor_export_finalization.s())
         else:
             actions.append(coverage_export_finalization.s())
@@ -284,7 +282,7 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
             # launch contributor export
             job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
             job.save()
-            action_export = contributor_export.si(Context('contributor', job), contributor)
+            action_export = contributor_export.si(ContributorContext(job), contributor)
             actions_header.append(action_export)
         chord(actions_header)(automatic_update_launch_coverage_exports.s())
     else:
@@ -326,7 +324,7 @@ def automatic_update_launch_coverage_exports(self: Task,
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
-                actions.append(coverage_export.si(Context('coverage', job, coverage=coverage)))
+                actions.append(coverage_export.si(CoverageContext(job, coverage=coverage)))
         if actions:
             group(actions).delay()
     else:
