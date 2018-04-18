@@ -129,7 +129,7 @@ class TestFullExport(AbstractRequestClient):
     def test_auto_update_one_contributor(self):
         self.init_contributor('contributor_light.json')
         self.init_coverage('coverage.json')
-        self.post('/actions/automatic_update?current_date=2017-08-15')
+        self.post('/actions/automatic_update')
         job = self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
         self.wait_for_job_to_be_done(job['id'], 'save_coverage_export')
         exports = self.get_dict_from_response(self.get('coverages/coverage_id/exports'))['exports']

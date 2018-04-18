@@ -274,7 +274,7 @@ def run_preprocess(context: Context, preprocess: PreProcess) -> Context:
 
 
 @celery.task()
-def automatic_update(current_date: datetime.date = datetime.date.today()) -> None:
+def automatic_update() -> None:
     logger.info('automatic_update')
     contributors = models.Contributor.all()
     if contributors:
@@ -342,3 +342,14 @@ def limit_chord_unlock_retry_delay(signal: Signal, sender: Worker, **kwargs: dic
     task.default_retry_delay = tartare.app.config.get('RETRY_DELAY_UNLOCK_CHORD')
     logger.debug('limit_chord_unlock_retry_delay made celery.chord_unlock.default_retry_delay = {}'.format(
         task.default_retry_delay))
+
+
+@celery.task()
+def purge_pending_jobs() -> None:
+    from tartare import mailer
+    logger.info('purge_pending_jobs')
+    statuses = ['pending', 'running']
+    nb_hours = 4
+    cancelled_jobs = models.Job.cancel_pending_updated_before(nb_hours, statuses)
+    if cancelled_jobs:
+        mailer.build_purge_report_and_send_mail(cancelled_jobs, nb_hours, statuses)

@@ -30,15 +30,14 @@
 import flask_restful
 from flask import Response
 
-from tartare.interfaces.common_argrs import CommonArgs
 from tartare.tasks import automatic_update
 import logging
 
 
-class AutomaticUpdateResource(flask_restful.Resource, CommonArgs):
+class AutomaticUpdateResource(flask_restful.Resource):
     def post(self) -> Response:
         try:
-            automatic_update.si(self.get_current_date()).delay()
+            automatic_update.si().delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))

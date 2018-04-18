@@ -181,9 +181,8 @@ class TartareFixture(object):
                              'url': url}}))
         return self.assert_sucessful_call(raw, 200)
 
-    def run_automatic_update(self, current_date=None):
-        date_option = '?current_date=' + current_date if current_date else ''
-        raw = self.post('/actions/automatic_update{}'.format(date_option))
+    def run_automatic_update(self):
+        raw = self.post('/actions/automatic_update')
         self.assert_sucessful_call(raw, 204)
         raw = self.get('/jobs')
         self.assert_sucessful_call(raw, 200)

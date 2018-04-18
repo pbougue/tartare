@@ -1,6 +1,8 @@
 # encoding: utf-8
 
 import os
+from datetime import timedelta
+
 from celery.schedules import crontab
 from kombu import Exchange, Queue
 
@@ -41,6 +43,11 @@ CELERYBEAT_SCHEDULE = {
     'automatic-update': {
         'task': 'tartare.tasks.automatic_update',
         'schedule': crontab(minute=0, hour=20, day_of_week='1-4'),
+        'options': {'expires': 25}
+    },
+    'jobs-purge': {
+        'task': 'tartare.tasks.purge_pending_jobs',
+        'schedule': crontab(minute=0, hour=19),
         'options': {'expires': 25}
     }
 }
