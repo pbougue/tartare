@@ -30,7 +30,7 @@
 import logging
 from typing import List, Dict
 
-from tartare.core.context import Context, ContributorContext
+from tartare.core.context import Context, ContributorExportContext
 from tartare.core.models import PreProcess
 from tartare.http_exceptions import InvalidArguments
 from tartare.processes import contributor
@@ -61,7 +61,7 @@ class PreProcessManager(object):
         :param preprocess: preprocess model object (api)
         :return: preprocess instance to run (worker)
         """
-        instance = 'contributor' if isinstance(context, ContributorContext) else 'coverage'
+        instance = 'contributor' if isinstance(context, ContributorExportContext) else 'coverage'
         attr = cls.get_preprocess_class(preprocess.type, instance)
 
         return attr(context, preprocess)  # call to the constructor, with all the args

@@ -31,7 +31,7 @@ from flask_restful import Resource
 from flask import Response
 
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
-from tartare.core.context import ContributorContext
+from tartare.core.context import ContributorExportContext
 from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
@@ -46,7 +46,7 @@ class ContributorExportResource(Resource):
         job = Job(contributor_id=contributor.id, action_type=ACTION_TYPE_CONTRIBUTOR_EXPORT)
         job.save()
         try:
-            contributor_export.si(ContributorContext(job), contributor, False).delay()
+            contributor_export.si(ContributorExportContext(job), contributor, False).delay()
         except Exception as e:
             # Exception when celery tasks aren't deferred, they are executed locally by blocking
             logging.getLogger(__name__).error('Error : {}'.format(str(e)))

@@ -33,7 +33,7 @@ import tempfile
 from functools import partial
 
 from tartare.core import zip
-from tartare.core.context import ContributorContext, Context
+from tartare.core.context import ContributorExportContext, Context
 from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
@@ -51,7 +51,7 @@ class Ruspell(AbstractContributorProcess):
     rules_filename = 'rules.csv'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
 
-    def __init__(self, context: ContributorContext, preprocess: PreProcess) -> None:
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')

@@ -31,7 +31,7 @@ from datetime import date
 from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ValidityPeriod, Contributor as ContributorModel, Coverage, DataSource, \
+from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
     ValidityPeriodContainer, Job, DataSourceFetched
 from tartare.exceptions import IntegrityException, ParameterException
 
@@ -47,8 +47,8 @@ class DataSourceContext:
         return str(vars(self))
 
 
-class Contributor(ValidityPeriodContainer):
-    def __init__(self, contributor: ContributorModel, data_source_contexts: Optional[List[DataSourceContext]]=None,
+class ContributorContext(ValidityPeriodContainer):
+    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]]=None,
                  validity_period: ValidityPeriod=None) -> None:
         super().__init__(validity_period)
         self.contributor = contributor
@@ -59,18 +59,17 @@ class Contributor(ValidityPeriodContainer):
 
 
 class Context:
-    def __init__(self, job: Job, current_date: date=date.today()) -> None:
-        self.contributor_contexts = []  # type: Optional[List[Contributor]]
-        self.current_date = current_date
+    def __init__(self, job: Job) -> None:
+        self.contributor_contexts = []  # type: Optional[List[ContributorContext]]
         self.job = job
 
     def __repr__(self) -> str:
         return str(vars(self))
 
 
-class ContributorContext(Context):
-    def __init__(self, job: Job, current_date: date=date.today()) -> None:
-        super().__init__(job, current_date)
+class ContributorExportContext(Context):
+    def __init__(self, job: Job) -> None:
+        super().__init__(job)
 
     def get_data_source_context_in_links(self, links: List[dict],
                                          data_format: Optional[str] = None) -> Optional[DataSourceContext]:
@@ -105,12 +104,12 @@ class ContributorContext(Context):
                      for data_source_context in data_source_contexts
                      if data_source_context.data_source_id == data_source_id), None)
 
-    def add_contributor_context(self, contributor: ContributorModel) -> None:
+    def add_contributor_context(self, contributor: Contributor) -> None:
         contributor_context = next((contributor_context
                                     for contributor_context in self.contributor_contexts
                                     if contributor_context.contributor.id == contributor.id), None)
         if not contributor_context:
-            self.contributor_contexts.append(Contributor(contributor))
+            self.contributor_contexts.append(ContributorContext(contributor))
 
     def add_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
                                             validity_period: Optional[ValidityPeriod],
@@ -123,7 +122,7 @@ class ContributorContext(Context):
                 DataSourceContext(data_source_id=data_source_id,
                                   gridfs_id=new_gridfs_id, validity_period=validity_period))
 
-    def fill_context(self, contributor: ContributorModel) -> None:
+    def fill_context(self, contributor: Contributor) -> None:
         self.add_contributor_context(contributor)
         for data_source in contributor.data_sources:
             if data_source.input.type != 'computed':
@@ -142,7 +141,7 @@ class ContributorContext(Context):
                 contributor_id = link.get('contributor_id')
                 data_source_id = link.get('data_source_id')
                 if contributor_id and data_source_id and contributor_id != contributor.id:
-                    tmp_contributor = ContributorModel.get(contributor_id)
+                    tmp_contributor = Contributor.get(contributor_id)
                     if not tmp_contributor:
                         continue
                     data_set = DataSourceFetched.get_last(data_source_id)
@@ -156,12 +155,13 @@ class ContributorContext(Context):
         return str(vars(self))
 
 
-class CoverageContext(Context, ValidityPeriodContainer):
+class CoverageExportContext(Context, ValidityPeriodContainer):
     def __init__(self, job: Job, coverage: Coverage=None, current_date: date=date.today()) -> None:
-        super().__init__(job=job, current_date=current_date)
+        super().__init__(job=job)
         self.validity_period = None
         self.coverage = coverage
         self.global_gridfs_id = ''
+        self.current_date = current_date
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
         self.contributor_contexts = []
@@ -181,7 +181,7 @@ class CoverageContext(Context, ValidityPeriodContainer):
                     )
                 if data_source_contexts:
                     self.contributor_contexts.append(
-                        Contributor(contributor=ContributorModel.get(contributor_id=contributor_id),
+                        ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
                                     validity_period=contributor_export.validity_period,
                                     data_source_contexts=data_source_contexts))
         self.coverage = coverage

@@ -29,7 +29,7 @@
 
 import requests
 
-from tartare.core.context import Context, CoverageContext
+from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess

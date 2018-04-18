@@ -38,7 +38,7 @@ from typing import List
 
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
-from tartare.core.context import Context, ContributorContext
+from tartare.core.context import Context, ContributorExportContext
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
@@ -48,7 +48,7 @@ from tartare.processes.utils import preprocess_registry
 
 @preprocess_registry()
 class ComputeExternalSettings(AbstractContributorProcess):
-    def __init__(self, context: ContributorContext, preprocess: PreProcess) -> None:
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \
             self.context.contributor_contexts and self.context.contributor_contexts[0].contributor else None

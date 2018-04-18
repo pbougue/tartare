@@ -35,7 +35,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, List
 from zipfile import is_zipfile
 
-from tartare.core.context import Context, ContributorContext, CoverageContext
+from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess, DataSource
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
@@ -63,7 +63,7 @@ class AbstractProcess(metaclass=ABCMeta):
 
 
 class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: CoverageContext, preprocess: PreProcess) -> None:
+    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
         super().__init__(preprocess)
         self.context = context
         if 'url' not in self.params:
@@ -76,7 +76,7 @@ class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: ContributorContext, preprocess: PreProcess) -> None:
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
         super().__init__(preprocess)
         self.context = context
         if self.context.contributor_contexts:

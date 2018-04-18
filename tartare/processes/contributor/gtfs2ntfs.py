@@ -33,7 +33,7 @@ import json
 
 from zipfile import ZipFile
 
-from tartare.core.context import Context, ContributorContext
+from tartare.core.context import Context, ContributorExportContext
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
@@ -48,7 +48,7 @@ class Gtfs2Ntfs(AbstractContributorProcess):
     config_filename = 'config.json'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output} -p {prefix}'
 
-    def __init__(self, context: ContributorContext, preprocess: PreProcess) -> None:
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
         # Default binary path in docker worker-gtfs2ntfs
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/gtfs2ntfs')

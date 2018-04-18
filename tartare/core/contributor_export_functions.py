@@ -35,7 +35,7 @@ from typing import Optional
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
-from tartare.core.context import ContributorContext
+from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod
 from tartare.core.validity_period_finder import ValidityPeriodFinder
@@ -44,17 +44,17 @@ from tartare.exceptions import ParameterException, FetcherException, GuessFileNa
 logger = logging.getLogger(__name__)
 
 
-def merge(contributor: Contributor, context: ContributorContext) -> ContributorContext:
+def merge(contributor: Contributor, context: ContributorExportContext) -> ContributorExportContext:
     logger.info("Merge for contributor_id : %s", contributor.id)
     return context
 
 
-def postprocess(contributor: Contributor, context: ContributorContext) -> ContributorContext:
+def postprocess(contributor: Contributor, context: ContributorExportContext) -> ContributorExportContext:
     logger.info("Post process for contributor_id : %s", contributor.id)
     return context
 
 
-def save_export(contributor: Contributor, context: ContributorContext) -> Optional[ContributorExport]:
+def save_export(contributor: Contributor, context: ContributorExportContext) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
