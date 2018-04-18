@@ -35,7 +35,7 @@ from typing import Dict, List
 
 from tartare.core import zip
 from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorExportContext
 from tartare.core.models import PreProcess
 from tartare.core.readers import CsvReader
 from tartare.exceptions import IntegrityException
@@ -48,7 +48,7 @@ class ComputeDirections(AbstractContributorProcess):
     direction_id_normal = '0'
     direction_id_return = '1'
 
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
         super().__init__(context, preprocess)
 
     def __get_config_gridfs_id_from_context(self) -> str:

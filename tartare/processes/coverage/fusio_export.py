@@ -31,7 +31,6 @@ import tempfile
 
 import requests
 
-from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler

@@ -31,7 +31,7 @@ import logging
 from typing import Optional
 
 from tartare.core.constants import DATA_FORMAT_GTFS
-from tartare.core.context import Context
+from tartare.core.context import CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource, \
     DataSource
@@ -41,7 +41,7 @@ from tartare.exceptions import IntegrityException
 logger = logging.getLogger(__name__)
 
 
-def merge(coverage: Coverage, context: Context) -> Context:
+def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportContext:
     logger.info("merge for coverage_id = %s", coverage.id)
     # following condition is matched when Fusio export preprocess is not attached to coverage
     # it simulates its behavior for now for tests purposes
@@ -60,13 +60,13 @@ def merge(coverage: Coverage, context: Context) -> Context:
     return context
 
 
-def postprocess(coverage: Coverage, context: Context) -> Context:
+def postprocess(coverage: Coverage, context: CoverageExportContext) -> CoverageExportContext:
     logger.info("postprocess for coverage_id = %s", coverage.id)
     # @TODO launch post process with tartare.tasks.launch function
     return context
 
 
-def save_export(coverage: Coverage, context: Context) -> Optional[CoverageExport]:
+def save_export(coverage: Coverage, context: CoverageExportContext) -> Optional[CoverageExport]:
     contributor_exports = []
     for contributor_context in context.contributor_contexts:
         data_sources = []
