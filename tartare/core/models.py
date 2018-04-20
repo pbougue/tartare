@@ -887,10 +887,11 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
-                 step: str = None, id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
-                 error_message: str = "") -> None:
+    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, parent_id: str = None,
+                 state: str = 'pending', step: str = None, id: str = None, started_at: datetime = None,
+                 updated_at: Optional[datetime] = None, error_message: str = "") -> None:
         self.id = id if id else str(uuid.uuid4())
+        self.parent_id = parent_id if id else None
         self.action_type = action_type
         self.contributor_id = contributor_id
         self.coverage_id = coverage_id
@@ -969,6 +970,7 @@ class Job(object):
 
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
+    parent_id = fields.String(required=False, allow_none=True)
     action_type = fields.String(required=True)
     contributor_id = fields.String(required=False, allow_none=True)
     coverage_id = fields.String(required=False, allow_none=True)

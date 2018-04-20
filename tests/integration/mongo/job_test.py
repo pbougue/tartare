@@ -38,19 +38,19 @@ from tests.integration.test_mechanism import TartareFixture
 class TestJobs(TartareFixture):
     def test_cancel_pending_updated_before(self):
         with app.app_context():
-            job1 = Job(ACTION_TYPE_CONTRIBUTOR_EXPORT, 'cid1', None, 'pending', 'my-step', 'job1-id',
+            job1 = Job(ACTION_TYPE_CONTRIBUTOR_EXPORT, 'cid1', None, None, 'pending', 'my-step', 'job1-id',
                        datetime.now() - timedelta(hours=10), datetime.now() - timedelta(hours=8))
 
-            job2 = Job(ACTION_TYPE_COVERAGE_EXPORT, None, 'covida', 'done', 'my-step', 'job2-id',
+            job2 = Job(ACTION_TYPE_COVERAGE_EXPORT, None, 'covida', None, 'done', 'my-step', 'job2-id',
                        datetime.now() - timedelta(hours=10), datetime.now() - timedelta(hours=8))
 
-            job3 = Job(ACTION_TYPE_AUTO_COVERAGE_EXPORT, 'covidb', None, 'running', 'my-step', 'job3-id',
+            job3 = Job(ACTION_TYPE_AUTO_COVERAGE_EXPORT, 'covidb', None, None, 'running', 'my-step', 'job3-id',
                        datetime.now() - timedelta(hours=15), datetime.now() - timedelta(hours=6))
 
-            job4 = Job(ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, 'cid2', None, 'failed', 'my-step', 'job4-id',
+            job4 = Job(ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, 'cid2', None, None, 'failed', 'my-step', 'job4-id',
                        datetime.now() - timedelta(hours=10), datetime.now() - timedelta(hours=8))
 
-            job5 = Job(ACTION_TYPE_CONTRIBUTOR_EXPORT, 'cid3', None, 'running', 'my-step', 'job5-id',
+            job5 = Job(ACTION_TYPE_CONTRIBUTOR_EXPORT, 'cid3', None, None, 'running', 'my-step', 'job5-id',
                        datetime.now() - timedelta(hours=2), datetime.now())
             jobs = [
                 job1, job2, job3, job4, job5
