@@ -36,9 +36,11 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
+from tartare.core.constants import INPUT_TYPE_COMPUTED
+from tartare.core.models import Contributor as ContributorModel, Input
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
-    CheckContributorIntegrity
+    CheckContributorIntegrity, RemoveComputedDataSources
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -74,12 +76,28 @@ class Contributor(flask_restful.Resource):
 
         try:
             contributor.save()
-        except DuplicateKeyError as e:
+            self.__create_computed_data_sources(contributor)
+        except (ValueError, DuplicateKeyError) as e:
             raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
             raise InternalServerError('impossible to add contributor {}'.format(contributor))
 
         return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
+
+    @staticmethod
+    def __create_computed_data_sources(contributor: ContributorModel) -> None:
+        """
+        Create computed data source
+        """
+        for preprocess in contributor.preprocesses:
+            if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
+                data_source_computed = models.DataSource(
+                    id=preprocess.params.get("target_data_source_id"),
+                    name=preprocess.params.get("target_data_source_id"),
+                    data_format=preprocess.params.get("export_type"),
+                    input=Input(INPUT_TYPE_COMPUTED),
+                )
+                data_source_computed.save(contributor.id)
 
     def get(self, contributor_id: Optional[str] = None) -> Response:
         if contributor_id:
@@ -135,6 +153,7 @@ class Contributor(flask_restful.Resource):
         return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200
 
     @JsonDataValidate()
+    @RemoveComputedDataSources()
     @ValidateContributorPrepocessesDataSourceIds()
     @CheckContributorIntegrity('PUT')
     def put(self, contributor_id: str) -> Response:
@@ -142,5 +161,5 @@ class Contributor(flask_restful.Resource):
         request.json['id'] = contributor_id
         post_return = self.post()
         contributor_schema = schema.ContributorSchema(strict=True)
-        return contributor_schema.dump(models.Contributor.get(contributor_id)).data, 200
+        return {'contributors': [contributor_schema.dump(models.Contributor.get(contributor_id)).data]}, 200
 

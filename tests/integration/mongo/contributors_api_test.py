@@ -33,7 +33,8 @@ import json
 import pytest
 
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
-    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -890,13 +891,13 @@ class TestContributors(TartareFixture):
 
     def test_put_contributor_simple(self, contributor):
         update = {"name": "name_updated", "data_prefix": "data_prefix_updated", "data_type": DATA_TYPE_GEOGRAPHIC}
-        expected = {'data_sources': [], 'data_prefix': 'data_prefix_updated', 'name': 'name_updated',
+        expected = {'contributors': [{'data_sources': [], 'data_prefix': 'data_prefix_updated', 'name': 'name_updated',
                                 'preprocesses': [],
-                                'data_type': DATA_TYPE_GEOGRAPHIC, 'id': 'id_test'}
+                                'data_type': DATA_TYPE_GEOGRAPHIC, 'id': 'id_test'}]}
         raw = self.put('/contributors/id_test', self.dict_to_json(update))
         assert self.assert_sucessful_call(raw) == expected
         contrib_dict = self.json_to_dict(self.get('/contributors/id_test'))
-        assert contrib_dict == {'contributors': [expected]}
+        assert contrib_dict == expected
 
     def test_put_contributor_data_sources(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
@@ -917,7 +918,7 @@ class TestContributors(TartareFixture):
                   ]
                   }
         raw = self.put('/contributors/cid', self.dict_to_json(update))
-        expected = {'name': 'cid_name', 'data_sources': [
+        expected = {'contributors': [{'name': 'cid_name', 'data_sources': [
             {'name': 'dsname_updated', 'data_format': 'bano_file',
              'license': {'name': 'Private (unspecified)', 'url': ''},
              'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
@@ -930,11 +931,10 @@ class TestContributors(TartareFixture):
                     'preprocesses': [],
                     'data_prefix': 'cid_prefix',
                     'id': 'cid',
-                    'data_type': 'geographic'}
+                    'data_type': 'geographic'}]}
         assert self.assert_sucessful_call(raw) == expected
         contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
-        assert contrib_dict == {'contributors': [expected]}
-
+        assert contrib_dict == expected
 
     def test_put_contributor_preprocesses(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
@@ -960,7 +960,7 @@ class TestContributors(TartareFixture):
                   ]
                   }
         raw = self.put('/contributors/cid', self.dict_to_json(update))
-        expected = {'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
+        expected = {'contributors': [{'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
                                 'preprocesses': [
                                     {'params': {}, 'sequence': 0, 'data_source_ids': ['dsid'], 'id': 'p1',
                                      'type': 'HeadsignShortName'},
@@ -974,7 +974,58 @@ class TestContributors(TartareFixture):
                  'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'fetch_started_at': None,
                  'status': 'never_fetched', 'updated_at': None}
             ],
-                                'id': 'cid'}
+                                'id': 'cid'}]}
         assert self.assert_sucessful_call(raw) == expected
         contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
-        assert contrib_dict == {'contributors': [expected]}
+        assert contrib_dict == expected
+
+    def test_post_and_put_contributor_preprocesses_with_target_data_source_id(self, init_http_download_server):
+        contrib_payload = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "OIF",
+            "preprocesses": [
+                {
+                    "sequence": 0,
+                    "data_source_ids": [],
+                    "type": "ComputeExternalSettings",
+                    "params": {
+                        "target_data_source_id": "target_1",
+                        "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+                    }
+                },
+                {
+                    "sequence": 0,
+                    "data_source_ids": [],
+                    "type": "ComputeExternalSettings",
+                    "params": {
+                        "target_data_source_id": "target_2",
+                        "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+                    }
+                }
+            ]
+        }
+
+        raw = self.post('/contributors', self.dict_to_json(contrib_payload))
+        result = self.json_to_dict(raw)
+        self.assert_sucessful_create(raw)
+
+        data_sources = result['contributors'][0]['data_sources']
+
+        assert data_sources[0]['id'] == 'target_1'
+        assert data_sources[0]['name'] == 'target_1'
+        assert data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert data_sources[1]['input']['type'] == INPUT_TYPE_COMPUTED
+
+        assert data_sources[1]['id'] == 'target_2'
+        assert data_sources[1]['name'] == 'target_2'
+        assert data_sources[1]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert data_sources[1]['input']['type'] == INPUT_TYPE_COMPUTED
+
+        # put a contributor with a computed data source
+        contributor = result['contributors'][0]
+        del contributor['preprocesses'][1]
+
+        raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
+        result = self.json_to_dict(raw)
+        assert(len(result['contributors'][0]['data_sources']) == 1)

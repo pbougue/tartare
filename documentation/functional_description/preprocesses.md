@@ -150,9 +150,11 @@ Through a contributor preprocess with two config files (tr_perimeter and lines_r
 1. Create a contributor.  
 2. Add to this contributor a GTFS Data Source. It will be used by the ComputeExternalSettings preprocess to generate the enhanced GTFS we want.    
 3. Add a Data source with ___tr_perimeter___ as __data_format__ and a json as input.   
-4. Add a Data source with ___lines_referential___ as __data_format__ and a json as input.  
-5. Add a Data source with ___pt_external_settings___ as __data_format__ and ___computed___ as type of input. This represent the data set that will be created by the preprocess.  
-6. Add the ComputeExternalSettings preprocess to the contributor with Data Source Step 2 as __data_source_ids__, Data Source Step 3 as __tr_perimeter__, Data source Step 4 as __lines_referential__ and data source step 5 as __target_data_source_id__.  
+4. Add a Data source with ___lines_referential___ as __data_format__ and a json as input.
+6. Add the ComputeExternalSettings preprocess to the contributor with:
+    - __target_data_source_id__: the data source id representing the result of the process and that will automatically be created
+    - __export_type__: ___pt_external_settings___
+    - Data Source Step 2 as __data_source_ids__, Data Source Step 3 as __tr_perimeter__, Data source Step 4 as __lines_referential__
 7. Create a coverage, and associate the contributor from step 1 to it.  
 8. Add the FusioSendPtExternalSettings preprocess to it.
 9. This coverage must have the required Fusio preprocesses to work : FusioDataUpdate, FusioImport, FusioPreProd and FusioExport (export_type : NTFS).
