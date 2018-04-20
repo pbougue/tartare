@@ -34,7 +34,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
-from tartare.core.models import Job, MongoValidityPeriodSchema, CoverageStatus
+from tartare.core.models import Job, MongoValidityPeriodSchema, DataSourceStatus
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema, MongoDataSourceFetchedSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
@@ -130,9 +130,9 @@ class DataSourceSchema(MongoDataSourceSchema):
 
     @post_dump()
     def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        coverage_status = CoverageStatus(data['id'])
-        coverage_status_dict = CoverageStatusSchema().dump(coverage_status).data
-        data.update(coverage_status_dict)
+        data_source_status = DataSourceStatus(data['id'])
+        data_source_status_dict = DataSourceStatusSchema().dump(data_source_status).data
+        data.update(data_source_status_dict)
 
         return data
 
@@ -163,7 +163,7 @@ class DataSourceFetchedSchema(MongoDataSourceFetchedSchema, NoUnknownFieldMixin)
     id = fields.String()
 
 
-class CoverageStatusSchema(Schema):
+class DataSourceStatusSchema(Schema):
     status = fields.String(allow_none=False)
     fetch_started_at = fields.Date(allow_none=True)
     updated_at = fields.Date(allow_none=True)

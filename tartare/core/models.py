@@ -1102,7 +1102,7 @@ class MongoCoverageExportSchema(Schema):
         return CoverageExport(**data)
 
 
-class CoverageStatus(object):
+class DataSourceStatus(object):
     """
    Calculate following attributes:
        - status: status of the last try on fetching data
