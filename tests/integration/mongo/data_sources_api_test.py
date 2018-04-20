@@ -32,6 +32,7 @@ import pytest
 from mock import mock
 
 import tartare
+from tartare import app, mongo
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, INPUT_TYPE_DEFAULT, \
     DATA_SOURCE_STATUS_NEVER_FETCHED, DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, \
@@ -39,7 +40,6 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE
 from tartare.exceptions import FetcherException
 from tests.integration.test_mechanism import TartareFixture
-from tartare import app, mongo
 
 
 class TestDataSources(TartareFixture):
@@ -508,7 +508,6 @@ class TestDataSources(TartareFixture):
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is None
         assert ds['validity_period'] is None
-
 
     def test_data_source_calculated_fields_values_after_export_ok_then_unchanged(self, contributor,
                                                                                  init_http_download_server):

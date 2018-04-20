@@ -34,6 +34,7 @@ import tempfile
 from tartare import app, mongo
 from tartare.core import models
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals
 
@@ -82,6 +83,18 @@ class TestDataSourceFetchAction(TartareFixture):
                 with open(gridout_path, 'wb+') as f:
                     f.write(gridout.read())
                     assert_files_equals(gridout_path, expected_path)
+            jobs = Job.get_some(contributor_id=contributor['id'])
+            assert len(jobs) == 1
+            job = jobs[0]
+            assert job.action_type == 'data_source_fetch'
+            assert job.parent_id is None
+            assert job.contributor_id == contributor['id']
+            assert job.data_source_id == data_source_id
+            assert job.step == 'save'
+            assert job.state == 'done'
+            assert job.started_at is not None
+            assert job.updated_at is not None
+            assert job.updated_at != job.started_at
 
     def test_fetch_invalid_type(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
@@ -120,6 +133,20 @@ class TestDataSourceFetchAction(TartareFixture):
 
         assert response.status_code == 500, print(self.json_to_dict(response))
         assert json_response['error'].startswith('fetching {} failed:'.format(url))
+        with app.app_context():
+            jobs = Job.get_some(contributor_id=contributor['id'])
+            assert len(jobs) == 1
+            job = jobs[0]
+            assert job.action_type == 'data_source_fetch'
+            assert job.parent_id is None
+            assert job.contributor_id == contributor['id']
+            assert job.data_source_id == data_source_id
+            assert job.step == 'fetch'
+            assert job.state == 'failed'
+            assert job.error_message == 'error during download of file: HTTP Error 404: Not Found'
+            assert job.started_at is not None
+            assert job.updated_at is not None
+            assert job.updated_at != job.started_at
 
     def test_fetch_authent_in_http_url_ok(self, init_http_download_authent_server):
         props = init_http_download_authent_server.properties
