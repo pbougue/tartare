@@ -94,7 +94,7 @@ class TestAutomaticUpdate(TartareFixture):
         self.__create_contributor(init_http_download_server.ip_addr)
         jobs = self.run_automatic_update()
         assert len(jobs) == 2
-        job = next((job for job in jobs if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT))
+        job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(job)
 
     def __create_coverage(self, contributor_ids, coverage_id='auto_update_coverage'):
@@ -186,7 +186,7 @@ class TestAutomaticUpdate(TartareFixture):
         self.init_contributor('contrib_id', 'ds_id', url)
         jobs_first_run = self.run_automatic_update()
         assert len(jobs_first_run) == 2
-        first_job = next((job for job in jobs_first_run if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT), None)
+        first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
 
         self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
@@ -201,7 +201,7 @@ class TestAutomaticUpdate(TartareFixture):
         self.init_contributor('contrib_id', 'ds_id', url, data_format=DATA_FORMAT_OSM_FILE, data_type=DATA_TYPE_GEOGRAPHIC)
         jobs = self.run_automatic_update()
         assert len(jobs) == 2
-        job = next((job for job in jobs if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT), None)
+        job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         assert job['state'] == 'done'
         assert job['step'] == 'fetching data'
         assert job['error_message'] == ''

@@ -193,8 +193,8 @@ class TestContributorExport(TartareFixture):
         self.init_contributor(contrib_id, ds_id, self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
         self.contributor_export(contrib_id)
         jobs = self.json_to_dict(self.get('/jobs'))['jobs']
-        job_export = next((job for job in jobs if job['action_type'] == ACTION_TYPE_CONTRIBUTOR_EXPORT), None)
-        job_fetch = next((job for job in jobs if job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH), None)
+        job_export = self.filter_job_of_action_type(jobs, ACTION_TYPE_CONTRIBUTOR_EXPORT)
+        job_fetch = self.filter_job_of_action_type(jobs, ACTION_TYPE_DATA_SOURCE_FETCH)
         assert job_fetch['parent_id'] == job_export['id']
         assert job_fetch['id'] != job_export['id']
         assert job_fetch['contributor_id'] == contrib_id

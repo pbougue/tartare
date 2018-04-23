@@ -234,3 +234,6 @@ class TartareFixture(object):
             self.assert_sucessful_call(response, 204)
         else:
             return response
+
+    def filter_job_of_action_type(self, jobs, action_type):
+        return next((job for job in jobs if job['action_type'] == action_type), None)
