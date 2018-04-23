@@ -130,7 +130,7 @@ class Contributor(flask_restful.Resource):
         upgrade_dict(contributor.preprocesses, request_data, "preprocesses")
 
         try:
-            contributor = models.Contributor.update(contributor_id, request_data)
+            contributor = models.Contributor.update_with_dict(contributor_id, request_data)
         except PyMongoError:
             raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
 

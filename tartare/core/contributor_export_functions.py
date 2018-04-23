@@ -34,10 +34,12 @@ from typing import Optional
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
-    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH
+    DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, Job
+from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, Job, \
+    DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 
@@ -84,22 +86,19 @@ def fetch_datasets_and_return_updated_number(contributor: Contributor, parent_jo
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
         if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
-            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source, parent_job_id) else 0
-
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source, parent_job_id) else 0
     return nb_updated_datasets
 
 
-def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource,
+def fetch_and_save_dataset(contributor: Contributor, data_source: models.DataSource,
                            parent_job_id: Optional[str] = None) -> bool:
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
-        data_source_fetch_job = Job(ACTION_TYPE_DATA_SOURCE_FETCH, contributor_id, parent_id=parent_job_id,
+        data_source_fetch_job = Job(ACTION_TYPE_DATA_SOURCE_FETCH, contributor.id, parent_id=parent_job_id,
                                     state='running', step='prepare', data_source_id=data_source.id)
         data_source_fetch_job.save()
-        last_data_source_fetched = models.DataSourceFetched.get_last(data_source_id=data_source.id)
-        new_data_source_fetched = models.DataSourceFetched(data_source_id=data_source.id, contributor_id=contributor_id)
-        new_data_source_fetched.save()
+        last_data_set = data_source.get_last_data_set()
         try:
             data_source_fetch_job.update(step='fetch')
             fetcher = FetcherManager.select_from_url(url)
@@ -109,22 +108,26 @@ def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource,
                 raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
         except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
             data_source_fetch_job.update(state='failed', error_message=str(e))
-            new_data_source_fetched.set_status(DATA_SOURCE_STATUS_FAILED).update()
             raise e
 
         if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
-            if last_data_source_fetched and last_data_source_fetched.is_identical_to(dest_full_file_name):
+            if last_data_set and last_data_set.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
-                             .format(expected_file_name, contributor_id))
-                new_data_source_fetched.set_status(DATA_SOURCE_STATUS_UNCHANGED).update()
+                             .format(expected_file_name, contributor.id))
+                data_source_fetch_job.update(step='compare', state='unchanged')
                 return False
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
-            contributor_id, data_source.id
+            contributor.id, data_source.id
         ))
         data_source_fetch_job.update(step='compute_validity')
         validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
-        new_data_source_fetched.validity_period = validity_period
-        data_source_fetch_job.update(step='save')
-        new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
-        data_source_fetch_job.update(state='done')
-        return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
+        with open(dest_full_file_name, 'rb') as file:
+            data_source_fetch_job.update(step='save')
+            data_set_id = DataSet.get_next_id()
+            gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name,
+                                                            data_set_id=data_set_id)
+            data_set = DataSet(data_set_id, gridfs_id, validity_period)
+            data_source.data_sets.append(data_set)
+            contributor.update()
+            data_source_fetch_job.update(state='done')
+            return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT

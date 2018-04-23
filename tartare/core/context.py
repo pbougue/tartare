@@ -126,7 +126,7 @@ class ContributorExportContext(Context):
         self.add_contributor_context(contributor)
         for data_source in contributor.data_sources:
             if data_source.input.type != 'computed':
-                data_set = DataSourceFetched.get_last(data_source.id)
+                data_set = data_source.get_last_data_set()
                 if not data_set:
                     raise ParameterException(
                         'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
@@ -144,7 +144,7 @@ class ContributorExportContext(Context):
                     tmp_contributor = Contributor.get(contributor_id)
                     if not tmp_contributor:
                         continue
-                    data_set = DataSourceFetched.get_last(data_source_id)
+                    data_set = DataSource.get_one(contributor_id, data_source_id).get_last_data_set()
                     if not data_set:
                         continue
                     self.add_contributor_context(tmp_contributor)

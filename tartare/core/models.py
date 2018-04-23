@@ -215,19 +215,46 @@ class Input(object):
         return str(vars(self))
 
 
+class DataSetStatus(object):
+    def __init__(self, status: str, updated_at: datetime = datetime.now()):
+        self.status = status
+        self.updated_at = updated_at
+
+
+class DataSet(object):
+    def __init__(self, id: str = None, gridfs_id: str = None, validity_period: Optional[ValidityPeriod] = None,
+                 created_at: datetime = datetime.utcnow(), status_history: List[DataSetStatus] = None) -> None:
+        self.id = id if id else self.get_next_id()
+        self.gridfs_id = gridfs_id
+        self.created_at = created_at
+        self.validity_period = validity_period
+        self.status_history = status_history if status_history else []
+
+    def is_identical_to(self, file_path: str) -> bool:
+        return self.get_md5() == get_md5_content_file(file_path)
+
+    @classmethod
+    def get_next_id(cls):
+        return str(uuid.uuid4())
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
 class DataSource(object):
     def __init__(self, id: Optional[str] = None,
                  name: Optional[str] = None,
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
                  input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
                  license: Optional[License] = None,
-                 service_id: str = None) -> None:
+                 service_id: str = None, data_sets: List[DataSet] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = input
         self.license = license if license else License()
         self.service_id = service_id
+        self.data_sets = data_sets if data_sets else []
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -308,6 +335,9 @@ class DataSource(object):
 
     def has_type(self, type: str) -> bool:
         return self.input.type == type
+
+    def get_last_data_set(self) -> Optional[DataSet]:
+        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)
 
 
 class GenericPreProcess(SequenceContainer):
@@ -453,7 +483,7 @@ class Contributor(PreProcessContainer):
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
-        self.data_sources = [] if data_sources is None else data_sources
+        self.data_sources = data_sources if data_sources else []
         self.data_type = data_type
 
     def __repr__(self) -> str:
@@ -485,13 +515,16 @@ class Contributor(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
-        tmp_dataset = dataset if dataset else {}
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
+    def update_with_dict(cls, contributor_id: str = None, contributor_dict: dict = None) -> Optional['Contributor']:
+        contributor_dict = contributor_dict if contributor_dict else {}
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': contributor_dict})
         if raw.matched_count == 0:
             return None
 
         return cls.get(contributor_id)
+
+    def update(self) -> None:
+        mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoContributorSchema().dump(self).data})
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
@@ -521,7 +554,7 @@ class Coverage(PreProcessContainer):
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
                  contributors: List[str] = None, license: License = None,
-                 preprocesses: List[PreProcess] = None) -> None:
+                 preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None) -> None:
         super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
@@ -529,6 +562,7 @@ class Coverage(PreProcessContainer):
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
+        self.data_sources = data_sources if data_sources else None
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()
@@ -625,6 +659,24 @@ class MongoValidityPeriodSchema(Schema):
     @post_load
     def make_validityperiod(self, data: dict) -> ValidityPeriod:
         return ValidityPeriod(**data)
+
+
+class MongoDataSetStatusSchema(Schema):
+    status = fields.String(required=True)
+    updated_at = fields.Date(required=True)
+
+
+class MongoDataSetSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    gridfs_id = fields.String(required=True)
+    created_at = fields.Date(required=True)
+    updated_at = fields.Date(allow_none=True)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=True)
+    status_history = fields.Nested(MongoDataSetStatusSchema, many=True)
+
+    @post_load
+    def make_data_set(self, data: dict) -> DataSet:
+        return DataSet(**data)
 
 
 class MongoContributorExportDataSourceSchema(Schema):
@@ -846,6 +898,7 @@ class MongoDataSourceSchema(Schema):
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
     service_id = fields.String(required=False, allow_none=True)
+    data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
@@ -876,6 +929,7 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     contributors = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
+    data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:
