@@ -887,12 +887,14 @@ class MongoContributorSchema(MongoPreProcessContainerSchema):
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, state: str = 'pending',
-                 step: str = None, id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
-                 error_message: str = "") -> None:
+    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, parent_id: str = None,
+                 state: str = 'pending', step: str = None, id: str = None, started_at: datetime = None,
+                 updated_at: Optional[datetime] = None, error_message: str = "", data_source_id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
+        self.parent_id = parent_id
         self.action_type = action_type
         self.contributor_id = contributor_id
+        self.data_source_id = data_source_id
         self.coverage_id = coverage_id
         self.step = step
         # 'pending', 'running', 'done', 'failed'
@@ -911,8 +913,9 @@ class Job(object):
         return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
-    def cancel_pending_updated_before(cls, nb_hours: int, statuses: List[str], current_date: datetime = datetime.today()) -> List['Job']:
-        filter_statuses = [{'state': status}for status in statuses]
+    def cancel_pending_updated_before(cls, nb_hours: int, statuses: List[str],
+                                      current_date: datetime = datetime.today()) -> List['Job']:
+        filter_statuses = [{'state': status} for status in statuses]
         filter = {
             '$or': filter_statuses,
             'updated_at': {'$lt': (current_date - timedelta(hours=nb_hours)).isoformat()}
@@ -969,8 +972,10 @@ class Job(object):
 
 class MongoJobSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
+    parent_id = fields.String(required=False, allow_none=True)
     action_type = fields.String(required=True)
     contributor_id = fields.String(required=False, allow_none=True)
+    data_source_id = fields.String(required=False, allow_none=True)
     coverage_id = fields.String(required=False, allow_none=True)
     state = fields.String(required=True)
     step = fields.String(required=False, allow_none=True)

@@ -28,11 +28,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from time import sleep
 
 import pytest
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE, ACTION_TYPE_CONTRIBUTOR_EXPORT
+from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE, ACTION_TYPE_CONTRIBUTOR_EXPORT, \
+    ACTION_TYPE_DATA_SOURCE_FETCH
 from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 
@@ -184,3 +186,21 @@ class TestContributorExport(TartareFixture):
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
             assert grid_fs_list.count() == 2
+
+    def test_contributor_export_generates_jobs(self, init_http_download_server):
+        contrib_id = 'cid'
+        ds_id = 'dsid'
+        self.init_contributor(contrib_id, ds_id, self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.contributor_export(contrib_id)
+        jobs = self.json_to_dict(self.get('/jobs'))['jobs']
+        job_export = self.filter_job_of_action_type(jobs, ACTION_TYPE_CONTRIBUTOR_EXPORT)
+        job_fetch = self.filter_job_of_action_type(jobs, ACTION_TYPE_DATA_SOURCE_FETCH)
+        assert job_fetch['parent_id'] == job_export['id']
+        assert job_fetch['id'] != job_export['id']
+        assert job_fetch['contributor_id'] == contrib_id
+        assert job_fetch['data_source_id'] == ds_id
+        assert job_fetch['updated_at'] is not None
+        assert job_fetch['started_at'] is not None
+        assert job_fetch['step'] == 'save'
+        assert job_fetch['state'] == 'done'
+        assert job_fetch['coverage_id'] is None

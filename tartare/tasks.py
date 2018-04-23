@@ -148,7 +148,7 @@ def contributor_export(self: Task, context: ContributorExportContext, contributo
             'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
-            contributor)
+            contributor, context.job.id)
         logger.info('number of data_sources updated for contributor {cid}: {number}'.
                     format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification

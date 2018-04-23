@@ -29,17 +29,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from urllib.error import ContentTooShortError
-
 import mock
 import pytest
 
 from tartare import app
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.context import ContributorExportContext
-from tartare.core.contributor_export_functions import fetch_datasets_and_return_updated_number
 from tartare.core.models import DataSource, Contributor, Input, Job
-from tartare.exceptions import ParameterException, FetcherException
+from tartare.exceptions import ParameterException
 from tests.utils import mock_urlretrieve
 
 
@@ -53,14 +50,3 @@ class TestFetcher:
             with pytest.raises(ParameterException) as excinfo:
                 context.fill_context(contrib)
             assert str(excinfo.value) == 'data source 666 has no data set'
-
-    @mock.patch('urllib.request.urlretrieve', side_effect=ContentTooShortError("http://bob.com/config.json", "bib"))
-    def test_fetcher_raises_url_not_found(self, urlretrieve_func):
-        data_source = DataSource(666, 'Bib', 'gtfs', Input('url', "http://bob.com/config.json"))
-        contrib = Contributor('contribId', 'contribName', 'bob', [data_source])
-        with app.app_context():
-            contrib.save()
-            with pytest.raises(FetcherException) as excinfo:
-                fetch_datasets_and_return_updated_number(contrib)
-            assert str(
-                excinfo.value) == "downloaded file size was shorter than exepected for url http://bob.com/config.json"

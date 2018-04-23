@@ -32,7 +32,7 @@ import json
 
 from tartare import app, mongo
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
-    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC
+    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -93,8 +93,8 @@ class TestAutomaticUpdate(TartareFixture):
     def test_automatic_update_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
         jobs = self.run_automatic_update()
-        assert len(jobs) == 1
-        job = jobs[0]
+        assert len(jobs) == 2
+        job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(job)
 
     def __create_coverage(self, contributor_ids, coverage_id='auto_update_coverage'):
@@ -110,24 +110,22 @@ class TestAutomaticUpdate(TartareFixture):
         self.__create_contributor(init_http_download_server.ip_addr)
         self.__create_coverage(['auto_update_contrib'])
         jobs = self.run_automatic_update()
-        assert len(jobs) == 2
+        assert len(jobs) == 3
         for job in jobs:
             if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 self.__assert_job_is_automatic_update_contributor_export(job)
             elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
                 self.__assert_job_is_automatic_update_coverage_export(job)
             else:
-                assert False, print('action type should be either {} or {}, found {}'.format(
-                    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, job['action_type']
-                ))
+                assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
         self.__create_coverage(['auto_update_contrib'])
         jobs_first_run = self.run_automatic_update()
         jobs_second_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 2
-        assert len(jobs_second_run) == 3
+        assert len(jobs_first_run) == 3
+        assert len(jobs_second_run) == 5
         for job in jobs_second_run:
             if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 if job['step'] == 'save_contributor_export':
@@ -137,9 +135,7 @@ class TestAutomaticUpdate(TartareFixture):
             elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
                 self.__assert_job_is_automatic_update_coverage_export(job)
             else:
-                assert False, print('action type should be either {} or {}, found {}'.format(
-                    ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, job['action_type']
-                ))
+                assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
 
     #
     # associations contributors ---> coverages:
@@ -158,7 +154,7 @@ class TestAutomaticUpdate(TartareFixture):
         for cov, contribs in coverages.items():
             self.__create_coverage(contribs, cov)
         jobs_first_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 6
+        assert len(jobs_first_run) == 10
         contributor_export_jobs = list(
             filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT and job['step'] == 'save_contributor_export', jobs_first_run))
         coverage_export_jobs = list(
@@ -189,23 +185,23 @@ class TestAutomaticUpdate(TartareFixture):
         url = self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')
         self.init_contributor('contrib_id', 'ds_id', url)
         jobs_first_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 1
-        first_job = jobs_first_run[0]
+        assert len(jobs_first_run) == 2
+        first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
 
         self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
         jobs_first_and_second_run = self.run_automatic_update()
-        assert len(jobs_first_and_second_run) == 2
+        assert len(jobs_first_and_second_run) == 4
         for job in jobs_first_and_second_run:
-            if job['id'] != first_job['id']:
+            if job['id'] != first_job['id'] and job['action_type'] != ACTION_TYPE_DATA_SOURCE_FETCH:
                 self.__assert_job_is_automatic_update_contributor_export(job, 'contrib_id')
 
     def test_data_format_generate_no_export(self, init_http_download_server):
         url = self.format_url(init_http_download_server.ip_addr, 'empty_pbf.funky_extension', path='geo_data')
         self.init_contributor('contrib_id', 'ds_id', url, data_format=DATA_FORMAT_OSM_FILE, data_type=DATA_TYPE_GEOGRAPHIC)
         jobs = self.run_automatic_update()
-        assert len(jobs) == 1
-        job = jobs[0]
+        assert len(jobs) == 2
+        job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         assert job['state'] == 'done'
         assert job['step'] == 'fetching data'
         assert job['error_message'] == ''
