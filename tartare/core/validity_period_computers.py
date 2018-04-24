@@ -170,12 +170,17 @@ class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
         self.remove_dates(dates)
 
     def _parse_feed_info(self, files_zip: str) -> None:
-        self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
-                                                usecols=['feed_start_date', 'feed_end_date'],
-                                                parse_dates=['feed_start_date', 'feed_end_date'],
-                                                date_parser=self.date_parser)
+        try:
+            self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
+                                                    usecols=['feed_start_date', 'feed_end_date'],
+                                                    parse_dates=['feed_start_date', 'feed_end_date'],
+                                                    date_parser=self.date_parser)
+        except InvalidFile as exc:
+            logging.getLogger(__name__).warning(str(exc))
+            return
+
         if self.reader.count_rows() > 1:
-            msg = 'impossible to find validity period, invalid file {}'.format(self.feed_info_filename)
+            msg = 'impossible to find validity period, file {} has more than 1 row'.format(self.feed_info_filename)
             logging.getLogger(__name__).error(msg)
             raise InvalidFile(msg)
 
