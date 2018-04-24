@@ -44,8 +44,9 @@ from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC, INPUT_TYPE_COMPUTED, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED
+    DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
+    DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
@@ -105,6 +106,11 @@ class PlatformType(ChoiceField):
 class PlatformProtocol(ChoiceField):
     def __init__(self, **metadata: Any) -> None:
         super().__init__(PLATFORM_PROTOCOL_VALUES, **metadata)
+
+
+class JobStatus(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(JOB_STATUSES, **metadata)
 
 
 SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
@@ -217,7 +223,7 @@ class Input(object):
 
 
 class DataSetStatus(object):
-    def __init__(self, status: str, updated_at: datetime = datetime.now()):
+    def __init__(self, status: str, updated_at: datetime = datetime.now()) -> None:
         self.status = status
         self.updated_at = updated_at
 
@@ -241,7 +247,7 @@ class DataSet(object):
         return self.get_md5() == get_md5_content_file(file_path)
 
     @classmethod
-    def get_next_id(cls):
+    def get_next_id(cls) -> str:
         return str(uuid.uuid4())
 
     def __repr__(self) -> str:
@@ -851,7 +857,7 @@ class Job(object):
     mongo_collection = 'jobs'
 
     def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, parent_id: str = None,
-                 state: str = 'pending', step: str = None, id: str = None, started_at: datetime = None,
+                 state: str = JOB_STATUS_PENDING, step: str = None, id: str = None, started_at: datetime = None,
                  updated_at: Optional[datetime] = None, error_message: str = "", data_source_id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.parent_id = parent_id
@@ -860,7 +866,6 @@ class Job(object):
         self.data_source_id = data_source_id
         self.coverage_id = coverage_id
         self.step = step
-        # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = error_message
         self.started_at = started_at if started_at else datetime.utcnow()
@@ -887,7 +892,7 @@ class Job(object):
         pending_jobs = MongoJobSchema(many=True).load(raw).data
         pending_jobs_before_update = copy.deepcopy(pending_jobs)
         for pending_job in pending_jobs:
-            pending_job.update('failed', error_message='automatically cancelled')
+            pending_job.update(JOB_STATUS_FAILED, error_message='automatically cancelled')
         return pending_jobs_before_update
 
     @classmethod
@@ -927,7 +932,7 @@ class Job(object):
         return self
 
     def has_failed(self) -> bool:
-        return self.state == "failed"
+        return self.state == JOB_STATUS_FAILED
 
     @classmethod
     def get_last_data_fetch_job(cls, data_source_id: str) -> Optional['Job']:
@@ -951,7 +956,7 @@ class MongoJobSchema(Schema):
     contributor_id = fields.String(required=False, allow_none=True)
     data_source_id = fields.String(required=False, allow_none=True)
     coverage_id = fields.String(required=False, allow_none=True)
-    state = fields.String(required=True)
+    state = JobStatus(required=True)
     step = fields.String(required=False, allow_none=True)
     started_at = fields.DateTime(required=False)
     updated_at = fields.DateTime(required=False)
@@ -1103,10 +1108,10 @@ class DataSourceStatus(object):
         if not job:
             status = DATA_SOURCE_STATUS_NEVER_FETCHED
         else:
-            if job.state == 'done':
+            if job.state == JOB_STATUS_DONE:
                 status = DATA_SOURCE_STATUS_UNCHANGED if job.step == 'compare' else DATA_SOURCE_STATUS_UPDATED
-            elif job.state == 'running':
+            elif job.state == JOB_STATUS_RUNNING:
                 status = 'fetching'
             else:
-                status = 'failed'
+                status = JOB_STATUS_FAILED
         return status

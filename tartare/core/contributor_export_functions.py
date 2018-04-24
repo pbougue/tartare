@@ -34,7 +34,7 @@ from typing import Optional
 
 from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
-    DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH
+    DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_DONE, JOB_STATUS_FAILED, JOB_STATUS_RUNNING
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
@@ -97,7 +97,7 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
         data_source_fetch_job = Job(ACTION_TYPE_DATA_SOURCE_FETCH, contributor.id, parent_id=parent_job_id,
-                                    state='running', step='prepare', data_source_id=data_source.id)
+                                    state=JOB_STATUS_RUNNING, step='prepare', data_source_id=data_source.id)
         data_source_fetch_job.save()
         last_data_set = data_source.get_last_data_set()
         try:
@@ -108,14 +108,14 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
             if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
                 raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
         except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
-            data_source_fetch_job.update(state='failed', error_message=str(e))
+            data_source_fetch_job.update(state=JOB_STATUS_FAILED, error_message=str(e))
             raise e
 
         if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
             if last_data_set and last_data_set.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
                              .format(expected_file_name, contributor.id))
-                data_source_fetch_job.update(step='compare', state='done')
+                data_source_fetch_job.update(step='compare', state=JOB_STATUS_DONE)
                 return False
         logger.debug('Add DataSet object for contributor: {}, data_source: {}'.format(
             contributor.id, data_source.id
@@ -130,5 +130,5 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
             data_set = DataSet(data_set_id, gridfs_id, validity_period)
             data_source.data_sets.append(data_set)
             contributor.update()
-            data_source_fetch_job.update(state='done')
+            data_source_fetch_job.update(state=JOB_STATUS_DONE)
             return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT

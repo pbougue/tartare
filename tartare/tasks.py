@@ -47,7 +47,8 @@ from tartare.core import calendar_handler, models
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
-from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
+from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
+    JOB_STATUS_FAILED, JOB_STATUS_RUNNING, JOB_STATUS_DONE
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
@@ -85,7 +86,7 @@ class CallbackTask(tartare.ContextTask):
     def update_job(self, job: Job, exc: Exception) -> None:
         if job:
             with tartare.app.app_context():
-                job.update(state="failed", error_message=str(exc))
+                job.update(state=JOB_STATUS_FAILED, error_message=str(exc))
 
 
 def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
@@ -110,7 +111,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
 
 
 def finish_job(context: Context) -> None:
-    context.job = context.job.update(state="done")
+    context.job = context.job.update(state=JOB_STATUS_DONE)
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -143,7 +144,7 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 def contributor_export(self: Task, context: ContributorExportContext, contributor: Contributor,
                        check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
-        context.job = context.job.update(state="running", step="fetching data")
+        context.job = context.job.update(state=JOB_STATUS_RUNNING, step="fetching data")
         logger.info(
             'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
@@ -174,7 +175,7 @@ def contributor_export_finalization(context: ContributorExportContext) -> Option
     contributor = context.contributor_contexts[0].contributor
     logger.info('contributor_export_finalization of {cid} from job {action}'.format(cid=contributor.id,
                                                                                     action=context.job.action_type))
-    context.job.update(state="running", step="merge")
+    context.job.update(state=JOB_STATUS_RUNNING, step="merge")
     context = contributor_export_functions.merge(contributor, context)
 
     context.job.update(step="postprocess")
@@ -192,7 +193,7 @@ def coverage_export(context: CoverageExportContext) -> CoverageExportContext:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export of {cov} from job {action}'.format(cov=coverage.id, action=job.action_type))
-    context.job.update(state="running", step="fetching context")
+    context.job.update(state=JOB_STATUS_RUNNING, step="fetching context")
     context.fill_contributor_contexts(coverage)
 
     context.job.update(step="preprocess")

@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 
 from tartare import app
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT, ACTION_TYPE_COVERAGE_EXPORT, \
-    ACTION_TYPE_AUTO_COVERAGE_EXPORT, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
+    ACTION_TYPE_AUTO_COVERAGE_EXPORT, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, JOB_STATUS_RUNNING, JOB_STATUS_PENDING
 from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
 
@@ -59,6 +59,6 @@ class TestJobs(TartareFixture):
             for job in jobs:
                 job.save()
 
-            cancelled_jobs = Job.cancel_pending_updated_before(4, ['running', 'pending'])
+            cancelled_jobs = Job.cancel_pending_updated_before(4, [JOB_STATUS_RUNNING, JOB_STATUS_PENDING])
             assert len(cancelled_jobs) == 2
             assert [job.id for job in cancelled_jobs] == ['job1-id', 'job3-id']
