@@ -494,8 +494,6 @@ class TestDataSources(TartareFixture):
         assert ds['fetch_started_at'] is not None
         assert ds['updated_at'] is not None
         assert ds['validity_period'] == {'start_date': '2015-03-25', 'end_date': '2015-08-26'}
-        assert 'start_date' in ds['validity_period']
-        assert 'end_date' in ds['validity_period']
 
     @mock.patch('tartare.core.fetcher.HttpFetcher.fetch', side_effect=FetcherException('my_message'))
     def test_data_source_calculated_fields_values_after_export_failed(self, fetch_mock, contributor,

@@ -83,8 +83,7 @@ api.add_resource(DataSource,
                  '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>')
 
 api.add_resource(DataSourceFetch,
-                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/actions/fetch',
-                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_source_fetches')
+                 '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/actions/fetch')
 
 api.add_resource(DataSet,
                  '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_sets')

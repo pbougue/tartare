@@ -86,12 +86,13 @@ def fetch_datasets_and_return_updated_number(contributor: Contributor, parent_jo
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
         if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
-            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source, parent_job_id) else 0
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id, parent_job_id) else 0
     return nb_updated_datasets
 
 
-def fetch_and_save_dataset(contributor: Contributor, data_source: models.DataSource,
+def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
                            parent_job_id: Optional[str] = None) -> bool:
+    data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -114,7 +115,7 @@ def fetch_and_save_dataset(contributor: Contributor, data_source: models.DataSou
             if last_data_set and last_data_set.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
                              .format(expected_file_name, contributor.id))
-                data_source_fetch_job.update(step='compare', state='unchanged')
+                data_source_fetch_job.update(step='compare', state='done')
                 return False
         logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
             contributor.id, data_source.id

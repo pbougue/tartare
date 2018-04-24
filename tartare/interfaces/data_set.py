@@ -37,7 +37,7 @@ from flask.globals import request
 from flask_restful import Resource
 
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import DataSource, Contributor
+from tartare.core.models import Contributor
 from tartare.core.models import DataSet as DataSetModel
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.decorators import validate_post_data_set
@@ -49,7 +49,7 @@ class DataSet(Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         file = request.files['file']
         contributor = Contributor.get(contributor_id)
-        data_source = DataSource.get_one(contributor_id, data_source_id)
+        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
         data_set_id = DataSetModel.get_next_id()
         gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=os.path.basename(file.filename),
                                                         data_set_id=data_set_id)
