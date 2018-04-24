@@ -255,25 +255,6 @@ def validate_post_data_set(func: Callable) -> Any:
     return wrapper
 
 
-def validate_get_data_sets(func: Callable) -> Any:
-    @wraps(func)
-    def wrapper(*args: list, **kwargs: str) -> Any:
-        contributor_id = kwargs['contributor_id']
-        data_source_id = kwargs['data_source_id']
-
-        try:
-            data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
-        except ValueError as e:
-            raise ObjectNotFound(str(e))
-
-        if data_source is None:
-            raise ObjectNotFound("data source {} not found for contributor {}".format(data_source_id, contributor_id))
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 class validate_file_params(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)

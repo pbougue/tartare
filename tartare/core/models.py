@@ -770,44 +770,6 @@ class Historisable(object):
                 GridFsHandler().delete_file_from_gridfs(gridf_id)
 
 
-class DataSourceFetched(Historisable):
-    mongo_collection = 'data_source_fetched'
-
-    def __init__(self, contributor_id: str, data_source_id: str,
-                 validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None, status: str = DATA_SOURCE_STATUS_FETCHING,
-                 saved_at: Optional[datetime] = None) -> None:
-        self.id = id if id else str(uuid.uuid4())
-        self.data_source_id = data_source_id
-        self.contributor_id = contributor_id
-        self.gridfs_id = gridfs_id
-        self.created_at = created_at if created_at else datetime.utcnow()
-        self.validity_period = validity_period
-        self.status = status
-        self.saved_at = saved_at
-
-    @classmethod
-    def get_last(cls, data_source_id: str, status: Optional[str] = DATA_SOURCE_STATUS_UPDATED) \
-            -> Optional['DataSourceFetched']:
-        where = {
-            'data_source_id': data_source_id
-        }
-        if status:
-            where['status'] = status
-        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
-        lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
-        return lasts[0] if lasts else None
-
-    @classmethod
-    def get_all(cls, contributor_id: str, data_source_id: str) -> 'DataSourceFetched':
-        where = {
-            'contributor_id': contributor_id,
-            'data_source_id': data_source_id
-        }
-        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1)
-        return MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
-
-
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
     url = fields.String(required=False)
@@ -815,21 +777,6 @@ class MongoDataSourceLicenseSchema(Schema):
     @post_load
     def build_license(self, data: dict) -> License:
         return License(**data)
-
-
-class MongoDataSourceFetchedSchema(Schema):
-    id = fields.String(required=True, load_from='_id', dump_to='_id')
-    data_source_id = fields.String(required=True)
-    contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=False, allow_none=True)
-    created_at = fields.DateTime(required=False, allow_none=True)
-    saved_at = fields.DateTime(required=False, allow_none=True)
-    status = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
-
-    @post_load
-    def build_data_source_fetched(self, data: dict) -> DataSourceFetched:
-        return DataSourceFetched(**data)
 
 
 class MongoDataSourceInputSchema(Schema):

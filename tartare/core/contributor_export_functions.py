@@ -117,7 +117,7 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
                              .format(expected_file_name, contributor.id))
                 data_source_fetch_job.update(step='compare', state='done')
                 return False
-        logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
+        logger.debug('Add DataSet object for contributor: {}, data_source: {}'.format(
             contributor.id, data_source.id
         ))
         data_source_fetch_job.update(step='compute_validity')

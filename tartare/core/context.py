@@ -32,7 +32,7 @@ from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer, Job, DataSourceFetched
+    ValidityPeriodContainer, Job
 from tartare.exceptions import IntegrityException, ParameterException
 
 

@@ -34,8 +34,7 @@ from bson import ObjectId
 import tartare
 from tartare import app, mongo
 from tartare.core import models
-from tartare.core.constants import DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
-from tartare.core.models import MongoDataSourceFetchedSchema, MongoContributorExportSchema, DataSource
+from tartare.core.models import MongoContributorExportSchema, DataSource
 from tests.integration.test_mechanism import TartareFixture
 
 
