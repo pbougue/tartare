@@ -53,9 +53,10 @@ def test_zip_file_only_feed_info():
 
 def test_zip_file_only_feed_info_invalid():
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_invalid.zip')
-    with pytest.raises(InvalidFile) as excinfo:
-        ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == "impossible to parse file feed_info.txt, error Usecols do not match names."
+    validity_period= ValidityPeriodFinder.select_computer_and_find(file)
+    # dates from calendar_dates.txt
+    assert validity_period.start_date == date(2016, 10, 4)
+    assert validity_period.end_date == date(2016, 12, 24)
 
 
 def test_zip_file_only_feed_info_missing_dates():
@@ -219,7 +220,7 @@ def test_gtfs_feed_info_with_2_rows():
     file = _get_file_fixture_full_path('validity_period/gtfs_feed_info_with_2_rows.zip')
     with pytest.raises(InvalidFile) as excinfo:
         ValidityPeriodFinder.select_computer_and_find(file)
-    assert str(excinfo.value) == 'impossible to find validity period, invalid file feed_info.txt'
+    assert str(excinfo.value) == 'impossible to find validity period, file feed_info.txt has more than 1 row'
 
 
 @pytest.mark.parametrize(
