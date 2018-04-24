@@ -44,7 +44,7 @@ from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC
+    DATA_TYPE_GEOGRAPHIC, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
@@ -495,6 +495,17 @@ class Contributor(PreProcessContainer):
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
+
+    def add_computed_data_sources(self) -> None:
+        for preprocess in self.preprocesses:
+            if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
+                data_source_computed = DataSource(
+                    id=preprocess.params.get("target_data_source_id"),
+                    name=preprocess.params.get("target_data_source_id"),
+                    data_format=preprocess.params.get("export_type"),
+                    input=Input(INPUT_TYPE_COMPUTED),
+                )
+                self.data_sources.append(data_source_computed)
 
 
 def get_contributor(contributor_id: str) -> Contributor:

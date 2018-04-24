@@ -995,7 +995,7 @@ class TestContributors(TartareFixture):
                     }
                 },
                 {
-                    "sequence": 0,
+                    "sequence": 1,
                     "data_source_ids": [],
                     "type": "ComputeExternalSettings",
                     "params": {

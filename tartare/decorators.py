@@ -128,7 +128,7 @@ class RemoveComputedDataSources(object):
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
             non_computed_data_sources = [ds for ds in post_data.get('data_sources', [])
-                                         if ds.get('input').get('type') != INPUT_TYPE_COMPUTED]
+                                         if 'input' not in ds or ds.get('input').get('type') != INPUT_TYPE_COMPUTED]
             post_data['data_sources'] = non_computed_data_sources
 
             return func(*args, **kwargs)
