@@ -1015,7 +1015,7 @@ class TestContributors(TartareFixture):
         assert data_sources[0]['id'] == 'target_1'
         assert data_sources[0]['name'] == 'target_1'
         assert data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
-        assert data_sources[1]['input']['type'] == INPUT_TYPE_COMPUTED
+        assert data_sources[0]['input']['type'] == INPUT_TYPE_COMPUTED
 
         assert data_sources[1]['id'] == 'target_2'
         assert data_sources[1]['name'] == 'target_2'

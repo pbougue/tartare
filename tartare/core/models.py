@@ -540,7 +540,12 @@ class Contributor(PreProcessContainer):
         return cls.get(contributor_id)
 
     def update(self) -> None:
-        mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoContributorSchema().dump(self).data})
+        self.update_with_object(self)
+
+    def update_with_object(self, contributor_object: 'Contributor') -> None:
+        mongo.db[self.mongo_collection].update_one(
+            {'_id': self.id},
+            {'$set': MongoContributorSchema().dump(contributor_object).data})
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
