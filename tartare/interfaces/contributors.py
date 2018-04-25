@@ -38,7 +38,7 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
-    CheckContributorIntegrity
+    CheckContributorIntegrity, RemoveComputedDataSources
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -48,6 +48,7 @@ from tartare.processes.processes import PreProcessManager
 class Contributor(flask_restful.Resource):
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
+    @RemoveComputedDataSources()
     @CheckContributorIntegrity('POST')
     def post(self) -> Response:
         post_data = request.json
@@ -69,6 +70,7 @@ class Contributor(flask_restful.Resource):
 
         try:
             contributor = contributor_schema.load(post_data).data
+            contributor.add_computed_data_sources()
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
@@ -142,5 +144,5 @@ class Contributor(flask_restful.Resource):
         request.json['id'] = contributor_id
         post_return = self.post()
         contributor_schema = schema.ContributorSchema(strict=True)
-        return contributor_schema.dump(models.Contributor.get(contributor_id)).data, 200
+        return {'contributors': [contributor_schema.dump(models.Contributor.get(contributor_id)).data]}, 200
 

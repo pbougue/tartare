@@ -350,6 +350,7 @@ class TestComputeExternalSettings(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename='fr-idf-custo-post-fusio-sample.zip',
                               path='prepare_external_settings')
+        params["export_type"] = DATA_FORMAT_PT_EXTERNAL_SETTINGS
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -368,6 +369,7 @@ class TestComputeExternalSettings(TartareFixture):
                 "data_format": "gtfs",
                 "input": {"type": "url", "url": url}
             },
+            # This is be removed from the payload and added automatically by the post
             {
                 "id": "ds-target",
                 "name": "ds-target",

@@ -191,6 +191,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
   "id": "compute_ext_settings",
   "params": {
     "target_data_source_id": "my_external_settings_data_source_id",
+    "export_type": "pt_external_settings",
     "links": [
       {
         "contributor_id": "{cid}",
@@ -226,7 +227,7 @@ curl -i -X POST \
 ```
 
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  
-The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source type is configured as "computed".  
+The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__.
 If the data source is configured as "manual" or "url", the preprocess will be skipped. 
 __my_external_settings_data_source_id__ must have the "pt_external_settings" **data_format**.  
 

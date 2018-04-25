@@ -36,7 +36,7 @@ from flask import request
 
 from tartare.core import models
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
-    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE
+    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED
 from tartare.core.models import DataSource
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
 from tartare.processes.processes import PreProcessManager
@@ -117,6 +117,20 @@ class ValidateContributorPrepocessesDataSourceIds(object):
                                         'id' in data_source]
             PreProcessManager.check_preprocess_data_source_integrity(post_data.get('preprocesses', []),
                                                                      existing_data_source_ids, 'contributor')
+            return func(*args, **kwargs)
+
+        return wrapper
+
+
+class RemoveComputedDataSources(object):
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            post_data = request.json
+            non_computed_data_sources = [ds for ds in post_data.get('data_sources', [])
+                                         if 'input' not in ds or ds.get('input').get('type') != INPUT_TYPE_COMPUTED]
+            post_data['data_sources'] = non_computed_data_sources
+
             return func(*args, **kwargs)
 
         return wrapper
