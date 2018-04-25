@@ -126,6 +126,7 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     patch:
+      deprecated: true
       summary: Modify a coverage configuration
       tags:
         - coverages
