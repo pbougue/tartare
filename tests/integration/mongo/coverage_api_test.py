@@ -577,7 +577,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_failed_call(raw)
         assert self.json_to_dict(raw) == {
-            'error': "{'name': ['Missing data for required field.']}",
+            'error': {'name': ['Missing data for required field.']},
             'message': 'Invalid arguments'
         }
         raw = self.get('/coverages/{}'.format(coverage['id']))
@@ -588,7 +588,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_failed_call(raw)
         assert self.json_to_dict(raw) == {
-            'error': "{'_schema': ['unknown field name invalid']}",
+            'error': {'_schema': ['unknown field name invalid']},
             'message': 'Invalid arguments'
         }
         raw = self.get('/coverages/{}'.format(coverage['id']))

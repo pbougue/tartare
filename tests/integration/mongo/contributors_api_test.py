@@ -913,7 +913,7 @@ class TestContributors(TartareFixture):
         raw = self.put('/contributors/{}'.format(contributor['id']), self.dict_to_json(contributor))
         self.assert_failed_call(raw)
         assert self.json_to_dict(raw) == {
-            'error': "{'name': ['Missing data for required field.']}",
+            'error': {'name': ['Missing data for required field.']},
             'message': 'Invalid arguments'
         }
         raw = self.get('/contributors/{}'.format(contributor['id']))
@@ -942,11 +942,13 @@ class TestContributors(TartareFixture):
             {'name': 'dsname_updated', 'data_format': 'bano_file',
              'license': {'name': 'Private (unspecified)', 'url': ''},
              'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
-             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [], 'fetch_started_at': None},
+             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
+             'fetch_started_at': None},
             {'name': 'dsname_2', 'data_format': 'osm_file', 'license': {'name': 'Private (unspecified)', 'url': ''},
              'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None,
              'id': 'dsid_2',
-             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [], 'fetch_started_at': None}
+             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
+             'fetch_started_at': None}
         ],
                                       'preprocesses': [],
                                       'data_prefix': 'cid_prefix',
@@ -991,7 +993,8 @@ class TestContributors(TartareFixture):
                 {'license': {'name': 'Private (unspecified)', 'url': ''}, 'service_id': None, 'name': 'dsid',
                  'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
                                                                               'some_archive.zip'), 'type': 'url'},
-                 'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'data_sets': [], 'fetch_started_at': None,
+                 'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'data_sets': [],
+                 'fetch_started_at': None,
                  'status': 'never_fetched', 'updated_at': None}
             ],
                                       'id': 'cid'}]}

@@ -142,6 +142,8 @@ class Contributor(flask_restful.Resource):
     @RemoveComputedDataSources()
     def put(self, contributor_id: str) -> Response:
         post_data = request.json
+        if 'id' in post_data and contributor_id != post_data['id']:
+            raise InvalidArguments('the modification of the id is not possible')
         post_data['id'] = contributor_id
         new_contributor = self.__pre_save_contributor(post_data)
         try:
