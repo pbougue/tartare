@@ -604,7 +604,6 @@ class TestRuspellProcess(TartareFixture):
         "contributor_id, data_source_id", [
             ('unknown', 'ds_config_ruspell'),  # unknown contributor
             ('id_test', 'unknown'),  # unknown data source
-            ('bano', 'ds_config_ruspell')  # data source in bad contributor
         ])
     def test_ruspell_error_message_misconfigured_links(self, init_http_download_server, contributor_id, data_source_id):
         params = {

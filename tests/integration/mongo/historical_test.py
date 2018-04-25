@@ -34,8 +34,7 @@ from bson import ObjectId
 import tartare
 from tartare import app, mongo
 from tartare.core import models
-from tartare.core.constants import DATA_SOURCE_STATUS_UPDATED, DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED
-from tartare.core.models import MongoDataSourceFetchedSchema, MongoContributorExportSchema
+from tartare.core.models import MongoContributorExportSchema, DataSource
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -90,18 +89,15 @@ class TestHistorical(TartareFixture):
             self.full_export('id_test', 'jdr')
 
         with app.app_context():
-            self.assert_data_source_fetched_number('data_source_gtfs', exports_number)
-            self.assert_data_source_fetched_number('data_source_config', exports_number)
+            self.assert_data_source_fetched_number(contributor['id'], 'data_source_gtfs', exports_number)
+            self.assert_data_source_fetched_number(contributor['id'], 'data_source_config', exports_number)
             self.assert_contributor_exports_number(exports_number)
             self.assert_coverage_exports_number(exports_number)
             self.assert_files_number(exports_number)
 
-    def assert_data_source_fetched_number(self, data_source_id, exports_number):
-        raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-            'contributor_id': 'id_test',
-            'data_source_id': data_source_id
-        })
-        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL'))
+    def assert_data_source_fetched_number(self, contributor_id, data_source_id, exports_number):
+        data_sources = DataSource.get_one(contributor_id, data_source_id)
+        assert len(data_sources.data_sets) == exports_number
 
     def assert_contributor_exports_number(self, exports_number):
         raw = mongo.db[models.ContributorExport.mongo_collection].find({
@@ -117,10 +113,11 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == min(tartare.app.config.get('HISTORICAL'), exports_number) * 7
+        #                                       === historized parts ===                      +  === data_sets parts ===
+        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 5) + (exports_number * 2)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
-    def test_data_source_fetched_histo_and_cleaning(self, init_http_download_server):
+    def test_data_sets_histo_and_cleaning(self, init_http_download_server):
         cid = 'cid'
         dsid = 'dsid'
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
@@ -136,26 +133,13 @@ class TestHistorical(TartareFixture):
         self.contributor_export(cid)  # -> unchanged
         self.update_data_source_url(cid, dsid, 'fail-url')  # -> failed
         self.contributor_export(cid, check_done=False)
-        # there should remain 4 DataSourceFetched: 2 updated, 1 unchanged happened after last update and
+        # there should remain 3 DataSet: 3 updated, 2 unchanged happened after last update and
         # 1 failed happened after last update
         with app.app_context():
-            raw = mongo.db[models.DataSourceFetched.mongo_collection].find({
-                'contributor_id': cid,
-                'data_source_id': dsid,
-            })
-            assert raw.count() == tartare.app.config.get('HISTORICAL') + 2
-            dsfs = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
-            dsf_updated = [dsf for dsf in dsfs if dsf.status == DATA_SOURCE_STATUS_UPDATED]
-            assert len(dsf_updated) == tartare.app.config.get('HISTORICAL')
-            dsf_failed = [dsf for dsf in dsfs if dsf.status == DATA_SOURCE_STATUS_FAILED]
-            assert len(dsf_failed) == 1
-            dsf_unchanged = [dsf for dsf in dsfs if dsf.status == DATA_SOURCE_STATUS_UNCHANGED]
-            assert len(dsf_unchanged) == 1
-            # corresponding files should be stored and other ones deleted
-            # 2 DataSourceFetched with 2 files per DataSourceFetched (one after fetch and one before contributor_export)
-            # so there should be 4 files
+            data_sets = DataSource.get_one(cid, dsid).data_sets
+            assert len(data_sets) == 3
             raw = mongo.db['fs.files'].find({})
-            assert raw.count() == 2 * tartare.app.config.get('HISTORICAL')
+            assert raw.count() == 5
 
     def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')

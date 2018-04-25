@@ -68,14 +68,11 @@ class TestDataSourceFetchAction(TartareFixture):
 
         self.assert_sucessful_call(raw, 204)
 
+        data_source = self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))['data_sources'][0]
+        data_set = data_source['data_sets'][0]
+        # Test that source file and saved file are the same
         with app.app_context():
-            raw = mongo.db[models.DataSourceFetched.mongo_collection].find_one({
-                'contributor_id': contributor['id'],
-                'data_source_id': json_response['data_sources'][0]['id']
-            })
-
-            # Test that source file and saved file are the same
-            gridout = GridFsHandler().get_file_from_gridfs(raw['gridfs_id'])
+            gridout = GridFsHandler().get_file_from_gridfs(data_set['gridfs_id'])
             expected_path = _get_file_fixture_full_path('gtfs/sample_1.zip')
 
             with tempfile.TemporaryDirectory() as path:
@@ -200,28 +197,3 @@ class TestDataSourceFetchAction(TartareFixture):
             'error': 'fetching {} failed: error during download of file: HTTP Error 404: Not Found'.format(url),
             'message': 'Internal Server Error'
         }
-
-    def test_get_datasets_of_unknown_contributor(self):
-        raw = self.get('/contributors/unknown/data_sources/unknown/data_source_fetches')
-        assert raw.status_code == 404
-        r = self.json_to_dict(raw)
-        assert r["error"] == "bad contributor unknown"
-
-    def test_get_dataset_with_unknown_data_source(self, contributor):
-        raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
-        assert raw.status_code == 404
-        r = self.json_to_dict(raw)
-        assert r["error"] == "data source unknown not found for contributor id_test"
-
-    def test_get_datasets(self, data_source):
-        raw = self.post_manual_data_set('id_test', data_source.get('id'), 'gtfs/some_archive.zip')
-        r = self.json_to_dict(raw)
-        assert len(r["data_sets"]) == 1
-        assert 'id' in r['data_sets'][0]
-
-        raw = self.get('/contributors/id_test/data_sources/{}/data_source_fetches'.format(data_source.get('id')))
-        self.assert_sucessful_call(raw)
-        ds = self.json_to_dict(raw)
-
-        assert len(ds["data_source_fetches"]) == 1
-        assert ds['data_source_fetches'][0]['gridfs_id'] == r["data_sets"][0]["gridfs_id"]

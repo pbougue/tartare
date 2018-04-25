@@ -33,9 +33,10 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, BinaryIO, Any, TypeVar
+from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
 
 import pymongo
+import pytz
 from gridfs import GridOut
 from marshmallow import Schema, post_load, utils, fields
 
@@ -43,8 +44,9 @@ from tartare import app
 from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC, INPUT_TYPE_COMPUTED
+    DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
+    DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
@@ -104,6 +106,11 @@ class PlatformType(ChoiceField):
 class PlatformProtocol(ChoiceField):
     def __init__(self, **metadata: Any) -> None:
         super().__init__(PLATFORM_PROTOCOL_VALUES, **metadata)
+
+
+class JobStatus(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(JOB_STATUSES, **metadata)
 
 
 SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
@@ -215,19 +222,55 @@ class Input(object):
         return str(vars(self))
 
 
+class DataSetStatus(object):
+    def __init__(self, status: str, updated_at: datetime = datetime.now()) -> None:
+        self.status = status
+        self.updated_at = updated_at
+
+
+class DataSet(object):
+    def __init__(self, id: str = None, gridfs_id: str = None, validity_period: Optional[ValidityPeriod] = None,
+                 created_at: datetime = None, status_history: List[DataSetStatus] = None) -> None:
+        self.id = id if id else str(uuid.uuid4())
+        self.gridfs_id = gridfs_id
+        self.created_at = created_at if created_at else datetime.now(pytz.utc)
+        self.validity_period = validity_period
+        self.status_history = status_history if status_history else []
+
+    def get_md5(self) -> str:
+        if not self.gridfs_id:
+            return None
+        file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
+        return file.md5
+
+    def is_identical_to(self, file_path: str) -> bool:
+        return self.get_md5() == get_md5_content_file(file_path)
+
+    def add_file_from_path(self, file_full_path: str, file_name: str) -> None:
+        with open(file_full_path, 'rb') as file:
+            self.add_file_from_io(file, file_name)
+
+    def add_file_from_io(self, io: Union[IOBase, BinaryIO], file_name: str) -> None:
+        self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=file_name, data_set_id=self.id)
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
 class DataSource(object):
     def __init__(self, id: Optional[str] = None,
                  name: Optional[str] = None,
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
                  input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
                  license: Optional[License] = None,
-                 service_id: str = None) -> None:
+                 service_id: str = None, data_sets: List[DataSet] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
         self.input = input
         self.license = license if license else License()
         self.service_id = service_id
+        self.data_sets = data_sets if data_sets else []
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -308,6 +351,9 @@ class DataSource(object):
 
     def has_type(self, type: str) -> bool:
         return self.input.type == type
+
+    def get_last_data_set(self) -> Optional[DataSet]:
+        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)
 
 
 class GenericPreProcess(SequenceContainer):
@@ -453,7 +499,7 @@ class Contributor(PreProcessContainer):
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
-        self.data_sources = [] if data_sources is None else data_sources
+        self.data_sources = data_sources if data_sources else []
         self.data_type = data_type
 
     def __repr__(self) -> str:
@@ -485,13 +531,16 @@ class Contributor(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, contributor_id: str = None, dataset: dict = None) -> Optional['Contributor']:
-        tmp_dataset = dataset if dataset else {}
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': tmp_dataset})
+    def update_with_dict(cls, contributor_id: str = None, contributor_dict: dict = None) -> Optional['Contributor']:
+        contributor_dict = contributor_dict if contributor_dict else {}
+        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': contributor_dict})
         if raw.matched_count == 0:
             return None
 
         return cls.get(contributor_id)
+
+    def update(self) -> None:
+        mongo.db[self.mongo_collection].update_one({'_id': self.id}, {'$set': MongoContributorSchema().dump(self).data})
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
@@ -521,7 +570,7 @@ class Coverage(PreProcessContainer):
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
                  contributors: List[str] = None, license: License = None,
-                 preprocesses: List[PreProcess] = None) -> None:
+                 preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None) -> None:
         super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
@@ -529,6 +578,7 @@ class Coverage(PreProcessContainer):
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
+        self.data_sources = data_sources if data_sources else None
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()
@@ -627,6 +677,23 @@ class MongoValidityPeriodSchema(Schema):
         return ValidityPeriod(**data)
 
 
+class MongoDataSetStatusSchema(Schema):
+    status = fields.String(required=True)
+    updated_at = fields.DateTime(required=True)
+
+
+class MongoDataSetSchema(Schema):
+    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    gridfs_id = fields.String(required=True)
+    created_at = fields.DateTime(required=True)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
+    status_history = fields.Nested(MongoDataSetStatusSchema, many=True)
+
+    @post_load
+    def make_data_set(self, data: dict) -> DataSet:
+        return DataSet(**data)
+
+
 class MongoContributorExportDataSourceSchema(Schema):
     data_source_id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
@@ -712,99 +779,6 @@ class Historisable(object):
                 GridFsHandler().delete_file_from_gridfs(gridf_id)
 
 
-class DataSourceFetched(Historisable):
-    mongo_collection = 'data_source_fetched'
-
-    def __init__(self, contributor_id: str, data_source_id: str,
-                 validity_period: Optional[ValidityPeriod] = None, gridfs_id: str = None,
-                 created_at: datetime = None, id: str = None, status: str = DATA_SOURCE_STATUS_FETCHING,
-                 saved_at: Optional[datetime] = None) -> None:
-        self.id = id if id else str(uuid.uuid4())
-        self.data_source_id = data_source_id
-        self.contributor_id = contributor_id
-        self.gridfs_id = gridfs_id
-        self.created_at = created_at if created_at else datetime.utcnow()
-        self.validity_period = validity_period
-        self.status = status
-        self.saved_at = saved_at
-
-    def update(self) -> bool:
-        raw = mongo.db[self.mongo_collection].update_one(
-            {'_id': self.id}, {'$set': MongoDataSourceFetchedSchema().dump(self).data}
-        )
-        return raw.matched_count == 1
-
-    def save(self) -> None:
-        raw = MongoDataSourceFetchedSchema().dump(self).data
-        mongo.db[self.mongo_collection].insert_one(raw)
-
-    def set_status(self, new_status: str) -> 'DataSourceFetched':
-        self.status = new_status
-        return self
-
-    @classmethod
-    def get_last(cls, data_source_id: str, status: Optional[str] = DATA_SOURCE_STATUS_UPDATED) \
-            -> Optional['DataSourceFetched']:
-        where = {
-            'data_source_id': data_source_id
-        }
-        if status:
-            where['status'] = status
-        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1).limit(1)
-        lasts = MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
-        return lasts[0] if lasts else None
-
-    @classmethod
-    def get_all(cls, contributor_id: str, data_source_id: str) -> 'DataSourceFetched':
-        where = {
-            'contributor_id': contributor_id,
-            'data_source_id': data_source_id
-        }
-        raw = mongo.db[cls.mongo_collection].find(where).sort("created_at", -1)
-        return MongoDataSourceFetchedSchema(many=True, strict=True).load(raw).data
-
-    def __repr__(self) -> str:
-        return str(vars(self))
-
-    def get_md5(self) -> str:
-        if not self.gridfs_id:
-            return None
-        file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
-        return file.md5
-
-    def update_dataset(self, tmp_file: Union[str, bytes, int], filename: str) -> None:
-        with open(tmp_file, 'rb') as file:
-            self.update_dataset_from_io(file, filename)
-
-    def update_dataset_from_io(self, io: Union[IOBase, BinaryIO], filename: str) -> None:
-        self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=filename,
-                                                             contributor_id=self.contributor_id)
-        self.set_status(DATA_SOURCE_STATUS_UPDATED)
-        self.saved_at = datetime.utcnow()
-        self.update()
-        self.keep_historical(
-            app.config.get('HISTORICAL', 3),
-            {
-                'contributor_id': self.contributor_id,
-                'data_source_id': self.data_source_id,
-                'status': DATA_SOURCE_STATUS_UPDATED
-            }
-        )
-        self.clean_intermediates_statuses_until(self.created_at)
-
-    def clean_intermediates_statuses_until(self, last_update_date: datetime) -> None:
-        old_rows = mongo.db[self.mongo_collection].find({
-            'contributor_id': self.contributor_id,
-            'data_source_id': self.data_source_id,
-            'status': {'$ne': DATA_SOURCE_STATUS_UPDATED},
-            'created_at': {'$lt': last_update_date.isoformat()}
-        })
-        self.delete_many([row.get('_id') for row in old_rows])
-
-    def is_identical_to(self, file_path: str) -> bool:
-        return self.get_md5() == get_md5_content_file(file_path)
-
-
 class MongoDataSourceLicenseSchema(Schema):
     name = fields.String(required=False)
     url = fields.String(required=False)
@@ -812,21 +786,6 @@ class MongoDataSourceLicenseSchema(Schema):
     @post_load
     def build_license(self, data: dict) -> License:
         return License(**data)
-
-
-class MongoDataSourceFetchedSchema(Schema):
-    id = fields.String(required=True, load_from='_id', dump_to='_id')
-    data_source_id = fields.String(required=True)
-    contributor_id = fields.String(required=True)
-    gridfs_id = fields.String(required=False, allow_none=True)
-    created_at = fields.DateTime(required=False, allow_none=True)
-    saved_at = fields.DateTime(required=False, allow_none=True)
-    status = fields.String(required=True)
-    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
-
-    @post_load
-    def build_data_source_fetched(self, data: dict) -> DataSourceFetched:
-        return DataSourceFetched(**data)
 
 
 class MongoDataSourceInputSchema(Schema):
@@ -846,6 +805,7 @@ class MongoDataSourceSchema(Schema):
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
     service_id = fields.String(required=False, allow_none=True)
+    data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:
@@ -876,6 +836,7 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     contributors = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
+    data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:
@@ -899,7 +860,7 @@ class Job(object):
     mongo_collection = 'jobs'
 
     def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, parent_id: str = None,
-                 state: str = 'pending', step: str = None, id: str = None, started_at: datetime = None,
+                 state: str = JOB_STATUS_PENDING, step: str = None, id: str = None, started_at: datetime = None,
                  updated_at: Optional[datetime] = None, error_message: str = "", data_source_id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.parent_id = parent_id
@@ -908,7 +869,6 @@ class Job(object):
         self.data_source_id = data_source_id
         self.coverage_id = coverage_id
         self.step = step
-        # 'pending', 'running', 'done', 'failed'
         self.state = state
         self.error_message = error_message
         self.started_at = started_at if started_at else datetime.utcnow()
@@ -935,7 +895,7 @@ class Job(object):
         pending_jobs = MongoJobSchema(many=True).load(raw).data
         pending_jobs_before_update = copy.deepcopy(pending_jobs)
         for pending_job in pending_jobs:
-            pending_job.update('failed', error_message='automatically cancelled')
+            pending_job.update(JOB_STATUS_FAILED, error_message='automatically cancelled')
         return pending_jobs_before_update
 
     @classmethod
@@ -975,7 +935,18 @@ class Job(object):
         return self
 
     def has_failed(self) -> bool:
-        return self.state == "failed"
+        return self.state == JOB_STATUS_FAILED
+
+    @classmethod
+    def get_last_data_fetch_job(cls, data_source_id: str) -> Optional['Job']:
+        logging.getLogger(__name__).warning('get_last_data_fetch_job')
+        filter = {
+            'action_type': ACTION_TYPE_DATA_SOURCE_FETCH,
+            'data_source_id': data_source_id,
+        }
+        raw = mongo.db[cls.mongo_collection].find(filter).sort("updated_at", -1).limit(1)
+        lasts = MongoJobSchema(strict=True, many=True).load(raw).data
+        return lasts[0] if lasts else None
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -988,7 +959,7 @@ class MongoJobSchema(Schema):
     contributor_id = fields.String(required=False, allow_none=True)
     data_source_id = fields.String(required=False, allow_none=True)
     coverage_id = fields.String(required=False, allow_none=True)
-    state = fields.String(required=True)
+    state = JobStatus(required=True)
     step = fields.String(required=False, allow_none=True)
     started_at = fields.DateTime(required=False)
     updated_at = fields.DateTime(required=False)
@@ -1127,16 +1098,23 @@ class DataSourceStatus(object):
        - validity_period: validity period of the data source
    """
 
-    def __init__(self, data_source_id: str) -> None:
-        last_data_set = DataSourceFetched.get_last(data_source_id, None)
-        self.status = last_data_set.status if last_data_set else DATA_SOURCE_STATUS_NEVER_FETCHED
-        self.fetch_started_at = last_data_set.created_at if last_data_set else None
-        self.validity_period = last_data_set.validity_period if last_data_set else None
-        self.updated_at = None
+    def __init__(self, data_source_id: str, data_sets_dict: List[dict]) -> None:
+        last_data_fetch_job = Job.get_last_data_fetch_job(data_source_id)
+        last_data_set_dict = max(data_sets_dict, key=lambda ds: ds['created_at'], default=None) if len(data_sets_dict) \
+            else None
+        self.status = self.get_status_from_job(last_data_fetch_job)
+        self.fetch_started_at = last_data_fetch_job.started_at.isoformat() if last_data_fetch_job else None
+        self.validity_period = last_data_set_dict['validity_period'] if last_data_set_dict else None
+        self.updated_at = last_data_set_dict['created_at'] if last_data_set_dict else None
 
-        if self.status == DATA_SOURCE_STATUS_UPDATED:
-            self.updated_at = last_data_set.saved_at
+    def get_status_from_job(self, job: Optional[Job]) -> str:
+        if not job:
+            status = DATA_SOURCE_STATUS_NEVER_FETCHED
         else:
-            last_data_set_updated = DataSourceFetched.get_last(data_source_id)
-            self.updated_at = last_data_set_updated.saved_at if last_data_set_updated else None
-            self.validity_period = last_data_set_updated.validity_period if last_data_set_updated else None
+            if job.state == JOB_STATUS_DONE:
+                status = DATA_SOURCE_STATUS_UNCHANGED if job.step == 'compare' else DATA_SOURCE_STATUS_UPDATED
+            elif job.state == JOB_STATUS_RUNNING:
+                status = 'fetching'
+            else:
+                status = JOB_STATUS_FAILED
+        return status
