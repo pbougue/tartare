@@ -36,7 +36,7 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages
+from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages, RemoveLastActiveJob
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -111,3 +111,21 @@ class Coverage(flask_restful.Resource):
             raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
 
         return self.get(coverage.id)
+
+    @JsonDataValidate()
+    @ValidateContributors()
+    @RemoveLastActiveJob()
+    def put(self, coverage_id: str) -> Response:
+        if 'id' in request.json and coverage_id != request.json['id']:
+            raise InvalidArguments('the modification of the id is not possible')
+        coverage_schema = schema.CoverageSchema(strict=True)
+        try:
+            errors = coverage_schema.validate(request.json)
+            if errors:
+                raise InvalidArguments(errors)
+        except ValidationError as e:
+            raise InvalidArguments(str(e))
+        self.delete(coverage_id)
+        request.json['id'] = coverage_id
+        post_return = self.post()
+        return coverage_schema.dump(models.Coverage.get(coverage_id)).data, 200
