@@ -36,7 +36,6 @@ from flask import Response
 from flask.globals import request
 from flask_restful import Resource
 
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Contributor
 from tartare.core.models import DataSet as DataSetModel
 from tartare.core.validity_period_finder import ValidityPeriodFinder
@@ -50,11 +49,9 @@ class DataSet(Resource):
         file = request.files['file']
         contributor = Contributor.get(contributor_id)
         data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
-        data_set_id = DataSetModel.get_next_id()
-        gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=os.path.basename(file.filename),
-                                                        data_set_id=data_set_id)
         validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename, data_source.data_format)
-        data_set = DataSetModel(data_set_id, gridfs_id, validity_period)
+        data_set = DataSetModel(validity_period=validity_period)
+        data_set.add_file_from_io(file, os.path.basename(file.filename))
         data_source.data_sets.append(data_set)
         contributor.update()
         return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201

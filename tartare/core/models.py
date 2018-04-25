@@ -33,7 +33,7 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, Any, TypeVar
+from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
 
 import pymongo
 import pytz
@@ -231,7 +231,7 @@ class DataSetStatus(object):
 class DataSet(object):
     def __init__(self, id: str = None, gridfs_id: str = None, validity_period: Optional[ValidityPeriod] = None,
                  created_at: datetime = None, status_history: List[DataSetStatus] = None) -> None:
-        self.id = id if id else self.get_next_id()
+        self.id = id if id else str(uuid.uuid4())
         self.gridfs_id = gridfs_id
         self.created_at = created_at if created_at else datetime.now(pytz.utc)
         self.validity_period = validity_period
@@ -246,9 +246,12 @@ class DataSet(object):
     def is_identical_to(self, file_path: str) -> bool:
         return self.get_md5() == get_md5_content_file(file_path)
 
-    @classmethod
-    def get_next_id(cls) -> str:
-        return str(uuid.uuid4())
+    def add_file_from_path(self, file_full_path: str, file_name: str) -> None:
+        with open(file_full_path, 'rb') as file:
+            self.add_file_from_io(file, file_name)
+
+    def add_file_from_io(self, io: Union[IOBase, BinaryIO], file_name: str) -> None:
+        self.gridfs_id = GridFsHandler().save_file_in_gridfs(io, filename=file_name, data_set_id=self.id)
 
     def __repr__(self) -> str:
         return str(vars(self))

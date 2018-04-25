@@ -32,12 +32,10 @@ import tempfile
 import zipfile
 from typing import Optional
 
-from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
     DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_DONE, JOB_STATUS_FAILED, JOB_STATUS_RUNNING
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, Job, \
     DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
@@ -122,13 +120,10 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
         ))
         data_source_fetch_job.update(step='compute_validity')
         validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
-        with open(dest_full_file_name, 'rb') as file:
-            data_source_fetch_job.update(step='save')
-            data_set_id = DataSet.get_next_id()
-            gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name,
-                                                            data_set_id=data_set_id)
-            data_set = DataSet(data_set_id, gridfs_id, validity_period)
-            data_source.data_sets.append(data_set)
-            contributor.update()
-            data_source_fetch_job.update(state=JOB_STATUS_DONE)
-            return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
+        data_source_fetch_job.update(step='save')
+        data_set = DataSet(validity_period=validity_period)
+        data_set.add_file_from_path(dest_full_file_name, expected_file_name)
+        data_source.data_sets.append(data_set)
+        contributor.update()
+        data_source_fetch_job.update(state=JOB_STATUS_DONE)
+        return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
