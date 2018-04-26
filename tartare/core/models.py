@@ -589,7 +589,7 @@ class Coverage(PreProcessContainer):
         gridfs_handler = GridFsHandler()
         filename = '{coverage}_calendars.zip'.format(coverage=self.id)
         id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update(self.id, {'grid_calendars_id': id})
+        Coverage.update_with_dict(self.id, {'grid_calendars_id': id})
         # when we delete the file all process reading it will get invalid data
         # TODO: We will need to implement a better solution
         gridfs_handler.delete_file_from_gridfs(self.grid_calendars_id)
@@ -632,7 +632,7 @@ class Coverage(PreProcessContainer):
         return cls.find(filter={})
 
     @classmethod
-    def update(cls, coverage_id: str = None, dataset: dict = None) -> 'Coverage':
+    def update_with_dict(cls, coverage_id: str = None, dataset: dict = None) -> 'Coverage':
         # we have to use "doted notation' to only update some fields of a nested object
         tmp_dataset = dataset if dataset else {}
         raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(tmp_dataset)})
@@ -641,13 +641,18 @@ class Coverage(PreProcessContainer):
 
         return cls.get(coverage_id)
 
+    def update_with_object(self, coverage_object: 'Coverage') -> None:
+        mongo.db[self.mongo_collection].update_one(
+            {'_id': self.id},
+            {'$set': MongoCoverageSchema().dump(coverage_object).data})
+
     def save_ntfs(self, environment_type: str, file: Union[str, bytes, IOBase, GridOut]) -> None:
         if environment_type not in self.environments.keys():
             raise ValueError('invalid value for environment_type')
         filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
         gridfs_handler = GridFsHandler()
         id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
+        Coverage.update_with_dict(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
         # when we delete the file all process reading it will get invalid data
         # TODO: We will need to implements a better solution
         gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
@@ -665,12 +670,12 @@ class Coverage(PreProcessContainer):
             )
 
         self.contributors.append(contributor.id)
-        self.update(self.id, {"contributors": self.contributors})
+        self.update_with_dict(self.id, {"contributors": self.contributors})
 
     def remove_contributor(self, contributor_id: str) -> None:
         if contributor_id in self.contributors:
             self.contributors.remove(contributor_id)
-            self.update(self.id, {"contributors": self.contributors})
+            self.update_with_dict(self.id, {"contributors": self.contributors})
 
 
 class MongoValidityPeriodSchema(Schema):

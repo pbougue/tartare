@@ -562,3 +562,34 @@ class TestCoverageApi(TartareFixture):
             'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
         }
+
+    def test_put_coverage_id(self, coverage):
+        coverage['id'] = 'changed'
+        raw = self.put('/coverages/jdr', self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': 'the modification of the id is not possible',
+            'message': 'Invalid arguments'
+        }
+
+    def test_put_invalid_coverage_missing_data_preserve_existing_one(self, coverage):
+        del coverage['name']
+        raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': {'name': ['Missing data for required field.']},
+            'message': 'Invalid arguments'
+        }
+        raw = self.get('/coverages/{}'.format(coverage['id']))
+        self.assert_sucessful_call(raw)
+
+    def test_put_invalid_coverage_added_data_preserve_existing_one(self, coverage):
+        coverage['invalid'] = 'value'
+        raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': {'_schema': ['unknown field name invalid']},
+            'message': 'Invalid arguments'
+        }
+        raw = self.get('/coverages/{}'.format(coverage['id']))
+        self.assert_sucessful_call(raw)

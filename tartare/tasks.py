@@ -102,7 +102,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
         publisher.publish(protocol_uploader, file, coverage, coverage_export)
         # Upgrade current_ntfs_id
         current_ntfs_id = coverage_export.gridfs_id
-        coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+        coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
         msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
             error=str(exc), url=platform.url, type=platform.type)

@@ -36,7 +36,7 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages
+from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages, RemoveLastActiveJob
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -44,23 +44,21 @@ from tartare.processes.processes import PreProcessManager
 
 
 class Coverage(flask_restful.Resource):
-    @JsonDataValidate()
-    @ValidateContributors()
-    def post(self) -> Response:
+    @classmethod
+    def __pre_save_coverage(self, post_data: dict) -> models.Coverage:
         coverage_schema = schema.CoverageSchema(strict=True)
-        post_data = request.json
-
         preprocesses = post_data.get('preprocesses', [])
-
         PreProcessManager.check_preprocesses_for_instance(preprocesses, 'coverage')
-
         setdefault_ids(preprocesses)
-
         try:
-            coverage = coverage_schema.load(post_data).data
+            return coverage_schema.load(post_data).data
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
+    @JsonDataValidate()
+    @ValidateContributors()
+    def post(self) -> Response:
+        coverage = self.__pre_save_coverage(request.json)
         try:
             coverage.save()
         except DuplicateKeyError:
@@ -106,8 +104,26 @@ class Coverage(flask_restful.Resource):
 
         logging.debug(request.json)
         try:
-            coverage = models.Coverage.update(coverage_id, request.json)
+            coverage = models.Coverage.update_with_dict(coverage_id, request.json)
         except PyMongoError:
             raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
 
         return self.get(coverage.id)
+
+    @JsonDataValidate()
+    @ValidateContributors()
+    @RemoveLastActiveJob()
+    def put(self, coverage_id: str) -> Response:
+        post_data = request.json
+        if 'id' in post_data and coverage_id != post_data['id']:
+            raise InvalidArguments('the modification of the id is not possible')
+        post_data['id'] = coverage_id
+        new_coverage = self.__pre_save_coverage(request.json)
+        try:
+            existing_coverage = models.Coverage.get(coverage_id)
+            existing_coverage.update_with_object(new_coverage)
+        except DuplicateKeyError:
+            raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
+        except PyMongoError:
+            raise InternalServerError('impossible to add coverage')
+        return schema.CoverageSchema.dump(models.Coverage.get(coverage_id)).data, 200
