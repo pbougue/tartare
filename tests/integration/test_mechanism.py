@@ -241,8 +241,11 @@ class TartareFixture(object):
         else:
             return response
 
-    def filter_job_of_action_type(self, jobs, action_type):
-        return next((job for job in jobs if job['action_type'] == action_type), None)
+    def filter_job_of_action_type(self, jobs, action_type, return_first=True):
+        jobs = (job for job in jobs if job['action_type'] == action_type)
+        if return_first:
+            return next(jobs)
+        return jobs
 
     def get_coverage(self, coverage_id):
         raw = self.get('coverages/{}'.format(coverage_id))

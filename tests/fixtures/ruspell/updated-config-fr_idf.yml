@@ -1,0 +1,7 @@
+processes:
+    # manage double encoding from latin1 and latin9
+  - Decode:
+      from_encoding: iso_8859-15 # latin9
+  - Decode:
+      from_encoding: windows-1252 # latin1
+
