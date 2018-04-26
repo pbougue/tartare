@@ -641,9 +641,6 @@ class Coverage(PreProcessContainer):
 
         return cls.get(coverage_id)
 
-    def update(self) -> None:
-        self.update_with_object(self)
-
     def update_with_object(self, coverage_object: 'Coverage') -> None:
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
