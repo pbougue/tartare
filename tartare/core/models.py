@@ -952,7 +952,6 @@ class Job(object):
 
     @classmethod
     def get_last_data_fetch_job(cls, data_source_id: str) -> Optional['Job']:
-        logging.getLogger(__name__).warning('get_last_data_fetch_job')
         filter = {
             'action_type': ACTION_TYPE_DATA_SOURCE_FETCH,
             'data_source_id': data_source_id,

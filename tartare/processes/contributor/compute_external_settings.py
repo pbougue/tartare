@@ -32,14 +32,14 @@ import os
 import shutil
 import tempfile
 import zipfile
+from typing import List
 
 from gridfs import GridOut
-from typing import List
 
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import PreProcess
+from tartare.core.models import PreProcess, Contributor, DataSet
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
@@ -202,6 +202,13 @@ class ComputeExternalSettings(AbstractContributorProcess):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
                 self.params['target_data_source_id']))
 
+    def __save_result_into_data_source(self, target_data_set_gridfs_id: str) -> None:
+        contributor = Contributor.get(self.contributor_id)
+        data_source = contributor.get_data_source(self.params['target_data_source_id'])
+        data_set = DataSet(gridfs_id=target_data_set_gridfs_id)
+        data_source.data_sets.append(data_set)
+        contributor.update()
+
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'stop_extensions.txt'])
         self.__check_target_data_source()
@@ -211,6 +218,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
             target_data_set_gridfs_id = self.__process_file_from_gridfs_id(data_source_to_process_context.gridfs_id)
+            self.__save_result_into_data_source(target_data_set_gridfs_id)
             data_source_target_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=self.params['target_data_source_id'])

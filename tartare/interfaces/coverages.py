@@ -53,6 +53,7 @@ class Coverage(flask_restful.Resource):
         try:
             coverage = coverage_schema.load(post_data).data
             coverage.add_computed_data_sources()
+            return coverage
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 
