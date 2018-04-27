@@ -583,7 +583,7 @@ class Coverage(PreProcessContainer):
         self.grid_calendars_id = grid_calendars_id
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
-        self.data_sources = data_sources if data_sources else None
+        self.data_sources = data_sources if data_sources else []
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()

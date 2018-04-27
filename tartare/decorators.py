@@ -276,7 +276,8 @@ class RemoveLastActiveJob(object):
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
-            del post_data['last_active_job']
+            if 'last_active_job' in post_data:
+                del post_data['last_active_job']
             return func(*args, **kwargs)
 
         return wrapper
