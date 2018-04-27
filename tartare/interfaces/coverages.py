@@ -51,7 +51,8 @@ class Coverage(flask_restful.Resource):
         PreProcessManager.check_preprocesses_for_instance(preprocesses, 'coverage')
         setdefault_ids(preprocesses)
         try:
-            return coverage_schema.load(post_data).data
+            coverage = coverage_schema.load(post_data).data
+            coverage.add_computed_data_sources()
         except ValidationError as err:
             raise InvalidArguments(err.messages)
 

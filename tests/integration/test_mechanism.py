@@ -168,6 +168,10 @@ class TartareFixture(object):
         raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
         self.assert_sucessful_create(raw)
 
+    def add_preprocess_to_contributor(self, preprocess, contributor_id):
+        raw = self.post('contributors/{}/preprocesses'.format(contributor_id), self.dict_to_json(preprocess))
+        self.assert_sucessful_create(raw)
+
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
         data_source = {
             "id": data_source_id,
@@ -241,10 +245,11 @@ class TartareFixture(object):
         else:
             return response
 
-    def filter_job_of_action_type(self, jobs, action_type, return_first=True):
+    @classmethod
+    def filter_job_of_action_type(cls, jobs, action_type, return_first=True):
         jobs = (job for job in jobs if job['action_type'] == action_type)
         if return_first:
-            return next(jobs)
+            return next(jobs, None)
         return jobs
 
     def get_coverage(self, coverage_id):

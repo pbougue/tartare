@@ -368,13 +368,6 @@ class TestComputeExternalSettings(TartareFixture):
                 "name": "ds-to-process",
                 "data_format": "gtfs",
                 "input": {"type": "url", "url": url}
-            },
-            # This is be removed from the payload and added automatically by the post
-            {
-                "id": "ds-target",
-                "name": "ds-target",
-                "data_format": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                "input": {"type": "computed"}
             }
         ]
 

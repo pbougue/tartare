@@ -129,11 +129,25 @@ class PreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
-    def __init__(self, preprocesses: List['PreProcess'] = None) -> None:
-        self.preprocesses = [] if preprocesses is None else preprocesses
+    def __init__(self, preprocesses: List['PreProcess'] = None, data_sources: List['DataSource'] = None) -> None:
+        self.preprocesses = [] if preprocesses is None else preprocesses  # type: List['PreProcess']
+        self.data_sources = data_sources if data_sources else []
+
+    def add_computed_data_sources(self) -> None:
+        for preprocess in self.preprocesses:
+            if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
+                if not any(data_source for data_source in self.data_sources if
+                           data_source.id == preprocess.params.get("target_data_source_id")):
+                    data_source_computed = DataSource(
+                        id=preprocess.params.get("target_data_source_id"),
+                        name=preprocess.params.get("target_data_source_id"),
+                        data_format=preprocess.params.get("export_type"),
+                        input=Input(INPUT_TYPE_COMPUTED),
+                    )
+                    self.data_sources.append(data_source_computed)
 
     @classmethod
-    def get(cls, contributor_id: str) -> Union['Contributor', 'Coverage']:
+    def get(cls, object_id: str) -> Union['Contributor', 'Coverage']:
         pass
 
 
@@ -375,6 +389,7 @@ class GenericPreProcess(SequenceContainer):
             raise ValueError("duplicate PreProcess id '{}'".format(self.id))
 
         data.preprocesses.append(ref_model_object)
+        data.add_computed_data_sources()
         raw_contrib = mongo_schema().dump(data).data
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
@@ -495,11 +510,10 @@ class Contributor(PreProcessContainer):
 
     def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
                  preprocesses: List[PreProcess] = None, data_type: str = DATA_TYPE_DEFAULT) -> None:
-        super(Contributor, self).__init__(preprocesses)
+        super(Contributor, self).__init__(preprocesses, data_sources)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
-        self.data_sources = data_sources if data_sources else []
         self.data_type = data_type
 
     def __repr__(self) -> str:
@@ -549,17 +563,6 @@ class Contributor(PreProcessContainer):
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
-
-    def add_computed_data_sources(self) -> None:
-        for preprocess in self.preprocesses:
-            if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
-                data_source_computed = DataSource(
-                    id=preprocess.params.get("target_data_source_id"),
-                    name=preprocess.params.get("target_data_source_id"),
-                    data_format=preprocess.params.get("export_type"),
-                    input=Input(INPUT_TYPE_COMPUTED),
-                )
-                self.data_sources.append(data_source_computed)
 
 
 def get_contributor(contributor_id: str) -> Contributor:
