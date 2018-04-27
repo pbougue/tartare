@@ -125,7 +125,7 @@ class TartareFixture(object):
         self.contributor_export(contributor_id)
         return self.coverage_export(coverage_id, current_date)
 
-    def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
+    def init_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
                          data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None):
         input = {'type': 'manual'} if manual else {
             "type": "url",
