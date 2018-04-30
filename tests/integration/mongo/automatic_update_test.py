@@ -30,9 +30,12 @@
 # www.navitia.io
 import json
 
+import pytest
+
 from tartare import app, mongo
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
-    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH
+    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_FORMAT_RUSPELL_CONFIG, \
+    DATA_FORMAT_DEFAULT, DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -195,6 +198,33 @@ class TestAutomaticUpdate(TartareFixture):
         for job in jobs_first_and_second_run:
             if job['id'] != first_job['id'] and job['action_type'] != ACTION_TYPE_DATA_SOURCE_FETCH:
                 self.__assert_job_is_automatic_update_contributor_export(job, 'contrib_id')
+
+    @pytest.mark.parametrize(
+        "path,filename,updated_filename,data_format", [
+            ('gtfs', 'sample_1.zip', 'some_archive.zip', DATA_FORMAT_DEFAULT),
+            ('ruspell', 'config-fr_idf.yml', 'updated-config-fr_idf.yml', DATA_FORMAT_RUSPELL_CONFIG),
+            ('compute_directions', 'config.json', 'updated-config.json', DATA_FORMAT_DIRECTION_CONFIG),
+            ('validity_period/other_data_formats', 'titan.zip', 'updated-titan.zip', DATA_FORMAT_TITAN),
+            ('validity_period/other_data_formats', 'obiti.zip', 'updated-obiti.zip', DATA_FORMAT_OBITI),
+            ('validity_period/other_data_formats', 'neptune.zip', 'updated-neptune.zip', DATA_FORMAT_NEPTUNE),
+        ])
+    def test_generate_2_exports_when_data_changes_with_different_data_formats(self, init_http_download_server, path,
+                                                                              filename, updated_filename, data_format):
+        url = self.format_url(init_http_download_server.ip_addr, filename, path=path)
+        self.init_contributor('contrib_id', 'ds_id', url, data_format=data_format)
+
+        jobs_first_run = self.run_automatic_update()
+
+        first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
+        self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
+
+        self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, updated_filename, path=path))
+        jobs_first_and_second_run = self.run_automatic_update()
+
+        automatic_contrib_export_jobs = self.filter_job_of_action_type(jobs_first_run,
+                                                                       ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT,
+                                                                       return_first=False)
+        assert all(job.get('step') == 'save_contributor_export' for job in automatic_contrib_export_jobs)
 
     def test_data_format_generate_no_export(self, init_http_download_server):
         url = self.format_url(init_http_download_server.ip_addr, 'empty_pbf.funky_extension', path='geo_data')
