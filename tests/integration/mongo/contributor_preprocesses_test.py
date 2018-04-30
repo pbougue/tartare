@@ -368,13 +368,6 @@ class TestComputeExternalSettings(TartareFixture):
                 "name": "ds-to-process",
                 "data_format": "gtfs",
                 "input": {"type": "url", "url": url}
-            },
-            # This is be removed from the payload and added automatically by the post
-            {
-                "id": "ds-target",
-                "name": "ds-target",
-                "data_format": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                "input": {"type": "computed"}
             }
         ]
 
@@ -449,11 +442,11 @@ class TestComputeExternalSettings(TartareFixture):
         assert job['step'] == 'save_contributor_export', print(job)
         assert job['error_message'] == '', print(job)
 
+        data_set = self.json_to_dict(
+            self.get('/contributors/{}/data_sources/{}'.format('id_test', 'ds-target'))
+        )['data_sources'][0]['data_sets'][0]
+        target_grid_fs_id = data_set['gridfs_id']
         with app.app_context():
-            export = ContributorExport.get_last('id_test')
-            target_grid_fs_id = next((data_source.gridfs_id
-                                      for data_source in export.data_sources
-                                      if data_source.data_source_id == 'ds-target'), None)
             fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
             with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:

@@ -126,11 +126,12 @@ class TartareFixture(object):
         return self.coverage_export(coverage_id, current_date)
 
     def init_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
-                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None):
+                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None, data_prefix=None):
         input = {'type': 'manual'} if manual else {
             "type": "url",
             "url": url
         }
+        data_prefix = data_prefix if data_prefix else contributor_id + '_prefix'
 
         data_source = {
             "id": data_source_id,
@@ -143,7 +144,7 @@ class TartareFixture(object):
             "data_type": data_type,
             "id": contributor_id,
             "name": contributor_id + '_name',
-            "data_prefix": contributor_id + '_prefix',
+            "data_prefix": data_prefix,
             "data_sources": [data_source]
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
@@ -166,6 +167,10 @@ class TartareFixture(object):
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
         raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
+        self.assert_sucessful_create(raw)
+
+    def add_preprocess_to_contributor(self, preprocess, contributor_id):
+        raw = self.post('contributors/{}/preprocesses'.format(contributor_id), self.dict_to_json(preprocess))
         self.assert_sucessful_create(raw)
 
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
@@ -241,10 +246,11 @@ class TartareFixture(object):
         else:
             return response
 
-    def filter_job_of_action_type(self, jobs, action_type, return_first=True):
+    @classmethod
+    def filter_job_of_action_type(cls, jobs, action_type, return_first=True):
         jobs = (job for job in jobs if job['action_type'] == action_type)
         if return_first:
-            return next(jobs)
+            return next(jobs, None)
         return jobs
 
     def get_coverage(self, coverage_id):

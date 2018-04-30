@@ -221,7 +221,7 @@ class TestAutomaticUpdate(TartareFixture):
         self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, updated_filename, path=path))
         jobs_first_and_second_run = self.run_automatic_update()
 
-        automatic_contrib_export_jobs = self.filter_job_of_action_type(jobs_first_run,
+        automatic_contrib_export_jobs = self.filter_job_of_action_type(jobs_first_and_second_run,
                                                                        ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT,
                                                                        return_first=False)
         assert all(job.get('step') == 'save_contributor_export' for job in automatic_contrib_export_jobs)

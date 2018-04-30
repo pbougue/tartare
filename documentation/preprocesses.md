@@ -238,7 +238,8 @@ __my_external_settings_data_source_id__ must have the "pt_external_settings" **d
 {
    "id":"fusio_export",
    "params":{
-      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll"
+      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+      "input_data_source_ids": ["my_external_settings_data_source_id"]
    },
    "type":"FusioSendPtExternalSettings",
    "sequence":4

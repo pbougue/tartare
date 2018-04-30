@@ -30,6 +30,7 @@
 # www.navitia.io
 import json
 
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -160,11 +161,11 @@ class TestContributorPreProcesses(TartareFixture):
             "type": "ComputeDirections",
             "sequence": 1,
             "params": {
-            "params": {
-                "links": [
-                    {"contributor_id": "id_test", "data_source_id": "compute-direction-config"}
-                ]
-            }
+                "params": {
+                    "links": [
+                        {"contributor_id": "id_test", "data_source_id": "compute-direction-config"}
+                    ]
+                }
             }
         }
 
@@ -351,3 +352,20 @@ class TestContributorPreProcesses(TartareFixture):
                 p_titi = p
         assert p_titi
         assert p_titi['type'] == 'HeadsignShortName'
+
+    def test_add_preprocess_generates_computed_data_source(self, contributor):
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": [],
+            "type": "ComputeExternalSettings",
+            "params": {
+                "target_data_source_id": "target_1",
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+            }
+        }, contributor['id'])
+        contributor_data_sources = self.json_to_dict(
+            self.get('/contributors/{}/data_sources'.format(contributor['id']))
+        )['data_sources']
+        assert len(contributor_data_sources) == 1
+        assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert contributor_data_sources[0]['id'] == 'target_1'
