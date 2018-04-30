@@ -126,4 +126,4 @@ class Coverage(flask_restful.Resource):
             raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
         except PyMongoError:
             raise InternalServerError('impossible to add coverage')
-        return schema.CoverageSchema.dump(models.Coverage.get(coverage_id)).data, 200
+        return schema.CoverageSchema().dump(models.Coverage.get(coverage_id)).data, 200

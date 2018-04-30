@@ -149,14 +149,20 @@ class TartareFixture(object):
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
 
-    def init_coverage(self, id, contributor_ids):
+    def init_coverage(self, id, contributor_ids=None, preprocesses=None, environments=None):
+        contributor_ids = contributor_ids if contributor_ids else []
+        preprocesses = preprocesses if preprocesses else []
+        environments = environments if environments else {}
         coverage = {
             "id": id,
             "name": id,
-            "contributors": contributor_ids
+            "contributors": contributor_ids,
+            "preprocesses": preprocesses,
+            "environments": environments,
         }
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
+        return self.json_to_dict(raw)
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
         raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
@@ -237,3 +243,8 @@ class TartareFixture(object):
 
     def filter_job_of_action_type(self, jobs, action_type):
         return next((job for job in jobs if job['action_type'] == action_type), None)
+
+    def get_coverage(self, coverage_id):
+        raw = self.get('coverages/{}'.format(coverage_id))
+        self.assert_sucessful_call(raw)
+        return self.json_to_dict(raw)['coverages'][0]
