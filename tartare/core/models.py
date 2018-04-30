@@ -113,6 +113,11 @@ class JobStatus(ChoiceField):
         super().__init__(JOB_STATUSES, **metadata)
 
 
+class CoverageType(ChoiceField):
+    def __init__(self, **metadata: Any) -> None:
+        super().__init__(['navitia.io', 'keolis', 'regional', 'other'], **metadata)
+
+
 SequenceContainerType = TypeVar('SequenceContainerType', bound='SequenceContainer')
 
 
@@ -578,7 +583,8 @@ class Coverage(PreProcessContainer):
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
                  contributors: List[str] = None, license: License = None,
-                 preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None) -> None:
+                 preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
+                 type: str = 'other', short_description: str = '', comment: str = '') -> None:
         super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
@@ -587,6 +593,9 @@ class Coverage(PreProcessContainer):
         self.contributors = [] if contributors is None else contributors
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
+        self.type = type
+        self.short_description = short_description
+        self.comment = comment
 
     def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
         gridfs_handler = GridFsHandler()
@@ -850,6 +859,9 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)
+    type = CoverageType()
+    short_description = fields.String()
+    comment = fields.String()
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:

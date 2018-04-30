@@ -1,7 +1,7 @@
 celery==4.1.0
 Flask-RESTful==0.3.6
 Flask-PyMongo==0.5.1
-marshmallow==2.10.0
+marshmallow==2.15.1
 requests==2.18.4
 pandas==0.20.3
 typing==3.6.1
