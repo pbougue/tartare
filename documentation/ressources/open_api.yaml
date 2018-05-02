@@ -1239,6 +1239,15 @@ definitions:
       name:
         type: string
         example: auv
+      type:
+        enum: ["navitia.io", "keolis", "regional", "other"]
+        description: Coverage typology
+      short_description:
+        type: string
+        description: Description of coverage content, used for ODS export
+      comment:
+        type: string
+        description: Coverage detail
       grid_calendars_id:
         type: string
         example: 5810cb2d3c96b7000108d074
@@ -1742,15 +1751,6 @@ definitions:
     type: "object"
     properties:
       data_sets:
-        type: "array"
-        items:
-          $ref: "#/definitions/data_source_fetch"
-
-  data_source_fetches:
-    description: "List of data sets"
-    type: "object"
-    properties:
-      data_source_fetches:
         type: "array"
         items:
           $ref: "#/definitions/data_source_fetch"
