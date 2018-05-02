@@ -199,6 +199,20 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw, 200)
         return self.json_to_dict(raw)['jobs']
 
+    def get_fusio_export_url_response_from_action_id(self, action_id, export_url):
+        return """<?xml version="1.0" encoding="ISO-8859-1"?>
+        <Info>
+            <ActionList ActionCount="1" TerminatedCount="1" WaitingCount="0" AbortedCount="0" WorkingCount="0"
+                        ThreadSuspended="True">
+                <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
+                        ActionId="{}" LastError="">
+                    <ActionProgression Status="Terminated"
+                                       Description="{}"
+                                       StepCount="10" CurrentStep="10"/>
+                </Action>
+            </ActionList>
+        </Info>""".format(action_id, export_url)
+
     def get_fusio_response_from_action_id(self, action_id):
         return """<?xml version="1.0" encoding="ISO-8859-1"?>
                             <serverfusio>
