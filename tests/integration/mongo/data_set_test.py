@@ -66,6 +66,18 @@ class TestDatasetApi(TartareFixture):
             r = self.json_to_dict(raw)
             assert r["error"] == 'file provided with bad param ("file" param expected)'
 
+    def test_post_dataset_on_unexisting_contributor(self):
+        raw = self.post('/contributors/id_test/data_sources/toto/data_sets')
+        self.assert_failed_call(raw, 404)
+        resp = self.json_to_dict(raw)
+        assert resp['error'] == 'bad contributor id_test'
+
+    def test_post_dataset_on_unexisting_data_source(self, contributor):
+        raw = self.post('/contributors/id_test/data_sources/toto/data_sets')
+        self.assert_failed_call(raw, 404)
+        resp = self.json_to_dict(raw)
+        assert resp['error'] == 'data source toto not found for contributor id_test'
+
     def test_post_dataset(self, data_source):
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
         self.assert_sucessful_call(raw)

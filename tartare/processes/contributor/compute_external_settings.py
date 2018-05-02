@@ -206,8 +206,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
         contributor = Contributor.get(self.contributor_id)
         data_source = contributor.get_data_source(self.params['target_data_source_id'])
         data_set = DataSet(gridfs_id=target_data_set_gridfs_id)
-        data_source.data_sets.append(data_set)
-        contributor.update()
+        data_source.add_data_set_and_update_contributor(data_set, contributor)
 
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'stop_extensions.txt'])

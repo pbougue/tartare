@@ -357,6 +357,16 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
+    def add_data_set_and_update_contributor(self, data_set: DataSet, contributor: 'Contributor') -> None:
+        self.data_sets.append(data_set)
+        data_sets_number = app.config.get('HISTORICAL', 3)
+        if len(self.data_sets) > data_sets_number:
+            sorted_data_set = sorted(self.data_sets, key=lambda ds: ds.created_at, reverse=True)
+            for data_set_to_be_removed in sorted_data_set[data_sets_number:]:
+                GridFsHandler().delete_file_from_gridfs(data_set_to_be_removed.gridfs_id)
+            self.data_sets = sorted_data_set[0:data_sets_number]
+        contributor.update()
+
     def is_of_data_format(self, data_format: str) -> bool:
         return self.data_format == data_format
 
