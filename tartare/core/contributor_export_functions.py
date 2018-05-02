@@ -123,7 +123,6 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
         data_source_fetch_job.update(step='save')
         data_set = DataSet(validity_period=validity_period)
         data_set.add_file_from_path(dest_full_file_name, expected_file_name)
-        data_source.data_sets.append(data_set)
-        contributor.update()
+        data_source.add_data_set_and_update_contributor(data_set, contributor)
         data_source_fetch_job.update(state=JOB_STATUS_DONE)
         return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT

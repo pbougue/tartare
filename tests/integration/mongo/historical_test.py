@@ -89,15 +89,15 @@ class TestHistorical(TartareFixture):
             self.full_export('id_test', 'jdr')
 
         with app.app_context():
-            self.assert_data_source_fetched_number(contributor['id'], 'data_source_gtfs', exports_number)
-            self.assert_data_source_fetched_number(contributor['id'], 'data_source_config', exports_number)
+            self.assert_data_set_number(contributor['id'], 'data_source_gtfs', exports_number)
+            self.assert_data_set_number(contributor['id'], 'data_source_config', exports_number)
             self.assert_contributor_exports_number(exports_number)
             self.assert_coverage_exports_number(exports_number)
             self.assert_files_number(exports_number)
 
-    def assert_data_source_fetched_number(self, contributor_id, data_source_id, exports_number):
+    def assert_data_set_number(self, contributor_id, data_source_id, exports_number):
         data_sources = DataSource.get_one(contributor_id, data_source_id)
-        assert len(data_sources.data_sets) == exports_number
+        assert len(data_sources.data_sets) == min(exports_number, tartare.app.config.get('HISTORICAL'))
 
     def assert_contributor_exports_number(self, exports_number):
         raw = mongo.db[models.ContributorExport.mongo_collection].find({
@@ -113,8 +113,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        #                                       === historized parts ===                      +  === data_sets parts ===
-        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 5) + (exports_number * 2)
+        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 7)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_sets_histo_and_cleaning(self, init_http_download_server):
@@ -133,13 +132,13 @@ class TestHistorical(TartareFixture):
         self.contributor_export(cid)  # -> unchanged
         self.update_data_source_url(cid, dsid, 'fail-url')  # -> failed
         self.contributor_export(cid, check_done=False)
-        # there should remain 3 DataSet: 3 updated, 2 unchanged happened after last update and
+        # there should remain 2 DataSet: 2 updated, 2 unchanged happened after last update and
         # 1 failed happened after last update
         with app.app_context():
             data_sets = DataSource.get_one(cid, dsid).data_sets
-            assert len(data_sets) == 3
+            assert len(data_sets) == 2
             raw = mongo.db['fs.files'].find({})
-            assert raw.count() == 5
+            assert raw.count() == 4
 
     def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')

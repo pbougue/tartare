@@ -48,10 +48,9 @@ class DataSet(Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         file = request.files['file']
         contributor = Contributor.get(contributor_id)
-        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
+        data_source = contributor.get_data_source(data_source_id)
         validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename, data_source.data_format)
         data_set = DataSetModel(validity_period=validity_period)
         data_set.add_file_from_io(file, os.path.basename(file.filename))
-        data_source.data_sets.append(data_set)
-        contributor.update()
+        data_source.add_data_set_and_update_contributor(data_set, contributor)
         return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201
