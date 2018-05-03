@@ -55,7 +55,9 @@ class FusioExport(AbstractFusioProcess):
                 ))
         self.export_type = self.params.get('export_type').lower()
         if self.export_type not in map_export_type:
-            msg = 'export_type {} not found'.format(self.export_type)
+            msg = 'export_type {} is not handled by preprocess FusioExport, possible values: {})'.format(
+                self.export_type, ','.join(map_export_type.keys())
+            )
             logging.getLogger(__name__).exception(msg)
             raise FusioException(msg)
         return map_export_type.get(self.export_type)

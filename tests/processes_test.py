@@ -124,14 +124,3 @@ class TestFusioProcesses:
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
         get_export_url.assert_called_with('1607281547155684')
         save_export.assert_called_with('http://fusio_host/abcd.zip')
-
-    def test_call_fusio_export_unkown_export_type(self):
-        params = {
-            'url': 'http://fusio_host',
-            "export_type": "bob"
-        }
-        fusio_export = FusioExport(context=CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                   preprocess=PreProcess(params=params))
-        with pytest.raises(FusioException) as excinfo:
-            fusio_export.do()
-        assert str(excinfo.value) == "export_type bob not found"

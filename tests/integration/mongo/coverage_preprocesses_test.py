@@ -519,7 +519,8 @@ class TestFusioExportPreprocess(TartareFixture):
     @pytest.mark.parametrize("export_type,expected_message", [
         (None,
          'export_type mandatory in preprocess fusio_export parameters (possible values: ntfs,gtfsv2,googletransit)'),
-        ('invalid', 'export_type invalid not found')
+        ('obiti',
+         'export_type obiti is not handled by preprocess FusioExport, possible values: ntfs,gtfsv2,googletransit)')
     ])
     def test_fusio_export_missing_export_type(self, init_http_download_server, export_type, expected_message):
         url = self.format_url(ip=init_http_download_server.ip_addr,
