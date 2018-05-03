@@ -727,7 +727,7 @@ class MongoDataSetStatusSchema(Schema):
 
 
 class MongoDataSetSchema(Schema):
-    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
