@@ -153,6 +153,9 @@ List of preprocesses for coverages
 ```
 values possibles for export_type: ntfs, gtfsv2 and googletransit
 
+If export_type is ntfs, the export result will be used as coverage export output file.
+If you want your FusioExport preprocess to output in a specified data source too, use 'target_data_source_id' in the params.
+
 ### FusioExportContributor
 ```json
 {

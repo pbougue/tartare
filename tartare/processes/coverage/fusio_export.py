@@ -31,37 +31,52 @@ import tempfile
 
 import requests
 
-from tartare.core.context import Context
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS, DATA_FORMAT_GOOGLE_TRANSIT
+from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import FusioException
+from tartare.core.models import PreProcess
+from tartare.exceptions import FusioException, ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
-from tartare.processes.utils import preprocess_registry
 from tartare.processes.fusio import Fusio
+from tartare.processes.utils import preprocess_registry
 
 
 @preprocess_registry('coverage')
 class FusioExport(AbstractFusioProcess):
+    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        self.export_type = self.params.get('export_type')
+
     def get_export_type(self) -> int:
-        export_type = self.params.get('export_type', "ntfs")
         map_export_type = {
-            "ntfs": 32,
-            "gtfsv2": 36,
-            "googletransit": 37
+            DATA_FORMAT_NTFS: 32,
+            DATA_FORMAT_GTFS: 36,
+            DATA_FORMAT_GOOGLE_TRANSIT: 37
         }
-        lower_export_type = export_type.lower()
-        if lower_export_type not in map_export_type:
-            msg = 'export_type {} not found'.format(lower_export_type)
+        if not self.params.get('export_type'):
+            raise ParameterException(
+                'export_type mandatory in preprocess {} parameters (possible values: {})'.format(
+                    self.process_id, ','.join(map_export_type.keys())
+                ))
+
+        if self.export_type not in map_export_type:
+            msg = 'export_type {} is not handled by preprocess FusioExport, possible values: {})'.format(
+                self.export_type, ','.join(map_export_type.keys())
+            )
             logging.getLogger(__name__).exception(msg)
             raise FusioException(msg)
-        return map_export_type.get(lower_export_type)
+        return map_export_type.get(self.export_type)
 
-    def save_export(self, url: str) -> Context:
+    def save_export(self, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
             with open(dest_full_file_name, 'rb') as file:
-                self.context.global_gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
-        return self.context
+                gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
+                if self.params.get('target_data_source_id'):
+                    self.save_result_into_target_data_source(self.context.coverage, gridfs_id)
+            if self.export_type == DATA_FORMAT_NTFS:
+                self.context.global_gridfs_id = gridfs_id
 
     def do(self) -> Context:
         data = {
@@ -79,4 +94,5 @@ class FusioExport(AbstractFusioProcess):
         # avoid to access to a private ip from outside
         new_export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
 
-        return self.save_export(new_export_url)
+        self.save_export(new_export_url)
+        return self.context

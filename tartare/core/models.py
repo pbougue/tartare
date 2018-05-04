@@ -362,7 +362,7 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
-    def add_data_set_and_update_contributor(self, data_set: DataSet, contributor: 'Contributor') -> None:
+    def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
         data_sets_number = app.config.get('HISTORICAL', 3)
         if len(self.data_sets) > data_sets_number:
@@ -370,7 +370,7 @@ class DataSource(object):
             for data_set_to_be_removed in sorted_data_set[data_sets_number:]:
                 GridFsHandler().delete_file_from_gridfs(data_set_to_be_removed.gridfs_id)
             self.data_sets = sorted_data_set[0:data_sets_number]
-        contributor.update()
+        model.update()
 
     def is_of_data_format(self, data_format: str) -> bool:
         return self.data_format == data_format
@@ -668,6 +668,9 @@ class Coverage(PreProcessContainer):
             {'_id': self.id},
             {'$set': MongoCoverageSchema().dump(coverage_object).data})
 
+    def update(self) -> None:
+        self.update_with_object(self)
+
     def save_ntfs(self, environment_type: str, file: Union[str, bytes, IOBase, GridOut]) -> None:
         if environment_type not in self.environments.keys():
             raise ValueError('invalid value for environment_type')
@@ -699,6 +702,9 @@ class Coverage(PreProcessContainer):
             self.contributors.remove(contributor_id)
             self.update_with_dict(self.id, {"contributors": self.contributors})
 
+    def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
+        return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
+
 
 class MongoValidityPeriodSchema(Schema):
     start_date = fields.Date(required=True)
@@ -715,7 +721,7 @@ class MongoDataSetStatusSchema(Schema):
 
 
 class MongoDataSetSchema(Schema):
-    id = fields.String(required=True, load_from='_id', dump_to='_id')
+    id = fields.String(required=True)
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)

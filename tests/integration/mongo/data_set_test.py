@@ -99,6 +99,7 @@ class TestDatasetApi(TartareFixture):
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))
         self.assert_sucessful_call(raw)
         ds = self.json_to_dict(raw)['data_sources'][0]
+        assert 'id' in ds['data_sets'][0]
         assert ds['status'] == DATA_SOURCE_STATUS_NEVER_FETCHED
         assert ds['fetch_started_at'] is None
         assert ds['updated_at'] is not None

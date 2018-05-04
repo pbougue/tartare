@@ -577,7 +577,8 @@ class TestDataPublisher(TartareFixture):
                 "id": "fusio_export",
                 "type": "FusioExport",
                 "params": {
-                    "url": fusio_end_point
+                    "url": fusio_end_point,
+                    "export_type": "ntfs"
                 },
                 "sequence": 1
             }

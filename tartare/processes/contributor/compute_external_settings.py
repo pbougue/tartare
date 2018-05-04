@@ -202,12 +202,6 @@ class ComputeExternalSettings(AbstractContributorProcess):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
                 self.params['target_data_source_id']))
 
-    def __save_result_into_data_source(self, target_data_set_gridfs_id: str) -> None:
-        contributor = Contributor.get(self.contributor_id)
-        data_source = contributor.get_data_source(self.params['target_data_source_id'])
-        data_set = DataSet(gridfs_id=target_data_set_gridfs_id)
-        data_source.add_data_set_and_update_contributor(data_set, contributor)
-
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'stop_extensions.txt'])
         self.__check_target_data_source()
@@ -217,7 +211,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 contributor_id=self.contributor_id,
                 data_source_id=data_source_id_to_process)
             target_data_set_gridfs_id = self.__process_file_from_gridfs_id(data_source_to_process_context.gridfs_id)
-            self.__save_result_into_data_source(target_data_set_gridfs_id)
+            self.save_result_into_target_data_source(Contributor.get(self.contributor_id), target_data_set_gridfs_id)
             data_source_target_context = self.context.get_contributor_data_source_context(
                 contributor_id=self.contributor_id,
                 data_source_id=self.params['target_data_source_id'])
