@@ -767,7 +767,8 @@ class TestCoverageApi(TartareFixture):
                         "type": "navitia",
                         "protocol": "http",
                         "url": "http://tyr.integ/deploy",
-                        "sequence": 1
+                        "sequence": 1,
+                        "input_data_source_ids": ['id-1']
                     },
                     {
                         "type": "ods",
@@ -778,21 +779,50 @@ class TestCoverageApi(TartareFixture):
                 ]
             }
         }
-        expected = {'type': 'other', 'short_description': '', 'comment': '',
-                    'grid_calendars_id': None, 'data_sources': [], 'id': 'my-cov',
-                    'license': {'name': 'Private (unspecified)', 'url': ''}, 'preprocesses': [], 'contributors': [],
-                    'environments':
-                        {'production': {'name': 'production', 'sequence': 2, 'publication_platforms': [
-                            {'type': 'ods', 'protocol': 'ftp', 'options': {}, 'url': 'ftp.ods.com.new', 'sequence': 0}],
-                                        'current_ntfs_id': None},
-                         'integration': {'name': 'integration', 'sequence': 1, 'publication_platforms': [
-                             {'type': 'navitia', 'protocol': 'http', 'options': {},
-                              'url': 'http://tyr.integ/deploy', 'sequence': 1},
-                             {'type': 'ods', 'protocol': 'ftp', 'options': {},
-                              'url': 'ftp.ods.com.integration', 'sequence': 2}], 'current_ntfs_id': None}},
-                    'name': 'my-cov', 'last_active_job': None}
+        expected = {
+            'environments': {
+                'production': {
+                    'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
+                        {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': {}, 'protocol': 'ftp',
+                         'input_data_source_ids': [],
+                         'type': 'ods'}], 'name': 'production'
+                },
+                'integration': {
+                    'sequence': 1, 'current_ntfs_id': None,
+                    'publication_platforms': [
+                        {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': {}, 'protocol': 'http',
+                         'input_data_source_ids': ['id-1'], 'type': 'navitia'},
+                        {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': {}, 'protocol': 'ftp',
+                         'input_data_source_ids': [], 'type': 'ods'}
+                    ],
+                    'name': 'integration'}
+            },
+            'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
+            'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
+            'short_description': '', 'data_sources': [], 'last_active_job': None}
 
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
         assert self.json_to_dict(raw) == expected
         assert self.get_coverage(coverage['id']) == expected
+
+    def test_post_coverage_publication_with_input_data_source_ids(self):
+        cov_id = 'covid'
+        self.init_coverage(cov_id, environments={
+            'production': {
+                'name': 'production',
+                'sequence': 0,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com",
+                        "sequence": 0,
+                        "input_data_source_ids": ['my-ds-id']
+                    }
+                ]
+            }
+        })
+        ods_platform = self.get_coverage(cov_id)['environments']['production']['publication_platforms'][0]
+        assert ods_platform['type'] == 'ods'
+        assert ods_platform['input_data_source_ids'] == ['my-ds-id']

@@ -124,13 +124,13 @@ class ProtocolManager:
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: Optional[CoverageExport]) -> None:
+                coverage_export: Optional[CoverageExport], input_data_source_ids: Optional[List[str]] = None) -> None:
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
         for cov_export_contrib in coverage_export.contributors:
@@ -155,7 +155,7 @@ class ODSPublisher(AbstractPublisher):
                 'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
 
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         import datetime
         meta_data_dict = [
             {
@@ -184,7 +184,7 @@ class ODSPublisher(AbstractPublisher):
 
 class StopAreaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         source_filename = 'stops.txt'
         dest_filename = "{coverage}_stops.txt".format(coverage=coverage.id)
 
