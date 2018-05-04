@@ -31,9 +31,11 @@ import tempfile
 
 import requests
 
-from tartare.core.context import Context
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS, DATA_FORMAT_GOOGLE_TRANSIT
+from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import PreProcess
 from tartare.exceptions import FusioException, ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -42,18 +44,22 @@ from tartare.processes.utils import preprocess_registry
 
 @preprocess_registry('coverage')
 class FusioExport(AbstractFusioProcess):
+    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
+        super().__init__(context, preprocess)
+        self.export_type = self.params.get('export_type')
+
     def get_export_type(self) -> int:
         map_export_type = {
-            "ntfs": 32,
-            "gtfsv2": 36,
-            "googletransit": 37
+            DATA_FORMAT_NTFS: 32,
+            DATA_FORMAT_GTFS: 36,
+            DATA_FORMAT_GOOGLE_TRANSIT: 37
         }
-        if 'export_type' not in self.params:
+        if not self.params.get('export_type'):
             raise ParameterException(
                 'export_type mandatory in preprocess {} parameters (possible values: {})'.format(
                     self.process_id, ','.join(map_export_type.keys())
                 ))
-        self.export_type = self.params.get('export_type').lower()
+
         if self.export_type not in map_export_type:
             msg = 'export_type {} is not handled by preprocess FusioExport, possible values: {})'.format(
                 self.export_type, ','.join(map_export_type.keys())
@@ -69,7 +75,7 @@ class FusioExport(AbstractFusioProcess):
                 gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
                 if self.params.get('target_data_source_id'):
                     self.save_result_into_target_data_source(self.context.coverage, gridfs_id)
-            if self.export_type == 'ntfs':
+            if self.export_type == DATA_FORMAT_NTFS:
                 self.context.global_gridfs_id = gridfs_id
 
     def do(self) -> Context:
