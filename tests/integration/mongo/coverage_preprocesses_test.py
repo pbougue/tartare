@@ -510,6 +510,7 @@ class TestFusioExportPreprocess(TartareFixture):
         coverage = self.json_to_dict(self.get('/coverages/{}'.format(coverage_id)))['coverages'][0]
         assert 'data_sources' in coverage
         assert len(coverage['data_sources']) == 1
+        assert coverage['data_sources'][0]['id'] == target_id
         assert 'data_sets' in coverage['data_sources'][0]
         assert len(coverage['data_sources'][0]['data_sets']) == 1
         gridfs_id = coverage['data_sources'][0]['data_sets'][0]['gridfs_id']

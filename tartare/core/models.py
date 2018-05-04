@@ -362,12 +362,6 @@ class DataSource(object):
 
         return cls.get(contributor_id, data_source_id)[0]
 
-    def add_data_set_and_update_coverage(self, data_set: DataSet, coverage: 'Coverage') -> None:
-        self.add_data_set_and_update_model(data_set, coverage)
-
-    def add_data_set_and_update_contributor(self, data_set: DataSet, contributor: 'Contributor') -> None:
-        self.add_data_set_and_update_model(data_set, contributor)
-
     def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
         data_sets_number = app.config.get('HISTORICAL', 3)
