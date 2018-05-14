@@ -704,7 +704,7 @@ class TestCoverageApi(TartareFixture):
         expected = {
             'name': 'my-cov',
             'type': 'other',
-            'short_description': '',
+            'short_description': 'description of coverage my-cov',
             'comment': '',
             'preprocesses': [
                 {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
@@ -799,7 +799,7 @@ class TestCoverageApi(TartareFixture):
             },
             'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
             'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
-            'short_description': '', 'data_sources': [], 'last_active_job': None}
+            'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None}
 
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)

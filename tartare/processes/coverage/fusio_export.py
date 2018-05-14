@@ -36,6 +36,7 @@ from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import PreProcess
+from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import FusioException, ParameterException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -74,7 +75,9 @@ class FusioExport(AbstractFusioProcess):
             with open(dest_full_file_name, 'rb') as file:
                 gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
                 if self.params.get('target_data_source_id'):
-                    self.save_result_into_target_data_source(self.context.coverage, gridfs_id)
+                    validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name,
+                                                                                    self.export_type)
+                    self.save_result_into_target_data_source(self.context.coverage, gridfs_id, validity_period)
             if self.export_type == DATA_FORMAT_NTFS:
                 self.context.global_gridfs_id = gridfs_id
 
