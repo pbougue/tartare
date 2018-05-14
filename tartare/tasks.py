@@ -99,7 +99,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
     try:
         publisher = PublisherManager.select_from_platform(platform)
         protocol_uploader = ProtocolManager.select_from_platform(platform)
-        publisher.publish(protocol_uploader, file, coverage, coverage_export)
+        publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
         # Upgrade current_ntfs_id
         current_ntfs_id = coverage_export.gridfs_id
         coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})

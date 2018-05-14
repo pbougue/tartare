@@ -157,12 +157,14 @@ class PreProcessContainer(metaclass=ABCMeta):
 
 
 class Platform(SequenceContainer):
-    def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0) -> None:
+    def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0,
+                 input_data_source_ids: List[str] = None) -> None:
         super().__init__(sequence)
         self.type = type
         self.protocol = protocol
         self.url = url
         self.options = {} if options is None else options
+        self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
 
 
 class Environment(SequenceContainer):
@@ -748,6 +750,7 @@ class MongoPlatformSchema(Schema):
     sequence = fields.Integer(required=True)
     url = fields.String(required=True)
     options = fields.Dict(required=False)
+    input_data_source_ids = fields.List(fields.String())
 
     @post_load
     def make_platform(self, data: dict) -> Platform:

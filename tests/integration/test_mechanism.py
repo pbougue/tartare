@@ -150,7 +150,7 @@ class TartareFixture(object):
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
 
-    def init_coverage(self, id, contributor_ids=None, preprocesses=None, environments=None):
+    def init_coverage(self, id, contributor_ids=None, preprocesses=None, environments=None, license=None):
         contributor_ids = contributor_ids if contributor_ids else []
         preprocesses = preprocesses if preprocesses else []
         environments = environments if environments else {}
@@ -160,7 +160,10 @@ class TartareFixture(object):
             "contributors": contributor_ids,
             "preprocesses": preprocesses,
             "environments": environments,
+            "short_description": "description of coverage {}".format(id)
         }
+        if license:
+            coverage['license'] = license
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)
@@ -227,12 +230,9 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
-    def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None,
-                                          expected_filename=None):
-        metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(
-            coverage_id=coverage_id)
-        expected_filename = expected_filename if expected_filename else '{coverage_id}.zip'.format(
-            coverage_id=coverage_id)
+    def assert_ods_uploaded_ok(self, init_ftp_upload_server, coverage_id):
+        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
                              init_ftp_upload_server.password)
 

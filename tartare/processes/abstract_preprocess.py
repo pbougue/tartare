@@ -32,12 +32,12 @@ import shutil
 import tempfile
 import zipfile
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Union
+from typing import Any, List, Union, Optional
 from zipfile import is_zipfile
 
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess, DataSource, Contributor, Coverage, DataSet
+from tartare.core.models import PreProcess, DataSource, Contributor, Coverage, DataSet, ValidityPeriod
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
 from tartare.processes.fusio import Fusio
 
@@ -49,9 +49,10 @@ class AbstractProcess(metaclass=ABCMeta):
         self.process_id = preprocess.id
 
     def save_result_into_target_data_source(self, data_source_owner: Union[Contributor, Coverage],
-                                            target_data_set_gridfs_id: str) -> None:
+                                            target_data_set_gridfs_id: str,
+                                            validity_period: Optional[ValidityPeriod] = None) -> None:
         data_source = data_source_owner.get_data_source(self.params['target_data_source_id'])
-        data_set = DataSet(gridfs_id=target_data_set_gridfs_id)
+        data_set = DataSet(gridfs_id=target_data_set_gridfs_id, validity_period=validity_period)
         data_source.add_data_set_and_update_model(data_set, data_source_owner)
 
     @abstractmethod

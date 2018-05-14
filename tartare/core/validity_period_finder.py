@@ -31,7 +31,8 @@ import logging
 from datetime import timedelta, date
 from typing import List
 
-from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE, \
+    DATA_FORMAT_NTFS
 from tartare.core.models import ValidityPeriod
 from tartare.core.validity_period_computers import AbstractValidityPeriodComputer, GtfsValidityPeriodComputer, \
     TitanValidityPeriodComputer, ObitiValidityPeriodComputer, NeptuneValidityPeriodComputer
@@ -47,6 +48,7 @@ class ValidityPeriodFinder:
     def get_computers_mapping(cls) -> dict:
         return {
             DATA_FORMAT_GTFS: GtfsValidityPeriodComputer(),
+            DATA_FORMAT_NTFS: GtfsValidityPeriodComputer(),
             DATA_FORMAT_TITAN: TitanValidityPeriodComputer(),
             DATA_FORMAT_OBITI: ObitiValidityPeriodComputer(),
             DATA_FORMAT_NEPTUNE: NeptuneValidityPeriodComputer(),
