@@ -1,2 +1,0 @@
-Description,Download,Format,ID,Licence,Publication update date,Script of Transformation,Source link,Type file,Validity end date,Validity start date
-Global transport in cA,gtfs.zip,GTFS,cA-GTFS,Private (unspecified),10/08/2015,,,Global,20160801,20150803
