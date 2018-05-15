@@ -145,16 +145,16 @@ List of preprocesses for coverages
    "id":"fusio_export",
    "params":{
       "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
-      "export_type": "ntfs"
+      "export_type": "ntfs",
+      "target_data_source_id": "gtfs_export"
    },
    "type":"FusioExport",
    "sequence":3
 }
 ```
-values possibles for export_type: ntfs, gtfsv2 and googletransit
-
+Possible values for export_type are: ntfs, gtfs and googletransit.  
+If target_data_source_id is specified, the output will be saved in the corresponding data source.  
 If export_type is ntfs, the export result will be used as coverage export output file.
-If you want your FusioExport preprocess to output in a specified data source too, use 'target_data_source_id' in the params.
 
 ### FusioExportContributor
 ```json
