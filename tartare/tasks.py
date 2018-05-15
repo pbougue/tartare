@@ -234,7 +234,8 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
 
 
 def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
-    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
+    enabled_processes = [process for process in processes if process.enabled]
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(enabled_processes)
     actions = []
 
     # Do better

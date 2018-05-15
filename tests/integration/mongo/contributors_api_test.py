@@ -985,10 +985,10 @@ class TestContributors(TartareFixture):
         expected = {'contributors': [{'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
                                       'preprocesses': [
                                           {'params': {}, 'sequence': 0, 'data_source_ids': ['dsid'], 'id': 'p1',
-                                           'type': 'HeadsignShortName'},
+                                           'type': 'HeadsignShortName', 'enabled': True},
                                           {'params': {'data': {'agency_name': 'my_agency'}}, 'sequence': 1,
                                            'data_source_ids': ['dsid'],
-                                           'id': 'p2', 'type': 'GtfsAgencyFile'}
+                                           'id': 'p2', 'type': 'GtfsAgencyFile', 'enabled': True}
                                       ], 'data_sources': [
                 {'license': {'name': 'Private (unspecified)', 'url': ''}, 'service_id': None, 'name': 'dsid',
                  'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
