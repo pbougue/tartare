@@ -209,6 +209,7 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
     @mock.patch('requests.get')
+    @freeze_time("2018-05-14")
     def test_publish_ftp_ods_with_metadata(self, fusio_get, fusio_post, wait_for_action_terminated,
                                            replace_url_hostname_from_url, init_http_download_server,
                                            init_ftp_upload_server):
