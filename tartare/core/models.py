@@ -389,12 +389,14 @@ class DataSource(object):
 
 class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
-                 sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None) -> None:
+                 sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None,
+                 enabled: bool = True) -> None:
         super().__init__(sequence)
         self.id = str(uuid.uuid4()) if not id else id
         self.data_source_ids = data_source_ids if data_source_ids else []
         self.params = params if params else {}
         self.type = type
+        self.enabled = enabled
 
     def save_data(self, class_name: Type[PreProcessContainer],
                   mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
@@ -855,6 +857,7 @@ class MongoDataSourceSchema(Schema):
 
 class MongoPreProcessSchema(Schema):
     id = fields.String(required=True)
+    enabled = fields.Boolean(required=False)
     sequence = fields.Integer(required=True)
     type = fields.String(required=True)
     params = fields.Dict(required=False)
