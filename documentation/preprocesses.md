@@ -153,7 +153,7 @@ List of preprocesses for coverages
 }
 ```
 Possible values for export_type are: ntfs, gtfs and googletransit.  
-If target_data_source_id is specified, the output will be saved in the corresponding data source.  
+If **target_data_source_id** is specified, the output will be saved in the corresponding data source.  
 If export_type is ntfs, the export result will be used as coverage export output file.
 
 ### FusioExportContributor
