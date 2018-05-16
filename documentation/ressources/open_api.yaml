@@ -163,6 +163,39 @@ paths:
           description: Unsupported Media Type
           schema :
             $ref: '#/definitions/error_415'
+    put:
+      summary: Modify a coverage configuration
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: body
+          name: body
+          description: Attributes of the coverage {coverage_id} that needs to be modified
+          required: true
+          schema:
+            $ref: "#/definitions/coverage_patch"
+      responses:
+        200:
+          description: Modified coverage
+          schema:
+            $ref: "#/definitions/coverages"
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        409:
+          description: Duplicate entry
+          schema :
+            $ref: '#/definitions/error_409'
     delete:
       summary: Delete a coverage
       tags:
