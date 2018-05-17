@@ -108,3 +108,13 @@ def test_launch_in_sequence(mock_run_preprocess):
     assert 'toto' == calls[0][0][1].id
     assert 'bob' == calls[1][0][0].id
     assert 'tata' == calls[2][0][0].id
+
+@mock.patch('tartare.tasks.run_preprocess.s')
+def test_launch_enabled(mock_run_preprocess):
+    preprocesses = [PreProcess(id='bob', sequence=1, enabled=False), PreProcess(id='toto', sequence=0, enabled=True),
+                    PreProcess(id='tata', sequence=2, enabled=True)]
+    launch(preprocesses, ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
+    calls = mock_run_preprocess.call_args_list
+    assert mock_run_preprocess.call_count == 2
+    assert calls[0][0][1].id == 'toto'
+    assert calls[1][0][0].id == 'tata'

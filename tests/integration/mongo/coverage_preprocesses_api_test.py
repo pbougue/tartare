@@ -29,6 +29,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import json
+
+import pytest
+
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -264,3 +267,37 @@ class TestCoveragePreProcesses(TartareFixture):
         assert p_titi
         assert p_titi['type'] == 'FusioPreProd'
 
+    def test_preprocess_enabled_by_default(self, coverage):
+        self.add_preprocess_to_coverage({
+            "id": "fusio_preprod",
+            "type": "FusioPreProd",
+            "sequence": 3,
+            "params": {
+                "url": "http://fusio.canaltp.fr/fusio.dll"
+            }
+        }, coverage['id'])
+        preprocesses = self.json_to_dict(
+            self.get('/coverages/{}/preprocesses'.format(coverage['id']))
+        )['preprocesses']
+        assert len(preprocesses) == 1
+        preprocess = preprocesses[0]
+        assert preprocess['enabled'] == True
+
+    @pytest.mark.parametrize("enabled", [
+        True,
+        False
+    ])
+    def test_preprocess_enabled_specified(self, coverage, enabled):
+        self.add_preprocess_to_coverage({
+            "id": "fusio_preprod",
+            "type": "FusioPreProd",
+            "sequence": 3,
+            "params": {
+                "url": "http://fusio.canaltp.fr/fusio.dll"
+            },
+            "enabled": enabled
+        }, coverage['id'])
+        preprocess = self.json_to_dict(
+            self.get('/coverages/{}/preprocesses'.format(coverage['id']))
+        )['preprocesses'][0]
+        assert preprocess['enabled'] == enabled

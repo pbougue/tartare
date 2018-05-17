@@ -709,11 +709,11 @@ class TestCoverageApi(TartareFixture):
             'preprocesses': [
                 {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
                  'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api'},
-                 'data_source_ids': [], 'sequence': 0},
+                 'data_source_ids': [], 'sequence': 0, 'enabled': True},
                 {'id': 'preprocess_2', 'type': 'FusioImport',
                  'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api',
                             'export_type': 'gtfsv2'}, 'data_source_ids': [],
-                 'sequence': 1}
+                 'sequence': 1, 'enabled': True}
             ],
             'id': 'my-cov', 'contributors': [],
             'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},

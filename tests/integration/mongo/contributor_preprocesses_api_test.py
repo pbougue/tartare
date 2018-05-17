@@ -30,6 +30,8 @@
 # www.navitia.io
 import json
 
+import pytest
+
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tests.integration.test_mechanism import TartareFixture
 
@@ -369,3 +371,34 @@ class TestContributorPreProcesses(TartareFixture):
         assert len(contributor_data_sources) == 1
         assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
         assert contributor_data_sources[0]['id'] == 'target_1'
+
+    def test_preprocess_enabled_by_default(self, contributor):
+        self.add_preprocess_to_contributor({
+            "id": "headsign_short_name",
+            "type": "HeadsignShortName",
+            "sequence": 0,
+            "data_source_ids": []
+        }, contributor['id'])
+        preprocesses = self.json_to_dict(
+            self.get('/contributors/{}/preprocesses'.format(contributor['id']))
+        )['preprocesses']
+        assert len(preprocesses) == 1
+        preprocess = preprocesses[0]
+        assert preprocess['enabled'] == True
+
+    @pytest.mark.parametrize("enabled", [
+        True,
+        False
+    ])
+    def test_preprocess_enabled_specified(self, contributor, enabled):
+        self.add_preprocess_to_contributor({
+            "id": "headsign_short_name",
+            "type": "HeadsignShortName",
+            "sequence": 0,
+            "data_source_ids": [],
+            "enabled": enabled
+        }, contributor['id'])
+        preprocess = self.json_to_dict(
+            self.get('/contributors/{}/preprocesses'.format(contributor['id']))
+        )['preprocesses'][0]
+        assert preprocess['enabled'] == enabled
