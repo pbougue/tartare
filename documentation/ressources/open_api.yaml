@@ -179,10 +179,10 @@ paths:
           required: true
         - in: body
           name: body
-          description: Attributes of the coverage {coverage_id} that needs to be modified
+          description: All the Attributes of the coverage {coverage_id}
           required: true
           schema:
-            $ref: "#/definitions/coverage_patch"
+            $ref: "#/definitions/coverages"
       responses:
         200:
           description: Modified coverage
