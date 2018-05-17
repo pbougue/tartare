@@ -659,18 +659,20 @@ class TestCoverageApi(TartareFixture):
             'comment': 'a comment'
         }
         expected = {
-            'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
-            'license': {'url': 'http://whatever.com', 'name': 'public'},
-            'preprocesses': [], 'contributors': ['id_test'], 'name': 'new_name', 'id': 'jdr',
-            'last_active_job': None,
-            'type': 'keolis',
-            'short_description': 'a short description',
-            'comment': 'a comment'
+            'coverages': [{
+                'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
+                'license': {'url': 'http://whatever.com', 'name': 'public'},
+                'preprocesses': [], 'contributors': ['id_test'], 'name': 'new_name', 'id': 'jdr',
+                'last_active_job': None,
+                'type': 'keolis',
+                'short_description': 'a short description',
+                'comment': 'a comment'
+            }]
         }
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(update))
         self.assert_sucessful_call(raw)
         assert self.json_to_dict(raw) == expected
-        assert self.get_coverage(coverage['id']) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
 
     def test_put_coverage_preprocess(self):
         cov_id = 'my-cov'
@@ -702,27 +704,30 @@ class TestCoverageApi(TartareFixture):
             },
         ]
         expected = {
-            'name': 'my-cov',
-            'type': 'other',
-            'short_description': 'description of coverage my-cov',
-            'comment': '',
-            'preprocesses': [
-                {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
-                 'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api'},
-                 'data_source_ids': [], 'sequence': 0, 'enabled': True},
-                {'id': 'preprocess_2', 'type': 'FusioImport',
-                 'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api',
-                            'export_type': 'gtfsv2'}, 'data_source_ids': [],
-                 'sequence': 1, 'enabled': True}
-            ],
-            'id': 'my-cov', 'contributors': [],
-            'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
-            'data_sources': [], 'environments': {}, 'last_active_job': None}
+            'coverages': [{
+                'name': 'my-cov',
+                'type': 'other',
+                'short_description': 'description of coverage my-cov',
+                'comment': '',
+                'preprocesses': [
+                    {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
+                     'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api'},
+                     'data_source_ids': [], 'sequence': 0, 'enabled': True},
+                    {'id': 'preprocess_2', 'type': 'FusioImport',
+                     'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api',
+                                'export_type': 'gtfsv2'}, 'data_source_ids': [],
+                     'sequence': 1, 'enabled': True}
+                ],
+                'id': 'my-cov', 'contributors': [],
+                'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
+                'data_sources': [], 'environments': {}, 'last_active_job': None
+            }]
+        }
 
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
         assert self.json_to_dict(raw) == expected
-        assert self.get_coverage(coverage['id']) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
 
     def test_put_coverage_publications(self):
         cov_id = 'my-cov'
@@ -780,31 +785,34 @@ class TestCoverageApi(TartareFixture):
             }
         }
         expected = {
-            'environments': {
-                'production': {
-                    'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
-                        {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': {}, 'protocol': 'ftp',
-                         'input_data_source_ids': [],
-                         'type': 'ods'}], 'name': 'production'
+            'coverages': [{
+                'environments': {
+                    'production': {
+                        'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
+                            {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': {}, 'protocol': 'ftp',
+                             'input_data_source_ids': [],
+                             'type': 'ods'}], 'name': 'production'
+                    },
+                    'integration': {
+                        'sequence': 1, 'current_ntfs_id': None,
+                        'publication_platforms': [
+                            {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': {}, 'protocol': 'http',
+                             'input_data_source_ids': ['id-1'], 'type': 'navitia'},
+                            {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': {}, 'protocol': 'ftp',
+                             'input_data_source_ids': [], 'type': 'ods'}
+                        ],
+                        'name': 'integration'}
                 },
-                'integration': {
-                    'sequence': 1, 'current_ntfs_id': None,
-                    'publication_platforms': [
-                        {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': {}, 'protocol': 'http',
-                         'input_data_source_ids': ['id-1'], 'type': 'navitia'},
-                        {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': {}, 'protocol': 'ftp',
-                         'input_data_source_ids': [], 'type': 'ods'}
-                    ],
-                    'name': 'integration'}
-            },
-            'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
-            'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
-            'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None}
+                'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
+                'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
+                'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
+            }]
+        }
 
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
         assert self.json_to_dict(raw) == expected
-        assert self.get_coverage(coverage['id']) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
 
     def test_post_coverage_publication_with_input_data_source_ids(self):
         cov_id = 'covid'
