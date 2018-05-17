@@ -372,6 +372,26 @@ class TestContributorPreProcesses(TartareFixture):
         assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
         assert contributor_data_sources[0]['id'] == 'target_1'
 
+    def test_update_preprocess_generates_computed_data_source(self, contributor):
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": [],
+            "type": "ComputeExternalSettings",
+            "params": {
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+            }
+        }, contributor['id'])
+        contributor_created = self.get_contributor(contributor['id'])
+        assert len(contributor_created['data_sources']) == 0
+        contributor_created['preprocesses'][0]['params']['target_data_source_id'] = 'target_1'
+        self.put('/contributors/{}'.format(contributor['id']), self.dict_to_json(contributor_created))
+        contributor_data_sources = self.json_to_dict(
+            self.get('/contributors/{}/data_sources'.format(contributor['id']))
+        )['data_sources']
+        assert len(contributor_data_sources) == 1
+        assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert contributor_data_sources[0]['id'] == 'target_1'
+
     def test_preprocess_enabled_by_default(self, contributor):
         self.add_preprocess_to_contributor({
             "id": "headsign_short_name",

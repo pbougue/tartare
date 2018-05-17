@@ -30,6 +30,8 @@
 # www.navitia.io
 import json
 
+from tartare.core.constants import DATA_FORMAT_GTFS
+
 import pytest
 
 from tests.integration.test_mechanism import TartareFixture
@@ -267,6 +269,38 @@ class TestCoveragePreProcesses(TartareFixture):
         assert p_titi
         assert p_titi['type'] == 'FusioPreProd'
 
+    def test_add_preprocess_generates_computed_data_source(self, coverage):
+        self.add_preprocess_to_coverage({
+            "sequence": 0,
+            "type": "FusioExport",
+            "params": {
+                "url": "http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+                "export_type": DATA_FORMAT_GTFS,
+                "target_data_source_id": "gtfs_export"
+            }
+        }, coverage['id'])
+        coverage_data_sources = self.get_coverage(coverage['id'])['data_sources']
+        assert len(coverage_data_sources) == 1
+        assert coverage_data_sources[0]['data_format'] == DATA_FORMAT_GTFS
+        assert coverage_data_sources[0]['id'] == 'gtfs_export'
+
+    def test_update_preprocess_generates_computed_data_source(self, coverage):
+        self.add_preprocess_to_coverage({
+            "sequence": 0,
+            "type": "FusioExport",
+            "params": {
+                "url": "http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+                "export_type": DATA_FORMAT_GTFS,
+            }
+        }, coverage['id'])
+        coverage_created = self.get_coverage(coverage['id'])
+        assert len(coverage_created['data_sources']) == 0
+        coverage_created['preprocesses'][0]['params']['target_data_source_id'] = 'gtfs_export'
+        self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage_created))
+        coverage_data_sources = self.get_coverage(coverage['id'])['data_sources']
+        assert len(coverage_data_sources) == 1
+        assert coverage_data_sources[0]['data_format'] == DATA_FORMAT_GTFS
+        assert coverage_data_sources[0]['id'] == 'gtfs_export'
     def test_preprocess_enabled_by_default(self, coverage):
         self.add_preprocess_to_coverage({
             "id": "fusio_preprod",
