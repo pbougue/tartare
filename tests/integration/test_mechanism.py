@@ -271,3 +271,8 @@ class TartareFixture(object):
         raw = self.get('coverages/{}'.format(coverage_id))
         self.assert_sucessful_call(raw)
         return self.json_to_dict(raw)['coverages'][0]
+
+    def get_contributor(self, contributor_id):
+        raw = self.get('contributors/{}'.format(contributor_id))
+        self.assert_sucessful_call(raw)
+        return self.json_to_dict(raw)['contributors'][0]

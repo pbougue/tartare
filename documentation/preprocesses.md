@@ -146,7 +146,7 @@ List of preprocesses for coverages
    "params":{
       "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
       "export_type": "ntfs",
-      "target_data_source_id": "gtfs_export"
+      "target_data_source_id": "ntfs_export"
    },
    "type":"FusioExport",
    "sequence":3
