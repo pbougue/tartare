@@ -30,10 +30,9 @@
 # www.navitia.io
 import json
 
-from tartare.core.constants import DATA_FORMAT_GTFS
-
 import pytest
 
+from tartare.core.constants import DATA_FORMAT_GTFS
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -301,6 +300,25 @@ class TestCoveragePreProcesses(TartareFixture):
         assert len(coverage_data_sources) == 1
         assert coverage_data_sources[0]['data_format'] == DATA_FORMAT_GTFS
         assert coverage_data_sources[0]['id'] == 'gtfs_export'
+
+    def test_add_preprocess_empty_target_data_source_id_generates_computed_data_source(self, coverage):
+        self.add_preprocess_to_coverage({
+            "sequence": 0,
+            "type": "FusioExport",
+            "params": {
+                "url": "http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+                "export_type": DATA_FORMAT_GTFS,
+                "target_data_source_id": ""
+            }
+        }, coverage['id'])
+        coverage_created = self.get_coverage(coverage['id'])
+        coverage_data_sources = coverage_created['data_sources']
+        assert len(coverage_data_sources) == 1
+        assert coverage_data_sources[0]['data_format'] == DATA_FORMAT_GTFS
+        assert coverage_data_sources[0]['id'] is not None
+        assert coverage_created['preprocesses'][0]['params']['target_data_source_id'] == \
+               coverage_data_sources[0]['id']
+
     def test_preprocess_enabled_by_default(self, coverage):
         self.add_preprocess_to_coverage({
             "id": "fusio_preprod",
