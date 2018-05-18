@@ -149,6 +149,8 @@ class PreProcessContainer(metaclass=ABCMeta):
                         data_format=preprocess.params.get("export_type"),
                         input=Input(INPUT_TYPE_COMPUTED),
                     )
+                    if not preprocess.params.get("target_data_source_id"):
+                        preprocess.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
 
     @classmethod
