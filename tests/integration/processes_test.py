@@ -31,7 +31,7 @@ from mock import mock
 
 from tartare import app
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT, ACTION_TYPE_COVERAGE_EXPORT
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.models import PreProcess, Job
 from tartare.http_exceptions import InvalidArguments
 from tartare.processes import contributor
@@ -54,11 +54,11 @@ def test_contributor_preprocess():
         # Contributor Preprocess
         for key, value in map_test.items():
             assert isinstance(PreProcessManager.get_preprocess(
-                Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)), PreProcess(type=key)), value)
+                ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)), PreProcess(type=key)), value)
     # Coverage Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
-            PreProcessManager.get_preprocess(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+            PreProcessManager.get_preprocess(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                              PreProcess(type=key))
         assert str(excinfo.typename) == "InvalidArguments"
 
@@ -74,35 +74,28 @@ def test_coverage_preprocess():
 
     # Coverage Preprocess
     for key, value in map_test.items():
-        assert isinstance(PreProcessManager.get_preprocess(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+        assert isinstance(PreProcessManager.get_preprocess(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                                            PreProcess(type=key, params={'url': 'http://fusio.com'})),
                           value)
     # Contributor Preprocess
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
-            PreProcessManager.get_preprocess(Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
+            PreProcessManager.get_preprocess(ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
                                              PreProcess(type=key))
         assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_coverage_invalid_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcessManager.get_preprocess(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+        isinstance(PreProcessManager.get_preprocess(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                                     PreProcess(type='AA')), FusioPreProd)
     assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_contributor_invalid_preprocess():
     with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(PreProcessManager.get_preprocess(Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
+        isinstance(PreProcessManager.get_preprocess(ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
                                                     PreProcess(type='AA')), FusioPreProd)
-    assert str(excinfo.typename) == "InvalidArguments"
-
-
-def test_preprocess_invalid_instance():
-    with pytest.raises(InvalidArguments) as excinfo:
-        PreProcessManager.get_preprocess(Context('bob', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
-                                         PreProcess(type='FusioPreProd'))
     assert str(excinfo.typename) == "InvalidArguments"
 
 
@@ -110,8 +103,18 @@ def test_preprocess_invalid_instance():
 def test_launch_in_sequence(mock_run_preprocess):
     preprocesses = [PreProcess(id='bob', sequence=1), PreProcess(id='toto', sequence=0),
                     PreProcess(id='tata', sequence=2)]
-    launch(preprocesses, Context('contributor', Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
+    launch(preprocesses, ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
     calls = mock_run_preprocess.call_args_list
     assert 'toto' == calls[0][0][1].id
     assert 'bob' == calls[1][0][0].id
     assert 'tata' == calls[2][0][0].id
+
+@mock.patch('tartare.tasks.run_preprocess.s')
+def test_launch_enabled(mock_run_preprocess):
+    preprocesses = [PreProcess(id='bob', sequence=1, enabled=False), PreProcess(id='toto', sequence=0, enabled=True),
+                    PreProcess(id='tata', sequence=2, enabled=True)]
+    launch(preprocesses, ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
+    calls = mock_run_preprocess.call_args_list
+    assert mock_run_preprocess.call_count == 2
+    assert calls[0][0][1].id == 'toto'
+    assert calls[1][0][0].id == 'tata'

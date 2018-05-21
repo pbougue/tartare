@@ -119,15 +119,11 @@ class TestCoverageExport(TartareFixture):
         # launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             self.contributor_export('id_test')
-            job = self.post('/coverages/coverage1/actions/export?current_date=2015-08-10', {})
-            self.assert_sucessful_call(job, 201)
+            self.coverage_export('coverage1', '2015-08-10')
 
             # jobs of coverage
-            jobs = self.get("/jobs")
-            assert jobs.status_code == 200
-            json = self.json_to_dict(jobs)
-            assert "jobs" in json
-            assert len(json.get("jobs")) == 2
+            jobs = self.json_to_dict(self.get("/jobs"))['jobs']
+            assert len(jobs) == 3
 
         # coverage export
         ce = self.get("/coverages/coverage1/exports")

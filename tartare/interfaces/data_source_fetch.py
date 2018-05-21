@@ -29,13 +29,13 @@
 
 import flask_restful
 from flask import Response
+
 from tartare.core import models
 from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.contributor_export_functions import fetch_and_save_dataset
+from tartare.core.models import Contributor
 from tartare.exceptions import FetcherException
 from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
-from tartare.decorators import validate_get_data_sets
-from tartare.interfaces import schema
 
 
 class DataSourceFetch(flask_restful.Resource):
@@ -49,14 +49,8 @@ class DataSourceFetch(flask_restful.Resource):
             raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_URL))
 
         try:
-            fetch_and_save_dataset(contributor_id, data_source)
+            fetch_and_save_dataset(Contributor.get(contributor_id), data_source_id)
         except FetcherException as e:
             raise InternalServerError('fetching {} failed: {}'.format(data_source.input.url, str(e)))
 
         return '', 204
-
-    @validate_get_data_sets
-    def get(self, contributor_id: str, data_source_id: str) -> Response:
-        data_source_fetched = models.DataSourceFetched.get_all(contributor_id, data_source_id)
-
-        return {'data_source_fetches': schema.DataSourceFetchedSchema().dump(data_source_fetched, many=True).data}, 200

@@ -32,31 +32,29 @@ import tempfile
 import zipfile
 from typing import Optional
 
-from tartare.core import models
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
-    DATA_SOURCE_STATUS_FAILED, DATA_SOURCE_STATUS_UNCHANGED, DATA_FORMAT_GTFS
-from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT
-from tartare.core.context import Context
+    DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_DONE, JOB_STATUS_FAILED, JOB_STATUS_RUNNING
+from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, DataSourceFetched, \
-    ValidityPeriod
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, Job, \
+    DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile
 
 logger = logging.getLogger(__name__)
 
 
-def merge(contributor: Contributor, context: Context) -> Context:
+def merge(contributor: Contributor, context: ContributorExportContext) -> ContributorExportContext:
     logger.info("Merge for contributor_id : %s", contributor.id)
     return context
 
 
-def postprocess(contributor: Contributor, context: Context) -> Context:
+def postprocess(contributor: Contributor, context: ContributorExportContext) -> ContributorExportContext:
     logger.info("Post process for contributor_id : %s", contributor.id)
     return context
 
 
-def save_export(contributor: Contributor, context: Context) -> Optional[ContributorExport]:
+def save_export(contributor: Contributor, context: ContributorExportContext) -> Optional[ContributorExport]:
     contrib_export_data_sources = []
     validity_periods = []
     for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
@@ -82,74 +80,49 @@ def save_export(contributor: Contributor, context: Context) -> Optional[Contribu
     return None
 
 
-def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
+def fetch_datasets_and_return_updated_number(contributor: Contributor, parent_job_id: str) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
         if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
-            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor.id, data_source) else 0
-
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id, parent_job_id) else 0
     return nb_updated_datasets
 
 
-def fetch_and_save_dataset(contributor_id: str, data_source: models.DataSource) -> bool:
+def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
+                           parent_job_id: Optional[str] = None) -> bool:
+    data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
-        last_data_source_fetched = models.DataSourceFetched.get_last(data_source_id=data_source.id)
-        new_data_source_fetched = models.DataSourceFetched(data_source_id=data_source.id, contributor_id=contributor_id)
-        new_data_source_fetched.save()
+        data_source_fetch_job = Job(ACTION_TYPE_DATA_SOURCE_FETCH, contributor.id, parent_id=parent_job_id,
+                                    state=JOB_STATUS_RUNNING, step='prepare', data_source_id=data_source.id)
+        data_source_fetch_job.save()
+        last_data_set = data_source.get_last_data_set()
         try:
+            data_source_fetch_job.update(step='fetch')
             fetcher = FetcherManager.select_from_url(url)
             dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name,
                                                                     data_source.input.expected_file_name)
             if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
                 raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
         except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
-            new_data_source_fetched.set_status(DATA_SOURCE_STATUS_FAILED).update()
+            data_source_fetch_job.update(state=JOB_STATUS_FAILED, error_message=str(e))
             raise e
 
         if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
-            if last_data_source_fetched and last_data_source_fetched.is_identical_to(dest_full_file_name):
+            if last_data_set and last_data_set.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
-                             .format(expected_file_name, contributor_id))
-                new_data_source_fetched.set_status(DATA_SOURCE_STATUS_UNCHANGED).update()
+                             .format(expected_file_name, contributor.id))
+                data_source_fetch_job.update(step='compare', state=JOB_STATUS_DONE)
                 return False
-        logger.debug('Add DataSourceFetched object for contributor: {}, data_source: {}'.format(
-            contributor_id, data_source.id
+        logger.debug('Add DataSet object for contributor: {}, data_source: {}'.format(
+            contributor.id, data_source.id
         ))
+        data_source_fetch_job.update(step='compute_validity')
         validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
-        new_data_source_fetched.validity_period = validity_period
-
-        new_data_source_fetched.update_dataset(dest_full_file_name, expected_file_name)
+        data_source_fetch_job.update(step='save')
+        data_set = DataSet(validity_period=validity_period)
+        data_set.add_file_from_path(dest_full_file_name, expected_file_name)
+        data_source.add_data_set_and_update_model(data_set, contributor)
+        data_source_fetch_job.update(state=JOB_STATUS_DONE)
         return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
-
-
-def build_context(contributor: Contributor, context: Context) -> Context:
-    context.add_contributor_context(contributor)
-    for data_source in contributor.data_sources:
-        if data_source.input.type != 'computed':
-            data_set = DataSourceFetched.get_last(data_source.id)
-            if not data_set:
-                raise ParameterException(
-                    'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
-            context.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                        data_set.gridfs_id)
-        else:
-            context.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
-    # links data added
-    if contributor.data_type == DATA_TYPE_PUBLIC_TRANSPORT:
-        for preprocess in contributor.preprocesses:
-            for link in preprocess.params.get('links', []):
-                contributor_id = link.get('contributor_id')
-                data_source_id = link.get('data_source_id')
-                if contributor_id and data_source_id and contributor_id != contributor.id:
-                    tmp_contributor = Contributor.get(contributor_id)
-                    if not tmp_contributor:
-                        continue
-                    data_set = DataSourceFetched.get_last(data_source_id)
-                    if not data_set:
-                        continue
-                    context.add_contributor_context(tmp_contributor)
-                    context.add_contributor_data_source_context(contributor_id, data_source_id, None,
-                                                                data_set.gridfs_id)
-    return context

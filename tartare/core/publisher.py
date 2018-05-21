@@ -31,6 +31,7 @@ import logging
 import os
 import tempfile
 from abc import ABCMeta, abstractmethod
+from datetime import datetime
 from typing import List, BinaryIO, Optional
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -42,7 +43,8 @@ from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, 
     PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Coverage, CoverageExport, DataSource, Platform
-from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException
+from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
+    PublisherException
 
 logger = logging.getLogger(__name__)
 
@@ -124,13 +126,13 @@ class ProtocolManager:
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: Optional[CoverageExport]) -> None:
+                coverage_export: Optional[CoverageExport], input_data_source_ids: Optional[List[str]] = None) -> None:
         pass
 
 
 class NavitiaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
         for cov_export_contrib in coverage_export.contributors:
@@ -149,42 +151,56 @@ class NavitiaPublisher(AbstractPublisher):
 
 
 class ODSPublisher(AbstractPublisher):
+    format_date = '%Y%m%d'
     @property
     def metadata_ordered_columns(self) -> List[str]:
-        return ['ID', 'Description', 'Format', 'Type file', 'Download', 'Validity start date', 'Validity end date',
-                'Script of Transformation', 'Licence', 'Source link', 'Publication update date']
+        return ['ID', 'Description', 'Format', 'Download', 'Validity start date', 'Validity end date',
+                'Licence', 'License link', 'Size', 'Update date']
 
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
-        import datetime
-        meta_data_dict = [
-            {
-                'ID': coverage.id + '-GTFS',
-                'Description': 'Global transport in {coverage}'.format(coverage=coverage.id),
-                'Format': 'GTFS',
-                'Type file': 'Global',
-                'Download': 'gtfs.zip',
-                'Validity start date': coverage_export.validity_period.start_date.strftime('%Y%m%d'),
-                'Validity end date': coverage_export.validity_period.end_date.strftime('%Y%m%d'),
-                'Licence': coverage.license.name,
-                'Source link': coverage.license.url,
-                'Publication update date': datetime.datetime.now().strftime('%d/%m/%Y')
-            }
-        ]
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
+        if not input_data_source_ids:
+            raise PublisherException('input_data_source_ids should be use for ods publication')
+        meta_data_dict = []
+        data_sets_with_format = {}
+        for input_data_source_id in input_data_source_ids:
+            data_source = coverage.get_data_source(input_data_source_id)
+            data_format_formatted = data_source.data_format.upper()
+            data_set = data_source.get_last_data_set()
+            if not data_set:
+                raise PublisherException('data source {} has no data set for ods publication'.format(data_source.id))
+            data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
+            data_sets_with_format[data_format_formatted] = data_set_file
+            file_size = data_set_file.length
+            meta_data_dict.append(
+                {
+                    'ID': '{}-{}'.format(coverage.id, data_format_formatted),
+                    'Description': coverage.short_description,
+                    'Format': data_format_formatted,
+                    'Download': '{}_{}.zip'.format(coverage.id, data_format_formatted),
+                    'Validity start date': data_set.validity_period.start_date.strftime(self.format_date),
+                    'Validity end date': data_set.validity_period.end_date.strftime(self.format_date),
+                    'Licence': coverage.license.name,
+                    'License link': coverage.license.url,
+                    'Size': file_size,
+                    'Update date': datetime.now().strftime(self.format_date)
+                }
+            )
         memory_csv = dic_to_memory_csv(meta_data_dict, self.metadata_ordered_columns)
         with tempfile.TemporaryDirectory() as tmp_dirname:
             zip_file_name = '{coverage}.zip'.format(coverage=coverage.id)
             zip_full_name = os.path.join(tmp_dirname, zip_file_name)
             with ZipFile(zip_full_name, 'a', ZIP_DEFLATED, False) as zip_out:
                 zip_out.writestr('{coverage}.txt'.format(coverage=coverage.id), memory_csv.getvalue())
-                zip_out.writestr('GTFS.zip', file.read())
-            with open(zip_full_name, 'rb') as fp:
-                protocol_uploader.publish(fp, zip_file_name)
+                for data_format, data_set_file in data_sets_with_format.items():
+                    zip_out.writestr('{}.zip'.format(data_format), data_set_file.read())
+            with open(zip_full_name, 'rb') as zip_full_file:
+                protocol_uploader.publish(zip_full_file, zip_file_name)
 
 
 class StopAreaPublisher(AbstractPublisher):
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         source_filename = 'stops.txt'
         dest_filename = "{coverage}_stops.txt".format(coverage=coverage.id)
 

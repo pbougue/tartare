@@ -47,8 +47,9 @@ from tartare.core import calendar_handler, models
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
 from tartare.core.calendar_handler import GridCalendarData
-from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT
-from tartare.core.context import Context
+from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
+    JOB_STATUS_FAILED, JOB_STATUS_RUNNING, JOB_STATUS_DONE
+from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
     ContributorExport
@@ -74,7 +75,8 @@ class CallbackTask(tartare.ContextTask):
         if isinstance(args[0], Context):
             context = args[0]
             self.update_job(context.job, exc)
-            self.send_mail(context.job)
+            if tartare.app.config.get('SEND_MAIL_ON_FAILURE'):
+                self.send_mail(context.job)
             super(CallbackTask, self).on_failure(exc, task_id, args, kwargs, einfo)
 
     def send_mail(self, job: Job) -> None:
@@ -84,7 +86,7 @@ class CallbackTask(tartare.ContextTask):
     def update_job(self, job: Job, exc: Exception) -> None:
         if job:
             with tartare.app.app_context():
-                job.update(state="failed", error_message=str(exc))
+                job.update(state=JOB_STATUS_FAILED, error_message=str(exc))
 
 
 def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
@@ -97,10 +99,10 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
     try:
         publisher = PublisherManager.select_from_platform(platform)
         protocol_uploader = ProtocolManager.select_from_platform(platform)
-        publisher.publish(protocol_uploader, file, coverage, coverage_export)
+        publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
         # Upgrade current_ntfs_id
         current_ntfs_id = coverage_export.gridfs_id
-        coverage.update(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+        coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
     except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
         msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
             error=str(exc), url=platform.url, type=platform.type)
@@ -109,7 +111,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
 
 
 def finish_job(context: Context) -> None:
-    context.job = context.job.update(state="done")
+    context.job = context.job.update(state=JOB_STATUS_DONE)
 
 
 @celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
@@ -139,27 +141,26 @@ def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> Non
 @celery.task(bind=True, default_retry_delay=180,
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
-def contributor_export(self: Task, context: Context, contributor: Contributor,
+def contributor_export(self: Task, context: ContributorExportContext, contributor: Contributor,
                        check_for_update: bool = True) -> Optional[ContributorExport]:
     try:
-        context.job = context.job.update(state="running", step="fetching data")
+        context.job = context.job.update(state=JOB_STATUS_RUNNING, step="fetching data")
         logger.info(
             'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
-            contributor)
+            contributor, context.job.id)
         logger.info('number of data_sources updated for contributor {cid}: {number}'.
                     format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
             context.job = context.job.update(step="building preprocesses context")
-            context = contributor_export_functions.build_context(contributor, context)
+            context.fill_context(contributor)
             context.job = context.job.update(step="preprocess")
             return launch(contributor.preprocesses, context)
         else:
             finish_job(context)
-
     except FetcherException as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
             error=str(exc),
@@ -170,11 +171,11 @@ def contributor_export(self: Task, context: Context, contributor: Contributor,
 
 
 @celery.task(base=CallbackTask)
-def contributor_export_finalization(context: Context) -> Optional[ContributorExport]:
+def contributor_export_finalization(context: ContributorExportContext) -> Optional[ContributorExport]:
     contributor = context.contributor_contexts[0].contributor
     logger.info('contributor_export_finalization of {cid} from job {action}'.format(cid=contributor.id,
                                                                                     action=context.job.action_type))
-    context.job.update(state="running", step="merge")
+    context.job.update(state=JOB_STATUS_RUNNING, step="merge")
     context = contributor_export_functions.merge(contributor, context)
 
     context.job.update(step="postprocess")
@@ -188,12 +189,11 @@ def contributor_export_finalization(context: Context) -> Optional[ContributorExp
 
 
 @celery.task(base=CallbackTask)
-def coverage_export(context: Context) -> Context:
+def coverage_export(context: CoverageExportContext) -> CoverageExportContext:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export of {cov} from job {action}'.format(cov=coverage.id, action=job.action_type))
-    context.instance = 'coverage'
-    context.job.update(state="running", step="fetching context")
+    context.job.update(state=JOB_STATUS_RUNNING, step="fetching context")
     context.fill_contributor_contexts(coverage)
 
     context.job.update(step="preprocess")
@@ -201,7 +201,7 @@ def coverage_export(context: Context) -> Context:
 
 
 @celery.task(base=CallbackTask)
-def coverage_export_finalization(context: Context) -> Context:
+def coverage_export_finalization(context: CoverageExportContext) -> CoverageExportContext:
     coverage = context.coverage
     job = context.job
     logger.info('coverage_export_finalization of {cov} from job {action}'.format(cov=coverage, action=job.action_type))
@@ -234,7 +234,8 @@ def coverage_export_finalization(context: Context) -> Context:
 
 
 def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
-    sorted_preprocesses = SequenceContainer.sort_by_sequence(processes)
+    enabled_processes = [process for process in processes if process.enabled]
+    sorted_preprocesses = SequenceContainer.sort_by_sequence(enabled_processes)
     actions = []
 
     # Do better
@@ -246,7 +247,7 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
         }.get(preprocess.type, "tartare")
 
     if not sorted_preprocesses:
-        if context.instance == 'contributor':
+        if isinstance(context, ContributorExportContext):
             return contributor_export_finalization.s(context).delay()
         else:
             return coverage_export_finalization.s(context).delay()
@@ -257,7 +258,7 @@ def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
         for p in sorted_preprocesses[1:]:
             actions.append(run_preprocess.s(p).set(queue=get_queue(p)))
 
-        if context.instance == 'contributor':
+        if isinstance(context, ContributorExportContext):
             actions.append(contributor_export_finalization.s())
         else:
             actions.append(coverage_export_finalization.s())
@@ -273,7 +274,7 @@ def run_preprocess(context: Context, preprocess: PreProcess) -> Context:
 
 
 @celery.task()
-def automatic_update(current_date: datetime.date = datetime.date.today()) -> None:
+def automatic_update() -> None:
     logger.info('automatic_update')
     contributors = models.Contributor.all()
     if contributors:
@@ -283,7 +284,7 @@ def automatic_update(current_date: datetime.date = datetime.date.today()) -> Non
             # launch contributor export
             job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
             job.save()
-            action_export = contributor_export.si(Context('contributor', job), contributor)
+            action_export = contributor_export.si(ContributorExportContext(job), contributor)
             actions_header.append(action_export)
         chord(actions_header)(automatic_update_launch_coverage_exports.s())
     else:
@@ -325,7 +326,7 @@ def automatic_update_launch_coverage_exports(self: Task,
             if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
-                actions.append(coverage_export.si(Context('coverage', job, coverage=coverage)))
+                actions.append(coverage_export.si(CoverageExportContext(job, coverage=coverage)))
         if actions:
             group(actions).delay()
     else:
@@ -341,3 +342,14 @@ def limit_chord_unlock_retry_delay(signal: Signal, sender: Worker, **kwargs: dic
     task.default_retry_delay = tartare.app.config.get('RETRY_DELAY_UNLOCK_CHORD')
     logger.debug('limit_chord_unlock_retry_delay made celery.chord_unlock.default_retry_delay = {}'.format(
         task.default_retry_delay))
+
+
+@celery.task()
+def purge_pending_jobs() -> None:
+    from tartare import mailer
+    logger.info('purge_pending_jobs')
+    statuses = ['pending', 'running']
+    nb_hours = 4
+    cancelled_jobs = models.Job.cancel_pending_updated_before(nb_hours, statuses)
+    if cancelled_jobs:
+        mailer.build_purge_report_and_send_mail(cancelled_jobs, nb_hours, statuses)

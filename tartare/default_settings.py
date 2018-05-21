@@ -1,6 +1,8 @@
 # encoding: utf-8
 
 import os
+from datetime import timedelta
+
 from celery.schedules import crontab
 from kombu import Exchange, Queue
 
@@ -42,6 +44,11 @@ CELERYBEAT_SCHEDULE = {
         'task': 'tartare.tasks.automatic_update',
         'schedule': crontab(minute=0, hour=20, day_of_week='1-4'),
         'options': {'expires': 25}
+    },
+    'jobs-purge': {
+        'task': 'tartare.tasks.purge_pending_jobs',
+        'schedule': crontab(minute=0, hour=19),
+        'options': {'expires': 25}
     }
 }
 
@@ -73,6 +80,7 @@ CALENDAR_FILE = 'export_calendars.zip'
 
 HISTORICAL = 3
 
+SEND_MAIL_ON_FAILURE = False if os.getenv('SEND_MAIL_ON_FAILURE', 'True') == 'False' else True
 MAILER = {
     'smtp': {
         'host': os.getenv('MAILER_SMTP_HOST', 'smtp.canaltp.local'),

@@ -48,6 +48,10 @@ class ProtocolException(Exception):
     pass
 
 
+class PublisherException(Exception):
+    pass
+
+
 class ProtocolManagerException(Exception):
     pass
 

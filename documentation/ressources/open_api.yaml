@@ -126,6 +126,7 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     patch:
+      deprecated: true
       summary: Modify a coverage configuration
       tags:
         - coverages
@@ -162,6 +163,39 @@ paths:
           description: Unsupported Media Type
           schema :
             $ref: '#/definitions/error_415'
+    put:
+      summary: Modify a coverage configuration
+      tags:
+        - coverages
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: coverage_id
+          type: string
+          description: Identifier of the coverage that needs to be modified
+          required: true
+        - in: body
+          name: body
+          description: All the Attributes of the coverage {coverage_id}
+          required: true
+          schema:
+            $ref: "#/definitions/coverages"
+      responses:
+        200:
+          description: Modified coverage
+          schema:
+            $ref: "#/definitions/coverages"
+        404:
+          description: Resource not found
+          schema :
+            $ref: '#/definitions/error_404'
+        409:
+          description: Duplicate entry
+          schema :
+            $ref: '#/definitions/error_409'
     delete:
       summary: Delete a coverage
       tags:
@@ -762,33 +796,6 @@ paths:
           schema:
             $ref: "#/definitions/error_404"
 
-  /contributors/{contributor_id}/data_sources/{data_source_id}/data_source_fetches:
-    get:
-      tags:
-      - "contributors"
-      summary: "List all the data sources fetches of a contributor"
-      description: "List all the data sources fetches of a contributor"
-      produces:
-      - "application/json"
-      parameters:
-      - name: "contributor_id"
-        in: "path"
-        required: true
-        type: "string"
-      - name: "data_source_id"
-        in: "path"
-        required: true
-        type: "string"
-      responses:
-        200:
-          description: "List of data source fetches"
-          schema:
-            $ref: "#/definitions/data_source_fetches"
-        404:
-          description: "Object not found"
-          schema:
-            $ref: "#/definitions/error_404"
-
   /contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch:
     post:
       summary: Fetch data source and save to database
@@ -1265,6 +1272,15 @@ definitions:
       name:
         type: string
         example: auv
+      type:
+        enum: ["navitia.io", "keolis", "regional", "other"]
+        description: Coverage typology
+      short_description:
+        type: string
+        description: Description of coverage content, used for ODS export
+      comment:
+        type: string
+        description: Coverage detail
       grid_calendars_id:
         type: string
         example: 5810cb2d3c96b7000108d074
@@ -1461,6 +1477,11 @@ definitions:
       sequence:
         type: integer
         example: 1
+      enabled:
+        type: boolean
+        example: false
+        description: tells if the preprocess will be executed during an export or not
+        default: true
       params:
         description: Process parameters object.
         type: object
@@ -1532,6 +1553,11 @@ definitions:
       sequence:
         type: integer
         example: 1
+      enabled:
+        type: boolean
+        example: false
+        description: tells if the preprocess will be executed during an export or not
+        default: true
       params:
         type: object
         example: {url: "http://fusio_host/cgi-bin/fusio.dll/"}
@@ -1768,15 +1794,6 @@ definitions:
     type: "object"
     properties:
       data_sets:
-        type: "array"
-        items:
-          $ref: "#/definitions/data_source_fetch"
-
-  data_source_fetches:
-    description: "List of data sets"
-    type: "object"
-    properties:
-      data_source_fetches:
         type: "array"
         items:
           $ref: "#/definitions/data_source_fetch"

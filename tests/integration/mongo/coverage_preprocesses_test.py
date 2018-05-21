@@ -28,13 +28,18 @@
 # www.navitia.io
 import ftplib
 import json
+import os
+import tempfile
+from zipfile import ZipFile
 
 import mock
 import pytest
 
-from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE
+from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE, \
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import get_response, assert_files_equals, _get_file_fixture_full_path
+from tests.utils import get_response, assert_files_equals, _get_file_fixture_full_path, \
+    assert_zip_contains_only_files_with_extensions
 
 
 class TestFusioDataUpdatePreprocess(TartareFixture):
@@ -412,7 +417,8 @@ class TestFusioExportPreprocess(TartareFixture):
                         "id": "fusio_export",
                         "type": "FusioExport",
                         "params": {
-                            "url": fusio_end_point
+                            "url": fusio_end_point,
+                            "export_type": "ntfs",
                         },
                         "sequence": 0
                     }
@@ -424,18 +430,7 @@ class TestFusioExportPreprocess(TartareFixture):
 
         post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
-        get_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-        <Info>
-            <ActionList ActionCount="1" TerminatedCount="1" WaitingCount="0" AbortedCount="0" WorkingCount="0"
-                        ThreadSuspended="True">
-                <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
-                        ActionId="42" LastError="">
-                    <ActionProgression Status="Terminated"
-                                       Description="http://fusio/ntfs.zip"
-                                       StepCount="10" CurrentStep="10"/>
-                </Action>
-            </ActionList>
-        </Info>"""
+        get_content = self.get_fusio_export_url_response_from_action_id(42, "http://fusio/ntfs.zip")
 
         replace_url_hostname_from_url.return_value = fetch_url
         fusio_post.return_value = get_response(200, post_content)
@@ -468,6 +463,90 @@ class TestFusioExportPreprocess(TartareFixture):
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         self.assert_sucessful_call(raw)
         assert_files_equals(resp.data, fixtures_file)
+
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('requests.get')
+    def test_fusio_export_to_data_source(self,
+                                         fusio_get,
+                                         fusio_post,
+                                         wait_for_action_terminated,
+                                         replace_url_hostname_from_url,
+                                         init_http_download_server):
+        filename = 'gtfs-1.zip'
+        output_fixture = 'sample_1.zip'
+        coverage_id = 'my_cov'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=filename,
+                              path='gtfs/historisation')
+        self.init_contributor("id_test", "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        target_id = "my_export_data_source"
+        preprocess = {
+            "id": "fusio_export",
+            "type": "FusioExport",
+            "params": {
+                "url": fusio_end_point,
+                "target_data_source_id": target_id,
+                "export_type": "ntfs"
+            },
+            "sequence": 0
+        }
+
+        self.init_coverage(coverage_id, ['id_test'], [preprocess])
+
+        post_content = self.get_fusio_response_from_action_id(42)
+        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=output_fixture)
+        get_content = self.get_fusio_export_url_response_from_action_id(42, "http://fusio/ntfs.zip")
+
+        replace_url_hostname_from_url.return_value = fetch_url
+        fusio_post.return_value = get_response(200, post_content)
+        fusio_get.return_value = get_response(200, get_content)
+
+        self.full_export('id_test', 'my_cov', '2017-08-10')
+
+        fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(output_fixture))
+        coverage = self.json_to_dict(self.get('/coverages/{}'.format(coverage_id)))['coverages'][0]
+        assert 'data_sources' in coverage
+        assert len(coverage['data_sources']) == 1
+        assert coverage['data_sources'][0]['id'] == target_id
+        assert 'data_sets' in coverage['data_sources'][0]
+        assert len(coverage['data_sources'][0]['data_sets']) == 1
+        gridfs_id = coverage['data_sources'][0]['data_sets'][0]['gridfs_id']
+        resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=gridfs_id), follow_redirects=True)
+        assert_files_equals(resp.data, fixtures_file)
+
+    @pytest.mark.parametrize("export_type,expected_message", [
+        (None,
+         'export_type mandatory in preprocess fusio_export parameters (possible values: ntfs,gtfs,google_transit)'),
+        ('obiti',
+         'export_type obiti is not handled by preprocess FusioExport, possible values: ntfs,gtfs,google_transit)')
+    ])
+    def test_fusio_export_missing_export_type(self, init_http_download_server, export_type, expected_message):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='gtfs-1.zip',
+                              path='gtfs/historisation')
+
+        self.init_contributor("id_test", "my_gtfs", url)
+        preprocess = {
+            "id": "fusio_export",
+            "type": "FusioExport",
+            "params": {
+                "url": 'http://whatever.com',
+                "target_data_source_id": "whatever_id"
+            },
+            "sequence": 0
+        }
+        if export_type:
+            preprocess['params']['export_type'] = export_type
+
+        self.init_coverage('cov_id', ['id_test'], [preprocess])
+        resp = self.coverage_export('cov_id')
+        job = self.get_job_from_export_response(resp)
+        assert job['step'] == 'preprocess'
+        assert job['state'] == 'failed'
+        assert job['error_message'] == expected_message
 
 
 class TestFusioExportContributorPreprocess(TartareFixture):
@@ -559,3 +638,77 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         assert expected_file_name in directory_content
         session.delete('{directory}/{filename}'.format(directory=directory, filename=expected_file_name))
         session.rmd(directory)
+
+
+class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_fusio_send_pt_external_settings(self, fusio_call, wait_for_action_terminated, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='fr-idf-custo-post-fusio-sample.zip',
+                              path='prepare_external_settings')
+        contributor_id = 'cid'
+        self.init_contributor('cid', 'gtfs_id', url, data_prefix='OIF')
+        external_settings_ds_id = "my_external_settings_data_source_id"
+        self.add_preprocess_to_contributor({
+            "data_source_ids": [
+                "gtfs_id"
+            ],
+            "id": "compute_ext_settings",
+            "type": "ComputeExternalSettings",
+            "sequence": 0,
+            "params": {
+                "target_data_source_id": external_settings_ds_id,
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+                "links": [
+                    {
+                        "contributor_id": contributor_id,
+                        "data_source_id": "my-data-source-of-perimeter-json-id"
+                    },
+                    {
+                        "contributor_id": contributor_id,
+                        "data_source_id": "my-data-source-of-lines-json-id"
+                    }
+                ],
+            }}, 'cid')
+        self.add_data_source_to_contributor(
+            contributor_id, 'my-data-source-of-perimeter-json-id', self.format_url(
+                init_http_download_server.ip_addr, 'tr_perimeter_id.json', 'prepare_external_settings'),
+            DATA_FORMAT_TR_PERIMETER
+        )
+        self.add_data_source_to_contributor(
+            contributor_id, 'my-data-source-of-lines-json-id', self.format_url(
+                init_http_download_server.ip_addr, 'lines_referential_id.json', 'prepare_external_settings'),
+            DATA_FORMAT_LINES_REFERENTIAL
+        )
+        coverage_id = 'covid'
+        self.init_coverage(coverage_id, [contributor_id])
+        self.add_preprocess_to_coverage({
+            "id": "send_ext_settings",
+            "params": {
+                "url": "http://fusio.whatever.com",
+                "input_data_source_ids": [external_settings_ds_id]
+            },
+            "type": "FusioSendPtExternalSettings",
+            "sequence": 0
+        }, coverage_id)
+
+        content = self.get_fusio_response_from_action_id(42)
+        fusio_call.return_value = get_response(200, content)
+
+        self.full_export(contributor_id, coverage_id)
+
+        assert fusio_call.call_count == 1
+        assert fusio_call.call_args_list[0][1]['data'] == {'action': 'externalstgupdate'}
+        assert 'filename' in fusio_call.call_args_list[0][1]['files']
+        fusio_settings_zip_file = fusio_call.call_args_list[0][1]['files']['filename']
+        with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['txt'])
+                fusio_settings_zip_file.extractall(tmp_dir_name)
+                assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
+                                    _get_file_fixture_full_path(
+                                        'prepare_external_settings/expected_fusio_object_codes.txt'))
+                assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
+                                    _get_file_fixture_full_path(
+                                        'prepare_external_settings/expected_fusio_object_properties.txt'))

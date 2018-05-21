@@ -1,2 +1,3 @@
-Description,Download,Format,ID,Licence,Publication update date,Script of Transformation,Source link,Type file,Validity end date,Validity start date
-Global transport in my-coverage-id,gtfs.zip,GTFS,my-coverage-id-GTFS,Private (unspecified),10/08/2015,,,Global,20170115,20150216
+Description,Download,Format,ID,Licence,License link,Size,Update date,Validity end date,Validity start date
+description of coverage my-coverage-id,my-coverage-id_GTFS.zip,GTFS,my-coverage-id-GTFS,my license,http://license.org/mycompany,8527,20180514,20150826,20150325
+description of coverage my-coverage-id,my-coverage-id_NTFS.zip,NTFS,my-coverage-id-NTFS,my license,http://license.org/mycompany,8548,20180514,20151113,20150722

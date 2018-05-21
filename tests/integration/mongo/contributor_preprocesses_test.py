@@ -350,6 +350,7 @@ class TestComputeExternalSettings(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename='fr-idf-custo-post-fusio-sample.zip',
                               path='prepare_external_settings')
+        params["export_type"] = DATA_FORMAT_PT_EXTERNAL_SETTINGS
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
@@ -367,12 +368,6 @@ class TestComputeExternalSettings(TartareFixture):
                 "name": "ds-to-process",
                 "data_format": "gtfs",
                 "input": {"type": "url", "url": url}
-            },
-            {
-                "id": "ds-target",
-                "name": "ds-target",
-                "data_format": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                "input": {"type": "computed"}
             }
         ]
 
@@ -447,11 +442,11 @@ class TestComputeExternalSettings(TartareFixture):
         assert job['step'] == 'save_contributor_export', print(job)
         assert job['error_message'] == '', print(job)
 
+        data_set = self.json_to_dict(
+            self.get('/contributors/{}/data_sources/{}'.format('id_test', 'ds-target'))
+        )['data_sources'][0]['data_sets'][0]
+        target_grid_fs_id = data_set['gridfs_id']
         with app.app_context():
-            export = ContributorExport.get_last('id_test')
-            target_grid_fs_id = next((data_source.gridfs_id
-                                      for data_source in export.data_sources
-                                      if data_source.data_source_id == 'ds-target'), None)
             fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
             with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -602,7 +597,6 @@ class TestRuspellProcess(TartareFixture):
         "contributor_id, data_source_id", [
             ('unknown', 'ds_config_ruspell'),  # unknown contributor
             ('id_test', 'unknown'),  # unknown data source
-            ('bano', 'ds_config_ruspell')  # data source in bad contributor
         ])
     def test_ruspell_error_message_misconfigured_links(self, init_http_download_server, contributor_id, data_source_id):
         params = {

@@ -36,8 +36,8 @@ from flask import Response
 from flask.globals import request
 from flask_restful import Resource
 
-from tartare.core import models
-from tartare.core.models import DataSource
+from tartare.core.models import Contributor
+from tartare.core.models import DataSet as DataSetModel
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.decorators import validate_post_data_set
 from tartare.interfaces import schema
@@ -47,14 +47,10 @@ class DataSet(Resource):
     @validate_post_data_set
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         file = request.files['file']
-        data_source_fetched = models.DataSourceFetched(contributor_id=contributor_id,
-                                                       data_source_id=data_source_id)
-        data_source_fetched.save()
-        data_source = DataSource.get_one(contributor_id, data_source_id)
-
+        contributor = Contributor.get(contributor_id)
+        data_source = contributor.get_data_source(data_source_id)
         validity_period = ValidityPeriodFinder.select_computer_and_find(file.filename, data_source.data_format)
-        data_source_fetched.validity_period = validity_period
-
-        data_source_fetched.update_dataset_from_io(file.stream, os.path.basename(file.filename))
-
-        return {'data_sets': [schema.DataSourceFetchedSchema().dump(data_source_fetched).data]}, 201
+        data_set = DataSetModel(validity_period=validity_period)
+        data_set.add_file_from_io(file, os.path.basename(file.filename))
+        data_source.add_data_set_and_update_model(data_set, contributor)
+        return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201

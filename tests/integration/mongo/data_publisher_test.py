@@ -37,7 +37,7 @@ import pytest
 from freezegun import freeze_time
 
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
-    DATA_FORMAT_POLY_FILE
+    DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import mock_requests_post, get_response, \
     _get_file_fixture_full_path
@@ -133,7 +133,7 @@ class TestDataPublisher(TartareFixture):
         assert len(contributors[0]["data_sources"]) == 1
         assert contributors[0]["data_sources"][0]["validity_period"]
 
-    def test_publish_ftp_ods(self, init_http_download_server, init_ftp_upload_server):
+    def test_publish_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         filename = 'some_archive.zip'
@@ -141,7 +141,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, url)
         publication_platform = {
             "sequence": 0,
-            "type": "ods",
+            "type": "navitia",
             "protocol": "ftp",
             # url without ftp:// works as well
             "url": init_ftp_upload_server.ip_addr,
@@ -166,7 +166,7 @@ class TestDataPublisher(TartareFixture):
         session.quit()
 
     @freeze_time("2015-08-10")
-    def test_publish_ftp_ods_with_directory(self, init_http_download_server, init_ftp_upload_server):
+    def test_publish_ftp_with_directory(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         ftp_username = 'tartare_user'
@@ -183,7 +183,7 @@ class TestDataPublisher(TartareFixture):
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "sequence": 0,
-            "type": "ods",
+            "type": "navitia",
             "protocol": "ftp",
             "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
@@ -205,16 +205,37 @@ class TestDataPublisher(TartareFixture):
         session.delete('{directory}/{coverage_id}.zip'.format(directory=directory, coverage_id=coverage_id))
         session.rmd(directory)
 
-    @pytest.mark.parametrize("license_url,license_name,sample_data,coverage_id", [
-        ('http://license.org/mycompany', 'my license', 'some_archive.zip', 'fr-idf-test'),
-        (None, None, 'sample_1.zip', 'my-coverage-id')
-    ])
-    @freeze_time("2015-08-10")
-    def test_publish_ftp_ods_with_metadata(self, init_http_download_server, init_ftp_upload_server, license_url,
-                                           license_name, sample_data, coverage_id):
-        contributor_id = 'whatever'
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
-        self._create_contributor(contributor_id, url)
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('requests.get')
+    @freeze_time("2018-05-14")
+    def test_publish_ftp_ods_with_metadata(self, fusio_get, fusio_post, wait_for_action_terminated,
+                                           replace_url_hostname_from_url, init_http_download_server,
+                                           init_ftp_upload_server):
+        contributor_id = 'id_test'
+        coverage_id = 'my-coverage-id'
+        sample_data = 'some_archive.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=sample_data,
+                              path='gtfs')
+        self.init_contributor(contributor_id, "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        preprocesses = []
+        input_data_source_ids = []
+        for target_data_format in [DATA_FORMAT_GTFS, DATA_FORMAT_NTFS]:
+            target_id = 'my_{}_data_source'.format(target_data_format)
+            input_data_source_ids.append(target_id)
+            preprocesses.append({
+                "id": "fusio_export",
+                "type": "FusioExport",
+                "params": {
+                    "url": fusio_end_point,
+                    "target_data_source_id": target_id,
+                    "export_type": target_data_format
+                },
+                "sequence": 0
+            })
         publication_platform = {
             "sequence": 0,
             "type": "ods",
@@ -225,18 +246,38 @@ class TestDataPublisher(TartareFixture):
                     "username": init_ftp_upload_server.user,
                     "password": init_ftp_upload_server.password
                 }
+            },
+            "input_data_source_ids": input_data_source_ids
+        }
+        environments = {
+            'production': {
+                'sequence': 0,
+                'name': 'production',
+                'publication_platforms': [publication_platform]
             }
         }
         license = {
-            "name": license_name,
-            "url": license_url
-        } if license_name or license_url else None
+            "name": 'my license',
+            "url": 'http://license.org/mycompany'
+        }
+        self.init_coverage(coverage_id, [contributor_id], preprocesses, environments, license)
 
-        self._create_coverage(coverage_id, contributor_id, publication_platform, license)
+        fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
+        fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
 
+        replace_url_hostname_from_url.side_effect = [fetch_url_gtfs, fetch_url_ntfs]
+        fusio_post.side_effect = [
+            get_response(200, self.get_fusio_response_from_action_id('gtfs-action-id')),
+            get_response(200, self.get_fusio_response_from_action_id('ntfs-action-id'))
+        ]
+        fusio_get.side_effect = [
+            get_response(200, self.get_fusio_export_url_response_from_action_id('gtfs-action-id',
+                                                                                "http://fusio/whatever")),
+            get_response(200, self.get_fusio_export_url_response_from_action_id('ntfs-action-id',
+                                                                                "http://fusio/whatever"))
+        ]
         self.full_export(contributor_id, coverage_id)
-
-        self.assert_metadata_equals_to_fixture(init_ftp_upload_server, coverage_id)
+        self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
 
     def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
@@ -533,72 +574,3 @@ class TestDataPublisher(TartareFixture):
                    'error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(
             job)
         assert job['state'] == 'failed', print(job)
-
-    @freeze_time("2015-08-10")
-    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
-    @mock.patch('tartare.core.fetcher.HttpFetcher.fetch')
-    @mock.patch('tartare.processes.fusio.Fusio.call')
-    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
-    def test_osm_publication_uses_fusio(self, mock_wait_for_action_terminated, mock_call, mock_fetch,
-                                        mock_get_export_url, init_http_download_server, init_ftp_upload_server):
-        filename_c1 = 'sample_1.zip'
-        filename_c2 = 'sample_2.zip'
-        export_url = 'http://export.whatever.com'
-        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename_c1)
-        self.init_contributor('c1', 'gtfs_ds_id_c1', fetch_url, manual=True)
-        fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename_c2)
-        self.init_contributor('c2', 'gtfs_ds_id_c2', fetch_url, manual=True)
-        self.post_manual_data_set('c1', 'gtfs_ds_id_c1', 'gtfs/' + filename_c1)
-        self.post_manual_data_set('c2', 'gtfs_ds_id_c2', 'gtfs/' + filename_c2)
-        publication_platform = {
-            "sequence": 0,
-            "type": "ods",
-            "protocol": "ftp",
-            "url": "ftp://" + init_ftp_upload_server.ip_addr,
-            "options": {
-                "authent": {
-                    "username": init_ftp_upload_server.user,
-                    "password": init_ftp_upload_server.password
-                }
-            }
-        }
-        self._create_coverage('cA', ['c1', 'c2'], publication_platform)
-        fusio_end_point = 'http://fusio_whatever_host/cgi-bin/fusio.dll/'
-        preprocesses = [
-            {
-                "id": "fusio_import",
-                "type": "FusioImport",
-                "params": {
-                    "url": fusio_end_point
-                },
-                "sequence": 0
-            },
-            {
-                "id": "fusio_export",
-                "type": "FusioExport",
-                "params": {
-                    "url": fusio_end_point
-                },
-                "sequence": 1
-            }
-        ]
-        raw = self.patch('coverages/cA', self.dict_to_json({"preprocesses": preprocesses}))
-        self.assert_sucessful_call(raw)
-        self.contributor_export('c1')
-        self.contributor_export('c2')
-        content = self.get_fusio_response_from_action_id(42)
-        mock_call.return_value = get_response(200, content)
-        mock_get_export_url.return_value = export_url
-        mock_fetch.return_value = _get_file_fixture_full_path('gtfs/sample_2.zip'), 'sample_2.zip'
-        raw = self.coverage_export('cA')
-        self.assert_sucessful_create(raw)
-        job = self.get_job_from_export_response(raw)
-        job = self.get_job_details(job['id'])
-        assert job['state'] == 'done'
-        assert mock_call.call_args_list[0][1] == {'api': 'api',
-                                                  'data': {'DateDebut': '03/08/2015', 'DateFin': '01/08/2016',
-                                                           'action': 'regionalimport'}}
-        assert mock_call.call_args_list[1][1] == {'api': 'api',
-                                                  'data': {'action': 'Export', 'ExportType': 32, 'Source': 4}}
-
-        self.assert_metadata_equals_to_fixture(init_ftp_upload_server, 'cA')

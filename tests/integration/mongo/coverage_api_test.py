@@ -51,7 +51,7 @@ class TestCoverageApi(TartareFixture):
         r = self.json_to_dict(raw)
         assert 'message' in r
 
-    def test_add_coverage_returns_success(self):
+    def test_post_minimal_coverage_returns_success(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
         assert raw.status_code == 201
         r = self.json_to_dict(raw)
@@ -60,6 +60,9 @@ class TestCoverageApi(TartareFixture):
         coverage = r["coverages"][0]
         assert coverage["id"] == "id_test"
         assert coverage["name"] == "name_test"
+        assert coverage["type"] == "other"
+        assert coverage["short_description"] == ""
+        assert coverage["comment"] == ""
         assert coverage['last_active_job'] is None
 
         raw = self.get('/coverages')
@@ -69,6 +72,9 @@ class TestCoverageApi(TartareFixture):
         coverage = r["coverages"][0]
         assert coverage["id"] == "id_test"
         assert coverage["name"] == "name_test"
+        assert coverage["type"] == "other"
+        assert coverage["short_description"] == ""
+        assert coverage["comment"] == ""
         assert coverage['last_active_job'] is None
 
         # test that we don't persist last_active_job in database
@@ -79,7 +85,7 @@ class TestCoverageApi(TartareFixture):
 
             assert 'last_active_job' not in raw
 
-    def test_add_coverage_no_id(self):
+    def test_post_coverage_no_id(self):
         raw = self.post('/coverages', '{"name": "name_test"}')
         r = self.json_to_dict(raw)
         assert 'error' in r
@@ -88,7 +94,7 @@ class TestCoverageApi(TartareFixture):
         r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 0
 
-    def test_add_coverage_empty_id(self):
+    def test_post_coverage_empty_id(self):
         raw = self.post('/coverages', '{"id": "", "name": "name_test"}')
         r = self.json_to_dict(raw)
 
@@ -98,7 +104,7 @@ class TestCoverageApi(TartareFixture):
             'id': ['field cannot be empty']
         }
 
-    def test_add_coverage_no_name(self):
+    def test_post_coverage_no_name(self):
         raw = self.post('/coverages', '{"id": "id_test"}')
         r = self.json_to_dict(raw)
         assert 'error' in r
@@ -107,7 +113,7 @@ class TestCoverageApi(TartareFixture):
         r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 0
 
-    def test_add_coverage_with_name(self):
+    def test_post_coverage_with_name(self):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage"}')
         assert raw.status_code == 201
@@ -118,7 +124,53 @@ class TestCoverageApi(TartareFixture):
         assert r["coverages"][0]["id"] == "id_test"
         assert r["coverages"][0]["name"] == "name of the coverage"
 
-    def test_add_coverage_with_pre_env(self):
+    def test_post_coverage_with_wrong_type(self):
+        raw = self.post('/coverages',
+                        '{"id": "id_test", "name": "name of the coverage", "type": "donotexist"}')
+        assert raw.status_code == 400
+
+        expected_result = {
+            'error': {
+                'type': ['choice "donotexist" not in possible values (navitia.io, keolis, regional, other).']
+            },
+            'message': 'Invalid arguments'
+        }
+
+        assert expected_result == self.json_to_dict(raw)
+
+    @pytest.mark.parametrize("type", [
+        'navitia.io',
+        'keolis',
+        'regional',
+        'other',
+    ])
+    def test_post_coverage_with_good_type(self, type):
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage", "type": type}))
+        assert raw.status_code == 201
+        raw = self.get('/coverages')
+        r = self.json_to_dict(raw)
+        assert len(r["coverages"]) == 1
+        assert isinstance(r["coverages"], list)
+        assert r["coverages"][0]["id"] == "id_test"
+        assert r["coverages"][0]["name"] == "name of the coverage"
+        assert r["coverages"][0]["type"] == type
+
+    def test_post_coverage_with_short_description_and_comment(self):
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage",
+                                           "short_description": "super coverage", "comment": "a comment"}))
+        assert raw.status_code == 201
+        raw = self.get('/coverages')
+        r = self.json_to_dict(raw)
+        assert len(r["coverages"]) == 1
+        assert isinstance(r["coverages"], list)
+        assert r["coverages"][0]["id"] == "id_test"
+        assert r["coverages"][0]["name"] == "name of the coverage"
+        assert r["coverages"][0]["short_description"] == "super coverage"
+        assert r["coverages"][0]["comment"] == "a comment"
+
+    def test_post_coverage_with_pre_env(self):
         raw = self.post('/coverages',
                         '''{"id": "id_test", "name": "name of the coverage",
                         "environments" : {"preproduction": {"name": "pre", "sequence": 0}}}''')
@@ -136,7 +188,7 @@ class TestCoverageApi(TartareFixture):
         assert coverage['environments']['preproduction']['name'] == 'pre'
         assert coverage['environments']['preproduction']['sequence'] == 0
 
-    def test_add_coverage_with_no_env(self):
+    def test_post_coverage_with_no_env(self):
         raw = self.post('/coverages',
                         '''{"id": "id_test", "name": "name of the coverage",
                             "environments" : {"notvalidenv": {"name": "pre", "tyr_url": "http://foo.bar/"}}}''')
@@ -146,7 +198,7 @@ class TestCoverageApi(TartareFixture):
         assert 'error' in r
         assert 'unknown field name notvalidenv' in r['error']['environments']['_schema']
 
-    def test_add_coverage_with_all_env(self):
+    def test_post_coverage_with_all_env(self):
         raw = self.post('/coverages',
                         '''{"id": "id_test", "name": "name of the coverage",
                         "environments" : {
@@ -465,14 +517,14 @@ class TestCoverageApi(TartareFixture):
                 assert coverage_from_api['license']['url'] == expected_url
                 assert coverage_from_api['license']['name'] == expected_name
 
-    def test_add_coverage_with_unknown_contributor(self):
+    def test_post_coverage_with_unknown_contributor(self):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert r['error'] == 'contributor unknown not found'
 
-    def test_add_coverage_with_existing_contributor(self, contributor):
+    def test_post_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors": ["id_test"]}')
         assert raw.status_code == 201
@@ -562,3 +614,223 @@ class TestCoverageApi(TartareFixture):
             'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
         }
+
+    def test_put_coverage_id(self, coverage):
+        coverage['id'] = 'changed'
+        raw = self.put('/coverages/jdr', self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': 'the modification of the id is not possible',
+            'message': 'Invalid arguments'
+        }
+
+    def test_put_invalid_coverage_missing_data_preserve_existing_one(self, coverage):
+        del coverage['name']
+        raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': {'name': ['Missing data for required field.']},
+            'message': 'Invalid arguments'
+        }
+        raw = self.get('/coverages/{}'.format(coverage['id']))
+        self.assert_sucessful_call(raw)
+
+    def test_put_invalid_coverage_added_data_preserve_existing_one(self, coverage):
+        coverage['invalid'] = 'value'
+        raw = self.put('/coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_failed_call(raw)
+        assert self.json_to_dict(raw) == {
+            'error': {'_schema': ['unknown field name invalid']},
+            'message': 'Invalid arguments'
+        }
+        raw = self.get('/coverages/{}'.format(coverage['id']))
+        self.assert_sucessful_call(raw)
+
+    def test_put_coverage_simple(self, coverage, contributor):
+        update = {
+            'name': 'new_name',
+            'license': {
+                'name': 'public',
+                'url': 'http://whatever.com'
+            },
+            'contributors': [contributor['id']],
+            'type': 'keolis',
+            'short_description': 'a short description',
+            'comment': 'a comment'
+        }
+        expected = {
+            'coverages': [{
+                'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
+                'license': {'url': 'http://whatever.com', 'name': 'public'},
+                'preprocesses': [], 'contributors': ['id_test'], 'name': 'new_name', 'id': 'jdr',
+                'last_active_job': None,
+                'type': 'keolis',
+                'short_description': 'a short description',
+                'comment': 'a comment'
+            }]
+        }
+        raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(update))
+        self.assert_sucessful_call(raw)
+        assert self.json_to_dict(raw) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
+
+    def test_put_coverage_preprocess(self):
+        cov_id = 'my-cov'
+        coverage = self.init_coverage(cov_id, [], [{
+            "id": "preprocess_old_id",
+            "type": "FusioDataUpdate",
+            "params": {
+                "url": "http://fusio_host.old/cgi-bin/fusio.dll/api"
+            },
+            "sequence": 4
+        }])['coverages'][0]
+        coverage['preprocesses'] = [
+            {
+                "id": "preprocess_1",
+                "type": "FusioDataUpdate",
+                "params": {
+                    "url": "http://fusio_host/cgi-bin/fusio.dll/api"
+                },
+                "sequence": 0
+            },
+            {
+                "id": "preprocess_2",
+                "type": "FusioImport",
+                "params": {
+                    "url": "http://fusio_host/cgi-bin/fusio.dll/api",
+                    "export_type": "gtfsv2"
+                },
+                "sequence": 1
+            },
+        ]
+        expected = {
+            'coverages': [{
+                'name': 'my-cov',
+                'type': 'other',
+                'short_description': 'description of coverage my-cov',
+                'comment': '',
+                'preprocesses': [
+                    {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
+                     'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api'},
+                     'data_source_ids': [], 'sequence': 0, 'enabled': True},
+                    {'id': 'preprocess_2', 'type': 'FusioImport',
+                     'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api',
+                                'export_type': 'gtfsv2'}, 'data_source_ids': [],
+                     'sequence': 1, 'enabled': True}
+                ],
+                'id': 'my-cov', 'contributors': [],
+                'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
+                'data_sources': [], 'environments': {}, 'last_active_job': None
+            }]
+        }
+
+        raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
+        assert self.json_to_dict(raw) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
+
+    def test_put_coverage_publications(self):
+        cov_id = 'my-cov'
+        coverage = self.init_coverage(cov_id, environments={
+            'production': {
+                'name': 'production',
+                'sequence': 0,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com",
+                        "sequence": 0
+                    },
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com.backup",
+                        "sequence": 1
+                    }
+                ]
+            }
+        })['coverages'][0]
+        coverage['environments'] = {
+            'production': {
+                'name': 'production',
+                'sequence': 2,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com.new",
+                        "sequence": 0
+                    }
+                ]
+            },
+            'integration': {
+                'name': 'integration',
+                'sequence': 1,
+                "publication_platforms": [
+                    {
+                        "type": "navitia",
+                        "protocol": "http",
+                        "url": "http://tyr.integ/deploy",
+                        "sequence": 1,
+                        "input_data_source_ids": ['id-1']
+                    },
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com.integration",
+                        "sequence": 2
+                    }
+                ]
+            }
+        }
+        expected = {
+            'coverages': [{
+                'environments': {
+                    'production': {
+                        'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
+                            {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': {}, 'protocol': 'ftp',
+                             'input_data_source_ids': [],
+                             'type': 'ods'}], 'name': 'production'
+                    },
+                    'integration': {
+                        'sequence': 1, 'current_ntfs_id': None,
+                        'publication_platforms': [
+                            {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': {}, 'protocol': 'http',
+                             'input_data_source_ids': ['id-1'], 'type': 'navitia'},
+                            {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': {}, 'protocol': 'ftp',
+                             'input_data_source_ids': [], 'type': 'ods'}
+                        ],
+                        'name': 'integration'}
+                },
+                'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
+                'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
+                'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
+            }]
+        }
+
+        raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
+        assert self.json_to_dict(raw) == expected
+        assert self.get_coverage(coverage['id']) == expected['coverages'][0]
+
+    def test_post_coverage_publication_with_input_data_source_ids(self):
+        cov_id = 'covid'
+        self.init_coverage(cov_id, environments={
+            'production': {
+                'name': 'production',
+                'sequence': 0,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com",
+                        "sequence": 0,
+                        "input_data_source_ids": ['my-ds-id']
+                    }
+                ]
+            }
+        })
+        ods_platform = self.get_coverage(cov_id)['environments']['production']['publication_platforms'][0]
+        assert ods_platform['type'] == 'ods'
+        assert ods_platform['input_data_source_ids'] == ['my-ds-id']

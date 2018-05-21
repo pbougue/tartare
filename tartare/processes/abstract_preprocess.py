@@ -32,22 +32,28 @@ import shutil
 import tempfile
 import zipfile
 from abc import ABCMeta, abstractmethod
-from typing import Any, List
+from typing import Any, List, Union, Optional
 from zipfile import is_zipfile
 
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess, DataSource
+from tartare.core.models import PreProcess, DataSource, Contributor, Coverage, DataSet, ValidityPeriod
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
 from tartare.processes.fusio import Fusio
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        self.context = context
+    def __init__(self, preprocess: PreProcess) -> None:
         self.params = preprocess.params if preprocess else {}  # type: dict
         self.data_source_ids = preprocess.data_source_ids
         self.process_id = preprocess.id
+
+    def save_result_into_target_data_source(self, data_source_owner: Union[Contributor, Coverage],
+                                            target_data_set_gridfs_id: str,
+                                            validity_period: Optional[ValidityPeriod] = None) -> None:
+        data_source = data_source_owner.get_data_source(self.params['target_data_source_id'])
+        data_set = DataSet(gridfs_id=target_data_set_gridfs_id, validity_period=validity_period)
+        data_source.add_data_set_and_update_model(data_set, data_source_owner)
 
     @abstractmethod
     def do(self) -> Context:
@@ -64,8 +70,9 @@ class AbstractProcess(metaclass=ABCMeta):
 
 
 class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
+        super().__init__(preprocess)
+        self.context = context
         if 'url' not in self.params:
             raise ParameterException('params.url not present in fusio preprocess')
         self.fusio = Fusio(self.params['url'])
@@ -76,8 +83,9 @@ class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: Context, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
+        super().__init__(preprocess)
+        self.context = context
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()

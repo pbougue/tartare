@@ -33,7 +33,7 @@ import requests
 from mock import mock
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
-from tartare.core.context import Context
+from tartare.core.context import CoverageExportContext
 from tartare.core.models import ValidityPeriod, PreProcess, Job
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
@@ -54,7 +54,7 @@ class TestFusioProcesses:
         expected_period = ValidityPeriod(begin_date, end_date)
         get_validity_period_union.return_value = expected_period
         get_validity_period_valid.return_value = expected_period
-        context = Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT))
+        context = CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT))
         keep_response_content = 'fusio_response'
         action_id = 42
 
@@ -77,7 +77,7 @@ class TestFusioProcesses:
             subcall_details = 'sub call details'
             get_validity_period_union.return_value = ValidityPeriod(date(2018, 1, 1), date(2018, 3, 1))
             get_validity_period_valid.side_effect = ValidityPeriodException(subcall_details)
-            fusio_import = FusioImport(Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+            fusio_import = FusioImport(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                        PreProcess(params={"url": "whatever"}))
             fusio_import.do()
         assert str(excinfo.value) == 'bounds date for fusio import incorrect: {details}'.format(details=subcall_details)
@@ -90,48 +90,9 @@ class TestFusioProcesses:
                     <ActionId>1607281547155684</ActionId>
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
-        fusio_preprod = FusioPreProd(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
+        fusio_preprod = FusioPreProd(context=CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
                                      preprocess=PreProcess(params={'url': 'http://fusio_host'}))
         fusio_preprod.do()
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})
         fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
-
-    @mock.patch('tartare.processes.coverage.FusioExport.save_export')
-    @mock.patch('tartare.processes.fusio.Fusio.get_export_url')
-    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
-    @mock.patch('tartare.processes.fusio.Fusio.call')
-    def test_call_fusio_export(self, fusio_call, fusio_wait_for_action_terminated, get_export_url, save_export):
-        content = """<?xml version="1.0" encoding="ISO-8859-1"?>
-                <serverfusio>
-                    <ActionId>1607281547155684</ActionId>
-                </serverfusio>"""
-        fusio_call.return_value = get_response(200, content)
-        get_export_url.return_value = 'http://vip_fusio/abcd.zip'
-        params = {
-            'url': 'http://fusio_host',
-            "export_type": "Ntfs"
-        }
-        fusio_export = FusioExport(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                   preprocess=PreProcess(params=params))
-        fusio_export.do()
-        data = {
-            'action': 'Export',
-            "ExportType": 32,
-            "Source": 4
-        }
-        fusio_call.assert_called_with(requests.post, api='api', data=data)
-        fusio_wait_for_action_terminated.assert_called_with('1607281547155684')
-        get_export_url.assert_called_with('1607281547155684')
-        save_export.assert_called_with('http://fusio_host/abcd.zip')
-
-    def test_call_fusio_export_unkown_export_type(self):
-        params = {
-            'url': 'http://fusio_host',
-            "export_type": "bob"
-        }
-        fusio_export = FusioExport(context=Context('coverage', Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                   preprocess=PreProcess(params=params))
-        with pytest.raises(FusioException) as excinfo:
-            fusio_export.do()
-        assert str(excinfo.value) == "export_type bob not found"

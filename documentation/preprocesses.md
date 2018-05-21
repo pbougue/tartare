@@ -145,13 +145,16 @@ List of preprocesses for coverages
    "id":"fusio_export",
    "params":{
       "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
-      "export_type": "ntfs"
+      "export_type": "ntfs",
+      "target_data_source_id": "ntfs_export"
    },
    "type":"FusioExport",
    "sequence":3
 }
 ```
-values possibles for export_type: ntfs, gtfsv2 and googletransit
+Possible values for export_type are: `ntfs`, `gtfs` and `google_transit`.  
+If **target_data_source_id** is specified, the output will be saved in the corresponding data source.  
+If export_type is ntfs, the export result will be used as coverage export output file.
 
 ### FusioExportContributor
 ```json
@@ -191,6 +194,7 @@ values possibles for export_type: ntfs, gtfsv2 and googletransit
   "id": "compute_ext_settings",
   "params": {
     "target_data_source_id": "my_external_settings_data_source_id",
+    "export_type": "pt_external_settings",
     "links": [
       {
         "contributor_id": "{cid}",
@@ -226,7 +230,7 @@ curl -i -X POST \
 ```
 
 You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  
-The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__ if the data source type is configured as "computed".  
+The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__.
 If the data source is configured as "manual" or "url", the preprocess will be skipped. 
 __my_external_settings_data_source_id__ must have the "pt_external_settings" **data_format**.  
 
@@ -237,7 +241,8 @@ __my_external_settings_data_source_id__ must have the "pt_external_settings" **d
 {
    "id":"fusio_export",
    "params":{
-      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll"
+      "url":"http://fusio-ihm.fr-ne-amiens.dev.canaltp.fr/cgi-bin/fusio.dll",
+      "input_data_source_ids": ["my_external_settings_data_source_id"]
    },
    "type":"FusioSendPtExternalSettings",
    "sequence":4

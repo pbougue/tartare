@@ -38,7 +38,7 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
-    CheckContributorIntegrity
+    CheckContributorIntegrity, RemoveComputedDataSources
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -46,31 +46,31 @@ from tartare.processes.processes import PreProcessManager
 
 
 class Contributor(flask_restful.Resource):
-    @JsonDataValidate()
-    @ValidateContributorPrepocessesDataSourceIds()
-    @CheckContributorIntegrity('POST')
-    def post(self) -> Response:
-        post_data = request.json
+    @classmethod
+    def __pre_save_contributor(cls, post_data: dict) -> models.Contributor:
         if 'data_prefix' not in post_data:
             raise InvalidArguments('contributor data_prefix must be specified')
         # first a check on the contributor id and providing a uuid if not provided
         setdefault_ids([post_data])
-
         # then a check on the data_sources id and providing a uuid if not provided
         setdefault_ids(post_data.get('data_sources', []))
-
         preprocesses = post_data.get('preprocesses', [])
-
         PreProcessManager.check_preprocesses_for_instance(preprocesses, 'contributor')
-
         setdefault_ids(preprocesses)
-
-        contributor_schema = schema.ContributorSchema(strict=True)
-
         try:
-            contributor = contributor_schema.load(post_data).data
+            contributor = schema.ContributorSchema(strict=True).load(post_data).data
+            contributor.add_computed_data_sources()
+            return contributor
         except ValidationError as err:
             raise InvalidArguments(err.messages)
+
+    @JsonDataValidate()
+    @ValidateContributorPrepocessesDataSourceIds()
+    @CheckContributorIntegrity('POST')
+    @RemoveComputedDataSources()
+    def post(self) -> Response:
+        post_data = request.json
+        contributor = self.__pre_save_contributor(post_data)
 
         try:
             contributor.save()
@@ -79,7 +79,9 @@ class Contributor(flask_restful.Resource):
         except PyMongoError:
             raise InternalServerError('impossible to add contributor {}'.format(contributor))
 
-        return {'contributors': [contributor_schema.dump(models.Contributor.get(post_data['id'])).data]}, 201
+        return {'contributors': [
+            schema.ContributorSchema(strict=True).dump(models.Contributor.get(post_data['id'])).data
+        ]}, 201
 
     def get(self, contributor_id: Optional[str] = None) -> Response:
         if contributor_id:
@@ -128,7 +130,7 @@ class Contributor(flask_restful.Resource):
         upgrade_dict(contributor.preprocesses, request_data, "preprocesses")
 
         try:
-            contributor = models.Contributor.update(contributor_id, request_data)
+            contributor = models.Contributor.update_with_dict(contributor_id, request_data)
         except PyMongoError:
             raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
 
@@ -137,10 +139,21 @@ class Contributor(flask_restful.Resource):
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
     @CheckContributorIntegrity('PUT')
+    @RemoveComputedDataSources()
     def put(self, contributor_id: str) -> Response:
-        self.delete(contributor_id)
-        request.json['id'] = contributor_id
-        post_return = self.post()
-        contributor_schema = schema.ContributorSchema(strict=True)
-        return contributor_schema.dump(models.Contributor.get(contributor_id)).data, 200
+        post_data = request.json
+        if 'id' in post_data and contributor_id != post_data['id']:
+            raise InvalidArguments('the modification of the id is not possible')
+        post_data['id'] = contributor_id
+        new_contributor = self.__pre_save_contributor(post_data)
+        try:
+            existing_contributor = models.Contributor.get(contributor_id)
+            existing_contributor.update_with_object(new_contributor)
+        except DuplicateKeyError as e:
+            raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
+        except PyMongoError:
+            raise InternalServerError('impossible to add contributor {}'.format(new_contributor))
 
+        return {'contributors': [
+            schema.ContributorSchema(strict=True).dump(models.Contributor.get(contributor_id)).data
+        ]}, 200

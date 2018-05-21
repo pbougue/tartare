@@ -30,6 +30,9 @@
 # www.navitia.io
 import json
 
+import pytest
+
+from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -160,11 +163,11 @@ class TestContributorPreProcesses(TartareFixture):
             "type": "ComputeDirections",
             "sequence": 1,
             "params": {
-            "params": {
-                "links": [
-                    {"contributor_id": "id_test", "data_source_id": "compute-direction-config"}
-                ]
-            }
+                "params": {
+                    "links": [
+                        {"contributor_id": "id_test", "data_source_id": "compute-direction-config"}
+                    ]
+                }
             }
         }
 
@@ -351,3 +354,89 @@ class TestContributorPreProcesses(TartareFixture):
                 p_titi = p
         assert p_titi
         assert p_titi['type'] == 'HeadsignShortName'
+
+    def test_add_preprocess_generates_computed_data_source(self, contributor):
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": [],
+            "type": "ComputeExternalSettings",
+            "params": {
+                "target_data_source_id": "target_1",
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+            }
+        }, contributor['id'])
+        contributor_data_sources = self.json_to_dict(
+            self.get('/contributors/{}/data_sources'.format(contributor['id']))
+        )['data_sources']
+        assert len(contributor_data_sources) == 1
+        assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert contributor_data_sources[0]['id'] == 'target_1'
+
+    def test_update_preprocess_generates_computed_data_source(self, contributor):
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": [],
+            "type": "ComputeExternalSettings",
+            "params": {
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+            }
+        }, contributor['id'])
+        contributor_created = self.get_contributor(contributor['id'])
+        assert len(contributor_created['data_sources']) == 0
+        contributor_created['preprocesses'][0]['params']['target_data_source_id'] = 'target_1'
+        self.put('/contributors/{}'.format(contributor['id']), self.dict_to_json(contributor_created))
+        contributor_data_sources = self.json_to_dict(
+            self.get('/contributors/{}/data_sources'.format(contributor['id']))
+        )['data_sources']
+        assert len(contributor_data_sources) == 1
+        assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert contributor_data_sources[0]['id'] == 'target_1'
+
+    def test_add_preprocess_empty_target_data_source_id_generates_computed_data_source(self, contributor):
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": [],
+            "type": "ComputeExternalSettings",
+            "params": {
+                "target_data_source_id": "",
+                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
+            }
+        }, contributor['id'])
+        contributor_created = self.get_contributor(contributor['id'])
+        contributor_data_sources = contributor_created['data_sources']
+        assert len(contributor_data_sources) == 1
+        assert contributor_data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert contributor_data_sources[0]['id'] is not None
+        assert contributor_created['preprocesses'][0]['params']['target_data_source_id'] == \
+               contributor_data_sources[0]['id']
+
+    def test_preprocess_enabled_by_default(self, contributor):
+        self.add_preprocess_to_contributor({
+            "id": "headsign_short_name",
+            "type": "HeadsignShortName",
+            "sequence": 0,
+            "data_source_ids": []
+        }, contributor['id'])
+        preprocesses = self.json_to_dict(
+            self.get('/contributors/{}/preprocesses'.format(contributor['id']))
+        )['preprocesses']
+        assert len(preprocesses) == 1
+        preprocess = preprocesses[0]
+        assert preprocess['enabled'] == True
+
+    @pytest.mark.parametrize("enabled", [
+        True,
+        False
+    ])
+    def test_preprocess_enabled_specified(self, contributor, enabled):
+        self.add_preprocess_to_contributor({
+            "id": "headsign_short_name",
+            "type": "HeadsignShortName",
+            "sequence": 0,
+            "data_source_ids": [],
+            "enabled": enabled
+        }, contributor['id'])
+        preprocess = self.json_to_dict(
+            self.get('/contributors/{}/preprocesses'.format(contributor['id']))
+        )['preprocesses'][0]
+        assert preprocess['enabled'] == enabled

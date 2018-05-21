@@ -23,8 +23,8 @@
 ## Publishing platforms
 For each environment, one or more publishing platforms can be configure.  
 These platforms will receive the coverage export, and can be of three types :  
-    * __Navitia__ : The exported file is made for Navitia and should be sent to Tyr via the relevant coverage job.  
-    * __ODS__ : The exported file will be archived as a GTFS.zip into a zip with a metadata txt file at the coverage's name. This txt file include description,download, format, ID, license, publication update date, scripts, source link, type file, validity end and start dates.  
+    * __navitia__ : The exported file is made for Navitia and should be sent to Tyr via the relevant coverage job.  
+    * __ods__ : The exported file will be archived as a GTFS.zip (for a gtfs export) into a zip with a metadata txt file at the coverage's name. This txt file include all data required on ODS platform.  
     * __stop_area__ : The stops.txt file will be extract from the exported file, renamed as <coverage_id>_stops.txt and published on the required url.   
 
 

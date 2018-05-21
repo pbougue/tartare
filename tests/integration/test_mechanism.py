@@ -125,12 +125,13 @@ class TartareFixture(object):
         self.contributor_export(contributor_id)
         return self.coverage_export(coverage_id, current_date)
 
-    def init_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
-                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None):
+    def init_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
+                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None, data_prefix=None):
         input = {'type': 'manual'} if manual else {
             "type": "url",
             "url": url
         }
+        data_prefix = data_prefix if data_prefix else contributor_id + '_prefix'
 
         data_source = {
             "id": data_source_id,
@@ -143,23 +144,36 @@ class TartareFixture(object):
             "data_type": data_type,
             "id": contributor_id,
             "name": contributor_id + '_name',
-            "data_prefix": contributor_id + '_prefix',
+            "data_prefix": data_prefix,
             "data_sources": [data_source]
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
 
-    def init_coverage(self, id, contributor_ids):
+    def init_coverage(self, id, contributor_ids=None, preprocesses=None, environments=None, license=None):
+        contributor_ids = contributor_ids if contributor_ids else []
+        preprocesses = preprocesses if preprocesses else []
+        environments = environments if environments else {}
         coverage = {
             "id": id,
             "name": id,
-            "contributors": contributor_ids
+            "contributors": contributor_ids,
+            "preprocesses": preprocesses,
+            "environments": environments,
+            "short_description": "description of coverage {}".format(id)
         }
+        if license:
+            coverage['license'] = license
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
+        return self.json_to_dict(raw)
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
         raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
+        self.assert_sucessful_create(raw)
+
+    def add_preprocess_to_contributor(self, preprocess, contributor_id):
+        raw = self.post('contributors/{}/preprocesses'.format(contributor_id), self.dict_to_json(preprocess))
         self.assert_sucessful_create(raw)
 
     def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
@@ -181,13 +195,26 @@ class TartareFixture(object):
                              'url': url}}))
         return self.assert_sucessful_call(raw, 200)
 
-    def run_automatic_update(self, current_date=None):
-        date_option = '?current_date=' + current_date if current_date else ''
-        raw = self.post('/actions/automatic_update{}'.format(date_option))
+    def run_automatic_update(self):
+        raw = self.post('/actions/automatic_update')
         self.assert_sucessful_call(raw, 204)
         raw = self.get('/jobs')
         self.assert_sucessful_call(raw, 200)
         return self.json_to_dict(raw)['jobs']
+
+    def get_fusio_export_url_response_from_action_id(self, action_id, export_url):
+        return """<?xml version="1.0" encoding="ISO-8859-1"?>
+        <Info>
+            <ActionList ActionCount="1" TerminatedCount="1" WaitingCount="0" AbortedCount="0" WorkingCount="0"
+                        ThreadSuspended="True">
+                <Action ActionType="Export" ActionCaption="export" ActionDesc="" Contributor="" ContributorId="-1"
+                        ActionId="{}" LastError="">
+                    <ActionProgression Status="Terminated"
+                                       Description="{}"
+                                       StepCount="10" CurrentStep="10"/>
+                </Action>
+            </ActionList>
+        </Info>""".format(action_id, export_url)
 
     def get_fusio_response_from_action_id(self, action_id):
         return """<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -203,12 +230,9 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
-    def assert_metadata_equals_to_fixture(self, init_ftp_upload_server, coverage_id, metadata_file_name=None,
-                                          expected_filename=None):
-        metadata_file_name = metadata_file_name if metadata_file_name else '{coverage_id}.txt'.format(
-            coverage_id=coverage_id)
-        expected_filename = expected_filename if expected_filename else '{coverage_id}.zip'.format(
-            coverage_id=coverage_id)
+    def assert_ods_uploaded_ok(self, init_ftp_upload_server, coverage_id):
+        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
         session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
                              init_ftp_upload_server.password)
 
@@ -235,3 +259,20 @@ class TartareFixture(object):
             self.assert_sucessful_call(response, 204)
         else:
             return response
+
+    @classmethod
+    def filter_job_of_action_type(cls, jobs, action_type, return_first=True):
+        jobs = (job for job in jobs if job['action_type'] == action_type)
+        if return_first:
+            return next(jobs, None)
+        return jobs
+
+    def get_coverage(self, coverage_id):
+        raw = self.get('coverages/{}'.format(coverage_id))
+        self.assert_sucessful_call(raw)
+        return self.json_to_dict(raw)['coverages'][0]
+
+    def get_contributor(self, contributor_id):
+        raw = self.get('contributors/{}'.format(contributor_id))
+        self.assert_sucessful_call(raw)
+        return self.json_to_dict(raw)['contributors'][0]

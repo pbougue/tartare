@@ -18,7 +18,7 @@ Publication is the end goal of Datahub : to give data where we need it. Platform
 
 **type** : The type of file we want to publish.  
   - **navitia** : NTFS for Tyr.  
-  - **ODS** : Zip containing a GTFS and metadata asked by Open Data Soft.  
+  - **ods** : Zip containing all exported files and metadata asked by Open Data Soft.  
   - **stop_area** : The original *stops.txt* from the GTFS renamed as *{coverage name}_stops.txt*.  
   
 **Protocol** : By which means will the file be published.  
