@@ -1,11 +1,25 @@
-# tartare
-data integration
-The global architecture is available in the [architecture.md](documentation/architecture.md) file.
+# Tartare
+Tartare is an API ([link to swagger doc](./documentation/ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
+
+Refers to [this page](./documentation/tartare.md) for a functionnal description.
 
 ## Requirements
 - python 3.6.2 (or use [pyenv](https://github.com/pyenv/pyenv)
 - [RabbitMQ](https://www.rabbitmq.com/)
 - [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) or use [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+
+
+## Architecture
+Tartare is composed of 2 distinct modules:
+* a web service using [Flask](http://flask.pocoo.org/)
+* and workers using [Celery](http://www.celeryproject.org/)
+
+Tartare is mostly plumbing, as most of the treatment will be externalized in others components. In a first step
+tartare is still using fusio to do most of the work.
+
+All data are stored in mongodb, for files we are using gridfs.
+
+![architecture](documentation/images/archi_functional.png)
 
 ## Installation
 
