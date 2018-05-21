@@ -1,7 +1,7 @@
 # Tartare
-Tartare is an API ([link to swagger doc](./ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
+Tartare is an API ([link to swagger doc](./documentation/ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
 
-Refers to [this page](./documentation/Tartare.md) for a functionnal description.
+Refers to [this page](./documentation/tartare.md) for a functionnal description.
 
 ## Requirements
 - python 3.6.2 (or use [pyenv](https://github.com/pyenv/pyenv)
