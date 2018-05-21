@@ -50,7 +50,7 @@ class TestGetFiles(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)
 
         coverage = {
-            "contributors": [contributor['id']],
+            "contributors_ids": [contributor['id']],
             "environments": {
                 "production": {
                     "name": "production",

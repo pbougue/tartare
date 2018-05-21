@@ -598,7 +598,7 @@ class Coverage(PreProcessContainer):
     label = 'Coverage'
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
-                 contributors: List[str] = None, license: License = None,
+                 contributors_ids: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
         super(Coverage, self).__init__(preprocesses)
@@ -606,7 +606,7 @@ class Coverage(PreProcessContainer):
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
-        self.contributors = [] if contributors is None else contributors
+        self.contributors_ids = [] if contributors_ids is None else contributors_ids
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
         self.type = type
@@ -690,23 +690,23 @@ class Coverage(PreProcessContainer):
         self.environments[environment_type].current_ntfs_id = id
 
     def has_contributor(self, contributor: Contributor) -> bool:
-        return contributor.id in self.contributors
+        return contributor.id in self.contributors_ids
 
     def add_contributor(self, contributor: Contributor) -> None:
         if contributor.data_type == DATA_TYPE_GEOGRAPHIC and any(
                         Contributor.get(contributor_id).data_type == DATA_TYPE_GEOGRAPHIC for contributor_id in
-                        self.contributors):
+                        self.contributors_ids):
             raise IntegrityException(
                 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
             )
 
-        self.contributors.append(contributor.id)
-        self.update_with_dict(self.id, {"contributors": self.contributors})
+        self.contributors_ids.append(contributor.id)
+        self.update_with_dict(self.id, {"contributors_ids": self.contributors_ids})
 
     def remove_contributor(self, contributor_id: str) -> None:
-        if contributor_id in self.contributors:
-            self.contributors.remove(contributor_id)
-            self.update_with_dict(self.id, {"contributors": self.contributors})
+        if contributor_id in self.contributors_ids:
+            self.contributors_ids.remove(contributor_id)
+            self.update_with_dict(self.id, {"contributors_ids": self.contributors_ids})
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
@@ -879,7 +879,7 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
-    contributors = fields.List(fields.String())
+    contributors_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)

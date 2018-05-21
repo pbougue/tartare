@@ -157,7 +157,7 @@ class TartareFixture(object):
         coverage = {
             "id": id,
             "name": id,
-            "contributors": contributor_ids,
+            "contributors_ids": contributor_ids,
             "preprocesses": preprocesses,
             "environments": environments,
             "short_description": "description of coverage {}".format(id)

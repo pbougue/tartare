@@ -1286,7 +1286,7 @@ definitions:
         example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
-      contributors:
+      contributors_ids:
         $ref: "#/definitions/array_of_strings"
       preprocesses:
         type: array

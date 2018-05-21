@@ -104,7 +104,7 @@ class TestAutomaticUpdate(TartareFixture):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
-            'contributors': contributor_ids,
+            'contributors_ids': contributor_ids,
         }
         raw = self.post('coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)

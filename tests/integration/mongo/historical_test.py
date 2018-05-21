@@ -63,7 +63,7 @@ class TestHistorical(TartareFixture):
         self.assert_sucessful_create(raw)
 
     def __init_coverage_config(self):
-        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}
+        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"]}
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 

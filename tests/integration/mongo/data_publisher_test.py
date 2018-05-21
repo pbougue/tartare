@@ -69,7 +69,7 @@ class TestDataPublisher(TartareFixture):
     def _create_coverage(self, id, contributor_id, publication_platform, license=None):
         contributor_ids = contributor_id if type(contributor_id) == list else [contributor_id]
         coverage = {
-            "contributors": contributor_ids,
+            "contributors_ids": contributor_ids,
             "environments": {
                 "production": {
                     "name": "production",
@@ -321,7 +321,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors": [
+            "contributors_ids": [
                 contributor_id
             ],
             "environments": {},
@@ -380,7 +380,7 @@ class TestDataPublisher(TartareFixture):
                 "url": url.format(seq=idx)
             })
         coverage = {
-            "contributors": [
+            "contributors_ids": [
                 contributor_id
             ],
             "environments": {
@@ -412,7 +412,7 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors": [
+            "contributors_ids": [
                 contributor_id
             ],
             "environments": {},

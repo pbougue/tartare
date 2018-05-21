@@ -158,7 +158,7 @@ class TestContributorExport(TartareFixture):
                         params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         self.assert_sucessful_create(raw)
         raw = self.post('/coverages',
-                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
+                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"]}')
         self.assert_sucessful_create(raw)
 
         self.contributor_export(contributor['id'])
