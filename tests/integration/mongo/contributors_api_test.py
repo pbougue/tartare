@@ -257,7 +257,7 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]['data_prefix'] == "BBB"
 
     def test_update_unknown_contributor(self):
-        raw = self.put('/contributors/unknown', '{"name": "new_name_test"}')
+        raw = self.put('/contributors/unknown', '{"data_prefix": "toto", "name": "new_name_test"}')
         self.assert_failed_call(raw, 404)
 
     def test_update_contributor_id_impossible(self, contributor):

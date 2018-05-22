@@ -66,7 +66,7 @@ class Contributor(flask_restful.Resource):
 
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
-    @CheckContributorIntegrity('POST')
+    @CheckContributorIntegrity()
     @RemoveComputedDataSources()
     def post(self) -> Response:
         post_data = request.json
@@ -98,7 +98,7 @@ class Contributor(flask_restful.Resource):
 
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
-    @CheckContributorIntegrity('PUT')
+    @CheckContributorIntegrity(True)
     @RemoveComputedDataSources()
     def put(self, contributor_id: str) -> Response:
         post_data = request.json

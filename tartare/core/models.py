@@ -601,13 +601,6 @@ class Contributor(PreProcessContainer):
         return self.data_type == DATA_TYPE_GEOGRAPHIC
 
 
-def get_contributor(contributor_id: str) -> Contributor:
-    contributor = Contributor.get(contributor_id)
-    if contributor is None:
-        raise ValueError('bad contributor {}'.format(contributor_id))
-    return contributor
-
-
 class Coverage(PreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'

@@ -166,32 +166,19 @@ class RemoveComputedDataSources(object):
 
 
 class CheckContributorIntegrity(object):
-    def __init__(self, method: str) -> None:
-        self.method = method
+    def __init__(self, update: bool=False) -> None:
+        self.update = update
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
-            contributor_id = kwargs.get('contributor_id', None)
-
-            if not self.method == 'POST' and not contributor_id:
-                msg = "contributor_id not present in request"
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-
-            if contributor_id:
-                contributor = models.Contributor.get(contributor_id)
-                data_type = post_data.get('data_type', contributor.data_type)
-                existing_data_sources = contributor.data_sources
-            else:
-                data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
-                existing_data_sources = []
+            data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
             data_sources = post_data.get('data_sources', [])
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-                check_contributor_data_source_osm_and_poly_constraint(existing_data_sources, data_sources)
+                check_contributor_data_source_osm_and_poly_constraint([], data_sources)
             return func(*args, **kwargs)
 
         return wrapper
