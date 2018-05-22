@@ -165,11 +165,11 @@ class CoverageExportContext(Context, ValidityPeriodContainer):
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
         self.contributor_contexts = []
-        if not coverage.contributors:
+        if not coverage.contributors_ids:
             raise IntegrityException(
                 'unable to get any contributor exports since no contributors are attached to coverage {}'.format(
                     coverage.id))
-        for contributor_id in coverage.contributors:
+        for contributor_id in coverage.contributors_ids:
             contributor_export = ContributorExport.get_last(contributor_id)
             if contributor_export:
                 data_source_contexts = []

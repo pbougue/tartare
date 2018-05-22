@@ -96,8 +96,8 @@ class ValidateContributors(object):
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
-            if "contributors" in post_data:
-                for contributor_id in post_data.get("contributors"):
+            if "contributors_ids" in post_data:
+                for contributor_id in post_data.get("contributors_ids"):
                     contributor_model = models.Contributor.get(contributor_id)
                     if not contributor_model:
                         msg = "contributor {} not found".format(contributor_id)

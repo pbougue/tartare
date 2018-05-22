@@ -102,7 +102,7 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
             if job_coverage and job_coverage.action_type == ACTION_TYPE_COVERAGE_EXPORT:
                 return job_coverage
 
-            for contributor_id in data['contributors']:
+            for contributor_id in data['contributors_ids']:
                 job_contributor = job_get_last(False, contributor_id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
                 if job_contributor:
                     if job_coverage:

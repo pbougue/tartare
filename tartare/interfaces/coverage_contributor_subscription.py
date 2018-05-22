@@ -73,7 +73,7 @@ class CoverageContributorSubscription(flask_restful.Resource):
         if coverage is None:
             raise ObjectNotFound('unknown coverage id "{}"'.format(coverage_id))
 
-        if contributor_id not in coverage.contributors:
+        if contributor_id not in coverage.contributors_ids:
             raise ObjectNotFound('unknown contributor id "{}" attribute in uri'.format(contributor_id))
 
         try:

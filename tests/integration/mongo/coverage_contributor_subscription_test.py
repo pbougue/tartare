@@ -61,10 +61,10 @@ def test_add_contributor(app, coverage, contributor):
                json.dumps({"id": contributor.get('id')}))
     r = to_json(raw)
     assert raw.status_code == 201
-    contributors = r.get('coverages')[0].get('contributors')
-    assert isinstance(contributors, list)
-    assert len(contributors) == 1
-    assert contributors[0] == contributor.get('id')
+    contributors_ids = r.get('coverages')[0].get('contributors_ids')
+    assert isinstance(contributors_ids, list)
+    assert len(contributors_ids) == 1
+    assert contributors_ids[0] == contributor.get('id')
 
     # test add existing data_source in coverage
     raw = post(app, '/coverages/jdr/contributors',
@@ -93,10 +93,10 @@ def test_delete_valid_contributor(app, coverage, contributor):
     assert raw.status_code==201
     raw = app.get('/coverages/jdr')
     r = to_json(raw)
-    assert len(r['coverages'][0]['contributors']) == 1
+    assert len(r['coverages'][0]['contributors_ids']) == 1
 
     r = delete(app, '/coverages/jdr/contributors/{}'.format(contributor.get('id')))
 
     raw = app.get('/coverages/jdr')
     r = to_json(raw)
-    assert len(r['coverages'][0]['contributors']) == 0
+    assert len(r['coverages'][0]['contributors_ids']) == 0

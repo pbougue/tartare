@@ -354,7 +354,7 @@ class TestCoverageApi(TartareFixture):
         assert 'environments' in coverage
         assert 'preproduction' in coverage['environments']
         assert len(coverage['preprocesses']) == 0
-        assert len(coverage['contributors']) == 0
+        assert len(coverage['contributors_ids']) == 0
         assert coverage['license'] == {'url': '', 'name': 'Private (unspecified)'}
         preprod_env = coverage['environments']['preproduction']
         assert preprod_env['name'] == 'preproduction'
@@ -519,31 +519,31 @@ class TestCoverageApi(TartareFixture):
 
     def test_post_coverage_with_unknown_contributor(self):
         raw = self.post('/coverages',
-                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["unknown"]}')
+                        '{"id": "id_test", "name": "name of the coverage", "contributors_ids": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert r['error'] == 'contributor unknown not found'
 
     def test_post_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
-                        '{"id": "id_test", "name": "name of the coverage", "contributors": ["id_test"]}')
+                        '{"id": "id_test", "name": "name of the coverage", "contributors_ids": ["id_test"]}')
         assert raw.status_code == 201
         r = self.json_to_dict(raw)
-        assert len(r["coverages"][0]['contributors']) == 1
-        assert r["coverages"][0]['contributors'][0] == 'id_test'
+        assert len(r["coverages"][0]['contributors_ids']) == 1
+        assert r["coverages"][0]['contributors_ids'][0] == 'id_test'
 
     def test_patch_coverage_with_unknown_contributor(self, coverage):
-        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["unknown"]}')
+        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert r['error'] == 'contributor unknown not found'
 
     def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
-        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors": ["id_test"]}')
+        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["id_test"]}')
         assert raw.status_code == 200
         r = self.json_to_dict(raw)
-        assert len(r["coverages"][0]['contributors']) == 1
-        assert r["coverages"][0]['contributors'][0] == 'id_test'
+        assert len(r["coverages"][0]['contributors_ids']) == 1
+        assert r["coverages"][0]['contributors_ids'][0] == 'id_test'
 
     def __assert_pub_platform_authent(self, pub_platform, user_to_set):
         assert 'password' not in pub_platform['options']['authent']
@@ -653,7 +653,7 @@ class TestCoverageApi(TartareFixture):
                 'name': 'public',
                 'url': 'http://whatever.com'
             },
-            'contributors': [contributor['id']],
+            'contributors_ids': [contributor['id']],
             'type': 'keolis',
             'short_description': 'a short description',
             'comment': 'a comment'
@@ -662,7 +662,7 @@ class TestCoverageApi(TartareFixture):
             'coverages': [{
                 'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
                 'license': {'url': 'http://whatever.com', 'name': 'public'},
-                'preprocesses': [], 'contributors': ['id_test'], 'name': 'new_name', 'id': 'jdr',
+                'preprocesses': [], 'contributors_ids': ['id_test'], 'name': 'new_name', 'id': 'jdr',
                 'last_active_job': None,
                 'type': 'keolis',
                 'short_description': 'a short description',
@@ -718,7 +718,7 @@ class TestCoverageApi(TartareFixture):
                                 'export_type': 'gtfsv2'}, 'data_source_ids': [],
                      'sequence': 1, 'enabled': True}
                 ],
-                'id': 'my-cov', 'contributors': [],
+                'id': 'my-cov', 'contributors_ids': [],
                 'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
                 'data_sources': [], 'environments': {}, 'last_active_job': None
             }]
@@ -804,7 +804,7 @@ class TestCoverageApi(TartareFixture):
                         'name': 'integration'}
                 },
                 'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
-                'name': 'my-cov', 'contributors': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
+                'name': 'my-cov', 'contributors_ids': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
                 'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
             }]
         }

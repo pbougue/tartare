@@ -71,7 +71,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         coverage = {
             "id": coverage_id,
             "name": "name of the coverage jdr",
-            "contributors": contributor_ids,
+            "contributors_ids": contributor_ids,
             "preprocesses": [
                 {
                     "id": "fusio_dataupdate",
@@ -410,7 +410,7 @@ class TestFusioExportPreprocess(TartareFixture):
         coverage = {
             "id": "my_cov",
             "name": "my_cov",
-            "contributors": ['id_test'],
+            "contributors_ids": ['id_test'],
             "preprocesses":
                 [
                     {
@@ -590,7 +590,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         coverage = {
             "id": "my_cov",
             "name": "my_cov",
-            "contributors": ['id_test'],
+            "contributors_ids": ['id_test'],
             "preprocesses":
                 [
                     {

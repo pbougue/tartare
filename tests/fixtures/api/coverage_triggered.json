@@ -1,5 +1,5 @@
 {
   "id": "coverage_id_triggered",
   "name": "coverage_name_triggered",
-  "contributors": ["contributor_id_sleeping", "contributor_id"]
+  "contributors_ids": ["contributor_id_sleeping", "contributor_id"]
 }
