@@ -170,8 +170,7 @@ class TestAutomaticUpdate(TartareFixture):
             mongo.db['jobs'].delete_many({})
 
         # update c1 data source
-        self.patch('/contributors/{}/data_sources/{}'.format('c1', 'ds_c1'),
-                   json.dumps({'input': {'url': self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')}}))
+        self.update_data_source_url('c1', 'ds_c1', self.format_url(init_http_download_server.ip_addr, 'sample_1.zip'))
         jobs_second_run = self.run_automatic_update()
         contributor_export_jobs = list(
             filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))

@@ -188,9 +188,6 @@ class CheckContributorIntegrity(object):
                 data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
                 existing_data_sources = []
             data_sources = post_data.get('data_sources', [])
-            if self.method == 'PATCH':
-                for existing_data_source in existing_data_sources:
-                    check_excepted_data_format(existing_data_source.data_format, data_type)
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)

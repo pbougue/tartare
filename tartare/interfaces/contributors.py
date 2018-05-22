@@ -97,43 +97,6 @@ class Contributor(flask_restful.Resource):
         return "", 204
 
     @JsonDataValidate()
-    @CheckContributorIntegrity('PATCH')
-    def patch(self, contributor_id: str) -> Response:
-        # "data_prefix" field is not modifiable, impacts of the modification
-        # need to be checked. The previous value needs to be checked for an error
-        contributor = models.Contributor.get(contributor_id)
-        request_data = request.json
-        preprocess_dict_list = request_data.get('preprocesses', [])
-        data_sources_dict_list = request_data.get('data_sources', [])
-
-        # checking errors before updating PATCH data
-        setdefault_ids(data_sources_dict_list)
-        setdefault_ids(preprocess_dict_list)
-
-        PreProcessManager.check_preprocesses_for_instance(preprocess_dict_list, 'contributor')
-        existing_data_source_ids = [data_source.id for data_source in contributor.data_sources]
-        PreProcessManager.check_preprocess_data_source_integrity(preprocess_dict_list, existing_data_source_ids,
-                                                                 'contributor')
-
-        schema_contributor = schema.ContributorSchema(partial=True)
-        errors = schema_contributor.validate(request_data, partial=True)
-        if errors:
-            raise InvalidArguments(errors)
-
-        if 'id' in request_data and contributor.id != request_data['id']:
-            raise InvalidArguments('the modification of the id is not possible')
-
-        upgrade_dict(contributor.data_sources, request_data, "data_sources")
-        upgrade_dict(contributor.preprocesses, request_data, "preprocesses")
-
-        try:
-            contributor = models.Contributor.update_with_dict(contributor_id, request_data)
-        except PyMongoError:
-            raise InternalServerError('impossible to update contributor with payload {}'.format(request_data))
-
-        return {'contributors': [schema.ContributorSchema().dump(contributor).data]}, 200
-
-    @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
     @CheckContributorIntegrity('PUT')
     @RemoveComputedDataSources()
