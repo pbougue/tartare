@@ -51,8 +51,6 @@ class CoverageContributorSubscription(flask_restful.Resource):
         contributor_id = request.json['id']
 
         contributor = models.Contributor.get(contributor_id=contributor_id)
-        if contributor is None:
-            raise ObjectNotFound("contributor {} not found".format(contributor_id))
 
         if coverage.has_contributor(contributor):
             raise DuplicateEntry('contributor id {} already exists in coverage {}'

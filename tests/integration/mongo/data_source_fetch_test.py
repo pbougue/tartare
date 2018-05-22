@@ -46,7 +46,7 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "bad contributor unknown"
+        assert r["error"] == "contributor 'unknown' not found"
 
     def test_fetch_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')

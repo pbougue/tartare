@@ -53,7 +53,7 @@ def test_unknown_contributor(app, coverage):
                '''{"id": "bob"}''')
     r = to_json(raw)
     assert raw.status_code == 404
-    assert r.get('error') == 'contributor bob not found'
+    assert r.get('error') == "contributor 'bob' not found"
 
 
 def test_add_contributor(app, coverage, contributor):

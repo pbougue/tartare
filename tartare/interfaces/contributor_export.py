@@ -54,20 +54,11 @@ class ContributorExportResource(Resource):
 
     def post(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
-        if not contributor:
-            msg = 'contributor not found: {}'.format(contributor_id)
-            logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
-
         job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
     def get(self, contributor_id: str) -> Response:
         contributor = Contributor.get(contributor_id)
-        if not contributor:
-            msg = 'contributor not found: {}'.format(contributor_id)
-            logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
         exports = ContributorExport.get(contributor_id=contributor.id)
         return {'exports': ContributorExportSchema(many=True, strict=True).dump(exports).data}, 200

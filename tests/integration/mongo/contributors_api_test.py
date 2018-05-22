@@ -264,7 +264,7 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]['id'] == "id_test"
         assert r["contributors"][0]['data_prefix'] == "BBB"
 
-    def test_update_unknown_coverage(self):
+    def test_update_unknown_contributor(self):
         raw = self.patch('/contributors/unknown', '{"name": "new_name_test"}')
         r = self.json_to_dict(raw)
         assert 'message' in r

@@ -98,11 +98,10 @@ class ValidateContributors(object):
             post_data = request.json
             if "contributors_ids" in post_data:
                 for contributor_id in post_data.get("contributors_ids"):
-                    contributor_model = models.Contributor.get(contributor_id)
-                    if not contributor_model:
-                        msg = "contributor {} not found".format(contributor_id)
-                        logging.getLogger(__name__).error(msg)
-                        raise InvalidArguments(msg)
+                    try:
+                        models.Contributor.get(contributor_id)
+                    except ObjectNotFound as exc:
+                        raise InvalidArguments(exc.data['error'])
             return func(*args, **kwargs)
 
         return wrapper
@@ -183,10 +182,6 @@ class CheckContributorIntegrity(object):
 
             if contributor_id:
                 contributor = models.Contributor.get(contributor_id)
-                if not contributor:
-                    msg = "contributor '{}' not found".format(contributor_id)
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
                 data_type = post_data.get('data_type', contributor.data_type)
                 existing_data_sources = contributor.data_sources
             else:
@@ -220,10 +215,6 @@ class CheckDataSourceIntegrity(object):
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
             contributor = models.Contributor.get(contributor_id)
-            if not contributor:
-                msg = "contributor '{}' not found".format(contributor_id)
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
             data_type = contributor.data_type
             new_data_source = post_data.copy()
             if self.data_source_id_required:

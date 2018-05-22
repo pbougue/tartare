@@ -38,6 +38,7 @@ from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import ParameterException, RuntimeException
+from tartare.http_exceptions import ObjectNotFound
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -80,7 +81,7 @@ class Ruspell(AbstractContributorProcess):
                 file_path = os.path.join(path, gridout.filename)
                 with open(file_path, 'wb+') as f:
                     f.write(gridout.read())
-            except ValueError:
+            except (ValueError, ObjectNotFound):
                 msg = 'data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(data_source_id,
                                                                                                            contributor_id)
                 raise ParameterException(self.format_error_message(msg))

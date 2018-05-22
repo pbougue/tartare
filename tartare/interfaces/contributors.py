@@ -85,10 +85,7 @@ class Contributor(flask_restful.Resource):
 
     def get(self, contributor_id: Optional[str] = None) -> Response:
         if contributor_id:
-            c = models.Contributor.get(contributor_id)
-            if c is None:
-                raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
-            result = schema.ContributorSchema().dump(c)
+            result = schema.ContributorSchema().dump(models.Contributor.get(contributor_id))
             return {'contributors': [result.data]}, 200
         contributors = models.Contributor.all()
         return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
