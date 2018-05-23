@@ -33,6 +33,7 @@ import pytest
 import tartare
 from tartare.core import models
 from tartare.core.constants import DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE
+from tartare.core.models import Coverage
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -364,7 +365,7 @@ class TestCoverageApi(TartareFixture):
         assert len(preprod_env['publication_platforms']) == 1
         platform = preprod_env['publication_platforms'][0]
         assert platform["sequence"] == 0
-        assert platform["options"] == {'authent': {'username': 'test'}}
+        assert platform["options"] == {'directory': None, 'authent': {'username': 'test', 'password': None}}
         assert platform["protocol"] == 'ftp'
         assert platform["type"] == 'navitia'
         assert platform["url"] == 'ftp.ods.com'
@@ -835,16 +836,16 @@ class TestCoverageApi(TartareFixture):
                 'environments': {
                     'production': {
                         'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
-                            {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': {}, 'protocol': 'ftp',
+                            {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': None, 'protocol': 'ftp',
                              'input_data_source_ids': [],
                              'type': 'ods'}], 'name': 'production'
                     },
                     'integration': {
                         'sequence': 1, 'current_ntfs_id': None,
                         'publication_platforms': [
-                            {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': {}, 'protocol': 'http',
+                            {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': None, 'protocol': 'http',
                              'input_data_source_ids': ['id-1'], 'type': 'navitia'},
-                            {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': {}, 'protocol': 'ftp',
+                            {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': None, 'protocol': 'ftp',
                              'input_data_source_ids': [], 'type': 'ods'}
                         ],
                         'name': 'integration'}
@@ -889,3 +890,71 @@ class TestCoverageApi(TartareFixture):
         }
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(update))
         assert self.assert_sucessful_call(raw)['coverages'][0]["input_data_source_ids"] == ["ds_test"]
+
+    def test_put_coverage_preserve_hidden_password_if_username_doesnt_change(self):
+        cov_id = 'covid'
+        password = "my_secret_password"
+        self.init_coverage(cov_id, environments={
+            'production': {
+                'name': 'production',
+                'sequence': 0,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com",
+                        "sequence": 0,
+                        "options": {
+                            "authent": {
+                                "username": "my_user",
+                                "password": password,
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+        coverage = self.get_coverage(cov_id)
+        ods_platform = coverage['environments']['production']['publication_platforms'][0]
+        assert 'authent' in ods_platform['options']
+        assert 'username' in ods_platform['options']['authent']
+        assert 'password' not in ods_platform['options']['authent']
+        coverage['name'] = 'new_name'
+        self.put('/coverages/{}'.format(cov_id), self.dict_to_json(coverage))
+        with tartare.app.app_context():
+            coverage = Coverage.get(cov_id)
+            assert coverage.name == 'new_name'
+            assert coverage.environments['production'].publication_platforms[0].options.authent.password == password
+
+    def test_put_coverage_remove_password_if_username_change(self):
+        cov_id = 'covid'
+        self.init_coverage(cov_id, environments={
+            'production': {
+                'name': 'production',
+                'sequence': 0,
+                "publication_platforms": [
+                    {
+                        "type": "ods",
+                        "protocol": "ftp",
+                        "url": "ftp.ods.com",
+                        "sequence": 0,
+                        "options": {
+                            "authent": {
+                                "username": "my_user",
+                                "password": "my_secret_password",
+                            }
+                        }
+                    }
+                ]
+            }
+        })
+        coverage = self.get_coverage(cov_id)
+        ods_platform = coverage['environments']['production']['publication_platforms'][0]
+        assert 'authent' in ods_platform['options']
+        assert 'username' in ods_platform['options']['authent']
+        assert 'password' not in ods_platform['options']['authent']
+        ods_platform['options']['authent']['username'] = 'new_user'
+        self.put('/coverages/{}'.format(cov_id), self.dict_to_json(coverage))
+        with tartare.app.app_context():
+            coverage = Coverage.get(cov_id)
+            assert coverage.environments['production'].publication_platforms[0].options.authent.password is None

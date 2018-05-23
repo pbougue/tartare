@@ -54,9 +54,11 @@ class NoUnknownFieldMixin(Schema):
 class PlatformSchema(MongoPlatformSchema):
     @post_dump()
     def remove_password(self, data: dict) -> dict:
-        password = data.get('options', {}).get('authent', {}).get('password', {})
-        if password:
-            data['options']['authent'].pop('password')
+        try:
+            if data.get('options').get('authent').get('password'):
+                data['options']['authent'].pop('password')
+        except AttributeError:
+            pass
         return data
 
 

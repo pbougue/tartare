@@ -158,14 +158,26 @@ class PreProcessContainer(metaclass=ABCMeta):
         pass
 
 
+class PlatformOptionsAuthent:
+    def __init__(self, username: str = None, password: str = None):
+        self.username = username
+        self.password = password
+
+
+class PlatformOptions:
+    def __init__(self, authent: PlatformOptionsAuthent = None, directory: str = None):
+        self.authent = authent
+        self.directory = directory
+
+
 class Platform(SequenceContainer):
-    def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0,
+    def __init__(self, protocol: str, type: str, url: str, options: PlatformOptions = None, sequence: Optional[int] = 0,
                  input_data_source_ids: List[str] = None) -> None:
         super().__init__(sequence)
         self.type = type
         self.protocol = protocol
         self.url = url
-        self.options = {} if options is None else options
+        self.options = options
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
 
 
@@ -176,6 +188,12 @@ class Environment(SequenceContainer):
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
+
+    def get_publication_platform_for_type_with_user(self, type: str, username: str) -> Optional[Platform]:
+        return next((existing_platform for existing_platform in self.publication_platforms
+                     if existing_platform.type == type and existing_platform.options and
+                     existing_platform.options.authent and existing_platform.options.authent.username == username),
+                    None)
 
 
 class ValidityPeriod(object):
@@ -682,7 +700,20 @@ class Coverage(PreProcessContainer):
 
         return cls.get(coverage_id)
 
+    def __fill_password_from_existing_coverage(self, existing_coverage: 'Coverage'):
+        for env_key, environment in self.environments.items():
+            for platform in environment.publication_platforms:
+                if platform.options and platform.options.authent and not platform.options.authent.password:
+                    if env_key in existing_coverage.environments:
+                        existing_platform = existing_coverage.environments[env_key]\
+                                .get_publication_platform_for_type_with_user(
+                                    platform.type, platform.options.authent.username
+                                )
+                        if existing_platform:
+                            platform.options.authent.password = existing_platform.options.authent.password
+
     def update_with_object(self, coverage_object: 'Coverage') -> None:
+        coverage_object.__fill_password_from_existing_coverage(self)
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
             {'$set': MongoCoverageSchema().dump(coverage_object).data})
@@ -761,12 +792,30 @@ class MongoContributorExportDataSourceSchema(Schema):
         return ContributorExportDataSource(**data)
 
 
+class MongoPlatformOptionsAuthentSchema(Schema):
+    username = fields.String(required=True)
+    password = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_platform_options_authent(self, data: dict) -> Platform:
+        return PlatformOptionsAuthent(**data)
+
+
+class MongoPlatformOptionsSchema(Schema):
+    authent = fields.Nested(MongoPlatformOptionsAuthentSchema, required=False)
+    directory = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_platform_options(self, data: dict) -> Platform:
+        return PlatformOptions(**data)
+
+
 class MongoPlatformSchema(Schema):
     type = PlatformType(required=True)
     protocol = PlatformProtocol(required=True)
     sequence = fields.Integer(required=True)
     url = fields.String(required=True)
-    options = fields.Dict(required=False)
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
     input_data_source_ids = fields.List(fields.String())
 
     @post_load
