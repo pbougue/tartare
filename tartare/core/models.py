@@ -159,37 +159,42 @@ class PreProcessContainer(metaclass=ABCMeta):
 
 
 class PlatformOptionsAuthent:
-    def __init__(self, username: str = None, password: str = None):
+    def __init__(self, username: str = None, password: str = None) -> None:
         self.username = username
         self.password = password
 
 
 class PlatformOptions:
-    def __init__(self, authent: PlatformOptionsAuthent = None, directory: str = None):
+    def __init__(self, authent: PlatformOptionsAuthent = None, directory: str = None) -> None:
         self.authent = authent
         self.directory = directory
 
 
-class Platform(SequenceContainer):
-    def __init__(self, protocol: str, type: str, url: str, options: PlatformOptions = None, sequence: Optional[int] = 0,
-                 input_data_source_ids: List[str] = None) -> None:
-        super().__init__(sequence)
-        self.type = type
+class Platform(object):
+    def __init__(self, protocol: str, url: str, options: PlatformOptions = None) -> None:
         self.protocol = protocol
         self.url = url
         self.options = options
+
+
+class PublicationPlatform(SequenceContainer, Platform):
+    def __init__(self, protocol: str, type: str, url: str, options: PlatformOptions = None, sequence: Optional[int] = 0,
+                 input_data_source_ids: List[str] = None) -> None:
+        SequenceContainer.__init__(self, sequence)
+        Platform.__init__(self, protocol, url, options)
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
+        self.type = type
 
 
 class Environment(SequenceContainer):
-    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None,
+    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[PublicationPlatform] = None,
                  sequence: Optional[int] = 0) -> None:
         super().__init__(sequence)
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
 
-    def get_publication_platform_for_type_with_user(self, type: str, username: str) -> Optional[Platform]:
+    def get_publication_platform_for_type_with_user(self, type: str, username: str) -> Optional[PublicationPlatform]:
         return next((existing_platform for existing_platform in self.publication_platforms
                      if existing_platform.type == type and existing_platform.options and
                      existing_platform.options.authent and existing_platform.options.authent.username == username),
@@ -700,15 +705,15 @@ class Coverage(PreProcessContainer):
 
         return cls.get(coverage_id)
 
-    def __fill_password_from_existing_coverage(self, existing_coverage: 'Coverage'):
+    def __fill_password_from_existing_coverage(self, existing_coverage: 'Coverage') -> None:
         for env_key, environment in self.environments.items():
             for platform in environment.publication_platforms:
                 if platform.options and platform.options.authent and not platform.options.authent.password:
                     if env_key in existing_coverage.environments:
-                        existing_platform = existing_coverage.environments[env_key]\
-                                .get_publication_platform_for_type_with_user(
-                                    platform.type, platform.options.authent.username
-                                )
+                        existing_platform = existing_coverage.environments[env_key] \
+                            .get_publication_platform_for_type_with_user(
+                            platform.type, platform.options.authent.username
+                        )
                         if existing_platform:
                             platform.options.authent.password = existing_platform.options.authent.password
 
@@ -797,7 +802,7 @@ class MongoPlatformOptionsAuthentSchema(Schema):
     password = fields.String(required=False, allow_none=True)
 
     @post_load
-    def make_platform_options_authent(self, data: dict) -> Platform:
+    def make_platform_options_authent(self, data: dict) -> PlatformOptionsAuthent:
         return PlatformOptionsAuthent(**data)
 
 
@@ -806,28 +811,41 @@ class MongoPlatformOptionsSchema(Schema):
     directory = fields.String(required=False, allow_none=True)
 
     @post_load
-    def make_platform_options(self, data: dict) -> Platform:
+    def make_platform_options(self, data: dict) -> PlatformOptions:
         return PlatformOptions(**data)
 
 
 class MongoPlatformSchema(Schema):
-    type = PlatformType(required=True)
     protocol = PlatformProtocol(required=True)
-    sequence = fields.Integer(required=True)
     url = fields.String(required=True)
     options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
-    input_data_source_ids = fields.List(fields.String())
 
     @post_load
     def make_platform(self, data: dict) -> Platform:
         return Platform(**data)
 
 
+class MongoPublicationPlatformSchema(Schema):
+    # inherited attributes from MongoPlatformSchema because if we extend it, it makes 2 decorators
+    # and confuses the post_load
+    protocol = PlatformProtocol(required=True)
+    url = fields.String(required=True)
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
+    # end of duplicate
+    type = PlatformType(required=True)
+    input_data_source_ids = fields.List(fields.String())
+    sequence = fields.Integer(required=True)
+
+    @post_load
+    def make_publication_platform(self, data: dict) -> PublicationPlatform:
+        return PublicationPlatform(**data)
+
+
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
     sequence = fields.Integer(required=True)
     current_ntfs_id = fields.String(allow_none=True)
-    publication_platforms = fields.Nested(MongoPlatformSchema, many=True)
+    publication_platforms = fields.Nested(MongoPublicationPlatformSchema, many=True)
 
     @post_load
     def make_environment(self, data: dict) -> Environment:

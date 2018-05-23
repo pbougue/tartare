@@ -51,8 +51,8 @@ from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_T
     JOB_STATUS_FAILED, JOB_STATUS_RUNNING, JOB_STATUS_DONE
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
-    ContributorExport
+from tartare.core.models import CoverageExport, Coverage, Job, Contributor, PreProcess, SequenceContainer, \
+    ContributorExport, PublicationPlatform
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
 from tartare.helper import upload_file
@@ -89,7 +89,7 @@ class CallbackTask(tartare.ContextTask):
                 job.update(state=JOB_STATUS_FAILED, error_message=str(exc))
 
 
-def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
+def publish_data_on_platform(platform: PublicationPlatform, coverage: Coverage, environment_id: str, job: Job) -> None:
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
     job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
@@ -97,7 +97,7 @@ def publish_data_on_platform(platform: Platform, coverage: Coverage, environment
     file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
     try:
-        publisher = PublisherManager.select_from_platform(platform)
+        publisher = PublisherManager.select_from_publication_platform(platform)
         protocol_uploader = ProtocolManager.select_from_platform(platform)
         publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
         # Upgrade current_ntfs_id
@@ -227,8 +227,8 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
         for env in sorted_environments:
             environment = coverage.get_environment(env)
             sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-            for platform in sorted_publication_platforms:
-                publish_data_on_platform(platform, coverage, env, job)
+            for publication_platform in sorted_publication_platforms:
+                publish_data_on_platform(publication_platform, coverage, env, job)
     finish_job(context)
     return context
 

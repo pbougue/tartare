@@ -42,7 +42,7 @@ from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
     PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions
+from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
     PublisherException
 
@@ -218,7 +218,7 @@ class PublisherManager:
     }
 
     @classmethod
-    def select_from_platform(cls, platform: Platform) -> AbstractPublisher:
+    def select_from_publication_platform(cls, platform: PublicationPlatform) -> AbstractPublisher:
         if platform.type not in cls.publishers_by_type:
             error_message = 'unknown platform type "{type}"'.format(type=platform.type)
             raise PublisherManagerException(error_message)

@@ -34,11 +34,11 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
-from tartare.core.models import Job, MongoValidityPeriodSchema, DataSourceStatus, MongoDataSetSchema
+from tartare.core.models import Job, MongoValidityPeriodSchema, DataSourceStatus, MongoDataSetSchema, \
+    MongoPublicationPlatformSchema
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema
-from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema, \
-    MongoPlatformSchema
+from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 
 not_blank = validate.Length(min=1, error='field cannot be empty')
 
@@ -51,7 +51,7 @@ class NoUnknownFieldMixin(Schema):
                 raise ValidationError('unknown field name {}'.format(key))
 
 
-class PlatformSchema(MongoPlatformSchema):
+class PublicationPlatformSchema(MongoPublicationPlatformSchema):
     @post_dump()
     def remove_password(self, data: dict) -> dict:
         try:
@@ -63,7 +63,7 @@ class PlatformSchema(MongoPlatformSchema):
 
 
 class EnvironmentSchema(MongoEnvironmentSchema, NoUnknownFieldMixin):
-    publication_platforms = fields.Nested(PlatformSchema, many=True)
+    publication_platforms = fields.Nested(PublicationPlatformSchema, many=True)
     current_ntfs_id = fields.String(allow_none=True, dump_only=True)
 
 

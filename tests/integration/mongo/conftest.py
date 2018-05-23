@@ -135,7 +135,8 @@ def data_source(app, contributor):
 def coverage_obj(tmpdir, get_app_context):
     coverage = models.Coverage(id='test', name='test')
     coverage.environments['production'] = models.Environment(name='prod')
-    publication_platform = models.Platform(type="navitia", protocol="http", url="http://tyr.prod/v0/instances/test")
+    publication_platform = models.PublicationPlatform(type="navitia", protocol="http",
+                                                      url="http://tyr.prod/v0/instances/test")
     coverage.environments['production'].publication_platforms.append(publication_platform)
     coverage.save()
     return coverage
