@@ -67,9 +67,9 @@ class TestDataPublisher(TartareFixture):
         return resp
 
     def _create_coverage(self, id, contributor_id, publication_platform, license=None):
-        contributor_ids = contributor_id if type(contributor_id) == list else [contributor_id]
+        contributors_ids = contributor_id if type(contributor_id) == list else [contributor_id]
         coverage = {
-            "contributors_ids": contributor_ids,
+            "contributors_ids": contributors_ids,
             "environments": {
                 "production": {
                     "name": "production",

@@ -335,6 +335,15 @@ class DataSource(object):
         return data_sources[0]
 
     @classmethod
+    def get_contributor_of_data_source(cls, data_source_id: str) -> 'Contributor':
+        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources': {'$elemMatch': {'id': data_source_id}}})
+
+        if not raw:
+            return None
+
+        return MongoContributorSchema(strict=True).load(raw).data
+
+    @classmethod
     def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
         if data_source_id is None:
             raise ValueError('a data_source id is required')
@@ -585,6 +594,9 @@ class Contributor(PreProcessContainer):
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
 
+    def is_geographic(self) -> bool:
+        return self.data_type == DATA_TYPE_GEOGRAPHIC
+
 
 def get_contributor(contributor_id: str) -> Contributor:
     contributor = Contributor.get(contributor_id)
@@ -598,7 +610,7 @@ class Coverage(PreProcessContainer):
     label = 'Coverage'
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
-                 contributors_ids: List[str] = None, license: License = None,
+                 contributors_ids: List[str] = None, input_data_source_ids: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
         super(Coverage, self).__init__(preprocesses)
@@ -607,6 +619,7 @@ class Coverage(PreProcessContainer):
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
         self.contributors_ids = [] if contributors_ids is None else contributors_ids
+        self.input_data_source_ids = [] if input_data_source_ids is None else input_data_source_ids
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
         self.type = type
@@ -693,8 +706,8 @@ class Coverage(PreProcessContainer):
         return contributor.id in self.contributors_ids
 
     def add_contributor(self, contributor: Contributor) -> None:
-        if contributor.data_type == DATA_TYPE_GEOGRAPHIC and any(
-                        Contributor.get(contributor_id).data_type == DATA_TYPE_GEOGRAPHIC for contributor_id in
+        if contributor.is_geographic() and any(
+                        Contributor.get(contributor_id).is_geographic() for contributor_id in
                         self.contributors_ids):
             raise IntegrityException(
                 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
@@ -880,6 +893,7 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
     contributors_ids = fields.List(fields.String())
+    input_data_source_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)

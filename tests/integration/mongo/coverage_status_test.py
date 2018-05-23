@@ -67,14 +67,14 @@ class TestCoverageStatus(TartareFixture):
         raw = self.post('/contributors', json.dumps(contributor))
         self.assert_sucessful_create(raw)
 
-    def __create_coverage(self, contributor_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
+    def __create_coverage(self, contributors_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
-            'contributors_ids': contributor_ids,
+            'contributors_ids': contributors_ids,
         }
-        if contributor_ids:
-            coverage['contributors_ids'] = contributor_ids
+        if contributors_ids:
+            coverage['contributors_ids'] = contributors_ids
 
         if publication_platform:
             coverage["environments"] = {

@@ -36,7 +36,7 @@ from flask import request
 
 from tartare.core import models
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
-    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED
+    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED, DATA_TYPE_GEOGRAPHIC
 from tartare.core.models import DataSource
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
 from tartare.processes.processes import PreProcessManager
@@ -103,6 +103,36 @@ class ValidateContributors(object):
                         msg = "contributor {} not found".format(contributor_id)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+
+class ValidateInputDataSourceIds(object):
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            geographic_contributor_ids = []
+            post_data = request.json
+            if "input_data_source_ids" in post_data:
+                input_data_source_ids = set(post_data.get("input_data_source_ids"))
+                for data_source_id in input_data_source_ids:
+                    contributor_model = models.DataSource.get_contributor_of_data_source(data_source_id)
+                    if not contributor_model:
+                        msg = "data source {} not found".format(data_source_id)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
+
+                    if contributor_model.is_geographic():
+                        geographic_contributor_ids.append(contributor_model.id)
+
+                    if len(geographic_contributor_ids) > 1:
+                        msg = 'unable to have more than one data source from several contributors of type {} by coverage'.format(
+                                DATA_TYPE_GEOGRAPHIC)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
+
+                request.json["input_data_source_ids"] = list(input_data_source_ids)
             return func(*args, **kwargs)
 
         return wrapper

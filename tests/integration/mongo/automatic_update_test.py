@@ -100,11 +100,11 @@ class TestAutomaticUpdate(TartareFixture):
         job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(job)
 
-    def __create_coverage(self, contributor_ids, coverage_id='auto_update_coverage'):
+    def __create_coverage(self, contributors_ids, coverage_id='auto_update_coverage'):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
-            'contributors_ids': contributor_ids,
+            'contributors_ids': contributors_ids,
         }
         raw = self.post('coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
