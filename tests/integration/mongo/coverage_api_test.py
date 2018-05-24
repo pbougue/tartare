@@ -617,35 +617,22 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages',
                         self.dict_to_json({"id": "id_test", "name": "name of the coverage",
                                            "input_data_source_ids": ["123456"]}))
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
+        r = self.assert_failed_call(raw)
         assert r == {'error': 'data source 123456 not found', 'message': 'Invalid arguments'}
 
     def test_post_coverage_with_one_existing_input_data_source_id(self, data_source):
         raw = self.post('/coverages',
                         self.dict_to_json({"id": "id_test", "name": "name of the coverage",
                                            "input_data_source_ids": ["ds_test"]}))
-        assert raw.status_code == 201
-        raw = self.get('/coverages')
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"]) == 1
-        assert isinstance(r["coverages"], list)
-        assert r["coverages"][0]["id"] == "id_test"
-        assert r["coverages"][0]["name"] == "name of the coverage"
-        assert r["coverages"][0]["input_data_source_ids"] == ["ds_test"]
+        r = self.get_coverage("id_test")
+        assert r["input_data_source_ids"] == ["ds_test"]
 
     def test_post_coverage_with_two_same_existing_input_data_source_id(self, data_source):
         raw = self.post('/coverages',
                         self.dict_to_json({"id": "id_test", "name": "name of the coverage",
                                            "input_data_source_ids": ["ds_test", "ds_test"]}))
-        assert raw.status_code == 201
-        raw = self.get('/coverages')
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"]) == 1
-        assert isinstance(r["coverages"], list)
-        assert r["coverages"][0]["id"] == "id_test"
-        assert r["coverages"][0]["name"] == "name of the coverage"
-        assert r["coverages"][0]["input_data_source_ids"] == ["ds_test"]
+        r = self.get_coverage("id_test")
+        assert r["input_data_source_ids"] == ["ds_test"]
 
     def test_post_coverage_with_2_input_data_source_ids_belonging_to_2_contributors_geographic(self):
         self.__create_geo_contributor('geo-1', 'foo')
@@ -653,10 +640,9 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages',
                         self.dict_to_json({"id": "id_test", "name": "name of the coverage",
                                            "input_data_source_ids": ["foo", "bar"]}))
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
+        r = self.assert_failed_call(raw)
         assert r == {
-            'error': 'unable to have more than one data source from several contributors of type geographic by coverage',
+            'error': 'unable to have more than one data source from more than 2 contributors of type geographic by coverage',
             'message': 'Invalid arguments'
         }
 
@@ -666,8 +652,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-1'}))
         self.assert_sucessful_create(raw)
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
+        r = self.assert_failed_call(raw)
         assert r == {
             'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
@@ -903,8 +888,4 @@ class TestCoverageApi(TartareFixture):
             'input_data_source_ids': ['ds_test'],
         }
         raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(update))
-        self.assert_sucessful_call(raw)
-
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"]) == 1
-        assert r["coverages"][0]["input_data_source_ids"] == ["ds_test"]
+        assert self.assert_sucessful_call(raw)['coverages'][0]["input_data_source_ids"] == ["ds_test"]

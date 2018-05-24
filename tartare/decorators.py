@@ -127,7 +127,7 @@ class ValidateInputDataSourceIds(object):
                         geographic_contributor_ids.append(contributor_model.id)
 
                     if len(geographic_contributor_ids) > 1:
-                        msg = 'unable to have more than one data source from several contributors of type {} by coverage'.format(
+                        msg = 'unable to have more than one data source from more than 2 contributors of type {} by coverage'.format(
                                 DATA_TYPE_GEOGRAPHIC)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
