@@ -33,7 +33,7 @@ import requests
 
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
-from tartare.core.models import Platform
+from tartare.core.models import MongoPlatformSchema
 from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -77,10 +77,9 @@ class FusioExportContributor(AbstractFusioProcess):
 
         logging.getLogger(__name__).info('fusio export contributor has generated url {}'.format(export_url))
 
-        publication_platform_dict = self.params.get('publication_platform')
-        publication_platform_object = Platform(publication_platform_dict.get('protocol'), '',
-                                               publication_platform_dict.get('url'),
-                                               publication_platform_dict.get('options'))
-        protocol_uploader = ProtocolManager.select_from_platform(publication_platform_object)
+        platform_object = MongoPlatformSchema(strict=True).load(
+            self.params.get('publication_platform')
+        ).data
+        protocol_uploader = ProtocolManager.select_from_platform(platform_object)
         self.publish(protocol_uploader, export_url)
         return self.context

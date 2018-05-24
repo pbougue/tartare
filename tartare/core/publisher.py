@@ -42,7 +42,7 @@ from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
     PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Coverage, CoverageExport, DataSource, Platform
+from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
     PublisherException
 
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractProtocol(metaclass=ABCMeta):
-    def __init__(self, url: str, options: dict) -> None:
+    def __init__(self, url: str, options: Optional[PlatformOptions]) -> None:
         self.url = url
         self.options = options
 
@@ -62,9 +62,9 @@ class HttpProtocol(AbstractProtocol):
     def publish(self, file: BinaryIO, filename: str) -> None:
         timeout = app.config.get('TYR_UPLOAD_TIMEOUT')
         logger.info('publishing file {filename} on {url}...'.format(filename=filename, url=self.url))
-        if self.options:
+        if self.options and self.options.authent:
             response = requests.post(self.url,
-                                     auth=(self.options['authent']['username'], self.options['authent']['password']),
+                                     auth=(self.options.authent.username, self.options.authent.password),
                                      files={'file': (filename, file)}, timeout=timeout)
         else:
             response = requests.post(self.url, files={'file': (filename, file)}, timeout=timeout)
@@ -76,19 +76,17 @@ class HttpProtocol(AbstractProtocol):
 
 
 class FtpProtocol(AbstractProtocol):
-    def __init__(self, url: str, options: dict) -> None:
+    def __init__(self, url: str, options: PlatformOptions) -> None:
         super().__init__(url, options)
         self.url = self.url.replace('ftp://', '') if self.url.startswith('ftp://') else self.url
 
     def publish(self, file: BinaryIO, filename: str) -> None:
-        directory = None
-        if 'directory' in self.options and self.options['directory']:
-            directory = self.options['directory']
+        directory = self.options.directory if self.options and self.options.directory else ''
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
-                                                                              directory=directory if directory else ''))
-        if 'authent' in self.options:
-            session = ftplib.FTP(self.url, self.options['authent']['username'], self.options['authent']['password'])
+                                                                              directory=directory))
+        if self.options and self.options.authent:
+            session = ftplib.FTP(self.url, self.options.authent.username, self.options.authent.password)
         else:
             session = ftplib.FTP(self.url)
         if directory:
@@ -220,7 +218,7 @@ class PublisherManager:
     }
 
     @classmethod
-    def select_from_platform(cls, platform: Platform) -> AbstractPublisher:
+    def select_from_publication_platform(cls, platform: PublicationPlatform) -> AbstractPublisher:
         if platform.type not in cls.publishers_by_type:
             error_message = 'unknown platform type "{type}"'.format(type=platform.type)
             raise PublisherManagerException(error_message)
