@@ -3,7 +3,7 @@ from mongodb_migrations.base import BaseMigration
 
 ########################################################################################################################
 #
-# Changed contributors attribute to contributor_ids in coverage
+# Changed contributors attribute to contributors_ids in coverage
 #
 ########################################################################################################################
 

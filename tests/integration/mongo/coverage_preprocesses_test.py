@@ -67,11 +67,11 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         raw = self.post('/contributors', json.dumps(contributor))
         self.assert_sucessful_create(raw)
 
-    def __init_coverage(self, coverage_id, contributor_ids):
+    def __init_coverage(self, coverage_id, contributors_ids):
         coverage = {
             "id": coverage_id,
             "name": "name of the coverage jdr",
-            "contributors_ids": contributor_ids,
+            "contributors_ids": contributors_ids,
             "preprocesses": [
                 {
                     "id": "fusio_dataupdate",

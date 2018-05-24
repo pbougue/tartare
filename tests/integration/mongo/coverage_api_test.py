@@ -32,7 +32,7 @@ import pytest
 
 import tartare
 from tartare.core import models
-from tartare.core.constants import DATA_TYPE_GEOGRAPHIC
+from tartare.core.constants import DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -64,6 +64,7 @@ class TestCoverageApi(TartareFixture):
         assert coverage["short_description"] == ""
         assert coverage["comment"] == ""
         assert coverage['last_active_job'] is None
+        assert coverage['input_data_source_ids'] == []
 
         raw = self.get('/coverages')
         r = self.json_to_dict(raw)
@@ -76,6 +77,7 @@ class TestCoverageApi(TartareFixture):
         assert coverage["short_description"] == ""
         assert coverage["comment"] == ""
         assert coverage['last_active_job'] is None
+        assert coverage['input_data_source_ids'] == []
 
         # test that we don't persist last_active_job in database
         with tartare.app.app_context():
@@ -592,15 +594,57 @@ class TestCoverageApi(TartareFixture):
         r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
-    def __create_geo_contributor(self, id):
+    def __create_geo_contributor(self, id, data_source_id=None):
         post_data = {
             "id": id,
             "name": id,
             "data_type": DATA_TYPE_GEOGRAPHIC,
             "data_prefix": id
         }
+        if data_source_id:
+            post_data['data_sources'] = [
+                {
+                    "id": data_source_id,
+                    "name": data_source_id,
+                    "data_prefix": data_source_id[0:3],
+                    "data_format": DATA_FORMAT_OSM_FILE
+                }
+            ]
         raw = self.post('/contributors', self.dict_to_json(post_data))
         self.assert_sucessful_create(raw)
+
+    def test_post_coverage_with_input_data_source_ids_not_found(self):
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage",
+                                           "input_data_source_ids": ["123456"]}))
+        r = self.assert_failed_call(raw)
+        assert r == {'error': 'data source 123456 not found', 'message': 'Invalid arguments'}
+
+    def test_post_coverage_with_one_existing_input_data_source_id(self, data_source):
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage",
+                                           "input_data_source_ids": ["ds_test"]}))
+        r = self.get_coverage("id_test")
+        assert r["input_data_source_ids"] == ["ds_test"]
+
+    def test_post_coverage_with_two_same_existing_input_data_source_id(self, data_source):
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage",
+                                           "input_data_source_ids": ["ds_test", "ds_test"]}))
+        r = self.get_coverage("id_test")
+        assert r["input_data_source_ids"] == ["ds_test"]
+
+    def test_post_coverage_with_2_input_data_source_ids_belonging_to_2_contributors_geographic(self):
+        self.__create_geo_contributor('geo-1', 'foo')
+        self.__create_geo_contributor('geo-2', 'bar')
+        raw = self.post('/coverages',
+                        self.dict_to_json({"id": "id_test", "name": "name of the coverage",
+                                           "input_data_source_ids": ["foo", "bar"]}))
+        r = self.assert_failed_call(raw)
+        assert r == {
+            'error': 'unable to have more than one data source from more than 2 contributors of type geographic by coverage',
+            'message': 'Invalid arguments'
+        }
 
     def test_post_coverage_multiple_geo_contrib(self, coverage):
         self.__create_geo_contributor('geo-1')
@@ -608,8 +652,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-1'}))
         self.assert_sucessful_create(raw)
         raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
+        r = self.assert_failed_call(raw)
         assert r == {
             'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
@@ -662,7 +705,9 @@ class TestCoverageApi(TartareFixture):
             'coverages': [{
                 'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
                 'license': {'url': 'http://whatever.com', 'name': 'public'},
-                'preprocesses': [], 'contributors_ids': ['id_test'], 'name': 'new_name', 'id': 'jdr',
+                'preprocesses': [], 'contributors_ids': ['id_test'],
+                'input_data_source_ids': [],
+                'name': 'new_name', 'id': 'jdr',
                 'last_active_job': None,
                 'type': 'keolis',
                 'short_description': 'a short description',
@@ -719,6 +764,7 @@ class TestCoverageApi(TartareFixture):
                      'sequence': 1, 'enabled': True}
                 ],
                 'id': 'my-cov', 'contributors_ids': [],
+                'input_data_source_ids': [],
                 'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
                 'data_sources': [], 'environments': {}, 'last_active_job': None
             }]
@@ -804,7 +850,8 @@ class TestCoverageApi(TartareFixture):
                         'name': 'integration'}
                 },
                 'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
-                'name': 'my-cov', 'contributors_ids': [], 'grid_calendars_id': None, 'comment': '', 'type': 'other',
+                'name': 'my-cov', 'contributors_ids': [],  'input_data_source_ids': [],
+                'grid_calendars_id': None, 'comment': '', 'type': 'other',
                 'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
             }]
         }
@@ -834,3 +881,11 @@ class TestCoverageApi(TartareFixture):
         ods_platform = self.get_coverage(cov_id)['environments']['production']['publication_platforms'][0]
         assert ods_platform['type'] == 'ods'
         assert ods_platform['input_data_source_ids'] == ['my-ds-id']
+
+    def test_put_coverage_with_input_data_source_ids(self, coverage, data_source):
+        update = {
+            'name': 'new_name',
+            'input_data_source_ids': ['ds_test'],
+        }
+        raw = self.put('coverages/{}'.format(coverage['id']), self.dict_to_json(update))
+        assert self.assert_sucessful_call(raw)['coverages'][0]["input_data_source_ids"] == ["ds_test"]
