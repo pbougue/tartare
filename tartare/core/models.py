@@ -137,9 +137,18 @@ class PreProcessContainer(metaclass=ABCMeta):
 
     def __init__(self, preprocesses: List['PreProcess'] = None, data_sources: List['DataSource'] = None) -> None:
         self.preprocesses = [] if preprocesses is None else preprocesses  # type: List['PreProcess']
-        self.data_sources = data_sources if data_sources else []
+        self.data_sources = data_sources if data_sources else []  # type: List['DataSource']
 
     def add_computed_data_sources(self) -> None:
+        for data_source in self.data_sources:
+            if data_source.export_data_source_id:
+                data_source_computed = DataSource(
+                    id=data_source.export_data_source_id,
+                    name=data_source.export_data_source_id,
+                    data_format=data_source.data_format,
+                    input=Input(INPUT_TYPE_COMPUTED),
+                )
+                self.data_sources.append(data_source_computed)
         for preprocess in self.preprocesses:
             if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
                 if not any(data_source for data_source in self.data_sources if
@@ -309,7 +318,7 @@ class DataSource(object):
                  name: Optional[str] = None,
                  data_format: Optional[str] = DATA_FORMAT_DEFAULT,
                  input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
-                 license: Optional[License] = None,
+                 license: Optional[License] = None, export_data_source_id: str = None,
                  service_id: str = None, data_sets: List[DataSet] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
@@ -317,6 +326,7 @@ class DataSource(object):
         self.input = input
         self.license = license if license else License()
         self.service_id = service_id
+        self.export_data_source_id = export_data_source_id
         self.data_sets = data_sets if data_sets else []
 
     def __repr__(self) -> str:
@@ -926,6 +936,7 @@ class MongoDataSourceSchema(Schema):
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
     service_id = fields.String(required=False, allow_none=True)
+    export_data_source_id = fields.String(required=False, allow_none=True)
     data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
 
     @post_load
