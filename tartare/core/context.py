@@ -33,7 +33,7 @@ from typing import List, Optional
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
     ValidityPeriodContainer, Job
-from tartare.exceptions import IntegrityException, ParameterException
+from tartare.exceptions import IntegrityException, ParameterException, EntityNotFound
 from tartare.http_exceptions import ObjectNotFound
 
 
@@ -145,7 +145,7 @@ class ContributorExportContext(Context):
                     # @TODO: should exit instead of continue and fail in preprocess
                     try:
                         tmp_contributor = Contributor.get(contributor_id)
-                    except ObjectNotFound:
+                    except EntityNotFound:
                         continue
                     data_set = DataSource.get_one(contributor_id, data_source_id).get_last_data_set()
                     if not data_set:

@@ -62,6 +62,23 @@ class TestDataSources(TartareFixture):
         self.assert_sucessful_call(raw)
         assert len(r["data_sources"]) == 1
 
+    def test_post_data_source_on_unknown_contributor(self):
+        post_ds = {
+            "name": "data_source_name",
+            "input": {
+                "type": "url",
+                "url": "http://stif.com/od.zip"
+            }
+        }
+        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(post_ds))
+        details = self.assert_failed_call(raw, 404)
+        assert details['error'] == "contributor 'id_test' not found"
+
+    def test_delete_data_source_on_unknown_contributor(self):
+        raw = self.delete('/contributors/id_test/data_sources/toto')
+        details = self.assert_failed_call(raw, 404)
+        assert details['error'] == "contributor 'id_test' not found"
+
     def test_post_ds_one_data_source_with_id(self, contributor):
         """
         using /data_sources endpoint

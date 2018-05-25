@@ -36,9 +36,9 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.core.mongodb_helper import upgrade_dict
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
     CheckContributorIntegrity, RemoveComputedDataSources
+from tartare.exceptions import EntityNotFound
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -84,11 +84,14 @@ class Contributor(flask_restful.Resource):
         ]}, 201
 
     def get(self, contributor_id: Optional[str] = None) -> Response:
-        if contributor_id:
-            result = schema.ContributorSchema().dump(models.Contributor.get(contributor_id))
-            return {'contributors': [result.data]}, 200
-        contributors = models.Contributor.all()
-        return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
+        try:
+            if contributor_id:
+                result = schema.ContributorSchema().dump(models.Contributor.get(contributor_id))
+                return {'contributors': [result.data]}, 200
+            contributors = models.Contributor.all()
+            return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
 
     def delete(self, contributor_id: str) -> Response:
         c = models.Contributor.delete(contributor_id)
@@ -109,6 +112,8 @@ class Contributor(flask_restful.Resource):
         try:
             existing_contributor = models.Contributor.get(contributor_id)
             existing_contributor.update_with_object(new_contributor)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         except DuplicateKeyError as e:
             raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:

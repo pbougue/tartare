@@ -32,7 +32,7 @@ import flask_restful
 from flask import Response
 from pymongo.errors import PyMongoError
 from tartare.core import models
-from tartare.exceptions import IntegrityException
+from tartare.exceptions import IntegrityException, EntityNotFound
 from tartare.interfaces import schema
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.decorators import JsonDataValidate
@@ -49,15 +49,14 @@ class CoverageContributorSubscription(flask_restful.Resource):
             raise InvalidArguments('missing contributor_id attribute in request body')
 
         contributor_id = request.json['id']
-
-        contributor = models.Contributor.get(contributor_id=contributor_id)
-
-        if coverage.has_contributor(contributor):
-            raise DuplicateEntry('contributor id {} already exists in coverage {}'
-                                 .format(contributor_id, coverage_id))
-
         try:
+            contributor = models.Contributor.get(contributor_id=contributor_id)
+            if coverage.has_contributor(contributor):
+                raise DuplicateEntry('contributor id {} already exists in coverage {}'
+                                     .format(contributor_id, coverage_id))
             coverage.add_contributor(contributor)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         except (PyMongoError, ValueError):
             raise InternalServerError('impossible to update coverage {} with contributor {}'
                                       .format(coverage_id, contributor_id))

@@ -48,7 +48,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import IntegrityException, ValidityPeriodException
+from tartare.exceptions import IntegrityException, ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 from tartare.http_exceptions import ObjectNotFound
 
@@ -345,7 +345,7 @@ class DataSource(object):
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
-    def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
+    def delete(cls, contributor_id: str, data_source_id: str) -> int:
         if data_source_id is None:
             raise ValueError('a data_source id is required')
         contributor = Contributor.get(contributor_id)
@@ -560,7 +560,7 @@ class Contributor(PreProcessContainer):
         if raw is None:
             msg = "contributor '{}' not found".format(contributor_id)
             logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
+            raise EntityNotFound(msg)
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod

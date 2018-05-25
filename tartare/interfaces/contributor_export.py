@@ -32,6 +32,7 @@ from flask import Response
 
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.context import ContributorExportContext
+from tartare.exceptions import EntityNotFound
 from tartare.tasks import contributor_export
 from tartare.interfaces.schema import JobSchema, ContributorExportSchema
 from tartare.core.models import Contributor, Job, ContributorExport
@@ -53,12 +54,18 @@ class ContributorExportResource(Resource):
         return job
 
     def post(self, contributor_id: str) -> Response:
-        contributor = Contributor.get(contributor_id)
+        try:
+            contributor = Contributor.get(contributor_id)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         job = self._export(contributor)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
     def get(self, contributor_id: str) -> Response:
-        contributor = Contributor.get(contributor_id)
+        try:
+            contributor = Contributor.get(contributor_id)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         exports = ContributorExport.get(contributor_id=contributor.id)
         return {'exports': ContributorExportSchema(many=True, strict=True).dump(exports).data}, 200
