@@ -34,7 +34,7 @@ from tartare.core import models
 from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.contributor_export_functions import fetch_and_save_dataset
 from tartare.core.models import Contributor
-from tartare.exceptions import FetcherException
+from tartare.exceptions import FetcherException, EntityNotFound
 from tartare.http_exceptions import InvalidArguments, InternalServerError, ObjectNotFound
 
 
@@ -42,7 +42,7 @@ class DataSourceFetch(flask_restful.Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         try:
             data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
-        except ValueError as e:
+        except (EntityNotFound, ValueError) as e:
             raise ObjectNotFound(str(e))
 
         if not data_source.has_type(INPUT_TYPE_URL) or not data_source.input.url:

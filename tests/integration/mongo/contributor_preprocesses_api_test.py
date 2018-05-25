@@ -125,9 +125,6 @@ class TestContributorPreProcesses(TartareFixture):
         assert r["contributors"][0]["preprocesses"][0]['id'] == 'toto'
 
     def test_update_preprocess_with_id(self):
-        '''
-        using /contributors endpoint
-        '''
         post_data = {
             "id": "id_test", "name": "name_test", "data_prefix": "AAA",
             "data_sources": [{
@@ -153,12 +150,9 @@ class TestContributorPreProcesses(TartareFixture):
             }]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.json_to_dict(raw))
-        raw = self.get('/contributors/id_test/')
-        r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["preprocesses"]) == 1
-        preprocess_id = r["contributors"][0]["preprocesses"][0]["id"]
+        self.assert_sucessful_create(raw)
+        contrib = self.get_contributor('id_test')
+        assert len(contrib["preprocesses"]) == 1
         new_preprocess = {
             "type": "ComputeDirections",
             "sequence": 1,
@@ -170,18 +164,16 @@ class TestContributorPreProcesses(TartareFixture):
                 }
             }
         }
+        post_data['preprocesses'][0] = new_preprocess
 
-        raw = self.patch('/contributors/id_test/preprocesses/{}'.format(preprocess_id), json.dumps(new_preprocess))
-        r = self.json_to_dict(raw)
+        raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
         self.assert_sucessful_call(raw)
-        assert len(r["preprocesses"]) == 1
-        assert r["preprocesses"][0]["type"] == new_preprocess["type"]
-        assert r["preprocesses"][0]["params"] == new_preprocess["params"]
+        contrib = self.get_contributor('id_test')
+        assert len(contrib["preprocesses"]) == 1
+        assert contrib["preprocesses"][0]["type"] == new_preprocess["type"]
+        assert contrib["preprocesses"][0]["params"] == new_preprocess["params"]
 
     def test_delete_preprocess(self):
-        '''
-        using /contributors endpoint
-        '''
         post_data = {
             "id": "id_test", "name": "name_test", "data_prefix": "AAA",
             "data_sources": [{

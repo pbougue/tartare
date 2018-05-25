@@ -520,13 +520,6 @@ class TestCoverageApi(TartareFixture):
                 assert coverage_from_api['license']['url'] == expected_url
                 assert coverage_from_api['license']['name'] == expected_name
 
-    def test_post_coverage_with_unknown_contributor(self):
-        raw = self.post('/coverages',
-                        '{"id": "id_test", "name": "name of the coverage", "contributors_ids": ["unknown"]}')
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
-        assert r['error'] == 'contributor unknown not found'
-
     def test_post_coverage_with_existing_contributor(self, contributor):
         raw = self.post('/coverages',
                         '{"id": "id_test", "name": "name of the coverage", "contributors_ids": ["id_test"]}')
@@ -539,7 +532,7 @@ class TestCoverageApi(TartareFixture):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["unknown"]}')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
-        assert r['error'] == 'contributor unknown not found'
+        assert r['error'] == "contributor 'unknown' not found"
 
     def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
         raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["id_test"]}')

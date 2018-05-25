@@ -43,7 +43,7 @@ class TestDatasetApi(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "bad contributor unknown"
+        assert r["error"] == "contributor 'unknown' not found"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
@@ -70,7 +70,7 @@ class TestDatasetApi(TartareFixture):
         raw = self.post('/contributors/id_test/data_sources/toto/data_sets')
         self.assert_failed_call(raw, 404)
         resp = self.json_to_dict(raw)
-        assert resp['error'] == 'bad contributor id_test'
+        assert resp['error'] == "contributor 'id_test' not found"
 
     def test_post_dataset_on_unexisting_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/toto/data_sets')

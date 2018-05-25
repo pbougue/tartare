@@ -48,8 +48,9 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import IntegrityException, ValidityPeriodException
+from tartare.exceptions import IntegrityException, ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
+from tartare.http_exceptions import ObjectNotFound
 
 
 @app.before_first_request
@@ -322,7 +323,7 @@ class DataSource(object):
         return str(vars(self))
 
     def save(self, contributor_id: str) -> None:
-        contributor = get_contributor(contributor_id)
+        contributor = Contributor.get(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
             raise ValueError("duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
@@ -332,7 +333,7 @@ class DataSource(object):
     @classmethod
     def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
-            contributor = get_contributor(contributor_id)
+            contributor = Contributor.get(contributor_id)
         elif data_source_id is not None:
             raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
             if raw is None:
@@ -367,10 +368,10 @@ class DataSource(object):
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
-    def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
+    def delete(cls, contributor_id: str, data_source_id: str) -> int:
         if data_source_id is None:
             raise ValueError('a data_source id is required')
-        contributor = get_contributor(contributor_id)
+        contributor = Contributor.get(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
         raw_contrib = MongoContributorSchema().dump(contributor).data
@@ -382,7 +383,7 @@ class DataSource(object):
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
             raise ValueError('a data_source id is required')
-        if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+        if not [ds for ds in Contributor.get(contributor_id).data_sources if ds.id == data_source_id]:
             raise ValueError("no data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
         if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
@@ -580,7 +581,9 @@ class Contributor(PreProcessContainer):
     def get(cls, contributor_id: str) -> 'Contributor':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
         if raw is None:
-            return None
+            msg = "contributor '{}' not found".format(contributor_id)
+            logging.getLogger(__name__).error(msg)
+            raise EntityNotFound(msg)
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
@@ -619,13 +622,6 @@ class Contributor(PreProcessContainer):
 
     def is_geographic(self) -> bool:
         return self.data_type == DATA_TYPE_GEOGRAPHIC
-
-
-def get_contributor(contributor_id: str) -> Contributor:
-    contributor = Contributor.get(contributor_id)
-    if contributor is None:
-        raise ValueError('bad contributor {}'.format(contributor_id))
-    return contributor
 
 
 class Coverage(PreProcessContainer):

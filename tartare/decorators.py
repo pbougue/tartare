@@ -38,6 +38,7 @@ from tartare.core import models
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
     DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED, DATA_TYPE_GEOGRAPHIC
 from tartare.core.models import DataSource
+from tartare.exceptions import EntityNotFound
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
 from tartare.processes.processes import PreProcessManager
 
@@ -98,11 +99,10 @@ class ValidateContributors(object):
             post_data = request.json
             if "contributors_ids" in post_data:
                 for contributor_id in post_data.get("contributors_ids"):
-                    contributor_model = models.Contributor.get(contributor_id)
-                    if not contributor_model:
-                        msg = "contributor {} not found".format(contributor_id)
-                        logging.getLogger(__name__).error(msg)
-                        raise InvalidArguments(msg)
+                    try:
+                        models.Contributor.get(contributor_id)
+                    except EntityNotFound as exc:
+                        raise InvalidArguments(str(exc))
             return func(*args, **kwargs)
 
         return wrapper
@@ -167,39 +167,19 @@ class RemoveComputedDataSources(object):
 
 
 class CheckContributorIntegrity(object):
-    def __init__(self, method: str) -> None:
-        self.method = method
+    def __init__(self, update: bool=False) -> None:
+        self.update = update
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
-            contributor_id = kwargs.get('contributor_id', None)
-
-            if not self.method == 'POST' and not contributor_id:
-                msg = "contributor_id not present in request"
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-
-            if contributor_id:
-                contributor = models.Contributor.get(contributor_id)
-                if not contributor:
-                    msg = "contributor '{}' not found".format(contributor_id)
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
-                data_type = post_data.get('data_type', contributor.data_type)
-                existing_data_sources = contributor.data_sources
-            else:
-                data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
-                existing_data_sources = []
+            data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
             data_sources = post_data.get('data_sources', [])
-            if self.method == 'PATCH':
-                for existing_data_source in existing_data_sources:
-                    check_excepted_data_format(existing_data_source.data_format, data_type)
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-                check_contributor_data_source_osm_and_poly_constraint(existing_data_sources, data_sources)
+                check_contributor_data_source_osm_and_poly_constraint([], data_sources)
             return func(*args, **kwargs)
 
         return wrapper
@@ -219,11 +199,10 @@ class CheckDataSourceIntegrity(object):
                 msg = "data_source_id not present in request"
                 logging.getLogger(__name__).error(msg)
                 raise ObjectNotFound(msg)
-            contributor = models.Contributor.get(contributor_id)
-            if not contributor:
-                msg = "contributor '{}' not found".format(contributor_id)
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
+            try:
+                contributor = models.Contributor.get(contributor_id)
+            except EntityNotFound as e:
+                raise ObjectNotFound(str(e))
             data_type = contributor.data_type
             new_data_source = post_data.copy()
             if self.data_source_id_required:
@@ -268,7 +247,7 @@ def validate_post_data_set(func: Callable) -> Any:
 
         try:
             data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
-        except ValueError as e:
+        except (EntityNotFound, ValueError) as e:
             raise ObjectNotFound(str(e))
 
         if data_source is None:

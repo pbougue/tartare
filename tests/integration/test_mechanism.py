@@ -149,6 +149,7 @@ class TartareFixture(object):
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
+        return self.json_to_dict(raw)['contributors'][0]
 
     def init_coverage(self, id, contributors_ids=None, preprocesses=None, environments=None, license=None):
         contributors_ids = contributors_ids if contributors_ids else []
@@ -190,9 +191,10 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
 
     def update_data_source_url(self, contrib_id, ds_id, url):
-        raw = self.patch('/contributors/{}/data_sources/{}'.format(contrib_id, ds_id),
-                         json.dumps({'input': {
-                             'url': url}}))
+        contributor = self.get_contributor(contrib_id)
+        data_source = next(data_source for data_source in contributor['data_sources'] if data_source['id'] == ds_id)
+        data_source['input']['url'] = url
+        raw = self.put('/contributors/{}'.format(contrib_id), self.dict_to_json(contributor))
         return self.assert_sucessful_call(raw, 200)
 
     def run_automatic_update(self):

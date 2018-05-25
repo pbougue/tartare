@@ -45,7 +45,12 @@ class TestContributorExport(TartareFixture):
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
         assert 'error' in r
-        assert r.get('error') == 'contributor not found: toto'
+        assert r.get('error') == "contributor 'toto' not found"
+
+    def test_get_contributor_export_contributor_not_found(self):
+        raw = self.get('/contributors/toto/actions/export')
+        r = self.assert_failed_call(raw, 404)
+        assert r.get('error') == "contributor 'toto' not found"
 
     def test_contributor_export(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
