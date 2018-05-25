@@ -34,7 +34,7 @@ import pytest
 
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
-    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -943,12 +943,12 @@ class TestContributors(TartareFixture):
              'license': {'name': 'Private (unspecified)', 'url': ''},
              'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
              'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
-             'fetch_started_at': None},
+             'fetch_started_at': None, 'export_data_source_id': None},
             {'name': 'dsname_2', 'data_format': 'osm_file', 'license': {'name': 'Private (unspecified)', 'url': ''},
              'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None,
              'id': 'dsid_2',
              'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
-             'fetch_started_at': None}
+             'fetch_started_at': None, 'export_data_source_id': None}
         ],
                                       'preprocesses': [],
                                       'data_prefix': 'cid_prefix',
@@ -994,7 +994,7 @@ class TestContributors(TartareFixture):
                  'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
                                                                               'some_archive.zip'), 'type': 'url'},
                  'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'data_sets': [],
-                 'fetch_started_at': None,
+                 'fetch_started_at': None, 'export_data_source_id': None,
                  'status': 'never_fetched', 'updated_at': None}
             ],
                                       'id': 'cid'}]}
@@ -1052,3 +1052,27 @@ class TestContributors(TartareFixture):
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         result = self.json_to_dict(raw)
         assert (len(result['contributors'][0]['data_sources']) == 1)
+
+    def __assert_export_id_generated_computed_data_source(self, contributor):
+        assert len(contributor['data_sources']) == 2
+        assert all(data_source['data_format'] == DATA_FORMAT_OBITI for data_source in contributor['data_sources'])
+        ds_input = next(data_source for data_source in contributor['data_sources'] if data_source['id'] == 'ds1')
+        ds_output = next(
+            data_source for data_source in contributor['data_sources'] if data_source['id'] == 'export_ds_id')
+        assert ds_input['input']['type'] == 'url'
+        assert ds_input['export_data_source_id'] == 'export_ds_id'
+        assert ds_output['input']['type'] == 'computed'
+
+    def test_post_contributor_data_source_export_id(self):
+        self.init_contributor('c1', 'ds1', 'http://my-url', data_format=DATA_FORMAT_OBITI, export_id='export_ds_id')
+        contributor = self.get_contributor('c1')
+        self.__assert_export_id_generated_computed_data_source(contributor)
+
+    def test_put_contributor_data_source_export_id(self):
+        self.init_contributor('c1', 'ds1', 'http://my-url', data_format=DATA_FORMAT_OBITI)
+        contributor = self.get_contributor('c1')
+        assert len(contributor['data_sources']) == 1
+        contributor['data_sources'][0]['export_data_source_id'] = 'export_ds_id'
+        self.put('/contributors/c1', self.dict_to_json(contributor))
+        contributor = self.get_contributor('c1')
+        self.__assert_export_id_generated_computed_data_source(contributor)
