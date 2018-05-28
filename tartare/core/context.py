@@ -69,12 +69,12 @@ class Context:
 
 
 class DataSourceExport:
-    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str):
+    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str) -> None:
         self.gridfs_id = gridfs_id
         self.data_source_id = data_source_id
         self.data_format = data_format
 
-    def update_data_set_state(self, gridfs_id: str, export_type: Optional[str]) -> None:
+    def update_data_set_state(self, gridfs_id: str, export_type: Optional[str] = None) -> None:
         self.gridfs_id = gridfs_id
         if export_type:
             self.data_format = export_type

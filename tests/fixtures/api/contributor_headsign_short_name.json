@@ -8,6 +8,7 @@
         "type": "url",
         "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name.zip"
       },
+      "export_data_source_id": "export_id",
       "name": "données gtfs"
     }
   ],
