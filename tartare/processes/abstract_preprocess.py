@@ -106,7 +106,7 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
                         dsid=data_source_id_to_process, files=', '.join(expected_files)
                     ))
 
-    def __replace_in_grid_fs(self, old_gridfs_id: str, zip_file: str, computed_file_name: str) -> str:
+    def replace_in_grid_fs(self, old_gridfs_id: str, zip_file: str, computed_file_name: str) -> str:
         with open(zip_file, 'rb') as new_archive_file:
             new_gridfs_id = self.gfs.save_file_in_gridfs(new_archive_file, filename=computed_file_name + '.zip')
             self.gfs.delete_file_from_gridfs(old_gridfs_id)
@@ -115,11 +115,11 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
     def create_archive_and_replace_in_grid_fs(self, old_gridfs_id: str, files: str,
                                               computed_file_name: str = 'gtfs-processed') -> str:
         if is_zipfile(files):
-            return self.__replace_in_grid_fs(old_gridfs_id, files, computed_file_name)
+            return self.replace_in_grid_fs(old_gridfs_id, files, computed_file_name)
         with tempfile.TemporaryDirectory() as tmp_out_dir_name:
             new_archive_file_name = os.path.join(tmp_out_dir_name, computed_file_name)
             new_archive_file_name = shutil.make_archive(new_archive_file_name, 'zip', files)
-            return self.__replace_in_grid_fs(old_gridfs_id, new_archive_file_name, computed_file_name)
+            return self.replace_in_grid_fs(old_gridfs_id, new_archive_file_name, computed_file_name)
 
     def check_links(self, data_format_required: List[str]) -> None:
         data_format_exists = set()

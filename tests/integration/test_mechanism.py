@@ -281,8 +281,8 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw)
         return self.json_to_dict(raw)['contributors'][0]
 
-    def get_file_from_gridfs(self, gridfs_id):
-        resp = self.get('/files/{gridfs_id}/download'.
-                        format(gridfs_id=gridfs_id), follow_redirects=True)
-        assert resp.status_code == 200
-        return resp.data
+    def get_gridfs_id_from_data_source(self, contributor_id, data_source_id):
+        return next(
+            data_source['data_sets'][0]['gridfs_id'] for data_source in
+            self.get_contributor(contributor_id)['data_sources']
+            if data_source['id'] == data_source_id)

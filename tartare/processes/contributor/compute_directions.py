@@ -64,7 +64,7 @@ class ComputeDirections(AbstractContributorProcess):
             config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
             data_source_export = self.context.get_data_source_export_from_data_source(data_source_id_to_process)
             new_gridfs_id = self.__process_file_from_gridfs_id(data_source_export.gridfs_id, config)
-            data_source_export.update_data_set_state(new_gridfs_id, self.params.get('export_type'))
+            data_source_export.update_data_set_state(new_gridfs_id)
         return self.context
 
     def __get_rules(self, trip_to_route: Dict[str, str], trip_stop_sequences: Dict[str, List[str]],

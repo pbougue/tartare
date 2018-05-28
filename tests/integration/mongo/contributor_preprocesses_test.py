@@ -50,7 +50,8 @@ class TestGtfsAgencyProcess(TartareFixture):
     excepted_headers.sort()
 
     def test_expected_files(self, init_http_download_server):
-        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'))
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+                              export_id='export_id')
         preprocess = {
             "id": "plop",
             "sequence": 0,
@@ -75,6 +76,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                         "url": data_set_url
                     },
                     "id": data_source_id,
+                    "export_data_source_id": "export_id",
                     "name": "data_source_to_process_name",
                     "data_format": "gtfs"
                 }
@@ -109,12 +111,7 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
-
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -145,11 +142,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -173,11 +166,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -209,11 +198,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -335,9 +320,7 @@ class TestComputeDirectionsProcess(TartareFixture):
         assert job['step'] == 'save_contributor_export', print(job)
         assert job['error_message'] == '', print(job)
 
-        gridfs_id = next(
-            data_source['data_sets'][0]['gridfs_id'] for data_source in self.get_contributor('id_test')['data_sources']
-            if data_source['id'] == 'export_id')
+        gridfs_id = self.get_gridfs_id_from_data_source('id_test', 'export_id')
         with app.app_context():
             new_zip_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
         with ZipFile(new_zip_file, 'r') as new_zip_file:
