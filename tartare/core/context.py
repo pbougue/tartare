@@ -28,18 +28,18 @@
 # www.navitia.io
 
 from datetime import date
+from typing import Dict
 from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer, Job
+    ValidityPeriodContainer, Job, DataSet
 from tartare.exceptions import IntegrityException, ParameterException, EntityNotFound
-from tartare.http_exceptions import ObjectNotFound
 
 
 class DataSourceContext:
     def __init__(self, data_source_id: str, gridfs_id: Optional[str],
-                 validity_period: Optional[ValidityPeriod]=None) -> None:
+                 validity_period: Optional[ValidityPeriod] = None) -> None:
         self.data_source_id = data_source_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
@@ -49,8 +49,8 @@ class DataSourceContext:
 
 
 class ContributorContext(ValidityPeriodContainer):
-    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]]=None,
-                 validity_period: ValidityPeriod=None) -> None:
+    def __init__(self, contributor: Contributor, data_source_contexts: Optional[List[DataSourceContext]] = None,
+                 validity_period: ValidityPeriod = None) -> None:
         super().__init__(validity_period)
         self.contributor = contributor
         self.data_source_contexts = data_source_contexts if data_source_contexts else []
@@ -68,9 +68,39 @@ class Context:
         return str(vars(self))
 
 
+class DataSourceExport:
+    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str):
+        self.gridfs_id = gridfs_id
+        self.data_source_id = data_source_id
+        self.data_format = data_format
+
+    def update_data_set_state(self, gridfs_id: str, export_type: Optional[str]) -> None:
+        self.gridfs_id = gridfs_id
+        if export_type:
+            self.data_format = export_type
+
+
 class ContributorExportContext(Context):
     def __init__(self, job: Job) -> None:
         super().__init__(job)
+        self.data_source_exports = {}  # type: Dict[str, List[DataSourceExport]]
+
+    def append_data_source_export(self, data_source: DataSource, data_set: DataSet) -> None:
+        if data_source.export_data_source_id not in self.data_source_exports:
+            self.data_source_exports[data_source.export_data_source_id] = []
+        self.data_source_exports[data_source.export_data_source_id].append(DataSourceExport(
+            data_set.gridfs_id,
+            data_source.id,
+            data_source.data_format
+        ))
+
+    def get_data_source_export_from_data_source(self, data_source_id: str) -> DataSourceExport:
+        for _, data_source_export_list in self.data_source_exports.items():
+            data_source_export_found = next((data_source_export for data_source_export in data_source_export_list if
+                                             data_source_export.data_source_id == data_source_id), None)
+            if data_source_export_found:
+                return data_source_export_found
+        raise IntegrityException('cannot find data source export for data source {} in context'.format(data_source_id))
 
     def get_data_source_context_in_links(self, links: List[dict],
                                          data_format: Optional[str] = None) -> Optional[DataSourceContext]:
@@ -97,7 +127,8 @@ class ContributorExportContext(Context):
         return contributor_data_source_context_list
 
     def get_contributor_data_source_context(self, contributor_id: str, data_source_id: str,
-                                            data_format_list: Optional[List[str]] = None) -> Optional[DataSourceContext]:
+                                            data_format_list: Optional[List[str]] = None) -> Optional[
+        DataSourceContext]:
         data_source_contexts = self.get_contributor_data_source_contexts(contributor_id, data_format_list)
         if not data_source_contexts:
             return None
@@ -131,8 +162,10 @@ class ContributorExportContext(Context):
                 if not data_set:
                     raise ParameterException(
                         'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
+                if data_source.export_data_source_id:
+                    self.append_data_source_export(data_source, data_set)
                 self.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
-                                                            data_set.gridfs_id)
+                                                         data_set.gridfs_id)
             else:
                 self.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
 
@@ -159,7 +192,7 @@ class ContributorExportContext(Context):
 
 
 class CoverageExportContext(Context, ValidityPeriodContainer):
-    def __init__(self, job: Job, coverage: Coverage=None, current_date: date=date.today()) -> None:
+    def __init__(self, job: Job, coverage: Coverage = None, current_date: date = date.today()) -> None:
         super().__init__(job=job)
         self.validity_period = None
         self.coverage = coverage
@@ -185,8 +218,8 @@ class CoverageExportContext(Context, ValidityPeriodContainer):
                 if data_source_contexts:
                     self.contributor_contexts.append(
                         ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
-                                    validity_period=contributor_export.validity_period,
-                                    data_source_contexts=data_source_contexts))
+                                           validity_period=contributor_export.validity_period,
+                                           data_source_contexts=data_source_contexts))
         self.coverage = coverage
 
     def __repr__(self) -> str:
