@@ -84,17 +84,10 @@ class HeadsignShortName(AbstractContributorProcess):
 
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'trips.txt'])
-        contributor = self.context.contributor_contexts[0].contributor
         for data_source_id in self.data_source_ids:
-            data_source_context = self.context.get_contributor_data_source_context(contributor_id=contributor.id,
-                                                                                   data_source_id=data_source_id)
-            if not data_source_context:
-                msg = 'impossible to build preprocess HeadsignShortName : ' \
-                      'data source {} does not exist for contributor {}'.format(data_source_id, contributor.id)
-                logging.getLogger(__name__).error(msg)
-                raise ParameterException(self.format_error_message(msg))
+            data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
 
-            grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
+            grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
             map_route_modes = self.get_map_route_modes(grid_out)
 
             with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
@@ -102,6 +95,6 @@ class HeadsignShortName(AbstractContributorProcess):
                                                                callback=partial(self.do_manage_headsign_short_name,
                                                                                 map_route_modes=map_route_modes)
                                                                )
-                data_source_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                    data_source_context.gridfs_id, gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0])
+                data_source_export.gridfs_id = self.create_archive_and_replace_in_grid_fs(
+                    data_source_export.gridfs_id, gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0])
         return self.context
