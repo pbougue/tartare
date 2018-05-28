@@ -265,6 +265,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                     "id": "ds-to-process",
                     "name": "ds-to-process",
                     "data_format": "gtfs",
+                    "export_data_source_id": "export_id",
                     "input": {"type": "url", "url": url}
                 })
         if add_data_source_config:
@@ -334,15 +335,17 @@ class TestComputeDirectionsProcess(TartareFixture):
         assert job['step'] == 'save_contributor_export', print(job)
         assert job['error_message'] == '', print(job)
 
+        gridfs_id = next(
+            data_source['data_sets'][0]['gridfs_id'] for data_source in self.get_contributor('id_test')['data_sources']
+            if data_source['id'] == 'export_id')
         with app.app_context():
-            export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
-            with ZipFile(new_zip_file, 'r') as new_zip_file:
-                with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    assert_zip_contains_only_txt_files(new_zip_file)
-                    new_zip_file.extractall(tmp_dir_name)
-                    assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
-                                        _get_file_fixture_full_path(expected_trips_file_name))
+            new_zip_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
+        with ZipFile(new_zip_file, 'r') as new_zip_file:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                assert_zip_contains_only_txt_files(new_zip_file)
+                new_zip_file.extractall(tmp_dir_name)
+                assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
+                                    _get_file_fixture_full_path(expected_trips_file_name))
 
 
 class TestComputeExternalSettings(TartareFixture):
@@ -591,7 +594,6 @@ class TestRuspellProcess(TartareFixture):
         if do_export:
             resp = self.contributor_export('id_test', check_done=False)
             return self.get_job_from_export_response(resp)
-
 
     @pytest.mark.parametrize(
         "contributor_id, data_source_id", [

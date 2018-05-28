@@ -61,14 +61,10 @@ class ComputeDirections(AbstractContributorProcess):
         self.check_links([DATA_FORMAT_DIRECTION_CONFIG])
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
         for data_source_id_to_process in self.data_source_ids:
-            # following data_source_to_process_context cannot be None because of integrity checks
-            # when creating contributor
-            data_source_to_process_context = self.context.get_contributor_data_source_context(
-                contributor_id=self.contributor_id,
-                data_source_id=data_source_id_to_process)
             config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
-            data_source_to_process_context.gridfs_id = self.__process_file_from_gridfs_id(
-                data_source_to_process_context.gridfs_id, config)
+            data_source_export = self.context.get_data_source_export_from_data_source(data_source_id_to_process)
+            new_gridfs_id = self.__process_file_from_gridfs_id(data_source_export.gridfs_id, config)
+            data_source_export.update_data_set_state(new_gridfs_id, self.params.get('export_type'))
         return self.context
 
     def __get_rules(self, trip_to_route: Dict[str, str], trip_stop_sequences: Dict[str, List[str]],
@@ -106,7 +102,7 @@ class ComputeDirections(AbstractContributorProcess):
 
     def __apply_rules(self, trips_reader: CsvReader, trips_file_name: str, trips_to_fix: Dict[str, str]) -> None:
         trips_reader.apply(column_name='direction_id', callback=lambda row, trips=trips_to_fix:
-                           trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
+        trips_to_fix[row['trip_id']] if row['trip_id'] in trips else row['direction_id'])
         trips_reader.save_as_csv(trips_file_name)
 
     def __get_stop_sequence_by_trip(self, trip_to_route: Dict[str, str]) -> Dict[str, List[str]]:
@@ -139,9 +135,10 @@ class ComputeDirections(AbstractContributorProcess):
         self.file_to_process = self.gfs.get_file_from_gridfs(gridfs_id_to_process)
         with tempfile.TemporaryDirectory() as tmp_dir_name, tempfile.TemporaryDirectory() as new_tmp_dir_name:
             gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(self.file_to_process, 'trips.txt', tmp_dir_name,
-                                                           new_tmp_dir_name,
-                                                           callback=partial(self.do_compute_directions,
-                                                                            config=("compute-direction", config))
-                                                           )
+                                                                    new_tmp_dir_name,
+                                                                    callback=partial(self.do_compute_directions,
+                                                                                     config=(
+                                                                                     "compute-direction", config))
+                                                                    )
 
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, gtfs_computed_path)
