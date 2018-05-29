@@ -280,3 +280,9 @@ class TartareFixture(object):
         raw = self.get('contributors/{}'.format(contributor_id))
         self.assert_sucessful_call(raw)
         return self.json_to_dict(raw)['contributors'][0]
+
+    def get_gridfs_id_from_data_source(self, contributor_id, data_source_id):
+        return next(
+            data_source['data_sets'][0]['gridfs_id'] for data_source in
+            self.get_contributor(contributor_id)['data_sources']
+            if data_source['id'] == data_source_id)

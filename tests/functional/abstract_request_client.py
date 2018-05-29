@@ -81,22 +81,15 @@ class AbstractRequestClient:
                 self.assert_sucessful_call(raw, 204)
 
     def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file, expected_filename=None):
-        # list of exports
-        raw = self.get('contributors/{contributor_id}/exports'.format(contributor_id=contributor_id))
-        self.assert_sucessful_call(raw)
-        exports = self.get_dict_from_response(raw)
-        assert "exports" in exports
-        assert len(exports["exports"]) == 1
-        gridfs_id = next(
-            ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
-        assert gridfs_id
-        export_id = exports["exports"][0]["id"]
-        assert export_id
+        contributor = self.get_dict_from_response(
+            self.get('/contributors/{}'.format(contributor_id))
+        )['contributors'][0]
+        gridfs_id = next(data_source['data_sets'][0]['gridfs_id'] for data_source in contributor['data_sources'] if
+                         data_source['id'] == data_source_id)
 
         # get export file
-        raw = self.get('/files/{gridfs_id}/download'.format(export_id=export_id,
-                                                                                                    gridfs_id=gridfs_id,
-                                                                                                    contributor_id=contributor_id))
+        raw = self.get('/files/{gridfs_id}/download'.format(gridfs_id=gridfs_id,
+                                                            contributor_id=contributor_id))
         if expected_filename:
             import re
             d = raw.headers['Content-Disposition']

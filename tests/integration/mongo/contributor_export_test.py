@@ -28,7 +28,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from time import sleep
 
 import pytest
 
@@ -134,8 +133,10 @@ class TestContributorExport(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
 
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", '
-                               '"input": {"type": "url", "url": "' + url + '"}}')
+                        params=self.dict_to_json(
+                            {"id": "to_process", "name": "bobette", "data_format": "gtfs",
+                             "export_data_source_id": "export_id", "input": {"type": "url", "url": url}}
+                        ))
         assert raw.status_code == 201
         raw = self.post('/contributors/id_test/preprocesses',
                         params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],'

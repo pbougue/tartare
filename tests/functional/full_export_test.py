@@ -49,7 +49,7 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
-                                                data_source_id='data_source_to_process_id',
+                                                data_source_id='export_id',
                                                 ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
@@ -67,7 +67,7 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip',
-                                                data_source_id="Google-1", expected_filename='gtfs-processed.zip')
+                                                data_source_id="export_id", expected_filename='gtfs-processed.zip')
 
     def test_exports_combined(self):
         self.init_contributor('contributor_light.json')
@@ -76,7 +76,7 @@ class TestFullExport(AbstractRequestClient):
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
                                                 ref_file='compute_directions/functional.zip',
-                                                data_source_id="data_source_to_process_id")
+                                                data_source_id="export_id")
 
     def test_exports_combined_two_coverages(self):
         self.init_contributor('contributor_light.json')

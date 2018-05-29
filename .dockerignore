@@ -4,4 +4,6 @@ __pycache__
 data
 .mypy_cache
 tests
+*.json
+*.zip
 

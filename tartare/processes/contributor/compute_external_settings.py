@@ -39,7 +39,7 @@ from gridfs import GridOut
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import PreProcess, Contributor, DataSet
+from tartare.core.models import PreProcess, Contributor, DataSource
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
@@ -207,14 +207,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
         self.__check_target_data_source()
         self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:
-            data_source_to_process_context = self.context.get_contributor_data_source_context(
-                contributor_id=self.contributor_id,
-                data_source_id=data_source_id_to_process)
-            target_data_set_gridfs_id = self.__process_file_from_gridfs_id(data_source_to_process_context.gridfs_id)
+            input_data_set = DataSource.get_one(data_source_id=data_source_id_to_process).get_last_data_set()
+            target_data_set_gridfs_id = self.__process_file_from_gridfs_id(input_data_set.gridfs_id)
             self.save_result_into_target_data_source(Contributor.get(self.contributor_id), target_data_set_gridfs_id)
-            data_source_target_context = self.context.get_contributor_data_source_context(
-                contributor_id=self.contributor_id,
-                data_source_id=self.params['target_data_source_id'])
-            data_source_target_context.gridfs_id = target_data_set_gridfs_id
 
         return self.context

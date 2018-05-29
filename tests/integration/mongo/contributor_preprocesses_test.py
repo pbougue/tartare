@@ -37,7 +37,6 @@ from tartare import app
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
     DATA_TYPE_GEOGRAPHIC
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport
 from tartare.helper import get_dict_from_zip
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
@@ -48,20 +47,6 @@ class TestGtfsAgencyProcess(TartareFixture):
     excepted_headers = ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang",
                         "agency_phone", "agency_fare_url", "agency_email"]
     excepted_headers.sort()
-
-    def test_expected_files(self, init_http_download_server):
-        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'))
-        preprocess = {
-            "id": "plop",
-            "sequence": 0,
-            "data_source_ids": ['dsid'],
-            "type": "HeadsignShortName",
-        }
-        self.post('/contributors/cid/preprocesses', self.dict_to_json(preprocess))
-        resp = self.contributor_export('cid', check_done=False)
-        job = self.get_job_from_export_response(resp)
-        assert job['state'] == 'failed'
-        assert job['error_message'] == 'data source dsid does not contains required files routes.txt, trips.txt'
 
     def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
         contrib_payload = {
@@ -75,6 +60,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                         "url": data_set_url
                     },
                     "id": data_source_id,
+                    "export_data_source_id": "export_id",
                     "name": "data_source_to_process_name",
                     "data_format": "gtfs"
                 }
@@ -109,12 +95,7 @@ class TestGtfsAgencyProcess(TartareFixture):
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
-
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -145,11 +126,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -173,11 +150,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -209,11 +182,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        exports = self.get('/contributors/contrib_id/exports')
-        self.assert_sucessful_call(exports)
-        r = self.json_to_dict(exports)
-        assert len(r["exports"]) == 1
-        gridfs_id = r["exports"][0]["data_sources"][0]['gridfs_id']
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
@@ -265,6 +234,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                     "id": "ds-to-process",
                     "name": "ds-to-process",
                     "data_format": "gtfs",
+                    "export_data_source_id": "export_id",
                     "input": {"type": "url", "url": url}
                 })
         if add_data_source_config:
@@ -334,15 +304,15 @@ class TestComputeDirectionsProcess(TartareFixture):
         assert job['step'] == 'save_contributor_export', print(job)
         assert job['error_message'] == '', print(job)
 
+        gridfs_id = self.get_gridfs_id_from_data_source('id_test', 'export_id')
         with app.app_context():
-            export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
-            with ZipFile(new_zip_file, 'r') as new_zip_file:
-                with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    assert_zip_contains_only_txt_files(new_zip_file)
-                    new_zip_file.extractall(tmp_dir_name)
-                    assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
-                                        _get_file_fixture_full_path(expected_trips_file_name))
+            new_zip_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
+        with ZipFile(new_zip_file, 'r') as new_zip_file:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                assert_zip_contains_only_txt_files(new_zip_file)
+                new_zip_file.extractall(tmp_dir_name)
+                assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
+                                    _get_file_fixture_full_path(expected_trips_file_name))
 
 
 class TestComputeExternalSettings(TartareFixture):
@@ -473,6 +443,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
                         "url": data_set_url
                     },
                     "id": data_source_id,
+                    "export_data_source_id": "export_id",
                     "name": "data_source_to_process_name",
                     "data_format": "gtfs"
                 }
@@ -493,6 +464,21 @@ class TestHeadsignShortNameProcess(TartareFixture):
         resp = self.contributor_export('id_test', check_done=False)
         return self.get_job_from_export_response(resp)
 
+    def test_expected_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+                              export_id='export_id')
+        preprocess = {
+            "id": "plop",
+            "sequence": 0,
+            "data_source_ids": ['dsid'],
+            "type": "HeadsignShortName",
+        }
+        self.post('/contributors/cid/preprocesses', self.dict_to_json(preprocess))
+        resp = self.contributor_export('cid', check_done=False)
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'failed'
+        assert job['error_message'] == 'data source dsid does not contains required files routes.txt, trips.txt'
+
     def test_headsign_short_name(self, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               path='headsign_short_name',
@@ -504,8 +490,8 @@ class TestHeadsignShortNameProcess(TartareFixture):
         assert job['error_message'] == ''
 
         with app.app_context():
-            export = ContributorExport.get_last('id_test')
-            new_zip_file = GridFsHandler().get_file_from_gridfs(export.data_sources[0].gridfs_id)
+            gridfs_id = self.get_gridfs_id_from_data_source('id_test', 'export_id')
+            new_zip_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_zip_file, 'r') as new_zip_file:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     assert_zip_contains_only_txt_files(new_zip_file)
@@ -591,7 +577,6 @@ class TestRuspellProcess(TartareFixture):
         if do_export:
             resp = self.contributor_export('id_test', check_done=False)
             return self.get_job_from_export_response(resp)
-
 
     @pytest.mark.parametrize(
         "contributor_id, data_source_id", [
