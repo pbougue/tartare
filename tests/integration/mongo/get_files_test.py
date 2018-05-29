@@ -32,7 +32,7 @@
 
 import json
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import assert_files_equals, _get_file_fixture_full_path
+from tests.utils import assert_text_files_equals, _get_file_fixture_full_path
 
 file_used = "some_archive.zip"
 fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(file_used))
@@ -100,7 +100,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
         raw = self.post('/coverages/{}/actions/export?current_date=2015-08-10'.format(coverage['id']), {})
         assert raw.status_code == 201
@@ -112,7 +112,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
         resp = self.get('/coverages/{coverage_id}'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
@@ -122,4 +122,4 @@ class TestGetFiles(TartareFixture):
         resp = self.get('/files/{gridfs_id}/download'.
                         format(gridfs_id=environments['production']['current_ntfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)

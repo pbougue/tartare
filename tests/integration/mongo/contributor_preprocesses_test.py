@@ -39,7 +39,7 @@ from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import get_dict_from_zip
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals, assert_zip_contains_only_txt_files, \
+from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, assert_zip_contains_only_txt_files, \
     assert_zip_contains_only_files_with_extensions
 
 
@@ -311,8 +311,8 @@ class TestComputeDirectionsProcess(TartareFixture):
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 assert_zip_contains_only_txt_files(new_zip_file)
                 new_zip_file.extractall(tmp_dir_name)
-                assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
-                                    _get_file_fixture_full_path(expected_trips_file_name))
+                assert_text_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
+                                         _get_file_fixture_full_path(expected_trips_file_name))
 
 
 class TestComputeExternalSettings(TartareFixture):
@@ -422,11 +422,11 @@ class TestComputeExternalSettings(TartareFixture):
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['txt'])
                     fusio_settings_zip_file.extractall(tmp_dir_name)
-                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
-                                        _get_file_fixture_full_path(
+                    assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
+                                             _get_file_fixture_full_path(
                                             'prepare_external_settings/expected_fusio_object_codes.txt'))
-                    assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
-                                        _get_file_fixture_full_path(
+                    assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
+                                             _get_file_fixture_full_path(
                                             'prepare_external_settings/expected_fusio_object_properties.txt'))
 
 
@@ -496,8 +496,8 @@ class TestHeadsignShortNameProcess(TartareFixture):
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     assert_zip_contains_only_txt_files(new_zip_file)
                     new_zip_file.extractall(tmp_dir_name)
-                    assert_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
-                                        _get_file_fixture_full_path('headsign_short_name/ref_trips.txt'))
+                    assert_text_files_equals(os.path.join(tmp_dir_name, 'trips.txt'),
+                                             _get_file_fixture_full_path('headsign_short_name/ref_trips.txt'))
 
     def test_headsign_short_name_missing_column(self, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr,

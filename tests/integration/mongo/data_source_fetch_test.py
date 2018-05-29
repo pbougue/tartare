@@ -35,7 +35,7 @@ from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals
+from tests.utils import _get_file_fixture_full_path, assert_text_files_equals
 
 fixtures_path = _get_file_fixture_full_path('gtfs/some_archive.zip')
 
@@ -83,7 +83,7 @@ class TestDataSourceFetchAction(TartareFixture):
                 gridout_path = os.path.join(path, gridout.filename)
                 with open(gridout_path, 'wb+') as f:
                     f.write(gridout.read())
-                    assert_files_equals(gridout_path, expected_path)
+                    assert_text_files_equals(gridout_path, expected_path)
             jobs = Job.get_some(contributor_id=contributor['id'])
             assert len(jobs) == 1
             job = jobs[0]

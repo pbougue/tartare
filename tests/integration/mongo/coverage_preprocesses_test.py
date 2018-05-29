@@ -38,7 +38,7 @@ import pytest
 from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE, \
     DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import get_response, assert_files_equals, _get_file_fixture_full_path, \
+from tests.utils import get_response, assert_text_files_equals, _get_file_fixture_full_path, \
     assert_zip_contains_only_files_with_extensions
 
 
@@ -312,7 +312,7 @@ class TestFusioExportPreprocess(TartareFixture):
                         format(coverage_id=coverage['id'], export_id=exports[0]['id'],
                                gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         self.assert_sucessful_call(raw)
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
     @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
@@ -365,7 +365,7 @@ class TestFusioExportPreprocess(TartareFixture):
         assert len(coverage['data_sources'][0]['data_sets']) == 1
         gridfs_id = coverage['data_sources'][0]['data_sets'][0]['gridfs_id']
         resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=gridfs_id), follow_redirects=True)
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
     @pytest.mark.parametrize("export_type,expected_message", [
         (None,
@@ -563,9 +563,9 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 assert_zip_contains_only_files_with_extensions(fusio_settings_zip_file, ['txt'])
                 fusio_settings_zip_file.extractall(tmp_dir_name)
-                assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
-                                    _get_file_fixture_full_path(
+                assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
+                                         _get_file_fixture_full_path(
                                         'prepare_external_settings/expected_fusio_object_codes.txt'))
-                assert_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
-                                    _get_file_fixture_full_path(
+                assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
+                                         _get_file_fixture_full_path(
                                         'prepare_external_settings/expected_fusio_object_properties.txt'))

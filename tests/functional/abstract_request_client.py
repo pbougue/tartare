@@ -33,7 +33,7 @@ from zipfile import ZipFile
 
 import requests
 
-from tests.utils import assert_files_equals
+from tests.utils import assert_text_files_equals, assert_content_equals_ref_file
 
 
 class AbstractRequestClient:
@@ -95,25 +95,7 @@ class AbstractRequestClient:
             fname = re.findall("filename=(.+)", d)
             assert fname[0] == expected_filename
 
-        self.assert_content_equals_ref_file(raw.content, ref_file)
-
-    def assert_content_equals_ref_file(self, content, ref_zip_file):
-        with tempfile.TemporaryDirectory() as extract_result_tmp, tempfile.TemporaryDirectory() as ref_tmp:
-            dest_zip_res = '{}/gtfs.zip'.format(extract_result_tmp)
-            with open(dest_zip_res, 'wb') as f:
-                f.write(content)
-
-            with ZipFile(dest_zip_res, 'r') as files_zip_res, ZipFile(self.get_fixtures_relative_path(ref_zip_file),
-                                                                      'r') as files_zip:
-                except_files_list = files_zip.namelist()
-                response_files_list = files_zip_res.namelist()
-
-                assert len(except_files_list) == len(response_files_list)
-                files_zip_res.extractall(extract_result_tmp)
-                files_zip.extractall(ref_tmp)
-
-                for f in except_files_list:
-                    assert_files_equals('{}/{}'.format(ref_tmp, f), '{}/{}'.format(extract_result_tmp, f))
+        assert_content_equals_ref_file(raw.content, ref_file)
 
     def replace_server_id_in_input_data_source_fixture(self, fixture_path):
         with open(self.get_api_fixture_path(fixture_path), 'rb') as file:

@@ -36,7 +36,7 @@ from zipfile import ZipFile
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
-from tests.utils import _get_file_fixture_full_path, assert_files_equals
+from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, assert_content_equals_ref_file
 
 
 class TartareFixture(object):
@@ -177,15 +177,22 @@ class TartareFixture(object):
         return self.json_to_dict(raw)['coverages'][0]
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
-        raw = self.get('coverages/{}'.format(coverage_id))
-        coverage = self.json_to_dict(raw)['coverages'][0]
+        coverage = self.get_coverage(coverage_id)
         coverage['preprocesses'].append(preprocess)
         raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
 
+    def add_publication_platform_to_coverage(self, platform, coverage_id, environment_name='production'):
+        coverage = self.get_coverage(coverage_id)
+        if environment_name not in coverage['environments']:
+            coverage['environments'][environment_name] = {'sequence': 0, 'name': environment_name,
+                                                          'publication_platforms': []}
+        coverage['environments'][environment_name]['publication_platforms'].append(platform)
+        raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
+
     def add_preprocess_to_contributor(self, preprocess, contributor_id):
-        raw = self.get('contributors/{}'.format(contributor_id))
-        contributor = self.json_to_dict(raw)['contributors'][0]
+        contributor = self.get_contributor(contributor_id)
         contributor['preprocesses'].append(preprocess)
         raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)
@@ -267,7 +274,7 @@ class TartareFixture(object):
                 ods_zip.extract(metadata_file_name, tmp_dirname)
                 fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_files_equals(metadata, fixture)
+                assert_text_files_equals(metadata, fixture)
         session.quit()
 
     def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
@@ -299,3 +306,7 @@ class TartareFixture(object):
             data_source['data_sets'][0]['gridfs_id'] for data_source in
             self.get_contributor(contributor_id)['data_sources']
             if data_source['id'] == data_source_id)
+
+    def assert_gridfs_equals_fixture(self, gridfs_id, fixture):
+        resp = self.get('/files/{}/download'.format(gridfs_id), follow_redirects=True)
+        assert_content_equals_ref_file(resp.data, fixture)

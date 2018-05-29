@@ -104,8 +104,7 @@ class Gtfs2Ntfs(AbstractContributorProcess):
                                       extract_dir_path,
                                       dst_dir_path,
                                       self.contributor.data_prefix)
-                    new_gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                        old_gridfs_id=data_source_export.gridfs_id,
+                    new_gridfs_id = self.create_archive_and_add_in_grid_fs(
                         files=dst_dir_path,
                         computed_file_name=data_source_id_to_process)
                     data_source_export.update_data_set_state(new_gridfs_id, DATA_FORMAT_NTFS)
