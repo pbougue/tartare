@@ -161,17 +161,17 @@ class TestContributorExport(TartareFixture):
     def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
         raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
+                        params='{"id": "bobette", "name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
         self.assert_sucessful_create(raw)
         raw = self.post('/coverages',
-                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"]}')
+                        params='{"id": "jdr", "name": "name of the coverage jdr", "input_data_source_ids": ["bobette"]}')
         self.assert_sucessful_create(raw)
 
         self.contributor_export(contributor['id'])
         self.coverage_export('jdr')
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 4
+            assert grid_fs_list.count() == 3
 
     @pytest.mark.parametrize("filename,path,data_format", [
         ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),

@@ -56,21 +56,20 @@ def postprocess(contributor: Contributor, context: ContributorExportContext) -> 
 
 
 def save_export(contributor: Contributor, context: ContributorExportContext) -> Optional[ContributorExport]:
-    if context.data_source_exports:
-        for export_id, data_source_export_list in context.data_source_exports.items():
-            gridfs_ids = [export.gridfs_id for export in data_source_export_list]
-            data_formats = [export.data_format for export in data_source_export_list]
-            if len(gridfs_ids) > 1 or len(data_formats) > 1:
-                raise RuntimeException(
-                    ('export {} cannot be determined from its input data_sources' +
-                     'found {} gridfs_id ({}) and {} data_format ({})').format(
-                        export_id, len(gridfs_ids), ','.join(gridfs_ids), len(data_formats), ','.join(data_formats))
+    for export_id, data_source_export_list in context.data_source_exports.items():
+        gridfs_ids = [export.gridfs_id for export in data_source_export_list]
+        data_formats = [export.data_format for export in data_source_export_list]
+        if len(gridfs_ids) > 1 or len(data_formats) > 1:
+            raise RuntimeException(
+                ('export {} cannot be determined from its input data_sources' +
+                 'found {} gridfs_id ({}) and {} data_format ({})').format(
+                    export_id, len(gridfs_ids), ','.join(gridfs_ids), len(data_formats), ','.join(data_formats))
 
-                )
-            data_set = DataSet(gridfs_id=gridfs_ids[0])
-            data_source = next(data_source for data_source in contributor.data_sources if data_source.id == export_id)
-            data_source.data_format = data_formats[0]
-            data_source.add_data_set_and_update_model(data_set, contributor)
+            )
+        data_set = DataSet(gridfs_id=gridfs_ids[0])
+        data_source = next(data_source for data_source in contributor.data_sources if data_source.id == export_id)
+        data_source.data_format = data_formats[0]
+        data_source.add_data_set_and_update_model(data_set, contributor)
 
     contrib_export_data_sources = []
     validity_periods = []

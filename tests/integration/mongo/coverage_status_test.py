@@ -67,11 +67,12 @@ class TestCoverageStatus(TartareFixture):
         raw = self.post('/contributors', json.dumps(contributor))
         self.assert_sucessful_create(raw)
 
-    def __create_coverage(self, contributors_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
+    def __create_coverage(self, contributors_ids=[], input_data_source_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
             'contributors_ids': contributors_ids,
+            'input_data_source_ids': input_data_source_ids,
         }
         if contributors_ids:
             coverage['contributors_ids'] = contributors_ids
@@ -104,12 +105,12 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['state'] == 'failed', print(last_active_job)
         assert last_active_job['step'] == 'fetching context', print(last_active_job)
         assert last_active_job['error_message'] == \
-               'unable to get any contributor exports since no contributors are attached to coverage {}'.format(
+               'no data sources are attached to coverage {}'.format(
                    coverage_id), print(last_active_job)
 
     def test_status_after_success_coverage_export_without_contributor_export(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')
-        self.__create_coverage(['contributor_export'], 'coverage_export')
+        self.__create_coverage(['contributor_export'], ['ds_contributor_export'], 'coverage_export')
         coverages = self.__run_coverage_export('coverage_export')
 
         assert len(coverages) == 1
@@ -124,7 +125,7 @@ class TestCoverageStatus(TartareFixture):
 
     def test_status_after_success_coverage_export_with_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')
-        self.__create_coverage(['contributor_export'], 'coverage_export')
+        self.__create_coverage(['contributor_export'], ['ds_contributor_export'], 'coverage_export')
         self.contributor_export('contributor_export')
         coverages = self.__run_coverage_export('coverage_export')
 
@@ -141,7 +142,8 @@ class TestCoverageStatus(TartareFixture):
     def test_status_after_success_automatic_update(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2')
-        self.__create_coverage(['contributor_automatic_update_1', 'contributor_automatic_update_2'], 'coverage_export')
+        self.__create_coverage(['contributor_automatic_update_1', 'contributor_automatic_update_2'],
+                               ['ds_contributor_automatic_update_1', 'ds_contributor_automatic_update_2'], 'coverage_export')
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
@@ -160,7 +162,10 @@ class TestCoverageStatus(TartareFixture):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3', 'unknown_file')
         self.__create_coverage(['contributor_automatic_update_1',
                                 'contributor_automatic_update_2',
-                                'contributor_automatic_update_3'], 'coverage_export')
+                                'contributor_automatic_update_3'],
+                               ['ds_contributor_automatic_update_1',
+                                'ds_contributor_automatic_update_2',
+                                'ds_contributor_automatic_update_3'], 'coverage_export')
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
@@ -187,7 +192,7 @@ class TestCoverageStatus(TartareFixture):
                 }
             }
         }
-        self.__create_coverage(['contributor_automatic_update'], 'coverage_export', publication_platform)
+        self.__create_coverage(['contributor_automatic_update'], ['ds_contributor_automatic_update'], 'coverage_export', publication_platform)
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
@@ -207,7 +212,10 @@ class TestCoverageStatus(TartareFixture):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3')
         self.__create_coverage(['contributor_automatic_update_2',
                                 'contributor_automatic_update_2',
-                                'contributor_automatic_update_3'], 'coverage_export')
+                                'contributor_automatic_update_3'],
+                               ['ds_contributor_automatic_update_2',
+                                'ds_contributor_automatic_update_2',
+                                'ds_contributor_automatic_update_3'], 'coverage_export')
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1

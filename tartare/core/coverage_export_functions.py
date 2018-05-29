@@ -33,8 +33,7 @@ from typing import Optional
 from tartare.core.constants import DATA_FORMAT_GTFS
 from tartare.core.context import CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, CoverageExportContributor, Coverage, ContributorExportDataSource, \
-    DataSource
+from tartare.core.models import CoverageExport, Coverage, DataSource
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import IntegrityException
 
@@ -47,12 +46,13 @@ def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportC
     # it simulates its behavior for now for tests purposes
     # merge necessary for multi-contributors is not handled here and should be done by Fusio
     if not context.global_gridfs_id:
-        for contributor_context in context.contributor_contexts:
-            for data_source_context in contributor_context.data_source_contexts:
-                if DataSource.get_one(contributor_context.contributor.id, data_source_context.data_source_id) \
-                        .is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
-                    context.global_gridfs_id = GridFsHandler().copy_file(data_source_context.gridfs_id)
-                    context.validity_period = contributor_context.validity_period
+        for data_source_id in coverage.input_data_source_ids:
+            data_source = DataSource.get_one(data_source_id=data_source_id)
+            if data_source.is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
+                data_set = data_source.get_last_data_set()
+                if data_set:
+                    context.global_gridfs_id = GridFsHandler().copy_file(data_set.gridfs_id)
+                    context.validity_period = data_set.validity_period
                     return context
         raise IntegrityException(
             ('coverage {} does not contains any Fusio export preprocess ' +
@@ -66,26 +66,9 @@ def postprocess(coverage: Coverage, context: CoverageExportContext) -> CoverageE
     return context
 
 
-def save_export(coverage: Coverage, context: CoverageExportContext) -> Optional[CoverageExport]:
-    contributor_exports = []
-    for contributor_context in context.contributor_contexts:
-        data_sources = []
-        for data_source_context in contributor_context.data_source_contexts:
-            data_sources.append(
-                ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
-                                            gridfs_id=data_source_context.gridfs_id,
-                                            validity_period=data_source_context.validity_period)
-            )
-
-        if data_sources:
-            contributor_exports.append(
-                CoverageExportContributor(contributor_id=contributor_context.contributor.id,
-                                          validity_period=contributor_context.validity_period,
-                                          data_sources=data_sources))
-    if contributor_exports:
-        export = CoverageExport(coverage_id=coverage.id,
-                                gridfs_id=context.global_gridfs_id,
-                                validity_period=context.validity_period,
-                                contributors=contributor_exports)
-        export.save()
-        return export
+def save_export(coverage: Coverage, context: CoverageExportContext) -> None:
+    export = CoverageExport(coverage_id=coverage.id,
+                            gridfs_id=context.global_gridfs_id,
+                            validity_period=context.validity_period,
+                            contributors=[])
+    export.save()

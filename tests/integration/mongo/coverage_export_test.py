@@ -108,6 +108,7 @@ class TestCoverageExport(TartareFixture):
             "data_prefix": "AAA",
             "data_sources": [
                 {
+                    "id": "bobette",
                     "name": "bobette",
                     "data_format": "gtfs",
                     "input": {"type": "url", "url": "http://stif.com/od.zip"}}
@@ -115,7 +116,7 @@ class TestCoverageExport(TartareFixture):
         }'''
         self.post('/contributors', contrib_data)
         # Add coverage with coverages
-        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors_ids": ["id_test"]}')
+        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors_ids": ["id_test"], "input_data_source_ids": ["bobette"]}')
         # launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             self.contributor_export('id_test')

@@ -715,7 +715,7 @@ class TestCoverageApi(TartareFixture):
 
     def test_put_coverage_preprocess(self):
         cov_id = 'my-cov'
-        coverage = self.init_coverage(cov_id, [], [{
+        coverage = self.init_coverage(cov_id, [], [], [{
             "id": "preprocess_old_id",
             "type": "FusioDataUpdate",
             "params": {

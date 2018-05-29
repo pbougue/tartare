@@ -766,6 +766,8 @@ class Coverage(PreProcessContainer):
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
 
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 class MongoValidityPeriodSchema(Schema):
     start_date = fields.Date(required=True)
