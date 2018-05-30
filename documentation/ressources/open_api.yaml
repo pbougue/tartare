@@ -1252,6 +1252,22 @@ definitions:
       integration:
         $ref: "#/definitions/environment_type"
 
+  options_type:
+    type: object
+    properties:
+      authent:
+        type: object
+        properties:
+          username:
+            type: string
+            exemple: "my_user"
+          password:
+            type: string
+            exemple: "my_secret_password"
+      directory:
+        type: string
+        exemple: "/path/"
+
   environment_type:
     type: object
     required: [
@@ -1300,8 +1316,7 @@ definitions:
         type: integer
         example: 0
       options:
-        type: object
-        example: {"authent": {"password": "XXXX", "username": "ftp_user"}, "directory": "/path/" }
+        $ref: "#/definitions/options_type"
 
   contributor_obj:
     type: object
@@ -1630,6 +1645,8 @@ definitions:
       expected_file_name:
         type: string
         example: "config.json"
+      options:
+        $ref: "#/definitions/options_type"
 
   license:
     type: object
