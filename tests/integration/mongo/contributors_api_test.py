@@ -492,7 +492,8 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert "error" in r
         assert r["message"] == "Invalid arguments"
-        assert r['error'] == "data_source referenced by id 'datasource_stif' in preprocess 'BOB' not found in contributor"
+        assert r[
+                   'error'] == "data_source referenced by id 'datasource_stif' in preprocess 'BOB' not found in contributor"
 
     def test_put_contrib_preprocesses_gtfs_agency_file(self, contributor):
         preprocesses = [
@@ -575,11 +576,11 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', json.dumps(post_data))
         self.assert_sucessful_create(raw)
         post_data['preprocesses'] = [
-                {
-                    "type": "GtfsAgencyFile",
-                    "data_source_ids": preprocess_data_source_ids
-                }
-            ]
+            {
+                "type": "GtfsAgencyFile",
+                "data_source_ids": preprocess_data_source_ids
+            }
+        ]
         raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
         r = self.assert_failed_call(raw)
         assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' " \
@@ -628,14 +629,16 @@ class TestContributors(TartareFixture):
     def test_put_contrib_public_transport_with_data_format_invalid(self):
         for data_type in DATA_TYPE_VALUES:
             contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
-            contributor = self.init_contributor(contributor_id, data_source_id=contributor_id + '-ds', data_type=data_type,
-                                  data_format=DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+            contributor = self.init_contributor(contributor_id, data_source_id=contributor_id + '-ds',
+                                                data_type=data_type,
+                                                data_format=DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             for other_data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
                 contributor['data_sources'][0]['data_format'] = other_data_format
                 raw = self.put('/contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
                 r = self.assert_failed_call(raw)
                 assert 'error' in r
-                assert r['error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
+                assert r[
+                           'error'] == "data source format {format} is incompatible with contributor data_type {type}, possibles values are: '{values}'". \
                            format(format=other_data_format, type=data_type,
                                   values=','.join(DATA_FORMAT_BY_DATA_TYPE[data_type]))
 
@@ -658,7 +661,8 @@ class TestContributors(TartareFixture):
         contributor['data_type'] = DATA_TYPE_PUBLIC_TRANSPORT
         raw = self.put('/contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
         resp = self.assert_failed_call(raw)
-        assert resp['error'] == "data source format {} is incompatible with contributor data_type {}, possibles values are: '{}'".format(
+        assert resp[
+                   'error'] == "data source format {} is incompatible with contributor data_type {}, possibles values are: '{}'".format(
             DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT,
             ','.join(DATA_FORMAT_BY_DATA_TYPE[DATA_TYPE_PUBLIC_TRANSPORT])
         )
@@ -765,86 +769,68 @@ class TestContributors(TartareFixture):
 
     def test_put_contributor_data_sources(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
-        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_GEOGRAPHIC,
-                  'data_sources': [
-                      {
-                          "id": 'dsid',
-                          "name": 'dsname_updated',
-                          "data_format": DATA_FORMAT_BANO_FILE,
-                          "input": {'type': 'manual'}
-                      },
-                      {
-                          "id": 'dsid_2',
-                          "name": 'dsname_2',
-                          "data_format": DATA_FORMAT_OSM_FILE,
-                          "input": {'type': 'manual'}
-                      },
-                  ]
-                  }
-        raw = self.put('/contributors/cid', self.dict_to_json(update))
-        expected = {'contributors': [{'name': 'cid_name', 'data_sources': [
-            {'name': 'dsname_updated', 'data_format': 'bano_file',
-             'license': {'name': 'Private (unspecified)', 'url': ''},
-             'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None, 'id': 'dsid',
-             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
-             'fetch_started_at': None, 'export_data_source_id': None},
-            {'name': 'dsname_2', 'data_format': 'osm_file', 'license': {'name': 'Private (unspecified)', 'url': ''},
-             'input': {'type': 'manual', 'expected_file_name': None, 'url': None}, 'service_id': None,
-             'id': 'dsid_2',
-             'updated_at': None, 'validity_period': None, 'status': 'never_fetched', 'data_sets': [],
-             'fetch_started_at': None, 'export_data_source_id': None}
-        ],
-                                      'preprocesses': [],
-                                      'data_prefix': 'cid_prefix',
-                                      'id': 'cid',
-                                      'data_type': 'geographic'}]}
-        assert self.assert_sucessful_call(raw) == expected
-        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
-        assert contrib_dict == expected
+        contributor = self.get_contributor('cid')
+        contributor['data_type'] = DATA_TYPE_GEOGRAPHIC
+        contributor['data_sources'] = [
+            {
+                "id": 'dsid',
+                "name": 'dsname_updated',
+                "data_format": DATA_FORMAT_BANO_FILE,
+                "input": {'type': 'manual'}
+            },
+            {
+                "id": 'dsid_2',
+                "name": 'dsname_2',
+                "data_format": DATA_FORMAT_OSM_FILE,
+                "input": {'type': 'manual'}
+            },
+        ]
+        raw = self.put('/contributors/cid', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
+        contrib_dict = self.get_contributor('cid')
+        ds_1 = contrib_dict['data_sources'][0]
+        assert ds_1['id'] == 'dsid'
+        assert ds_1['name'] == 'dsname_updated'
+        assert ds_1['data_format'] == DATA_FORMAT_BANO_FILE
+        assert ds_1['input']['type'] == 'manual'
+        ds_2 = contrib_dict['data_sources'][1]
+        assert ds_2['id'] == 'dsid_2'
+        assert ds_2['name'] == 'dsname_2'
+        assert ds_2['data_format'] == DATA_FORMAT_OSM_FILE
+        assert ds_2['input']['type'] == 'manual'
 
     def test_put_contributor_preprocesses(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
-        update = {"name": "cid_name", "data_prefix": "cid_prefix", "data_type": DATA_TYPE_PUBLIC_TRANSPORT,
-                  'data_sources': [{'id': 'dsid', 'name': 'dsid',
-                                    'input': {
-                                        'type': 'url', 'url': self.format_url(init_http_download_server.ip_addr,
-                                                                              'some_archive.zip')}}],
-                  'preprocesses': [
-                      {
-                          "id": 'p1',
-                          "sequence": 0,
-                          "type": 'HeadsignShortName',
-                          "data_source_ids": ['dsid']
-                      },
-                      {
-                          "id": 'p2',
-                          "sequence": 1,
-                          "type": 'GtfsAgencyFile',
-                          "data_source_ids": ['dsid'],
-                          "params": {'data': {'agency_name': 'my_agency'}}
-                      }
-                  ]
-                  }
-        raw = self.put('/contributors/cid', self.dict_to_json(update))
-        expected = {'contributors': [{'data_type': 'public_transport', 'data_prefix': 'cid_prefix', 'name': 'cid_name',
-                                      'preprocesses': [
-                                          {'params': {}, 'sequence': 0, 'data_source_ids': ['dsid'], 'id': 'p1',
-                                           'type': 'HeadsignShortName', 'enabled': True},
-                                          {'params': {'data': {'agency_name': 'my_agency'}}, 'sequence': 1,
-                                           'data_source_ids': ['dsid'],
-                                           'id': 'p2', 'type': 'GtfsAgencyFile', 'enabled': True}
-                                      ], 'data_sources': [
-                {'license': {'name': 'Private (unspecified)', 'url': ''}, 'service_id': None, 'name': 'dsid',
-                 'input': {'expected_file_name': None, 'url': self.format_url(init_http_download_server.ip_addr,
-                                                                              'some_archive.zip'), 'type': 'url'},
-                 'id': 'dsid', 'data_format': 'gtfs', 'validity_period': None, 'data_sets': [],
-                 'fetch_started_at': None, 'export_data_source_id': None,
-                 'status': 'never_fetched', 'updated_at': None}
-            ],
-                                      'id': 'cid'}]}
-        assert self.assert_sucessful_call(raw) == expected
-        contrib_dict = self.json_to_dict(self.get('/contributors/cid'))
-        assert contrib_dict == expected
+        contributor = self.get_contributor('cid')
+        contributor['preprocesses'] = [
+            {
+                "id": 'p1',
+                "sequence": 0,
+                "type": 'HeadsignShortName',
+                "data_source_ids": ['dsid']
+            },
+            {
+                "id": 'p2',
+                "sequence": 1,
+                "type": 'GtfsAgencyFile',
+                "data_source_ids": ['dsid'],
+                "params": {'data': {'agency_name': 'my_agency'}}
+            }
+        ]
+        raw = self.put('/contributors/cid', self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
+        contrib_dict = self.get_contributor('cid')
+        preprocess_1 = contrib_dict['preprocesses'][0]
+        preprocess_2 = contrib_dict['preprocesses'][1]
+        assert preprocess_1['id'] == 'p1'
+        assert preprocess_1['sequence'] == 0
+        assert preprocess_1['type'] == 'HeadsignShortName'
+        assert preprocess_1['data_source_ids'] == ['dsid']
+        assert preprocess_2['id'] == 'p2'
+        assert preprocess_2['sequence'] == 1
+        assert preprocess_2['type'] == 'GtfsAgencyFile'
+        assert preprocess_2['data_source_ids'] == ['dsid']
+        assert preprocess_2['params'] == {'data': {'agency_name': 'my_agency'}}
 
     def test_post_and_put_contributor_preprocesses_with_target_data_source_id(self, init_http_download_server):
         contrib_payload = {

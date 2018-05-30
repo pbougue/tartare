@@ -34,6 +34,7 @@ import mock
 import pytest
 from requests import HTTPError
 
+from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.fetcher import HttpFetcher, FetcherManager
 from tartare.core.models import Input
 from tartare.exceptions import FetcherException, GuessFileNameFromUrlException
@@ -118,7 +119,7 @@ class TestFetcher:
         url = 'http://whatever.com/config.json'
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = ContentTooShortError('', '')
-            HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
+            HttpFetcher().fetch(Input(type=INPUT_TYPE_URL, url=url), '/tmp/whatever')
         assert str(excinfo.value) == 'downloaded file size was shorter than exepected for url {}'.format(url)
 
     @mock.patch('urllib.request.urlretrieve')
@@ -131,14 +132,14 @@ class TestFetcher:
     @mock.patch('urllib.request.urlretrieve')
     def test_fetch_ok_data_format(self, mock_url_retrieve):
         url = 'http://whatever.com/config.json'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(type=INPUT_TYPE_URL, url=url), '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json'), print(dest_full_file_name)
         assert expected_file_name == 'config.json'
 
     @mock.patch('urllib.request.urlretrieve')
     def test_fetch_ok_expected_file_name(self, mock_url_retrieve):
         url = 'http://whatever.com/resource'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(url=url, expected_file_name='config.json'),
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(type=INPUT_TYPE_URL, url=url, expected_file_name='config.json'),
                                                                       '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json')
         assert expected_file_name == 'config.json'
@@ -151,7 +152,7 @@ class TestFetcher:
         mock_response.return_value = response
         url = 'http://whatever.com/resource'
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
-            HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
+            HttpFetcher().fetch(Input(type=INPUT_TYPE_URL, url=url), '/tmp/whatever')
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
 
     @pytest.mark.parametrize(
