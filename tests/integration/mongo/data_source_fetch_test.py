@@ -174,6 +174,40 @@ class TestDataSourceFetchAction(TartareFixture):
         data_source = self.get_contributor('cid')['data_sources'][0]
         assert len(data_source['data_sets']) == 1
 
+    def test_fetch_ftp_authent_in_options_ok(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_ftp_authent_in_options_unauthorized(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': 'wrong_user',
+                        'password': 'wrong_password'}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': 'fetching {} failed: error during download of file: 530 Login authentication failed'.format(url),
+            'message': 'Internal Server Error'}
+
+    def test_fetch_ftp_authent_in_options_not_found(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive_unknown.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': "fetching {} failed: error during download of file: 550 Can't open /gtfs/some_archive_unknown.zip: No such file or directory".format(url),
+            'message': 'Internal Server Error'}
+
     def test_fetch_authent_in_http_url_unauthorized(self, init_http_download_authent_server):
         props = init_http_download_authent_server.properties
         contrib_cpt = 0

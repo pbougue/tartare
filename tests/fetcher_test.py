@@ -35,6 +35,7 @@ import pytest
 from requests import HTTPError
 
 from tartare.core.fetcher import HttpFetcher, FetcherManager
+from tartare.core.models import Input
 from tartare.exceptions import FetcherException, GuessFileNameFromUrlException
 
 
@@ -109,7 +110,7 @@ class TestFetcher:
     def test_fetch_http_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = HTTPError('404 not found')
-            HttpFetcher().fetch('http://whatever.com/config.json', '/tmp/whatever')
+            HttpFetcher().fetch(Input(url='http://whatever.com/config.json'), '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: 404 not found'
 
     @mock.patch('urllib.request.urlretrieve')
@@ -117,27 +118,28 @@ class TestFetcher:
         url = 'http://whatever.com/config.json'
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = ContentTooShortError('', '')
-            HttpFetcher().fetch(url, '/tmp/whatever')
+            HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
         assert str(excinfo.value) == 'downloaded file size was shorter than exepected for url {}'.format(url)
 
     @mock.patch('urllib.request.urlretrieve')
     def test_fetch_url_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = URLError('details')
-            HttpFetcher().fetch('http://whatever.com/config.json', '/tmp/whatever')
+            HttpFetcher().fetch(Input(url='http://whatever.com/config.json'), '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: <urlopen error details>'
 
     @mock.patch('urllib.request.urlretrieve')
     def test_fetch_ok_data_format(self, mock_url_retrieve):
         url = 'http://whatever.com/config.json'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, '/tmp/whatever')
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json'), print(dest_full_file_name)
         assert expected_file_name == 'config.json'
 
     @mock.patch('urllib.request.urlretrieve')
     def test_fetch_ok_expected_file_name(self, mock_url_retrieve):
         url = 'http://whatever.com/resource'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, '/tmp/whatever', 'config.json')
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(Input(url=url, expected_file_name='config.json'),
+                                                                      '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json')
         assert expected_file_name == 'config.json'
 
@@ -149,14 +151,15 @@ class TestFetcher:
         mock_response.return_value = response
         url = 'http://whatever.com/resource'
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
-            HttpFetcher().fetch(url, '/tmp/whatever')
+            HttpFetcher().fetch(Input(url=url), '/tmp/whatever')
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
 
     @pytest.mark.parametrize(
         "url,expected", [
             ('http://bob:tata@canaltp.fr/upload.php?param=value', 'http://canaltp.fr/upload.php?param=value'),
             ('https://toto:bar@canaltp.fr/get.aspx', 'https://canaltp.fr/get.aspx'),
-            ('http://foo@domain.tld:password@kisio.com/get.php?name=titi&country=fr', 'http://kisio.com/get.php?name=titi&country=fr'),
+            ('http://foo@domain.tld:password@kisio.com/get.php?name=titi&country=fr',
+             'http://kisio.com/get.php?name=titi&country=fr'),
         ])
     def test_fetch_recompose_url(self, url, expected):
         assert expected == HttpFetcher.recompose_url_without_authent_from_parsed_result(urlparse(url))

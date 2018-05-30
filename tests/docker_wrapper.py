@@ -216,6 +216,7 @@ class DownloadHttpServerAuthentDocker(AbstractHttpServerDocker):
                 'mode': 'ro',
             },
         }
+
     @property
     def env_vars(self):
         return {'USERNAME': 'user@domain.com', 'PASSWORD': 'myPassword*'}
@@ -306,6 +307,34 @@ class UploadFtpServerDocker(AbstractDocker):
 
     def wait_until_available(self):
         sleep(3)
+
+
+class DownloadFtpServerAuthentDocker(UploadFtpServerDocker):
+    # see credentials copied here : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+    @property
+    def home_dir(self):
+        return '/home/ftpusers/{}'.format(self.user)
+
+    @property
+    def volumes(self):
+        return [self.conf_dir, self.home_dir]
+
+    @property
+    def container_name(self):
+        return 'ftp_download_server_authent'
+
+    @property
+    def image_name(self):
+        return 'stilliard/pure-ftpd:hardened'
+
+    @property
+    def volumes_bindings(self):
+        volumes_binding = super().volumes_bindings
+        volumes_binding[self.fixtures_directory] = {
+            'bind': self.home_dir,
+            'mode': 'rw',
+        }
+        return volumes_binding
 
 
 class MongoDocker(AbstractDocker):

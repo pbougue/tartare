@@ -33,7 +33,7 @@ import pytest
 from tartare import app, mongo
 from tartare.core import models
 from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker, \
-    DownloadHttpServerAuthentDocker
+    DownloadHttpServerAuthentDocker, DownloadFtpServerAuthentDocker
 from tests.utils import to_json
 
 
@@ -85,6 +85,12 @@ def init_ftp_upload_server():
 @pytest.yield_fixture(scope="session", autouse=False)
 def init_ftp_download_server():
     with DownloadFtpServerDocker() as download_server:
+        yield download_server
+
+
+@pytest.yield_fixture(scope="session", autouse=False)
+def init_ftp_download_server_authent():
+    with DownloadFtpServerAuthentDocker() as download_server:
         yield download_server
 
 

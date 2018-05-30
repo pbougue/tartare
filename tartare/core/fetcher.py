@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import ftplib
 import logging
 import os
 import re
@@ -60,6 +61,31 @@ class AbstractFetcher(metaclass=ABCMeta):
           - expected_file_name is destination file name (config.json)
         """
         pass
+
+    @classmethod
+    def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
+        pass
+
+    @classmethod
+    def recompose_url_without_authent_from_parsed_result(cls, parsed: ParseResult) -> str:
+        return urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6])
+
+    @classmethod
+    def get_url_and_credentials(cls, input: Input) \
+            -> Tuple[str, Optional[str], Optional[str], Optional[ParseResult]]:
+        parsed = urlparse(input.url)
+        if not ((input.options and input.options.authent) or parsed.username):
+            return input.url, None, None, None
+        else:
+            url = input.url
+            if input.options and input.options.authent:
+                username = input.options.authent.username
+                password = input.options.authent.password
+            else:
+                username = parsed.username
+                password = parsed.password
+                url = cls.recompose_url_without_authent_from_parsed_result(parsed)
+            return url, username, password, parsed
 
     @classmethod
     def fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
@@ -113,40 +139,33 @@ class FtpFetcher(AbstractFetcher):
     def fetch(self, input: Input, destination_path: str) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(input.url)
         dest_full_file_name = os.path.join(destination_path, expected_file_name)
-        self.fetch_to_target(input.url, dest_full_file_name)
+        self.check_authent_and_fetch_to_target(input, dest_full_file_name)
         return dest_full_file_name, expected_file_name
+
+    @classmethod
+    def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
+        url, username, password, parsed = cls.get_url_and_credentials(input)
+        if username and password:
+            try:
+                session = ftplib.FTP(parsed.hostname, username, password)
+                with open(dest_full_file_name, 'wb') as dest_file:
+                    session.retrbinary('RETR {expected_filename}'.format(expected_filename=parsed.path), dest_file.write)  # type: ignore
+                    session.quit()
+            except Exception as e:
+                raise FetcherException('error during download of file: {}'.format(str(e)))
+        else:
+            cls.fetch_to_target(url, dest_full_file_name)
 
 
 class HttpFetcher(AbstractFetcher):
     @classmethod
-    def recompose_url_without_authent_from_parsed_result(cls, parsed: ParseResult) -> str:
-        return urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6])
-
-    @classmethod
-    def get_url_and_credentials(cls, input: Input) \
-            -> Tuple[str, Optional[urllib.request.HTTPPasswordMgrWithDefaultRealm]]:
-        parsed = urlparse(input.url)
-        if not ((input.options and input.options.authent) or parsed.username):
-            return input.url, None
-        else:
-            url = input.url
-            top_level = '{}://{}'.format(parsed.scheme, parsed.hostname)
-            password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-            if input.options and input.options.authent:
-                username = input.options.authent.username
-                password = input.options.authent.password
-            else:
-                username = parsed.username
-                password = parsed.password
-                url = cls.recompose_url_without_authent_from_parsed_result(parsed)
-            password_manager.add_password(None, top_level, username, password)
-            return url, password_manager
-
-    @classmethod
     def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
-        url, password_manager = cls.get_url_and_credentials(input)
-        if password_manager:
+        url, username, password, parsed = cls.get_url_and_credentials(input)
+        if username and password:
             try:
+                password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+                top_level = '{}://{}'.format(parsed.scheme, parsed.hostname)
+                password_manager.add_password(None, top_level, username, password)
                 opener = urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(password_manager))
                 with opener.open(url) as response, open(dest_full_file_name, 'wb') as out_file:
                     shutil.copyfileobj(response, out_file)  # type: ignore
