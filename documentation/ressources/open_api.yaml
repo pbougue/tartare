@@ -127,7 +127,7 @@ paths:
             $ref: '#/definitions/error_404'
     patch:
       deprecated: true
-      summary: Modify a coverage configuration
+      summary: Modify a coverage configuration (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       consumes:
@@ -269,7 +269,8 @@ paths:
 
   /coverages/{coverage_id}/contributors:
     post:
-      summary: Subscribe a coverage to a contributor
+      deprecated: true
+      summary: Subscribe a coverage to a contributor (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       consumes:
@@ -308,7 +309,8 @@ paths:
 
   /coverages/{coverage_id}/contributors/{contributor_id}:
     delete:
-      summary: Delete a contributor from a coverage {coverage_id}
+      deprecated: true
+      summary: Delete a contributor from a coverage {coverage_id} (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       parameters:
@@ -329,78 +331,6 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
-    get:
-      summary: Retrieve the latest data file of the specified coverage
-      tags:
-        - data
-      produces:
-        - application/json
-        - application/zip
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the manipulated coverage
-          required: true
-        - in: path
-          name: environment_type
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} to be requested
-          required: true
-        - in: path
-          name: data_type
-          type: string
-          enum: ["ntfs"]
-          description: Type of data beeing manipulated
-          required: true
-      responses:
-        200:
-          description: Return the data file requested
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-    post:
-      summary: Send a new data file to coverage {coverage_id} for processing
-      tags:
-        - data
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the manipulated coverage
-          required: true
-        - in: path
-          name: environment_type
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} the data will be sent to
-          required: true
-        - in: path
-          name: data_type
-          type: string
-          enum: ["ntfs"]
-          description: Type of data beeing manipulated
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
-          required: true
-      responses:
-        200:
-          description: Return the data file requested
 
   /coverages/{coverage_id}/exports:
     get:
@@ -622,7 +552,8 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     post:
-      summary: Create a new data source for a contributor
+      deprecated: true
+      summary: Create a new data source for a contributor (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       parameters:
@@ -656,7 +587,8 @@ paths:
 
   /contributors/{contributor_id}/data_sources/{data_source_id}:
     patch:
-      summary: Modify a data source for a contributor
+      deprecated: true
+      summary: Modify a data source for a contributor (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       consumes:
@@ -698,7 +630,8 @@ paths:
           schema :
             $ref: '#/definitions/error_415'
     delete:
-      summary: Delete a data_source from a contributor {contributor_id}
+      deprecated: true
+      summary: Delete a data_source from a contributor {contributor_id} (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       parameters:
@@ -813,7 +746,8 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     post:
-      summary: Create preprocess for a contributor
+      deprecated: true
+      summary: Create preprocess for a contributor (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       parameters:
@@ -848,7 +782,8 @@ paths:
 
   /contributors/{contributor_id}/preprocesses/{preprocess_id}:
     patch:
-      summary: Modify a preprocess for a contributor
+      deprecated: true
+      summary: Modify a preprocess for a contributor (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       consumes:
@@ -891,7 +826,8 @@ paths:
             $ref: '#/definitions/error_415'
 
     delete:
-      summary: Delete a preprocess from the contributor {contributor_id}
+      deprecated: true
+      summary: Delete a preprocess from the contributor {contributor_id} (use PUT /contributors/{contributor_id} instead)
       tags:
         - contributors
       parameters:
@@ -941,7 +877,8 @@ paths:
           schema :
             $ref: '#/definitions/error_404'
     post:
-      summary: Create preprocess for a coverage
+      deprecated: true
+      summary: Create preprocess for a coverage (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       parameters:
@@ -971,7 +908,8 @@ paths:
 
   /coverages/{coverage_id}/preprocesses/{preprocess_id}:
     patch:
-      summary: Modify a preprocess for a coverage
+      deprecated: true
+      summary: Modify a preprocess for a coverage (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       consumes:
@@ -1014,7 +952,8 @@ paths:
             $ref: '#/definitions/error_415'
 
     delete:
-      summary: Delete a preprocess from the coverage {coverage_id}
+      deprecated: true
+      summary: Delete a preprocess from the coverage {coverage_id} (use PUT /coverages/{coverage_id} instead)
       tags:
         - coverages
       parameters:
@@ -1035,7 +974,6 @@ paths:
           description: Object not found
           schema :
             $ref: '#/definitions/error_404'
-
 
   /contributors/{contributor_id}/jobs:
     get:
