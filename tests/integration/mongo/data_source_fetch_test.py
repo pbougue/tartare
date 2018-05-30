@@ -31,8 +31,7 @@
 import os
 import tempfile
 
-from tartare import app, mongo
-from tartare.core import models
+from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
@@ -68,7 +67,9 @@ class TestDataSourceFetchAction(TartareFixture):
 
         self.assert_sucessful_call(raw, 204)
 
-        data_source = self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))['data_sources'][0]
+        data_source = \
+            self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))[
+                'data_sources'][0]
         data_set = data_source['data_sets'][0]
         # Test that source file and saved file are the same
         with app.app_context():
@@ -156,6 +157,22 @@ class TestDataSourceFetchAction(TartareFixture):
         )
         self.init_contributor('cid', 'dsid', url)
         self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_authent_in_options_ok(self, init_http_download_authent_server):
+        props = init_http_download_authent_server.properties
+        url = "http://{ip}/{alias}gtfs/{filename}".format(
+            alias=props['ROOT'],
+            ip=init_http_download_authent_server.ip_addr,
+            filename='some_archive.zip'
+        )
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': props['USERNAME'], 'password': props['PASSWORD']}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
 
     def test_fetch_authent_in_http_url_unauthorized(self, init_http_download_authent_server):
         props = init_http_download_authent_server.properties

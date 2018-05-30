@@ -118,8 +118,7 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
         try:
             data_source_fetch_job.update(step='fetch')
             fetcher = FetcherManager.select_from_url(url)
-            dest_full_file_name, expected_file_name = fetcher.fetch(url, tmp_dir_name,
-                                                                    data_source.input.expected_file_name)
+            dest_full_file_name, expected_file_name = fetcher.fetch(data_source.input, tmp_dir_name)
             if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
                 raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
         except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
