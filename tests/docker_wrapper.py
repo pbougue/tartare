@@ -87,6 +87,10 @@ class AbstractDocker(metaclass=ABCMeta):
         return None
 
     @property
+    def command(self):
+        return None
+
+    @property
     def volumes(self):
         return []
 
@@ -112,7 +116,7 @@ class AbstractDocker(metaclass=ABCMeta):
 
         try:
             self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
-                                                             ports=self.ports,
+                                                             ports=self.ports, command=self.command,
                                                              environment=self.env_vars,
                                                              volumes=self.volumes, host_config=host_config).get('Id')
             self.logger.info("docker id is {}".format(self.container_id))
@@ -335,6 +339,18 @@ class DownloadFtpServerAuthentDocker(UploadFtpServerDocker):
             'mode': 'rw',
         }
         return volumes_binding
+
+    @property
+    def command(self):
+        return '/run.sh -c 5 -C 5 -l puredb:/etc/pure-ftpd/pureftpd.pdb -E -j -R -P localhost -p 30010:30019'
+
+    @property
+    def port_bindings(self):
+        return {nb: nb for nb in range(30010, 30020)}
+
+    @property
+    def ports(self):
+        return [nb for nb in range(30010, 30020)]
 
 
 class MongoDocker(AbstractDocker):
