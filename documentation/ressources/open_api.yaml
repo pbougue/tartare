@@ -1260,13 +1260,13 @@ definitions:
         properties:
           username:
             type: string
-            exemple: "my_user"
+            example: "my_user"
           password:
             type: string
-            exemple: "my_secret_password"
+            example: "my_secret_password"
       directory:
         type: string
-        exemple: "/path/"
+        example: "/path/"
 
   environment_type:
     type: object
