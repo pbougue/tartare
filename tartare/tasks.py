@@ -93,21 +93,22 @@ def publish_data_on_platform(platform: PublicationPlatform, coverage: Coverage, 
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
     job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
-    gridfs_handler = GridFsHandler()
-    file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
+    if coverage_export:
+        gridfs_handler = GridFsHandler()
+        file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
-    try:
-        publisher = PublisherManager.select_from_publication_platform(platform)
-        protocol_uploader = ProtocolManager.select_from_platform(platform)
-        publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
-        # Upgrade current_ntfs_id
-        current_ntfs_id = coverage_export.gridfs_id
-        coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
-        msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
-            error=str(exc), url=platform.url, type=platform.type)
-        logger.error(msg)
-        raise exc
+        try:
+            publisher = PublisherManager.select_from_publication_platform(platform)
+            protocol_uploader = ProtocolManager.select_from_platform(platform)
+            publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
+            # Upgrade current_ntfs_id
+            current_ntfs_id = coverage_export.gridfs_id
+            coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
+        except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
+            msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
+                error=str(exc), url=platform.url, type=platform.type)
+            logger.error(msg)
+            raise exc
 
 
 def finish_job(context: Context) -> None:
@@ -225,7 +226,7 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
     for environment in raw_sorted_environments:
         sorted_environments[flipped_environments[environment]] = environment
     for env in sorted_environments:
-        environment = coverage.get_environment(env)
+        environment = coverage.environments[env]
         sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
         for publication_platform in sorted_publication_platforms:
             publish_data_on_platform(publication_platform, coverage, env, job)

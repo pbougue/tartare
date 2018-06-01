@@ -32,10 +32,10 @@ import glob
 
 import os
 import zipfile
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 
 
-def type_of_data(filename: Union[str, list]) -> Tuple[str, str]:
+def type_of_data(filename: Union[str, list]) -> Tuple[Optional[str], Optional[str]]:
     """
         return the type of data contains in a file + the path to load it
         this type can be one in:
@@ -106,8 +106,8 @@ def type_of_data(filename: Union[str, list]) -> Tuple[str, str]:
 
 
 def is_ntfs_data(input_file: str) -> bool:
-    return type_of_data(input_file)[0] == 'fusio'
+    return type_of_data(input_file) and type_of_data(input_file)[0] == 'fusio'
 
 
 def is_calendar_data(input_file: str) -> bool:
-    return type_of_data(input_file)[0] == 'calendar'
+    return type_of_data(input_file) and type_of_data(input_file)[0] == 'calendar'

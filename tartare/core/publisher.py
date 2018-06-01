@@ -76,7 +76,7 @@ class HttpProtocol(AbstractProtocol):
 
 
 class FtpProtocol(AbstractProtocol):
-    def __init__(self, url: str, options: PlatformOptions) -> None:
+    def __init__(self, url: str, options: Optional[PlatformOptions]) -> None:
         super().__init__(url, options)
         self.url = self.url.replace('ftp://', '') if self.url.startswith('ftp://') else self.url
 
@@ -124,7 +124,7 @@ class ProtocolManager:
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: Optional[CoverageExport], input_data_source_ids: Optional[List[str]] = None) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         pass
 
 
@@ -141,7 +141,7 @@ class NavitiaPublisher(AbstractPublisher):
             # - one poly data source allowed by geo contributor
             # see tartare.decorators.check_contributor_data_source_osm_and_poly_constraint
             if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or \
-                    data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
+                            data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
                 data_set = data_source_obj.get_last_data_set()
                 file_to_publish = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
                 protocol_uploader.publish(file_to_publish, file_to_publish.filename)
@@ -149,6 +149,7 @@ class NavitiaPublisher(AbstractPublisher):
 
 class ODSPublisher(AbstractPublisher):
     format_date = '%Y%m%d'
+
     @property
     def metadata_ordered_columns(self) -> List[str]:
         return ['ID', 'Description', 'Format', 'Download', 'Validity start date', 'Validity end date',
@@ -166,6 +167,9 @@ class ODSPublisher(AbstractPublisher):
             data_set = data_source.get_last_data_set()
             if not data_set:
                 raise PublisherException('data source {} has no data set for ods publication'.format(data_source.id))
+            if not data_set.validity_period:
+                raise PublisherException(
+                    'data set of data source {} has no validity period for ods publication'.format(data_source.id))
             data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
             data_sets_with_format[data_format_formatted] = data_set_file
             file_size = data_set_file.length

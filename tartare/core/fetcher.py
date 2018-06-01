@@ -145,7 +145,7 @@ class FtpFetcher(AbstractFetcher):
     @classmethod
     def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
         url, username, password, parsed = cls.get_url_and_credentials(input)
-        if username and password:
+        if username and password and parsed:
             try:
                 session = ftplib.FTP(parsed.hostname, username, password)
                 with open(dest_full_file_name, 'wb') as dest_file:
