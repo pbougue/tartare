@@ -61,9 +61,8 @@ class AbstractRequestClient:
     def post(self, uri, payload=None, files=None, headers=None):
         return requests.post(self.get_url() + uri, json=payload, files=files, headers=headers)
 
-    def patch(self, uri, params=None, headers={'Content-Type': 'application/json'}):
-        data = params if params else {}
-        return requests.patch(self.get_url() + uri, data=data, headers=headers)
+    def put(self, uri, payload=None, headers={'Content-Type': 'application/json'}):
+        return requests.put(self.get_url() + uri, json=payload, headers=headers)
 
     def get_json_from_dict(self, dict):
         return json.dumps(dict)
@@ -182,6 +181,8 @@ class AbstractRequestClient:
         json_file = self.replace_server_id_in_input_data_source_fixture(fixture)
         raw = self.post('contributors', json_file)
         self.assert_sucessful_create(raw)
+
+        return self.get_dict_from_response(raw)['contributors'][0]
 
     def init_coverage(self, fixture):
         with open(self.get_api_fixture_path(fixture), 'rb') as file:

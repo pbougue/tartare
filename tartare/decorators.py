@@ -185,60 +185,6 @@ class CheckContributorIntegrity(object):
         return wrapper
 
 
-class CheckDataSourceIntegrity(object):
-    def __init__(self, data_source_id_required: bool = False) -> None:
-        self.data_source_id_required = data_source_id_required
-
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            post_data = request.json
-            contributor_id = kwargs.get('contributor_id', None)
-            data_source_id = kwargs.get('data_source_id', None)
-            if self.data_source_id_required and not data_source_id:
-                msg = "data_source_id not present in request"
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            try:
-                contributor = models.Contributor.get(contributor_id)
-            except EntityNotFound as e:
-                raise ObjectNotFound(str(e))
-            data_type = contributor.data_type
-            new_data_source = post_data.copy()
-            if self.data_source_id_required:
-                try:
-                    models.DataSource.get_one(contributor_id, data_source_id)
-                except ValueError as e:
-                    raise ObjectNotFound(str(e))
-                new_data_source['id'] = data_source_id
-                if post_data.get('data_format'):
-                    check_excepted_data_format(post_data.get('data_format'), data_type)
-            else:
-                check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-            check_contributor_data_source_osm_and_poly_constraint(contributor.data_sources, [new_data_source])
-
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
-class ValidatePatchCoverages(object):
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            post_data = request.json
-            if "environments" in post_data:
-                for environment_name in post_data.get("environments"):
-                    environment = post_data.get("environments").get(environment_name)
-                    if environment is not None and "publication_platforms" in environment:
-                        msg = "'publication_platforms' field can't be updated"
-                        logging.getLogger(__name__).error(msg)
-                        raise InvalidArguments(msg)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
 def validate_post_data_set(func: Callable) -> Any:
     @wraps(func)
     def wrapper(*args: list, **kwargs: str) -> Any:

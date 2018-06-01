@@ -65,7 +65,7 @@ class TestCoverageStatus(TartareFixture):
             ]
         }
         raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_create(raw)
+        return self.assert_sucessful_create(raw)['contributors'][0]
 
     def __create_coverage(self, contributors_ids=[], input_data_source_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
         coverage = {
@@ -208,7 +208,7 @@ class TestCoverageStatus(TartareFixture):
     def test_status_successive_automatic_update(self, init_http_download_server):
         # Automatic update that fails in a contributor export
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
-        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2', 'unknown_file')
+        contributor2 = self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2', 'unknown_file')
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3')
         self.__create_coverage(['contributor_automatic_update_2',
                                 'contributor_automatic_update_2',
@@ -229,13 +229,12 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['step'] == 'fetching data'
 
         # Let's make the automatic update a success
-        data_source = {
-            "input": {
-                "type": "url",
-                "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip')
-            }
+        contributor2['data_sources'][0]['input'] = {
+            "type": "url",
+            "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip')
         }
-        self.patch('/contributors/contributor_automatic_update_2/data_sources/ds_contributor_automatic_update_2', json.dumps(data_source))
+        
+        self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
         coverages = self.__run_automatic_update()
         assert len(coverages) == 1
         assert 'last_active_job' in coverages[0]
@@ -248,14 +247,11 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['step'] == 'save_coverage_export'
 
         # We make the automatic update failing in the contributor export again
-        data_source = {
-            "input": {
-                "type": "url",
-                "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url')
-            }
+        contributor2['data_sources'][0]['input'] = {
+            "type": "url",
+            "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url')
         }
-        self.patch('/contributors/contributor_automatic_update_2/data_sources/ds_contributor_automatic_update_2',
-                   json.dumps(data_source))
+        self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
         coverages = self.__run_automatic_update()
         assert len(coverages) == 1
         assert 'last_active_job' in coverages[0]

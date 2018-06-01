@@ -521,25 +521,26 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         filename = 'some_archive.zip'
-        contributor_geo = 'geo'
+        contributor_geo_id = 'geo'
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
         self.init_contributor(contributor_id, 'gtfs_ds_id', fetch_url)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
-        self.init_contributor(contributor_geo, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+        self.init_contributor(contributor_geo_id, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
                               data_type=DATA_TYPE_GEOGRAPHIC)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data',
                                     filename='ile-de-france.poly')
-        self.add_data_source_to_contributor(contributor_geo, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+        self.add_data_source_to_contributor(contributor_geo_id, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+
         publication_platform = {
             "sequence": 0,
             "type": "navitia",
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo_id], ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
 
         self.contributor_export(contributor_id)
-        self.contributor_export(contributor_geo)
+        self.contributor_export(contributor_geo_id)
         resp = self.coverage_export(coverage_id)
 
         assert post_mock.call_count == 2

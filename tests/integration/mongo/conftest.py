@@ -34,7 +34,7 @@ from tartare import app, mongo
 from tartare.core import models
 from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker, \
     DownloadHttpServerAuthentDocker, DownloadFtpServerAuthentDocker
-from tests.utils import to_json
+from tests.utils import to_json, to_dict
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -105,7 +105,7 @@ def coverage_with_data_source_tram_lyon(app):
     coverage = app.post('/coverages',
                         headers={'Content-Type': 'application/json'},
                         data='{"id": "jdr", "name": "name of the coverage jdr", "data_sources": ["tram_lyon"]}')
-    return to_json(coverage)['coverages'][0]
+    return to_dict(coverage)['coverages'][0]
 
 
 @pytest.fixture(scope="function")
@@ -113,7 +113,7 @@ def coverage(app):
     coverage = app.post('/coverages',
                         headers={'Content-Type': 'application/json'},
                         data='{"id": "jdr", "name": "name of the coverage jdr"}')
-    return to_json(coverage)['coverages'][0]
+    return to_dict(coverage)['coverages'][0]
 
 
 @pytest.fixture(scope="function")
@@ -121,16 +121,23 @@ def contributor(app):
     contributor = app.post('/contributors',
                            headers={'Content-Type': 'application/json'},
                            data='{"id": "id_test", "name": "name_test", "data_prefix": "AAA"}')
-    return to_json(contributor)['contributors'][0]
+    return to_dict(contributor)['contributors'][0]
 
 
 @pytest.fixture(scope="function")
 def data_source(app, contributor):
-    data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
+    contributor['data_sources'] = [
+        {
+            "id": "ds_test",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": "http://stif.com/od.zip"}
+        }
+    ]
+    contributors = app.put('/contributors/{}'.format(contributor.get('id')),
                            headers={'Content-Type': 'application/json'},
-                           data='{"id": "ds_test", "name": "bobette", "data_format": "gtfs",'
-                                '"input": {"type": "url", "url": "http://stif.com/od.zip"}}')
-    ds = to_json(data_source)['data_sources'][0]
+                           data=to_json(contributor))
+    ds = to_dict(contributors)['contributors'][0]['data_sources'][0]
     calculated_fields = ['status', 'updated_at', 'fetch_started_at']
     for calculated_field in calculated_fields:
         ds.pop(calculated_field, None)

@@ -174,18 +174,26 @@ class TartareFixture(object):
             coverage['license'] = license
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
-        return self.json_to_dict(raw)
+        return self.json_to_dict(raw)['coverages'][0]
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
-        raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
-        self.assert_sucessful_create(raw)
+        raw = self.get('coverages/{}'.format(coverage_id))
+        coverage = self.json_to_dict(raw)['coverages'][0]
+        coverage['preprocesses'].append(preprocess)
+        raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
 
     def add_preprocess_to_contributor(self, preprocess, contributor_id):
-        raw = self.post('contributors/{}/preprocesses'.format(contributor_id), self.dict_to_json(preprocess))
-        self.assert_sucessful_create(raw)
+        raw = self.get('contributors/{}'.format(contributor_id))
+        contributor = self.json_to_dict(raw)['contributors'][0]
+        contributor['preprocesses'].append(preprocess)
+        raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
-    def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
-        data_source = {
+    def add_data_source_to_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
+        raw = self.get('contributors/{}'.format(contributor_id))
+        contributor = self.json_to_dict(raw)['contributors'][0]
+        contributor['data_sources'].append({
             "id": data_source_id,
             "name": data_source_id,
             "data_format": data_format,
@@ -193,9 +201,9 @@ class TartareFixture(object):
                 "type": "url",
                 "url": url
             }
-        }
-        raw = self.post('/contributors/{}/data_sources'.format(contrib_id), self.dict_to_json(data_source))
-        self.assert_sucessful_create(raw)
+        })
+        self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
     def update_data_source_url(self, contrib_id, ds_id, url):
         contributor = self.get_contributor(contrib_id)

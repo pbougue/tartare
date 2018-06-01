@@ -49,6 +49,14 @@ class TestGetFiles(TartareFixture):
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)
 
+        contributor['data_sources'].append({
+            "id": "to_process",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        self.put('/contributors/id_test', params=self.dict_to_json(contributor))
+
         coverage = {
             "contributors_ids": [contributor['id']],
             "input_data_source_ids": ['to_process'],
@@ -75,11 +83,6 @@ class TestGetFiles(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        # Data sources added
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", '
-                               '"data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
 
         # Coverage added
         raw = self.post('/coverages', params=json.dumps(coverage))

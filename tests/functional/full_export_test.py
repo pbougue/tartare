@@ -100,16 +100,16 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_coverage_exports_callback_waits_for_contributor_full_export(self):
-        self.init_contributor('contributor_sleeping.json')
+        contributor = self.init_contributor('contributor_sleeping.json')
         self.init_contributor('contributor_light.json')
         self.init_coverage('coverage_triggered.json')
 
         self.post('/actions/automatic_update?current_date=2017-08-15')
         self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
-        self.patch(
-            '/contributors/{}/data_sources/{}'.format('contributor_id_sleeping', 'data_source_to_process_id_sleeping'),
-            json.dumps({'input': {'url': "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
-                HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))}}))
+
+        contributor['data_sources'][0]['input']['url'] = "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
+                HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
+        self.put('/contributors/contributor_id_sleeping', contributor)
         self.post('/actions/automatic_update?current_date=2017-08-15')
         # here there should be 2 coverage exports:
         # - one for the first automatic update because all data set were new

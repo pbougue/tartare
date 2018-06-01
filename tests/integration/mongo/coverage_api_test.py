@@ -370,23 +370,6 @@ class TestCoverageApi(TartareFixture):
         assert platform["type"] == 'navitia'
         assert platform["url"] == 'ftp.ods.com'
 
-    def test_patch_simple_coverage(self):
-        raw = self.post('/coverages',
-                        '''{"id": "id_test", "name": "name of the coverage"}''')
-        assert raw.status_code == 201
-        raw = self.get('/coverages')
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"]) == 1
-        assert isinstance(r["coverages"], list)
-        assert r["coverages"][0]["id"] == "id_test"
-        assert r["coverages"][0]["name"] == "name of the coverage"
-
-        raw = self.patch('/coverages/id_test', '{"name": "new name"}')
-        assert raw.status_code == 200
-        r = self.json_to_dict(raw)
-        assert r["coverages"][0]["id"] == "id_test"
-        assert r["coverages"][0]["name"] == "new name"
-
     def test_delete_coverage_returns_success(self):
         raw = self.get('/coverages/id_test')
         assert raw.status_code == 404
@@ -403,93 +386,6 @@ class TestCoverageApi(TartareFixture):
         raw = self.get('/coverages')
         r = self.json_to_dict(raw)
         assert len(r["coverages"]) == 1
-
-    def test_update_coverage_returns_success_status(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-
-        raw = self.patch('/coverages/id_test', '{"name": "new_name_test"}')
-        r = self.json_to_dict(raw)
-
-        assert raw.status_code == 200
-        assert r["coverages"][0]['id'] == "id_test"
-        assert r["coverages"][0]['name'] == "new_name_test"
-
-    def test_update_unknown_coverage(self):
-        raw = self.patch('/coverages/unknown', '{"name": "new_name_test"}')
-        r = self.json_to_dict(raw)
-        assert 'message' in r
-        assert raw.status_code == 404
-
-    def test_update_id_impossible(self):
-        """It should not be possible to update the id of an object"""
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-        raw = self.patch('/coverages/id_test', '{"id": "bob"}')
-        r = self.json_to_dict(raw)
-        assert 'error' in r
-        assert raw.status_code == 400
-
-    def test_update_coverage_forbid_unkown_field(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-
-        raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "foo": "bar"}')
-        r = self.json_to_dict(raw)
-
-        assert raw.status_code == 400
-        assert 'error' in r
-
-    def test_update_coverage_forbid_unkown_environments_type(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-
-        raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "environments": '
-                                               '{"integration": {"name": "bar", "sequence": 0}}}')
-        assert raw.status_code == 200
-
-        raw = self.patch('/coverages/id_test', '{"name": "new_name_test", "environments": {"bar": {"name": "bar"}}}')
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
-        assert 'error' in r
-
-    def test_update_coverage_env(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-
-        raw = self.patch('/coverages/id_test',
-                         '''{"environments" : {
-                         "preproduction": {"name": "pre", "sequence": 0},
-                         "production": null
-                        }}''')
-
-        assert raw.status_code == 200
-        raw = self.get('/coverages')
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"]) == 1
-        assert isinstance(r["coverages"], list)
-        coverage = r["coverages"][0]
-        assert coverage["id"] == "id_test"
-        assert coverage["name"] == "name_test"
-        assert 'environments' in coverage
-        assert 'production' not in coverage['environments']
-        assert 'preproduction' in coverage['environments']
-        assert coverage['environments']['preproduction']['name'] == 'pre'
-        assert coverage['environments']['preproduction']['sequence'] == 0
-
-    def test_update_coverage_environment_with_validation(self):
-        raw = self.post('/coverages', '{"id": "id_test", "name": "name_test"}')
-        assert raw.status_code == 201
-
-        raw = self.patch('/coverages/id_test',
-                         '''{"environments" : {
-                         "preproduction": {"publication_platform":  [ { "options": { "authent": { "username": "test" },
-                          "directory": "/" }}]},
-                         "production": null
-                        }}''')
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
-        assert 'error' in r
 
     @pytest.mark.parametrize("license_url,license_name,expected_status_code", [
         ('http://license.org/mycompany', 'my license', 201),
@@ -528,19 +424,6 @@ class TestCoverageApi(TartareFixture):
         assert len(r["coverages"][0]['contributors_ids']) == 1
         assert r["coverages"][0]['contributors_ids'][0] == 'id_test'
 
-    def test_patch_coverage_with_unknown_contributor(self, coverage):
-        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["unknown"]}')
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
-        assert r['error'] == "contributor 'unknown' not found"
-
-    def test_patch_coverage_with_existing_contributor(self, coverage, contributor):
-        raw = self.patch('/coverages/{}'.format(coverage['id']), '{"contributors_ids": ["id_test"]}')
-        assert raw.status_code == 200
-        r = self.json_to_dict(raw)
-        assert len(r["coverages"][0]['contributors_ids']) == 1
-        assert r["coverages"][0]['contributors_ids'][0] == 'id_test'
-
     def __assert_pub_platform_authent(self, pub_platform, user_to_set):
         assert 'password' not in pub_platform['options']['authent']
         assert 'username' in pub_platform['options']['authent']
@@ -574,18 +457,17 @@ class TestCoverageApi(TartareFixture):
             "name": cov_id
         }
         raw = self.post("/coverages", self.dict_to_json(coverage))
-        self.assert_sucessful_create(raw)
+        coverage = self.assert_sucessful_create(raw)['coverages'][0]
         r = self.json_to_dict(raw)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
-        raw = self.patch('/coverages/' + cov_id, self.dict_to_json({'name': 'toto'}))
-        self.assert_sucessful_call(raw, 200)
-        r = self.json_to_dict(raw)['coverages'][0]
+        coverage['name'] = 'toto'
+        raw = self.put('/coverages/' + cov_id, self.dict_to_json(coverage))
+        r = self.assert_sucessful_call(raw, 200)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
         raw = self.get('/coverages/{cov_id}'.format(cov_id=cov_id))
-        self.assert_sucessful_call(raw, 200)
-        r = self.json_to_dict(raw)['coverages'][0]
+        r = self.assert_sucessful_call(raw, 200)['coverages'][0]
         self.__assert_pub_platform_authent(r['environments']['production']['publication_platforms'][0], user_to_set)
 
     def __create_geo_contributor(self, id, data_source_id=None):
@@ -637,18 +519,6 @@ class TestCoverageApi(TartareFixture):
         r = self.assert_failed_call(raw)
         assert r == {
             'error': 'unable to have more than one data source from more than 2 contributors of type geographic by coverage',
-            'message': 'Invalid arguments'
-        }
-
-    def test_post_coverage_multiple_geo_contrib(self, coverage):
-        self.__create_geo_contributor('geo-1')
-        self.__create_geo_contributor('geo-2')
-        raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-1'}))
-        self.assert_sucessful_create(raw)
-        raw = self.post('/coverages/jdr/contributors', self.dict_to_json({'id': 'geo-2'}))
-        r = self.assert_failed_call(raw)
-        assert r == {
-            'error': 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC),
             'message': 'Invalid arguments'
         }
 
@@ -722,7 +592,7 @@ class TestCoverageApi(TartareFixture):
                 "url": "http://fusio_host.old/cgi-bin/fusio.dll/api"
             },
             "sequence": 4
-        }])['coverages'][0]
+        }])
         coverage['preprocesses'] = [
             {
                 "id": "preprocess_1",
@@ -790,7 +660,7 @@ class TestCoverageApi(TartareFixture):
                     }
                 ]
             }
-        })['coverages'][0]
+        })
         coverage['environments'] = {
             'production': {
                 'name': 'production',
