@@ -31,8 +31,7 @@
 import os
 import tempfile
 
-from tartare import app, mongo
-from tartare.core import models
+from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
@@ -68,7 +67,9 @@ class TestDataSourceFetchAction(TartareFixture):
 
         self.assert_sucessful_call(raw, 204)
 
-        data_source = self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))['data_sources'][0]
+        data_source = \
+            self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))[
+                'data_sources'][0]
         data_set = data_source['data_sets'][0]
         # Test that source file and saved file are the same
         with app.app_context():
@@ -156,6 +157,56 @@ class TestDataSourceFetchAction(TartareFixture):
         )
         self.init_contributor('cid', 'dsid', url)
         self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_authent_in_options_ok(self, init_http_download_authent_server):
+        props = init_http_download_authent_server.properties
+        url = "http://{ip}/{alias}gtfs/{filename}".format(
+            alias=props['ROOT'],
+            ip=init_http_download_authent_server.ip_addr,
+            filename='some_archive.zip'
+        )
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': props['USERNAME'], 'password': props['PASSWORD']}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_ftp_authent_in_options_ok(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_ftp_authent_in_options_unauthorized(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': 'wrong_user',
+                        'password': 'wrong_password'}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': 'fetching {} failed: error during download of file: 530 Login authentication failed'.format(url),
+            'message': 'Internal Server Error'}
+
+    def test_fetch_ftp_authent_in_options_not_found(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive_unknown.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': "fetching {} failed: error during download of file: 550 Can't open /gtfs/some_archive_unknown.zip: No such file or directory".format(url),
+            'message': 'Internal Server Error'}
 
     def test_fetch_authent_in_http_url_unauthorized(self, init_http_download_authent_server):
         props = init_http_download_authent_server.properties

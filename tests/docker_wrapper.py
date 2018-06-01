@@ -87,6 +87,10 @@ class AbstractDocker(metaclass=ABCMeta):
         return None
 
     @property
+    def command(self):
+        return None
+
+    @property
     def volumes(self):
         return []
 
@@ -112,7 +116,7 @@ class AbstractDocker(metaclass=ABCMeta):
 
         try:
             self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
-                                                             ports=self.ports,
+                                                             ports=self.ports, command=self.command,
                                                              environment=self.env_vars,
                                                              volumes=self.volumes, host_config=host_config).get('Id')
             self.logger.info("docker id is {}".format(self.container_id))
@@ -216,6 +220,7 @@ class DownloadHttpServerAuthentDocker(AbstractHttpServerDocker):
                 'mode': 'ro',
             },
         }
+
     @property
     def env_vars(self):
         return {'USERNAME': 'user@domain.com', 'PASSWORD': 'myPassword*'}
@@ -306,6 +311,46 @@ class UploadFtpServerDocker(AbstractDocker):
 
     def wait_until_available(self):
         sleep(3)
+
+
+class DownloadFtpServerAuthentDocker(UploadFtpServerDocker):
+    # see credentials copied here : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
+    @property
+    def home_dir(self):
+        return '/home/ftpusers/{}'.format(self.user)
+
+    @property
+    def volumes(self):
+        return [self.conf_dir, self.home_dir]
+
+    @property
+    def container_name(self):
+        return 'ftp_download_server_authent'
+
+    @property
+    def image_name(self):
+        return 'stilliard/pure-ftpd:hardened'
+
+    @property
+    def volumes_bindings(self):
+        volumes_binding = super().volumes_bindings
+        volumes_binding[self.fixtures_directory] = {
+            'bind': self.home_dir,
+            'mode': 'rw',
+        }
+        return volumes_binding
+
+    @property
+    def command(self):
+        return '/run.sh -c 5 -C 5 -l puredb:/etc/pure-ftpd/pureftpd.pdb -E -j -R -P localhost -p 30010:30019'
+
+    @property
+    def port_bindings(self):
+        return {nb: nb for nb in range(30010, 30020)}
+
+    @property
+    def ports(self):
+        return [nb for nb in range(30010, 30020)]
 
 
 class MongoDocker(AbstractDocker):

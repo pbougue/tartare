@@ -50,7 +50,6 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import IntegrityException, ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
-from tartare.http_exceptions import ObjectNotFound
 
 
 @app.before_first_request
@@ -197,7 +196,8 @@ class PublicationPlatform(SequenceContainer, Platform):
 
 
 class Environment(SequenceContainer):
-    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[PublicationPlatform] = None,
+    def __init__(self, name: str = None, current_ntfs_id: str = None,
+                 publication_platforms: List[PublicationPlatform] = None,
                  sequence: Optional[int] = 0) -> None:
         super().__init__(sequence)
         self.name = name
@@ -269,10 +269,11 @@ class License(object):
 
 class Input(object):
     def __init__(self, type: str = INPUT_TYPE_DEFAULT, url: Optional[str] = None,
-                 expected_file_name: str = None) -> None:
+                 expected_file_name: str = None, options: PlatformOptions = None) -> None:
         self.type = type
         self.url = url
         self.expected_file_name = expected_file_name
+        self.options = options
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -749,8 +750,8 @@ class Coverage(PreProcessContainer):
 
     def add_contributor(self, contributor: Contributor) -> None:
         if contributor.is_geographic() and any(
-                        Contributor.get(contributor_id).is_geographic() for contributor_id in
-                        self.contributors_ids):
+                Contributor.get(contributor_id).is_geographic() for contributor_id in
+                self.contributors_ids):
             raise IntegrityException(
                 'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
             )
@@ -923,6 +924,7 @@ class MongoDataSourceInputSchema(Schema):
     type = InputType(required=False, allow_none=True)
     url = fields.String(required=False, allow_none=True)
     expected_file_name = fields.String(required=False, allow_none=True)
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
 
     @post_load
     def make_input(self, data: dict) -> Input:
