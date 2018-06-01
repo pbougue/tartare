@@ -83,7 +83,7 @@ class TartareFixture(object):
         return "{method}://{ip}/{path}/{filename}".format(method=method, ip=ip, filename=filename, path=path)
 
     def assert_sucessful_create(self, raw):
-        self.assert_sucessful_call(raw, 201)
+        return self.assert_sucessful_call(raw, 201)
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
         debug = self.json_to_dict(raw) if status_code_expected != 204 else 'no body'
@@ -156,14 +156,16 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)['contributors'][0]
 
-    def init_coverage(self, id, contributors_ids=None, preprocesses=None, environments=None, license=None):
+    def init_coverage(self, id, contributors_ids=None, input_data_source_ids= None, preprocesses=None, environments=None, license=None):
         contributors_ids = contributors_ids if contributors_ids else []
         preprocesses = preprocesses if preprocesses else []
         environments = environments if environments else {}
+        input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         coverage = {
             "id": id,
             "name": id,
             "contributors_ids": contributors_ids,
+            "input_data_source_ids": input_data_source_ids,
             "preprocesses": preprocesses,
             "environments": environments,
             "short_description": "description of coverage {}".format(id)

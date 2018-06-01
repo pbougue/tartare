@@ -213,22 +213,22 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
 
     # insert export in mongo db
     context.job.update(step="save_coverage_export")
-    export = coverage_export_functions.save_export(coverage, context)
-    if export:
-        # launch publish for all environment
-        sorted_environments = {}
-        # flip env: object in object: env
-        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
-        # sort envs
-        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
-        # restore mapping
-        for environment in raw_sorted_environments:
-            sorted_environments[flipped_environments[environment]] = environment
-        for env in sorted_environments:
-            environment = coverage.get_environment(env)
-            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-            for publication_platform in sorted_publication_platforms:
-                publish_data_on_platform(publication_platform, coverage, env, job)
+    coverage_export_functions.save_export(coverage, context)
+
+    # launch publish for all environment
+    sorted_environments = {}
+    # flip env: object in object: env
+    flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+    # sort envs
+    raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+    # restore mapping
+    for environment in raw_sorted_environments:
+        sorted_environments[flipped_environments[environment]] = environment
+    for env in sorted_environments:
+        environment = coverage.get_environment(env)
+        sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
+        for publication_platform in sorted_publication_platforms:
+            publish_data_on_platform(publication_platform, coverage, env, job)
     finish_job(context)
     return context
 

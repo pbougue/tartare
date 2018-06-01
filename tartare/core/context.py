@@ -32,7 +32,7 @@ from typing import Dict
 from typing import List, Optional
 
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ValidityPeriod, Contributor, Coverage, DataSource, \
+from tartare.core.models import ValidityPeriod, Contributor, Coverage, DataSource, \
     ValidityPeriodContainer, Job, DataSet
 from tartare.exceptions import IntegrityException, ParameterException, EntityNotFound
 
@@ -61,7 +61,6 @@ class ContributorContext(ValidityPeriodContainer):
 
 class Context:
     def __init__(self, job: Job) -> None:
-        self.contributor_contexts = []  # type: Optional[List[ContributorContext]]
         self.job = job
 
     def __repr__(self) -> str:
@@ -84,6 +83,7 @@ class ContributorExportContext(Context):
     def __init__(self, job: Job) -> None:
         super().__init__(job)
         self.data_source_exports = {}  # type: Dict[str, List[DataSourceExport]]
+        self.contributor_contexts = []  # type: Optional[List[ContributorContext]]
 
     def append_data_source_export(self, data_source: DataSource, data_set: DataSet) -> None:
         if data_source.export_data_source_id not in self.data_source_exports:
@@ -194,33 +194,16 @@ class ContributorExportContext(Context):
 class CoverageExportContext(Context, ValidityPeriodContainer):
     def __init__(self, job: Job, coverage: Coverage = None, current_date: date = date.today()) -> None:
         super().__init__(job=job)
-        self.validity_period = None
+        ValidityPeriodContainer.__init__(self)
         self.coverage = coverage
         self.global_gridfs_id = ''
         self.current_date = current_date
 
     def fill_contributor_contexts(self, coverage: Coverage) -> None:
-        self.contributor_contexts = []
-        if not coverage.contributors_ids:
+        if not coverage.input_data_source_ids:
             raise IntegrityException(
-                'unable to get any contributor exports since no contributors are attached to coverage {}'.format(
+                'no data sources are attached to coverage {}'.format(
                     coverage.id))
-        for contributor_id in coverage.contributors_ids:
-            contributor_export = ContributorExport.get_last(contributor_id)
-            if contributor_export:
-                data_source_contexts = []
-                for data_source in contributor_export.data_sources:
-                    data_source_contexts.append(
-                        DataSourceContext(data_source_id=data_source.data_source_id,
-                                          gridfs_id=GridFsHandler().copy_file(data_source.gridfs_id),
-                                          validity_period=data_source.validity_period)
-                    )
-                if data_source_contexts:
-                    self.contributor_contexts.append(
-                        ContributorContext(contributor=Contributor.get(contributor_id=contributor_id),
-                                           validity_period=contributor_export.validity_period,
-                                           data_source_contexts=data_source_contexts))
-        self.coverage = coverage
 
     def __repr__(self) -> str:
         return str(vars(self))

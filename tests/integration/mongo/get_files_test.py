@@ -51,6 +51,7 @@ class TestGetFiles(TartareFixture):
 
         coverage = {
             "contributors_ids": [contributor['id']],
+            "input_data_source_ids": ['to_process'],
             "environments": {
                 "production": {
                     "name": "production",

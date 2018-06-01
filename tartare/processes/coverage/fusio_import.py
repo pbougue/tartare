@@ -30,7 +30,7 @@
 import requests
 
 from tartare.core.context import Context
-from tartare.core.models import ValidityPeriod
+from tartare.core.models import ValidityPeriod, DataSource
 from tartare.exceptions import IntegrityException, ValidityPeriodException
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -40,8 +40,10 @@ from tartare.processes.utils import preprocess_registry
 @preprocess_registry('coverage')
 class FusioImport(AbstractFusioProcess):
     def get_validity_period(self) -> ValidityPeriod:
-        validity_periods = [ceds.validity_period for ceds in self.context.contributor_contexts if
-                            ceds.validity_period]
+        validity_periods = [
+            DataSource.get_one(data_source_id=data_source_id).get_last_data_set().validity_period
+            for data_source_id in self.context.coverage.input_data_source_ids
+        ]
         try:
             validity_period_union = ValidityPeriod.union(validity_periods).to_valid(self.context.current_date)
         except ValidityPeriodException as exception:

@@ -34,7 +34,7 @@ from mock import mock
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import CoverageExportContext
-from tartare.core.models import ValidityPeriod, PreProcess, Job
+from tartare.core.models import ValidityPeriod, PreProcess, Job, Coverage
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from tests.utils import get_response
@@ -54,7 +54,7 @@ class TestFusioProcesses:
         expected_period = ValidityPeriod(begin_date, end_date)
         get_validity_period_union.return_value = expected_period
         get_validity_period_valid.return_value = expected_period
-        context = CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT))
+        context = CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT), Coverage("id_cov", "id_cov"))
         keep_response_content = 'fusio_response'
         action_id = 42
 
@@ -77,7 +77,7 @@ class TestFusioProcesses:
             subcall_details = 'sub call details'
             get_validity_period_union.return_value = ValidityPeriod(date(2018, 1, 1), date(2018, 3, 1))
             get_validity_period_valid.side_effect = ValidityPeriodException(subcall_details)
-            fusio_import = FusioImport(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
+            fusio_import = FusioImport(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT), Coverage("id_cov", "id_cov")),
                                        PreProcess(params={"url": "whatever"}))
             fusio_import.do()
         assert str(excinfo.value) == 'bounds date for fusio import incorrect: {details}'.format(details=subcall_details)

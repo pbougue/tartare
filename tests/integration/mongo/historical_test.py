@@ -63,7 +63,8 @@ class TestHistorical(TartareFixture):
         self.assert_sucessful_create(raw)
 
     def __init_coverage_config(self):
-        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"]}
+        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"],
+                    "input_data_source_ids": ["data_source_gtfs"]}
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 
@@ -113,7 +114,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 7)
+        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 5)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_sets_histo_and_cleaning(self, init_http_download_server):

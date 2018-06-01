@@ -53,6 +53,7 @@ class TestDataPublisher(TartareFixture):
             "data_prefix": id,
             "data_sources": [
                 {
+                    "id": 'ds_' + data_format,
                     "name": 'ds' + data_format,
                     "data_format": data_format,
                     "input": {
@@ -66,10 +67,12 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
         return resp
 
-    def _create_coverage(self, id, contributor_id, publication_platform, license=None):
+    def _create_coverage(self, id, contributor_id, input_data_source_id, publication_platform, license=None):
         contributors_ids = contributor_id if type(contributor_id) == list else [contributor_id]
+        input_data_source_ids = input_data_source_id if type(input_data_source_id) == list else [input_data_source_id]
         coverage = {
             "contributors_ids": contributors_ids,
+            "input_data_source_ids": input_data_source_ids,
             "environments": {
                 "production": {
                     "name": "production",
@@ -101,7 +104,7 @@ class TestDataPublisher(TartareFixture):
             "url": "http://bob/v0/jobs"
         }
         self._create_contributor(contributor_id, url=url)
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
@@ -127,11 +130,6 @@ class TestDataPublisher(TartareFixture):
         assert exports[0]["validity_period"]["start_date"] == "2015-02-16"
         assert exports[0]["validity_period"]["end_date"] == "2017-01-15"
         assert exports[0]["gridfs_id"]
-        contributors = exports[0]["contributors"]
-        assert len(contributors) == 1
-        assert contributors[0]["validity_period"]
-        assert len(contributors[0]["data_sources"]) == 1
-        assert contributors[0]["data_sources"][0]["validity_period"]
 
     def test_publish_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
@@ -152,7 +150,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -194,7 +192,7 @@ class TestDataPublisher(TartareFixture):
                 "directory": directory
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id)
 
@@ -260,7 +258,7 @@ class TestDataPublisher(TartareFixture):
             "name": 'my license',
             "url": 'http://license.org/mycompany'
         }
-        self.init_coverage(coverage_id, [contributor_id], preprocesses, environments, license)
+        self.init_coverage(coverage_id, [contributor_id], ["my_gtfs"], preprocesses, environments, license)
 
         fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
         fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
@@ -297,7 +295,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -323,6 +321,9 @@ class TestDataPublisher(TartareFixture):
         coverage = {
             "contributors_ids": [
                 contributor_id
+            ],
+            "input_data_source_ids": [
+                'ds_gtfs'
             ],
             "environments": {},
             "id": cov_id,
@@ -383,6 +384,9 @@ class TestDataPublisher(TartareFixture):
             "contributors_ids": [
                 contributor_id
             ],
+            "input_data_source_ids": [
+                'ds_gtfs'
+            ],
             "environments": {
                 "production": {
                     "name": 'production',
@@ -414,6 +418,9 @@ class TestDataPublisher(TartareFixture):
         coverage = {
             "contributors_ids": [
                 contributor_id
+            ],
+            "input_data_source_ids": [
+                'ds_gtfs'
             ],
             "environments": {},
             "id": cov_id,
@@ -460,7 +467,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
 
         resp = self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -494,7 +501,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo], ['ds_gtfs', 'ds_'+data_format], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo)
@@ -529,13 +536,13 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+        self._create_coverage(coverage_id, [contributor_id, contributor_geo], ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo)
         resp = self.coverage_export(coverage_id)
 
-        assert post_mock.call_count == 3
+        assert post_mock.call_count == 2
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
@@ -561,7 +568,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_geo, publication_platform)
+        self._create_coverage(coverage_id, contributor_geo, 'ds_' + data_format, publication_platform)
 
         resp = self.full_export(contributor_geo, coverage_id, '2015-08-10')
 
