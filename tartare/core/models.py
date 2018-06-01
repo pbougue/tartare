@@ -1181,13 +1181,12 @@ class CoverageExport(Historisable):
     mongo_collection = 'coverage_exports'
 
     def __init__(self, coverage_id: str, gridfs_id: str, validity_period: ValidityPeriod,
-                 contributors: List[CoverageExportContributor] = None, id: str = None, created_at: str = None) -> None:
+                 id: str = None, created_at: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
         self.created_at = created_at if created_at else datetime.utcnow()
-        self.contributors = [] if contributors is None else contributors
 
     def save(self) -> None:
         raw = MongoCoverageExportSchema().dump(self).data
@@ -1220,7 +1219,6 @@ class MongoCoverageExportSchema(Schema):
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
-    contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)
 
     @post_load
     def make_coverage_export(self, data: dict) -> CoverageExport:

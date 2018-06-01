@@ -206,8 +206,6 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw, 204)
         raw = self.get('/jobs')
         self.assert_sucessful_call(raw, 200)
-        import logging
-        logging.getLogger('JOB').debug(self.json_to_dict(raw)['jobs'])
         return self.json_to_dict(raw)['jobs']
 
     def get_fusio_export_url_response_from_action_id(self, action_id, export_url):

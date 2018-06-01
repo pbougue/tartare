@@ -146,11 +146,10 @@ def coverage_obj(tmpdir, get_app_context):
 def coverage_export_obj(tmpdir, get_app_context):
     p = models.ValidityPeriod(date(2017, 1, 1), date(2017, 1, 30))
     c = models.ContributorExportDataSource(data_source_id='1234', validity_period=p)
-    contributors = models.CoverageExportContributor(contributor_id='fr-idf',
-                                                    validity_period=p, data_sources=[c])
     coverage_export = models.CoverageExport(coverage_id='coverage1',
                                             gridfs_id='1234',
-                                            validity_period=p,
-                                            contributors=[contributors])
+                                            validity_period=p
+                                            )
+
     coverage_export.save()
     return coverage_export

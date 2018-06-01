@@ -81,10 +81,6 @@ class TestCoverageExport(TartareFixture):
         assert r["exports"][0]["coverage_id"] == "coverage1"
         assert r["exports"][0]['validity_period']['start_date'] == '2017-01-01'
         assert r["exports"][0]['validity_period']['end_date'] == '2017-01-30'
-        assert len(r["exports"][0]["contributors"]) == 1
-        assert r["exports"][0]["contributors"][0]['contributor_id'] == 'fr-idf'
-        assert r["exports"][0]['contributors'][0]['validity_period']['start_date'] == '2017-01-01'
-        assert r["exports"][0]['contributors'][0]['validity_period']['end_date'] == '2017-01-30'
 
         # Exports for coverage2, 0 export
         exports = self.get('/coverages/coverage2/exports')

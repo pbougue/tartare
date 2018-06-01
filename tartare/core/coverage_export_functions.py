@@ -69,6 +69,6 @@ def postprocess(coverage: Coverage, context: CoverageExportContext) -> CoverageE
 def save_export(coverage: Coverage, context: CoverageExportContext) -> None:
     export = CoverageExport(coverage_id=coverage.id,
                             gridfs_id=context.global_gridfs_id,
-                            validity_period=context.validity_period,
-                            contributors=[])
+                            validity_period=context.validity_period
+                            )
     export.save()

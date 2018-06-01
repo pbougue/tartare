@@ -91,7 +91,7 @@ class TestCoverageStatus(TartareFixture):
         raw = self.post('coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 
-    def test_status_after_success_coverage_export_without_contributor(self):
+    def test_status_after_success_coverage_export_without_input_data_source_ids(self):
         coverage_id = 'cov_id'
         self.__create_coverage(coverage_id=coverage_id)
         coverages = self.__run_coverage_export(coverage_id)
