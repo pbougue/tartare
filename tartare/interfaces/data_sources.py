@@ -30,35 +30,12 @@ from typing import Optional
 
 import flask_restful
 from flask import Response
-from flask_restful import request
-from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
-from tartare.exceptions import EntityNotFound
 from tartare.interfaces import schema
-from marshmallow import ValidationError
-from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
-from tartare.decorators import JsonDataValidate, CheckDataSourceIntegrity
+from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 
 
 class DataSource(flask_restful.Resource):
-    @JsonDataValidate()
-    @CheckDataSourceIntegrity()
-    def post(self, contributor_id: str) -> Response:
-        data_source_schema = schema.DataSourceSchema(strict=True)
-        try:
-            d = request.json
-            data_source = data_source_schema.load(d).data
-        except ValidationError as err:
-            raise InvalidArguments(err.messages)
-        try:
-            data_source.save(contributor_id)
-            response, status = self.get(contributor_id, data_source.id)
-            return response, 201
-        except (ValueError, DuplicateKeyError) as e:
-            raise DuplicateEntry(str(e))
-        except PyMongoError:
-            raise InternalServerError('impossible to add data source')
-
     def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
             ds = models.DataSource.get(contributor_id, data_source_id)
@@ -68,37 +45,3 @@ class DataSource(flask_restful.Resource):
             raise InvalidArguments(str(e))
 
         return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
-
-    def delete(self, contributor_id: str, data_source_id: str) -> Response:
-        try:
-            nb_deleted = models.DataSource.delete(contributor_id, data_source_id)
-            if nb_deleted == 0:
-                raise ObjectNotFound("data source '{}' not found".format(contributor_id))
-        except EntityNotFound as e:
-            raise ObjectNotFound(str(e))
-        except ValueError as e:
-            raise InvalidArguments(str(e))
-
-        return {'data_sources': []}, 204
-
-    @JsonDataValidate()
-    @CheckDataSourceIntegrity(data_source_id_required=True)
-    def patch(self, contributor_id: str, data_source_id: Optional[str]=None) -> Response:
-        ds = models.DataSource.get(contributor_id, data_source_id)
-
-        schema_data_source = schema.DataSourceSchema(partial=True)
-        errors = schema_data_source.validate(request.json, partial=True)
-        if errors:
-            raise InvalidArguments("invalid data, {}".format(errors))
-
-        if 'id' in request.json and ds[0].id != request.json['id']:
-            raise InvalidArguments('the modification of the id is not possible')
-
-        try:
-            models.DataSource.update(contributor_id, data_source_id, request.json)
-        except ValueError as e:
-            raise InvalidArguments(str(e))
-        except PyMongoError:
-            raise InternalServerError('impossible to update contributor with dataset {}'.format(request.json))
-
-        return self.get(contributor_id, data_source_id)

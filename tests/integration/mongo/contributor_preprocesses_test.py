@@ -465,15 +465,15 @@ class TestHeadsignShortNameProcess(TartareFixture):
         return self.get_job_from_export_response(resp)
 
     def test_expected_files(self, init_http_download_server):
-        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+        contributor = self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
                               export_id='export_id')
-        preprocess = {
+        contributor['preprocesses'].append({
             "id": "plop",
             "sequence": 0,
             "data_source_ids": ['dsid'],
             "type": "HeadsignShortName",
-        }
-        self.post('/contributors/cid/preprocesses', self.dict_to_json(preprocess))
+        })
+        self.put('/contributors/cid', self.dict_to_json(contributor))
         resp = self.contributor_export('cid', check_done=False)
         job = self.get_job_from_export_response(resp)
         assert job['state'] == 'failed'
@@ -512,7 +512,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
 
 class TestRuspellProcess(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params,
-                                               export_contrib_geo=True, do_export=True):
+                                               export_contrib_geo=True, do_export=True, exclude_transport_data_source=False):
         # Create contributor geographic
         url_bano = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
         contrib_geographic = {
@@ -597,27 +597,6 @@ class TestRuspellProcess(TartareFixture):
         assert job[
                    'error_message'] == '[process "ruspell_id"] data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
             data_source_id, contributor_id)
-
-    def test_ruspell_error_message_unknown_target_data_source(self, init_http_download_server):
-        params = {
-            'links': [
-                {'contributor_id': 'id_test', 'data_source_id': 'ds_to_process'},
-                {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
-            ]
-        }
-
-        self.__setup_contributor_export_environment(init_http_download_server, params, do_export=False)
-        contributor = self.json_to_dict(self.get('contributors/id_test'))['contributors'][0]
-        data_source = contributor['data_sources'][0]
-        data_source['id'] = 'unknown'
-        raw = self.delete('contributors/id_test/data_sources/ds_to_process')
-        self.assert_sucessful_call(raw, 204)
-        raw = self.post('contributors/id_test/data_sources', self.dict_to_json(data_source))
-        self.assert_sucessful_create(raw)
-        response = self.contributor_export('id_test', check_done=False)
-        job = self.get_job_from_export_response(response)
-        assert job['state'] == 'failed'
-        assert job['error_message'] == 'data source to process id_test.ds_to_process not found in contributor context'
 
     def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
         params = {

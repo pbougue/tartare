@@ -56,12 +56,15 @@ class TestDataSourceFetchAction(TartareFixture):
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = self.format_url(ip, 'sample_1.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         raw = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
 
@@ -97,12 +100,15 @@ class TestDataSourceFetchAction(TartareFixture):
     def test_fetch_invalid_type(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='unknown.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "manual", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "manual", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
         json_response = self.json_to_dict(response)
@@ -112,19 +118,15 @@ class TestDataSourceFetchAction(TartareFixture):
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         url = self.format_url(init_http_download_server.ip_addr, 'unknown.zip', path='')
-        params = {
+        contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {
-                "type": "url",
-                "url": url
-            }
-        }
-        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(params))
-        self.assert_sucessful_create(raw)
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
         json_response = self.json_to_dict(response)

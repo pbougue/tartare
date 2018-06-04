@@ -36,7 +36,7 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages, RemoveLastActiveJob, \
+from tartare.decorators import JsonDataValidate, ValidateContributors, RemoveLastActiveJob, \
     ValidateInputDataSourceIds
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
@@ -91,28 +91,6 @@ class Coverage(flask_restful.Resource):
         if c == 0:
             raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
         return "", 204
-
-    @JsonDataValidate()
-    @ValidateContributors()
-    @ValidatePatchCoverages()
-    def patch(self, coverage_id: str) -> Response:
-        coverage = models.Coverage.get(coverage_id)
-        if coverage is None:
-            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
-        if 'id' in request.json and coverage.id != request.json['id']:
-            raise InvalidArguments('the modification of the id is not possible')
-        coverage_schema = schema.CoverageSchema(partial=True)
-        errors = coverage_schema.validate(request.json, partial=True)
-        if errors:
-            raise InvalidArguments(errors)
-
-        logging.debug(request.json)
-        try:
-            models.Coverage.update_with_dict(coverage_id, request.json)
-        except PyMongoError:
-            raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
-
-        return self.get(coverage_id)
 
     @JsonDataValidate()
     @ValidateContributors()

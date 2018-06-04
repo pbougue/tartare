@@ -28,7 +28,7 @@
 # www.navitia.io
 import os
 from tartare import mongo
-from tests.utils import to_json, get_valid_ntfs_memory_archive
+from tests.utils import to_json, get_valid_ntfs_memory_archive, to_dict
 from gridfs import GridFS
 from bson.objectid import ObjectId
 import requests_mock
@@ -39,11 +39,11 @@ def test_post_grid_calendar_returns_success_status(app, coverage, get_app_contex
     path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixtures/gridcalendar/', filename)
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 200
     assert r.get('message') == 'OK'
     raw = app.get('/coverages')
-    r = to_json(raw)
+    r = to_dict(raw)
     assert len(r['coverages']) == 1
     assert 'grid_calendars_id' in r['coverages'][0]
     gridfs = GridFS(mongo.db)
@@ -55,7 +55,7 @@ def test_post_grid_calendar_returns_success_status(app, coverage, get_app_contex
     assert raw.status_code == 200
 
     raw = app.get('/coverages')
-    r = to_json(raw)
+    r = to_dict(raw)
     assert len(r['coverages']) == 1
     assert 'grid_calendars_id' in r['coverages'][0]
     #it should be another file
@@ -71,7 +71,7 @@ def test_post_grid_calendar_returns_non_compliant_file_status(app, coverage):
                         'fixtures/gridcalendar/export_calendars_with_invalid_header.zip')
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 400
     assert r.get('error') == 'non-compliant file(s) : grid_periods.txt'
 
@@ -81,14 +81,14 @@ def test_post_grid_calendar_returns_file_missing_status(app, coverage):
                         'fixtures/gridcalendar/export_calendars_without_grid_calendars.zip')
     files = {'file': (open(path, 'rb'), 'export_calendars.zip')}
     raw = app.post('/coverages/jdr/grid_calendar', data=files)
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 400
     assert r.get('error') == 'file(s) missing : grid_calendars.txt'
 
 
 def test_post_grid_calendar_returns_archive_missing_message(app, coverage):
     raw = app.post('/coverages/jdr/grid_calendar')
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 400
     assert r.get('error') == 'the archive is missing'
 

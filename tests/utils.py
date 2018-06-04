@@ -40,8 +40,12 @@ from requests import Response
 from tartare.helper import get_md5_content_file
 
 
-def to_json(response):
+def to_dict(response):
     return json.loads(response.data.decode('utf-8'))
+
+
+def to_json(dict):
+    return json.dumps(dict)
 
 
 def delete(app, url):

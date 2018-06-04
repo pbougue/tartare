@@ -501,6 +501,7 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
         contributor_id = 'cid'
         self.init_contributor('cid', 'gtfs_id', url, data_prefix='OIF')
         external_settings_ds_id = "my_external_settings_data_source_id"
+
         self.add_preprocess_to_contributor({
             "data_source_ids": [
                 "gtfs_id"
@@ -521,7 +522,9 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
                         "data_source_id": "my-data-source-of-lines-json-id"
                     }
                 ],
-            }}, 'cid')
+            }
+        }, contributor_id)
+
         self.add_data_source_to_contributor(
             contributor_id, 'my-data-source-of-perimeter-json-id', self.format_url(
                 init_http_download_server.ip_addr, 'tr_perimeter_id.json', 'prepare_external_settings'),
@@ -532,9 +535,10 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
                 init_http_download_server.ip_addr, 'lines_referential_id.json', 'prepare_external_settings'),
             DATA_FORMAT_LINES_REFERENTIAL
         )
+
         coverage_id = 'covid'
-        self.init_coverage(coverage_id, [contributor_id], ["gtfs_id"])
-        self.add_preprocess_to_coverage({
+        coverage = self.init_coverage(coverage_id, [contributor_id], ["gtfs_id"])
+        coverage['preprocesses'].append({
             "id": "send_ext_settings",
             "params": {
                 "url": "http://fusio.whatever.com",
@@ -542,7 +546,9 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
             },
             "type": "FusioSendPtExternalSettings",
             "sequence": 0
-        }, coverage_id)
+        })
+        raw = self.put('/coverages/covid', params=self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
 
         content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
