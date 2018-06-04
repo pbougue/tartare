@@ -108,11 +108,11 @@ class Coverage(flask_restful.Resource):
 
         logging.debug(request.json)
         try:
-            coverage = models.Coverage.update_with_dict(coverage_id, request.json)
+            models.Coverage.update_with_dict(coverage_id, request.json)
         except PyMongoError:
             raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
 
-        return self.get(coverage.id)
+        return self.get(coverage_id)
 
     @JsonDataValidate()
     @ValidateContributors()
