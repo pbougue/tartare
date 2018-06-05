@@ -1,5 +1,12 @@
 # Tartare
 
+## Summary
+[Overview](#overview)  
+[Contributors](#contributors)  
+[Coverages](#coverages)  
+[Workflow](#workflow)  
+[Other infos](#otherinfos)  
+
 ## Overview
 Tartare is an API ([link to swagger doc](./ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
 The purpose of Tartare is to:
@@ -44,14 +51,129 @@ data_format | Required | Specify the content of each `Data Set`. See (1) for det
 - for `Contributor` of `public_transport` type:
   - `gtfs`, `ntfs`, `google_transit` for transit data
   - `direction_config` for `ComputeDirections` process config
-- for `Contributor` of `geographic` type, can be `bano_file`, `poly` or `osm`
+  - `ruspell_config` for `Ruspell` process config
+  - `lines_referential` and `tr_perimeter` for `ComputeExternalSettings` process config
+  - `pt_external_settings` as `ComputeExternalSettings` output format
+- for `Contributor` of `geographic` type, can be `bano_file`, `poly_file` or `osm_file`
 
-When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is an automaticaly computed. Specs are [available here](./validity_periods.md). 
+When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md). 
 
 ### Contributor's Process properties
 The `Contributor` processes are described [in this page](./preprocesses.md).
 
 ### Contributor's Update workflow
 
+### Actions on Contributors
+Contributors can be created, read, updated or deleted. The `Data Source`s and `Process`es are created, read, updated or deleted by modifying the `Contributor`.  
+At the moment, deleting a contributor doesn't delete its `Data Source`s or `Process`es.  
+
+**ContributorExport**  
+A contributor export will do the following tasks, in the following order:
+1. Retrieve data from each of its `Data Source`.  
+2. Check if an update has been made on the `Data Source`.
+3. The Contributor `Process`es are executed
+4. The result of the `ContributorExport` is saved in the output `Data Source`.
+
+The export progress can be supervised through the /jobs resource or /contributors/{contrib_id}/jobs sub-resource.
+If this is a manual contributor export, no other action will follow.  
+If this is an automatic update, a coverage export will follow if at least one of the contributor's data source has been updated. 
+
 ## Coverages
 A `Coverage` is a grouping of data from several contributors to be published altogether. 
+It is composed of several attributes and:
+* a list of `Input Data Source`s
+* a list of `Process`es that will be applied upon on `Input Data Source`s or accordingly to the `Process` behaviour
+* a list of `Data Source`s. They are the `Data Source`s managed by the `Coverage`, as `Process`es output data
+* a list of `Environment`s containing a list of `Publication Plateform`s 
+
+### Coverage properties
+Property | Constraint | Description |
+--- | --- | --- |
+name | Required | The name of the `Coverage`
+id | Not required, unique | If not provided, Tartare will generate one.
+type | Not required | Possible values are `regional`, `keolis`, `navitia.io`, `other` (default is `other`)
+short_description | Not required | Short description of the `Coverage`. It is used by the **ODS Publication** `Process` 
+comment | Not required | This comment is for users to add notes or reminder to the `Coverage`
+license.name | Not required | Name of the license associated to the data (for exemple **ODbL**)  
+license.url | Not required | URL of a web page describing the license's details  
+input_data_source_ids | Not required | List of `Data Source`'s id to be used for this coverage
+
+### Coverage's Process properties
+The `Coverage` processes are described [in this page](./preprocesses.md).
+
+
+### Coverage's Data Source properties
+Property | Constraint | Description |
+--- | --- | --- |
+id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source` 
+name | Required | The name of the `Data Source`
+data_format | Required | Specify the content of each `Data Set`. See (1) for details.
+
+### Coverage's Environments and Publication Plateforms
+#### Environments
+There are three environments available : `integration`, `preproduction` and `production`.  
+
+Property | Constraint | Description |
+--- | --- | --- |
+name | Required | The name of the `Environement`. Should be the same than the type of environement.
+sequence | Required | Order of the `Environement` in the list.
+publication_platforms | Required | A list of `Publication Plateform`s (see below). This list can be empty.
+current_ntfs_id | Not required | Id of the last file used by the environement.
+
+#### Publication Plateforms
+Property | Constraint | Description |
+--- | --- | --- |
+sequence | Required | Order of the `Publication Plateform` to be processed in the containing `Environement`.
+type | Required | Type of the publication. Can be `navitia`, `ods` or `stop_area` 
+input_data_source_ids | Required | The list of the `Data Source`s to be published
+protocol | Required | Protocol to be used to send data. It can be `http` or `ftp`
+url | Required | URL of the plateform the data will be sent to
+options.directory | not required | directory where the data will be stored
+options.authent | not required | contains credentials if authentifications need to be made for publication. `username` and `password` fields should be provided. (1)
+
+(1) Be carefull with `password`. For security reasons, `password` field will not be available when reading data for the `Coverage`. Only specify the `password` key when setting or modifying the `password` value.
+
+### Actions on Coverages
+Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by modifying the `Coverage`.  
+At the moment, deleting a coverage doesn't delete its `Data Source`s, `Process`es or `Environment`s.  
+
+**CoverageExport**  
+Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` beforehand. 
+
+A coverage export will do the following tasks, in the following order:
+1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file). 
+2. Applying the `Process`es of the coverage
+3. The result of the `ContributorExport` is saved in the output `Data Source`.
+4. Data are published accordingly to configured `Publication Plateform`s
+
+The export progress can be supervised through the /jobs resource or /coverages/{coverage_id}/jobs sub-resource  
+
+
+## Workflow
+### Automatic update  
+1. At 20h UTC every day from monday to thursday 
+2. A contributor export is launched on all contributors.
+3. The contributors ids of whose data have changed are recorded
+4. Then for all coverages, if at least one of its contributors is in the previous list, a coverage export is executed
+
+
+### Failures during workflow.
+If there is a fail, only one retry will be tempted again, 180 secs after.  
+If this retry also fail, Tartare stops there and send an email.  
+There is no retry if the failure happened during the publishing step.  
+
+An email is sent to the Tartare team containing the following infos :  
+   * Plateform  
+   * Start & end date of execution.  
+   * Action type (Contributor_export, coverage_export) 
+   * Job ID  
+   * Step  
+   * Contributor  
+   * Error message  
+   
+## Other infos
+### Data sets backup
+In all the `Data Source`s, the last 3 `Data Set`s are available.
+
+   
+

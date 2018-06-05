@@ -1,6 +1,5 @@
 # Validity periods
-A data set (A data source version at a specific time) has a validity period, with a start date and an end date.  
-Same for a data set and the final GTFS sent to Navitia & ODS.  
+A public transport `Data Set` should have a validity period, with a start date and an end date.  
 This validity period's computation depends on the format of the provided data set.
 
 ## Computing validity period of a GTFS data set

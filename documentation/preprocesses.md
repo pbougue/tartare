@@ -3,20 +3,19 @@ This page describes all the `Process`es that can be used in `Tartare`.
 
 ## Summary
 **CONTRIBUTOR PREPROCESSES**  
-[Compute Directions](#computedirections)
-[GtfsAgencyFile](#gtfsagencyfile)
-[Ruspell](#ruspell)
-
+[Compute Directions](#computedirections)  
+[GtfsAgencyFile](#gtfsagencyfile)  
+[Ruspell](#ruspell)  
+[ComputeExternalSettings](#computeexternalsettings) 
+[HeadsignShortName](#headsignshortname)
 
 **COVERAGE PREPROCESSES**  
-[FusioDataUpdate](#fusiodataupdate)
-[FusioImport](#fusioimport)
-[FusioPreprod](#fusiopreprod)
-[FusioExport](#fusioexport)
-[FusioExportContributor](#fusioexportcontributor)
-
-**COUPLED PREPROCESSES**  
-[ComputeExternalSettings](#computeexternalsettings) and [FusioSendPtExternalSettings](#fusiosendptexternalsettings)
+[FusioDataUpdate](#fusiodataupdate)  
+[FusioImport](#fusioimport)  
+[FusioPreprod](#fusiopreprod)  
+[FusioExport](#fusioexport)  
+[FusioExportContributor](#fusioexportcontributor)  
+[FusioSendPtExternalSettings](#fusiosendptexternalsettings)  
 
 ## Contributor processes
 ### ComputeDirections
@@ -154,26 +153,23 @@ Ruspell is a third party application : https://github.com/CanalTP/ruspell
 
 
 ### ComputeExternalSettings
-#### Use Case  
-We want to add informations gathered from Stif to a GTFS in order to create a NTFS for Navitia 2.  
-These informations are which lines have a realtime system, what is this system, and if the realtime system is currently desactivated.  
-This is a specific preprocess made for Stif, since it's made from config files provided by Stif.    
+**Specific for Ile-de-France Mobilités (IDFM).**  
+This process computes additional data for the GTFS Open Data by using others IDFM Open Data sets. 
+Those additional data are lines and stops properties to enable realtime in navitia.
 
-#### How does it work?
-Through a contributor preprocess with two config files (tr_perimeter and lines_referential), we create two txt files (fusio_object_codes and fusio_object_properties) to send to FUSIO through the FusioSendPtExternalSetting coverage preprocess and used during FusioImport.  
+This preprocess uses two config `Data Source`s (*tr_perimeter* and *lines_referential*) and the IDFM GTFS `Data Source` to create a *Fusio External Settings* `Data Set` in a computed `Data Source` of `pt_external_settings`type.  
+This output `Data Source` can then be used by a `FusioSendPtExternalSetting` Coverage process.
 
-#### How to use it?
-1. Create a contributor.  
-2. Add to this contributor a GTFS Data Source. It will be used by the ComputeExternalSettings preprocess to generate the enhanced GTFS we want.    
-3. Add a Data source with ___tr_perimeter___ as __data_format__ and a json as input.   
-4. Add a Data source with ___lines_referential___ as __data_format__ and a json as input.
-6. Add the ComputeExternalSettings preprocess to the contributor with:
-    - __target_data_source_id__: the data source id representing the result of the process and that will automatically be created
-    - __export_type__: ___pt_external_settings___
-    - Data Source Step 2 as __data_source_ids__, Data Source Step 3 as __tr_perimeter__, Data source Step 4 as __lines_referential__
-7. Create a coverage, and associate the contributor from step 1 to it.  
-8. Add the FusioSendPtExternalSettings preprocess to it.
-9. This coverage must have the required Fusio preprocesses to work : FusioDataUpdate, FusioImport, FusioPreProd and FusioExport (export_type : NTFS).
+#### Parameters 
+Field | Description | 
+--- | --- 
+data_source_ids | Array containing only the IDFM GTFS `Data Source` id
+params.target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
+params.export_type | The output `Data Source`'s type should be `pt_external_settings`
+params.links | This array contains 2 items referencing the 2 complementary `Data Source`s of IDFM. (1) 
+
+(1) The 2 additional `Data Source`s MUST be respectively of `tr_perimeter` and `lines_referential` types 
+
 
 ```json
 {
@@ -197,31 +193,21 @@ Through a contributor preprocess with two config files (tr_perimeter and lines_r
    "type":"ComputeExternalSettings",
    "sequence":0
 }
+
 ```
-You will then need to provide two json config file:
-- tr_perimeter: see here [https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true](https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true)
-- lines_referential: see here [https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin](https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin)
+The complementary `Data Source`s should be created beforehands. The actual links for the complementary data are:
+- tr_perimeter: [https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true](https://opendata.stif.info/explore/dataset/perimetre-tr-plateforme-stif/download/?format=json&timezone=Europe/Berlin&use_labels_for_header=true)
+- lines_referential: [https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin](https://opendata.stif.info/explore/dataset/referentiel-des-lignes-stif/download/?format=json&timezone=Europe/Berlin)
 
-by doing
 
-```bash
-curl -i -X POST \
-  -F "file=@\"./path/to/your_tr_perimeter_file.json\"" \
- 'http://{tartare_host}/contributors/{cid_1}/data_sources/my-data-source-of-perimeter-json-id/data_sets'
-```
-
-and 
-
-```bash
-curl -i -X POST \
-  -F "file=@\"./path/to/your_lines_referential_file.json\"" \
- 'http://{tartare_host}/contributors/{cid_2}/data_sources/my-data-source-of-lines-json-id/data_sets'
-```
-
-You can also use the __data_sources.input__ to automatically fetch from the 2 above URLs.  
-The preprocess will use these 2 configuration files to compute external settings into data source __my_external_settings_data_source_id__.
-If the data source is configured as "manual" or "url", the preprocess will be skipped. 
-__my_external_settings_data_source_id__ must have the "pt_external_settings" **data_format**.  
+### HeadsignShortName
+**Specific for Ile-de-France Mobilités (IDFM).**  
+This process MUST be applied on  the GTFS provided by IDFM.  
+This process will:
+- clean-up the **trip_short_name** field:
+  - for Metro (`route_type` is `1`): **trip_short_name** is emptied
+  - for TER trains (`route_type` is `2` and `route_id` starts with `800:TER`): **trip_headsign** value is copied in the **trip_short_name** field
+- empty the **trip_headsign** field
 
 
 ## Coverage processes
