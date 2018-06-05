@@ -26,7 +26,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
 
 import os
 import tempfile
@@ -39,7 +38,7 @@ from tartare.core import zip
 from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.readers import CsvReader
-from tartare.exceptions import ParameterException, ColumnNotFound, RuntimeException
+from tartare.exceptions import ColumnNotFound, RuntimeException
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -91,10 +90,12 @@ class HeadsignShortName(AbstractContributorProcess):
             map_route_modes = self.get_map_route_modes(grid_out)
 
             with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
-                gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(grid_out, 'trips.txt', extract_zip_path, new_zip_path,
-                                                               callback=partial(self.do_manage_headsign_short_name,
-                                                                                map_route_modes=map_route_modes)
-                                                               )
-                data_source_export.gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                    data_source_export.gridfs_id, gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0])
+                gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(grid_out, 'trips.txt', extract_zip_path,
+                                                                        new_zip_path,
+                                                                        callback=partial(
+                                                                            self.do_manage_headsign_short_name,
+                                                                            map_route_modes=map_route_modes)
+                                                                        )
+                data_source_export.update_data_set_state(self.create_archive_and_add_in_grid_fs(
+                    gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0]))
         return self.context

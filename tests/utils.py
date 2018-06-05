@@ -30,6 +30,7 @@
 # www.navitia.io
 import json
 import os
+import tempfile
 from contextlib import contextmanager
 from glob import glob
 from io import BytesIO
@@ -37,6 +38,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from mock import MagicMock
 from requests import Response
+
 from tartare.helper import get_md5_content_file
 
 
@@ -100,7 +102,7 @@ def mock_requests_post(url, files, timeout):
     return get_response()
 
 
-def get_response(status_code: int=200, content: str=None) -> Response:
+def get_response(status_code: int = 200, content: str = None) -> Response:
     response = MagicMock()
     response.status_code = status_code
     if content:
@@ -115,7 +117,8 @@ def _get_file_fixture_full_path(rel_path):
 def assert_zip_contains_only_files_with_extensions(zip_file, extensions):
     for zip_info in zip_file.filelist:
         assert zip_info.filename[-3:] in extensions, print(
-            'file {filename} should not be in zip archive (only {extensions} files allowed)'.format(filename=zip_info.filename, extensions=','.join(extensions)))
+            'file {filename} should not be in zip archive (only {extensions} files allowed)'.format(
+                filename=zip_info.filename, extensions=','.join(extensions)))
 
 
 def assert_zip_contains_only_txt_files(zip_file):
@@ -131,6 +134,28 @@ def display_files_content(result_file_name, expected_file_name):
             exp_len=len(expected_content)))
 
 
-def assert_files_equals(result_file_name, expected_file_name):
+def assert_text_files_equals(result_file_name, expected_file_name):
     assert get_md5_content_file(result_file_name) == get_md5_content_file(expected_file_name), \
         display_files_content(result_file_name, expected_file_name)
+
+
+def assert_zip_file_equals_ref_zip_file(zip_file, tmp_dir, ref_zip_file, ref_tmp_dir):
+    with ZipFile(zip_file, 'r') as zip_file_handle, ZipFile(_get_file_fixture_full_path(ref_zip_file),
+                                                          'r') as ref_zip_file_handle:
+        except_files_list = ref_zip_file_handle.namelist()
+        response_files_list = zip_file_handle.namelist()
+
+        assert len(except_files_list) == len(response_files_list)
+        zip_file_handle.extractall(tmp_dir)
+        ref_zip_file_handle.extractall(ref_tmp_dir)
+
+        for f in except_files_list:
+            assert_text_files_equals('{}/{}'.format(ref_tmp_dir, f), '{}/{}'.format(tmp_dir, f))
+
+
+def assert_content_equals_ref_file(content, ref_zip_file):
+    with tempfile.TemporaryDirectory() as extract_result_tmp, tempfile.TemporaryDirectory() as ref_tmp:
+        dest_zip_res = '{}/gtfs.zip'.format(extract_result_tmp)
+        with open(dest_zip_res, 'wb') as f:
+            f.write(content)
+        assert_zip_file_equals_ref_zip_file(dest_zip_res, extract_result_tmp, ref_zip_file, ref_tmp)

@@ -31,6 +31,9 @@
 import copy
 import ftplib
 import json
+import os
+import tempfile
+from zipfile import ZipFile
 
 import mock
 import pytest
@@ -39,8 +42,7 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_requests_post, get_response, \
-    _get_file_fixture_full_path
+from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file
 
 
 class TestDataPublisher(TartareFixture):
@@ -582,3 +584,59 @@ class TestDataPublisher(TartareFixture):
                    'error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(
             job)
         assert job['state'] == 'failed', print(job)
+
+    def test_publish_modified_fixture_from_contributor_preprocess(self, init_ftp_upload_server,
+                                                                  init_http_download_server):
+        self.init_contributor('c1', 'ds1', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+                              export_id='export_id')
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": ['ds1'],
+            "type": "GtfsAgencyFile",
+            "params": {
+            }
+        }, 'c1')
+        self.contributor_export('c1')
+        self.init_coverage('cov_id', input_data_source_ids=['export_id'])
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
+                }
+            }
+        }
+        self.add_publication_platform_to_coverage(publication_platform, 'cov_id')
+        self.coverage_export('cov_id')
+        # check that ds1 data set is the original gtfs
+        export_gridfs_id = self.get_gridfs_id_from_data_source('c1', 'export_id')
+        export_fixture = 'gtfs/minimal_gtfs_and_agency.zip'
+        self.assert_gridfs_equals_fixture(export_gridfs_id, export_fixture)
+        # check that export_id data set is the updated gtfs
+        input_gridfs_id = self.get_gridfs_id_from_data_source('c1', 'ds1')
+        input_fixture = 'gtfs/minimal_gtfs.zip'
+        self.assert_gridfs_equals_fixture(input_gridfs_id, input_fixture)
+        # check that published data set is the updated gtfs
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
+
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        expected_filename = 'cov_id.zip'
+        assert 'cov_id.zip' in directory_content
+
+        # check that meta data from file on ftp server are correct
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete(expected_filename)
+            with tempfile.TemporaryDirectory() as fixture_tmp_dir:
+                assert_zip_file_equals_ref_zip_file(transfered_full_name, tmp_dirname, export_fixture, fixture_tmp_dir)
+        session.quit()
+
