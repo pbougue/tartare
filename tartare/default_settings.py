@@ -73,11 +73,6 @@ DEFAULT_LICENSE_NAME = 'Private (unspecified)'
 
 PLATFORM = os.getenv('PLATFORM', 'local')
 
-# GRID_CALENDAR_DIR is just the name of the directory where is a calendar file
-# The absolute path is CURRENT_DATA_DIR/grid_calendar
-GRID_CALENDAR_DIR = 'grid_calendar'
-CALENDAR_FILE = 'export_calendars.zip'
-
 HISTORICAL = 3
 
 SEND_MAIL_ON_FAILURE = False if os.getenv('SEND_MAIL_ON_FAILURE', 'True') == 'False' else True
