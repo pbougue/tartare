@@ -5,7 +5,7 @@
 [Contributors](#contributors)  
 [Coverages](#coverages)  
 [Workflow](#workflow)  
-[Other infos](#otherinfos)  
+[Miscellaneous](#miscellaneous)  
 
 ## Overview
 Tartare is an API ([link to swagger doc](./ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
@@ -64,8 +64,8 @@ The `Contributor` processes are described [in this page](./preprocesses.md).
 ### Contributor's Update workflow
 
 ### Actions on Contributors
-Contributors can be created, read, updated or deleted. The `Data Source`s and `Process`es are created, read, updated or deleted by modifying the `Contributor`.  
-At the moment, deleting a contributor doesn't delete its `Data Source`s or `Process`es.  
+Contributors can be created, read, updated or deleted. The `Data Source`s and `Process`es are created, read, updated or deleted by accessing or modifying the `Contributor`.  
+Deleting a contributor deletes its `Data Source`s (with its `Data Set`s and corresponding files) or `Process`es.
 
 **ContributorExport**  
 A contributor export will do the following tasks, in the following order:
@@ -81,9 +81,9 @@ If this is an automatic update, a coverage export will follow if at least one of
 ## Coverages
 A `Coverage` is a grouping of data from several contributors to be published altogether. 
 It is composed of several attributes and:
-* a list of `Input Data Source`s
+* a list of `Input Data Source`s (usually from a `Contributor`)
 * a list of `Process`es that will be applied upon on `Input Data Source`s or accordingly to the `Process` behaviour
-* a list of `Data Source`s. They are the `Data Source`s managed by the `Coverage`, as `Process`es output data
+* a list of `Data Source`s. They are the `Data Source`s managed by the `Coverage`, and can be either an input `Data Source` or a `Process`es output `Data Source`
 * a list of `Environment`s containing a list of `Publication Plateform`s 
 
 ### Coverage properties
@@ -134,8 +134,8 @@ options.authent | not required | contains credentials if authentifications need 
 (1) Be carefull with `password`. For security reasons, `password` field will not be available when reading data for the `Coverage`. Only specify the `password` key when setting or modifying the `password` value.
 
 ### Actions on Coverages
-Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by modifying the `Coverage`.  
-At the moment, deleting a coverage doesn't delete its `Data Source`s, `Process`es or `Environment`s.  
+Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by accessing or modifying the `Coverage`.  
+Deleting a coverage deletes its `Data Source`s (with its `Data Set`s and corresponding files), `Process`es, `Environment`s and `Publication Plateform`s.
 
 **CoverageExport**  
 Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` beforehand. 
@@ -157,8 +157,8 @@ The export progress can be supervised through the /jobs resource or /coverages/{
 4. Then for all coverages, if at least one of its contributors is in the previous list, a coverage export is executed
 
 
-### Failures during workflow.
-If there is a fail, only one retry will be tempted again, 180 secs after.  
+### Failures during workflow
+If there is a fail due to network issues, only one retry will be tempted again, 180 secs after.  
 If this retry also fail, Tartare stops there and send an email.  
 There is no retry if the failure happened during the publishing step.  
 
@@ -171,7 +171,7 @@ An email is sent to the Tartare team containing the following infos :
    * Contributor  
    * Error message  
    
-## Other infos
+## Miscellaneous
 ### Data sets backup
 In all the `Data Source`s, the last 3 `Data Set`s are available.
 

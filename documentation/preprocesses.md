@@ -6,7 +6,7 @@ This page describes all the `Process`es that can be used in `Tartare`.
 [Compute Directions](#computedirections)  
 [GtfsAgencyFile](#gtfsagencyfile)  
 [Ruspell](#ruspell)  
-[ComputeExternalSettings](#computeexternalsettings) 
+[ComputeExternalSettings](#computeexternalsettings)  
 [HeadsignShortName](#headsignshortname)
 
 **COVERAGE PREPROCESSES**  
