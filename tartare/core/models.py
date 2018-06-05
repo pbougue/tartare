@@ -346,10 +346,7 @@ class DataSource(object):
         if contributor_id is not None:
             contributor = Contributor.get(contributor_id)
         elif data_source_id is not None:
-            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
-            if raw is None:
-                return None
-            contributor = MongoContributorSchema(strict=True).load(raw).data
+            contributor = cls.get_contributor_of_data_source(data_source_id)
         else:
             raise ValueError("to get data_sources you must provide a contributor_id or a data_source_id")
 
@@ -371,7 +368,7 @@ class DataSource(object):
 
     @classmethod
     def get_contributor_of_data_source(cls, data_source_id: str) -> Optional['Contributor']:
-        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources': {'$elemMatch': {'id': data_source_id}}})
+        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
 
         if not raw:
             return None
@@ -631,7 +628,7 @@ class Coverage(PreProcessContainer):
     label = 'Coverage'
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
-                 contributors_ids: List[str] = None, input_data_source_ids: List[str] = None, license: License = None,
+                 input_data_source_ids: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
         super(Coverage, self).__init__(preprocesses)
@@ -639,7 +636,6 @@ class Coverage(PreProcessContainer):
         self.name = name
         self.environments = {} if environments is None else environments
         self.grid_calendars_id = grid_calendars_id
-        self.contributors_ids = [] if contributors_ids is None else contributors_ids
         self.input_data_source_ids = [] if input_data_source_ids is None else input_data_source_ids
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
@@ -732,25 +728,6 @@ class Coverage(PreProcessContainer):
         # TODO: We will need to implements a better solution
         gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
         self.environments[environment_type].current_ntfs_id = id
-
-    def has_contributor(self, contributor: Contributor) -> bool:
-        return contributor.id in self.contributors_ids
-
-    def add_contributor(self, contributor: Contributor) -> None:
-        if contributor.is_geographic() and any(
-                Contributor.get(contributor_id).is_geographic() for contributor_id in
-                self.contributors_ids):
-            raise IntegrityException(
-                'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
-            )
-
-        self.contributors_ids.append(contributor.id)
-        self.update_with_dict(self.id, {"contributors_ids": self.contributors_ids})
-
-    def remove_contributor(self, contributor_id: str) -> None:
-        if contributor_id in self.contributors_ids:
-            self.contributors_ids.remove(contributor_id)
-            self.update_with_dict(self.id, {"contributors_ids": self.contributors_ids})
 
     def get_data_source(self, data_source_id: str) -> 'DataSource':
         return next(data_source for data_source in self.data_sources if data_source.id == data_source_id)
@@ -958,7 +935,6 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
     grid_calendars_id = fields.String(allow_none=True)
-    contributors_ids = fields.List(fields.String())
     input_data_source_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)

@@ -112,7 +112,7 @@ class TestCoverageExport(TartareFixture):
         }'''
         self.post('/contributors', contrib_data)
         # Add coverage with coverages
-        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors_ids": ["id_test"], "input_data_source_ids": ["bobette"]}')
+        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "input_data_source_ids": ["bobette"]}')
         # launch contributor export
         with mock.patch('requests.post', mock_requests_post):
             self.contributor_export('id_test')

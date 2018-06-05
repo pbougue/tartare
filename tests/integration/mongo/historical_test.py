@@ -65,8 +65,7 @@ class TestHistorical(TartareFixture):
         return self.assert_sucessful_call(raw)['contributors'][0]
 
     def __init_coverage_config(self):
-        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors_ids": ["id_test"],
-                    "input_data_source_ids": ["data_source_gtfs"]}
+        coverage = {"id": "jdr", "name": "name of the coverage jdr", "input_data_source_ids": ["data_source_gtfs"]}
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 
@@ -143,7 +142,7 @@ class TestHistorical(TartareFixture):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
         self.init_contributor('cid', 'dsid', url_gtfs)
         self.contributor_export('cid')
-        self.init_coverage('covid', ['cid'])
+        self.init_coverage('covid', ['dsid'])
         self.coverage_export('covid')
         self.coverage_export('covid')
         self.coverage_export('covid')

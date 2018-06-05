@@ -58,7 +58,6 @@ class TestGetFiles(TartareFixture):
         self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         coverage = {
-            "contributors_ids": [contributor['id']],
             "input_data_source_ids": ['to_process'],
             "environments": {
                 "production": {

@@ -92,22 +92,6 @@ class JsonDataValidate(object):
         return wrapper
 
 
-class ValidateContributors(object):
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            post_data = request.json
-            if "contributors_ids" in post_data:
-                for contributor_id in post_data.get("contributors_ids"):
-                    try:
-                        models.Contributor.get(contributor_id)
-                    except EntityNotFound as exc:
-                        raise InvalidArguments(str(exc))
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
 class ValidateInputDataSourceIds(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)

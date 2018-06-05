@@ -35,7 +35,7 @@ from marshmallow import Schema, fields, post_load, validates_schema, ValidationE
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
 from tartare.core.models import Job, MongoValidityPeriodSchema, DataSourceStatus, MongoDataSetSchema, \
-    MongoPublicationPlatformSchema
+    MongoPublicationPlatformSchema, DataSource
 from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
@@ -104,8 +104,9 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
             if job_coverage and job_coverage.action_type == ACTION_TYPE_COVERAGE_EXPORT:
                 return job_coverage
 
-            for contributor_id in data['contributors_ids']:
-                job_contributor = job_get_last(False, contributor_id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
+            for data_source_id in data['input_data_source_ids']:
+                contributor = DataSource.get_contributor_of_data_source(data_source_id)
+                job_contributor = job_get_last(False, contributor.id, [ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT])
                 if job_contributor:
                     if job_coverage:
                         # ----------------------------------- Automatic update -----------------------------------------

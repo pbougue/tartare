@@ -1,6 +1,5 @@
 {
   "id": "coverage_id_2",
   "name": "coverage_name_2",
-  "contributors_ids": ["contributor_id"],
   "input_data_source_ids": ["data_source_to_process_id"]
 }

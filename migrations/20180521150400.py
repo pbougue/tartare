@@ -12,6 +12,7 @@ class Migration(BaseMigration):
     def upgrade(self):
         for coverage in self.db['coverages'].find():
             coverage['contributors_ids'] = coverage.get('contributors')
-            del coverage['contributors']
+            if 'contributors' in coverage:
+                del coverage['contributors']
 
             self.db['coverages'].save(coverage)
