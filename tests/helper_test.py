@@ -26,12 +26,15 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-
-from tartare.helper import to_doted_notation, _make_doted_key, upload_file, get_values_by_key, date_from_string
-import requests_mock
-from io import StringIO
 from datetime import date
+from io import StringIO
+
 import pytest
+import requests_mock
+from mock import mock
+
+from tartare.helper import to_doted_notation, _make_doted_key, get_values_by_key, date_from_string, \
+    dic_to_memory_csv
 
 
 def test_to_doted_notation_flat():
@@ -70,18 +73,6 @@ def test_make_doted_key():
     assert _make_doted_key(None, 'a', 'b') == 'a.b'
     assert _make_doted_key('a', None, 'b') == 'a.b'
     assert _make_doted_key(None, 'a', None, 'b', None) == 'a.b'
-
-
-def test_upload_file():
-    with requests_mock.Mocker() as m, StringIO('myfile') as stream:
-        m.post('http://test.com/', text='ok')
-        upload_file('http://test.com/', 'test.txt', stream)
-        assert m.called
-        assert len(m.request_history) == 1
-        request = m.request_history[0]
-        assert request.method == 'POST'
-        assert request.url == 'http://test.com/'
-        # we can't really check the upload: we can only check how it's implemented in requests
 
 
 def test_get_values_by_key_list():
@@ -127,3 +118,28 @@ def test_date_from_string_invalid():
     with pytest.raises(ValueError) as exec_value:
         date_from_string('ee', 'current_date')
     assert str(exec_value.value) == 'the current_date argument value is not valid, you gave: ee'
+
+
+def test_dic_to_memory_csv_none():
+    assert not dic_to_memory_csv([])
+
+
+@mock.patch('csv.DictWriter')
+def test_dic_to_memory_csv_argument_keys(dict_writer):
+    csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+    assert dict_writer.call_args_list[0][0][1] == ['att1', 'att2']
+    assert isinstance(csv, StringIO)
+
+
+@mock.patch('csv.DictWriter')
+def test_dic_to_memory_csv_keys(dict_writer):
+    expected_keys = ['att_1', 'att_b', 'att_bob']
+    dic_to_memory_csv([{"att_1": "val1", "att_b": "val2", "att_bob": "val2"}])
+    assert dict_writer.call_args_list[0][0][1] == expected_keys
+
+
+def test_dic_to_memory_csv_return_type():
+    csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}])
+    assert isinstance(csv, StringIO)
+    csv = dic_to_memory_csv([{"att1": "val1", "att2": "val2"}], ['att1', 'att2'])
+    assert isinstance(csv, StringIO)

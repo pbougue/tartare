@@ -38,13 +38,13 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import requests
 
 from tartare import app
-from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
     PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
     PublisherException
+from tartare.helper import dic_to_memory_csv
 
 logger = logging.getLogger(__name__)
 

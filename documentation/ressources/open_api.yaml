@@ -197,38 +197,6 @@ paths:
           schema:
             $ref: "#/definitions/job"
 
-  /coverages/{coverage_id}/grid_calendar:
-    post:
-      summary: Handle a grid_calendar file to coverage {coverage_id} for processing
-      tags:
-        - coverages
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
-          required: true
-      responses:
-        200:
-          description: OK
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
   /coverages/{coverage_id}/exports:
     get:
       summary: Display coverage exports
@@ -691,9 +659,6 @@ definitions:
       name:
         type: string
         example: auv
-      grid_calendars_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments_patch"
       contributors:
@@ -721,9 +686,6 @@ definitions:
       comment:
         type: string
         description: Coverage detail
-      grid_calendars_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
       input_data_source_ids:

@@ -77,8 +77,6 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     id = fields.String(required=True, validate=not_blank)
     # we have to override nested field to add validation on input
     environments = fields.Nested(EnvironmentListSchema)
-    # read only
-    grid_calendars_id = fields.String(dump_only=True)
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:

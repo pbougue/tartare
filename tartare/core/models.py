@@ -627,7 +627,7 @@ class Coverage(PreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
-    def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
+    def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None,
                  input_data_source_ids: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
@@ -635,31 +635,12 @@ class Coverage(PreProcessContainer):
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
-        self.grid_calendars_id = grid_calendars_id
         self.input_data_source_ids = [] if input_data_source_ids is None else input_data_source_ids
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
         self.type = type
         self.short_description = short_description
         self.comment = comment
-
-    def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
-        gridfs_handler = GridFsHandler()
-        filename = '{coverage}_calendars.zip'.format(coverage=self.id)
-        id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update_with_dict(self.id, {'grid_calendars_id': id})
-        # when we delete the file all process reading it will get invalid data
-        # TODO: We will need to implement a better solution
-        if self.grid_calendars_id:
-            gridfs_handler.delete_file_from_gridfs(self.grid_calendars_id)
-        self.grid_calendars_id = id
-
-    def get_grid_calendars(self) -> Optional[GridOut]:
-        if not self.grid_calendars_id:
-            return None
-
-        gridfs_handler = GridFsHandler()
-        return gridfs_handler.get_file_from_gridfs(self.grid_calendars_id)
 
     def save(self) -> None:
         raw = MongoCoverageSchema(strict=True).dump(self).data
@@ -734,6 +715,7 @@ class Coverage(PreProcessContainer):
 
     def __repr__(self) -> str:
         return str(vars(self))
+
 
 class MongoValidityPeriodSchema(Schema):
     start_date = fields.Date(required=True)
@@ -934,7 +916,6 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
-    grid_calendars_id = fields.String(allow_none=True)
     input_data_source_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)

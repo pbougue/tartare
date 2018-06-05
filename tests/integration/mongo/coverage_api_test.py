@@ -557,7 +557,7 @@ class TestCoverageApi(TartareFixture):
         }
         expected = {
             'coverages': [{
-                'grid_calendars_id': None, 'environments': {}, 'data_sources': [],
+                'environments': {}, 'data_sources': [],
                 'license': {'url': 'http://whatever.com', 'name': 'public'},
                 'preprocesses': [],
                 'input_data_source_ids': [],
@@ -618,8 +618,7 @@ class TestCoverageApi(TartareFixture):
                      'sequence': 1, 'enabled': True}
                 ],
                 'id': 'my-cov',
-                'input_data_source_ids': [],
-                'grid_calendars_id': None, 'license': {'url': '', 'name': 'Private (unspecified)'},
+                'input_data_source_ids': [], 'license': {'url': '', 'name': 'Private (unspecified)'},
                 'data_sources': [], 'environments': {}, 'last_active_job': None
             }]
         }
@@ -705,7 +704,7 @@ class TestCoverageApi(TartareFixture):
                 },
                 'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
                 'name': 'my-cov', 'input_data_source_ids': [],
-                'grid_calendars_id': None, 'comment': '', 'type': 'other',
+                'comment': '', 'type': 'other',
                 'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
             }]
         }
