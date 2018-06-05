@@ -156,15 +156,13 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)['contributors'][0]
 
-    def init_coverage(self, id, contributors_ids=None, input_data_source_ids= None, preprocesses=None, environments=None, license=None):
-        contributors_ids = contributors_ids if contributors_ids else []
+    def init_coverage(self, id, input_data_source_ids=None, preprocesses=None, environments=None, license=None):
         preprocesses = preprocesses if preprocesses else []
         environments = environments if environments else {}
         input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         coverage = {
             "id": id,
             "name": id,
-            "contributors_ids": contributors_ids,
             "input_data_source_ids": input_data_source_ids,
             "preprocesses": preprocesses,
             "environments": environments,

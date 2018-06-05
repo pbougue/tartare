@@ -69,11 +69,9 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
         return resp
 
-    def _create_coverage(self, id, contributor_id, input_data_source_id, publication_platform, license=None):
-        contributors_ids = contributor_id if type(contributor_id) == list else [contributor_id]
+    def _create_coverage(self, id, input_data_source_id, publication_platform, license=None):
         input_data_source_ids = input_data_source_id if type(input_data_source_id) == list else [input_data_source_id]
         coverage = {
-            "contributors_ids": contributors_ids,
             "input_data_source_ids": input_data_source_ids,
             "environments": {
                 "production": {
@@ -106,7 +104,7 @@ class TestDataPublisher(TartareFixture):
             "url": "http://bob/v0/jobs"
         }
         self._create_contributor(contributor_id, url=url)
-        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
@@ -152,7 +150,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -194,7 +192,7 @@ class TestDataPublisher(TartareFixture):
                 "directory": directory
             }
         }
-        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id)
 
@@ -260,7 +258,7 @@ class TestDataPublisher(TartareFixture):
             "name": 'my license',
             "url": 'http://license.org/mycompany'
         }
-        self.init_coverage(coverage_id, [contributor_id], ["my_gtfs"], preprocesses, environments, license)
+        self.init_coverage(coverage_id, ["my_gtfs"], preprocesses, environments, license)
 
         fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
         fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
@@ -297,7 +295,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -321,9 +319,6 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors_ids": [
-                contributor_id
-            ],
             "input_data_source_ids": [
                 'ds_gtfs'
             ],
@@ -383,9 +378,6 @@ class TestDataPublisher(TartareFixture):
                 "url": url.format(seq=idx)
             })
         coverage = {
-            "contributors_ids": [
-                contributor_id
-            ],
             "input_data_source_ids": [
                 'ds_gtfs'
             ],
@@ -418,9 +410,6 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors_ids": [
-                contributor_id
-            ],
             "input_data_source_ids": [
                 'ds_gtfs'
             ],
@@ -469,7 +458,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_id, 'ds_gtfs', publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         resp = self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -503,7 +492,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], ['ds_gtfs', 'ds_'+data_format], publication_platform)
+        self._create_coverage(coverage_id, ['ds_gtfs', 'ds_'+data_format], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo)
@@ -539,7 +528,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo_id], ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
+        self._create_coverage(coverage_id, ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo_id)
@@ -571,7 +560,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_geo, 'ds_' + data_format, publication_platform)
+        self._create_coverage(coverage_id, 'ds_' + data_format, publication_platform)
 
         resp = self.full_export(contributor_geo, coverage_id, '2015-08-10')
 

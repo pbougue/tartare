@@ -100,11 +100,10 @@ class TestAutomaticUpdate(TartareFixture):
         job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(job)
 
-    def __create_coverage(self, contributors_ids, input_data_source_ids, coverage_id='auto_update_coverage'):
+    def __create_coverage(self, input_data_source_ids, coverage_id='auto_update_coverage'):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
-            'contributors_ids': contributors_ids,
             'input_data_source_ids': input_data_source_ids
         }
         raw = self.post('coverages', json.dumps(coverage))
@@ -112,7 +111,7 @@ class TestAutomaticUpdate(TartareFixture):
 
     def test_automatic_update_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['auto_update_contrib'], ['ds_auto_update_contrib'])
+        self.__create_coverage(['ds_auto_update_contrib'])
         jobs = self.run_automatic_update()
         assert len(jobs) == 3
         for job in jobs:
@@ -125,7 +124,7 @@ class TestAutomaticUpdate(TartareFixture):
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['auto_update_contrib'], ['ds_auto_update_contrib'])
+        self.__create_coverage(['ds_auto_update_contrib'])
         jobs_first_run = self.run_automatic_update()
         jobs_second_run = self.run_automatic_update()
         assert len(jobs_first_run) == 3
@@ -152,11 +151,11 @@ class TestAutomaticUpdate(TartareFixture):
     # x  ----> cC
     def test_automatic_update_twice_multi_contributor_and_multi_coverage(self, init_http_download_server):
         contributors = ['c1', 'c2', 'c3', 'c4']
-        coverages = {'cA': (['c1', 'c2'],  ['ds_c1', 'ds_c2']), 'cB': (['c3'], ['ds_c3']), 'cC': [[], []]}
+        coverages = {'cA': ['ds_c1', 'ds_c2'], 'cB': ['ds_c3'], 'cC': []}
         for contributor in contributors:
             self.__create_contributor(init_http_download_server.ip_addr, contributor)
-        for cov, contrib_ds in coverages.items():
-            self.__create_coverage(contrib_ds[0], contrib_ds[1], cov)
+        for cov, ds in coverages.items():
+            self.__create_coverage(ds, cov)
         jobs_first_run = self.run_automatic_update()
         assert len(jobs_first_run) == 10
         contributor_export_jobs = list(

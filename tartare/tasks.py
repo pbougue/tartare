@@ -52,7 +52,7 @@ from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_T
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Contributor, PreProcess, SequenceContainer, \
-    ContributorExport, PublicationPlatform
+    ContributorExport, PublicationPlatform, DataSource
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
 from tartare.helper import upload_file
@@ -324,7 +324,8 @@ def automatic_update_launch_coverage_exports(self: Task,
         logger.info("fetching {} coverages".format(len(coverages)))
         actions = []
         for coverage in coverages:
-            if any(contributor_id in updated_contributors for contributor_id in coverage.contributors_ids):
+            contributors = {DataSource.get_contributor_of_data_source(data_source_id) for data_source_id in coverage.input_data_source_ids}
+            if any(contributor.id in updated_contributors for contributor in contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
                 actions.append(coverage_export.si(CoverageExportContext(job, coverage=coverage)))

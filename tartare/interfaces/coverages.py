@@ -36,7 +36,7 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import JsonDataValidate, ValidateContributors, RemoveLastActiveJob, \
+from tartare.decorators import JsonDataValidate, RemoveLastActiveJob, \
     ValidateInputDataSourceIds
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
@@ -59,7 +59,6 @@ class Coverage(flask_restful.Resource):
             raise InvalidArguments(err.messages)
 
     @JsonDataValidate()
-    @ValidateContributors()
     @ValidateInputDataSourceIds()
     def post(self) -> Response:
         coverage = self.__pre_save_coverage(request.json)
@@ -93,7 +92,6 @@ class Coverage(flask_restful.Resource):
         return "", 204
 
     @JsonDataValidate()
-    @ValidateContributors()
     @ValidateInputDataSourceIds()
     @RemoveLastActiveJob()
     def put(self, coverage_id: str) -> Response:
