@@ -57,6 +57,8 @@ curl -i -X POST \
 
 Defining that the direction_id is forward (0) or backward (1) consists of comparing the order of each trip's stop order with the stop order in the config file.
 
+If the input `Data Source` contains an export_data_source_id property, the resulting `Data Set` will be recorded in the specified computed `Data Source`. If not, the result will be stored in memory to be used in the next `Process`es.
+
 #### TroubleShooting
 - The source `Data Source` **MUST** be a valid `gtfs` file
 - The config `Data Source` **MUST** have the type `direction_config` (see example [here](https://github.com/CanalTP/tartare/blob/master/tests/fixtures/compute_directions/config.json))

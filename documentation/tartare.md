@@ -33,7 +33,7 @@ Property | Constraint | Description |
 --- | --- | --- |
 name | Required | The name of the `Contributor`
 data_prefix | Required, unique | A prefix that will be applied to all the `Contributor`'s data to ensure uniqueness of the objects ids when merged with other `Contributor`s's data in one coverage. 
-id | Not required, unique | If not provided, Tartare will generate one.
+id | Optionnal, unique | If not provided, Tartare will generate one.
 data_type | required | The type of data provided, either *public_transport* or *geographic*. Default is *public_transport*. 
 
 Details about **data_type**:
@@ -46,6 +46,14 @@ Property | Constraint | Description |
 id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source` 
 name | Required | The name of the `Data Source`
 data_format | Required | Specify the content of each `Data Set`. See (1) for details.
+input.type | Optionnal | The source type of the `Data Source`. Can be `manual` (default), `url` or `computed`.
+input.url | Optionnal | If `input.type` is `url`, provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
+input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
+input.options | Optinonal | contains additional properties for Internet ressources (2)
+license.name | Optionnal | Short name of the license of the `Data Source`. For exemple `ODbL`
+license.url | Optionnal | URL providing details about the license
+validity_period | self computed | Validity period of the last `Data Set` fetched or sent to Tartare. This object is computed by Tartare and contains a `start_date` and `end_date` properties
+
 
 (1) Available data_format : 
 - for `Contributor` of `public_transport` type:
@@ -57,6 +65,11 @@ data_format | Required | Specify the content of each `Data Set`. See (1) for det
 - for `Contributor` of `geographic` type, can be `bano_file`, `poly_file` or `osm_file`
 
 When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md). 
+
+(2) input.options provides the following properties: 
+- `directory` : provide a sub-directory, usefull when connecting to a FTP ressource
+- `authent.username` : for a secured ressource (FTP or HTTP), contains the login
+- `authent.password` : for a secured ressource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
 
 ### Contributor's Process properties
 The `Contributor` processes are described [in this page](./preprocesses.md).
@@ -103,11 +116,9 @@ The `Coverage` processes are described [in this page](./preprocesses.md).
 
 
 ### Coverage's Data Source properties
-Property | Constraint | Description |
---- | --- | --- |
-id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source` 
-name | Required | The name of the `Data Source`
-data_format | Required | Specify the content of each `Data Set`. See (1) for details.
+A `Covarage` may need to store `Data Set`s for config or processed files. To store them, `Data Source`s ressources are also available for a Coverage.
+The properties are the same than the `Contributor`'s `Data Source`.
+See **Contributor's Data Source properties** for more details.
 
 ### Coverage's Environments and Publication Plateforms
 #### Environments
@@ -143,10 +154,10 @@ Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` b
 A coverage export will do the following tasks, in the following order:
 1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file). 
 2. Applying the `Process`es of the coverage
-3. The result of the `ContributorExport` is saved in the output `Data Source`.
+3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` ressource
 4. Data are published accordingly to configured `Publication Plateform`s
 
-The export progress can be supervised through the /jobs resource or /coverages/{coverage_id}/jobs sub-resource  
+The export progress can be supervised through the `/jobs` resource or `/coverages/{coverage_id}/jobs` sub-resource.
 
 
 ## Workflow
