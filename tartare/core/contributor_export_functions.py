@@ -32,7 +32,7 @@ import tempfile
 import zipfile
 from typing import Optional
 
-from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, INPUT_TYPE_URL, \
+from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, \
     DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_DONE, JOB_STATUS_FAILED, JOB_STATUS_RUNNING
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
@@ -99,7 +99,7 @@ def save_export(contributor: Contributor, context: ContributorExportContext) -> 
 def fetch_datasets_and_return_updated_number(contributor: Contributor, parent_job_id: str) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.input.url and data_source.has_type(INPUT_TYPE_URL):
+        if data_source.is_auto() and data_source.input.url:
             nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id, parent_job_id) else 0
     return nb_updated_datasets
 

@@ -5,8 +5,12 @@
       "data_format": "gtfs",
       "id": "Google-1",
       "input": {
-        "type": "url",
-        "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name.zip"
+        "type": "auto",
+        "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name.zip",
+        "frequency": {
+          "type": "daily",
+          "hour": 20
+        }
       },
       "export_data_source_id": "export_id",
       "name": "données gtfs"

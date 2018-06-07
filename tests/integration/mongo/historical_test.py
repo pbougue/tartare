@@ -44,8 +44,12 @@ class TestHistorical(TartareFixture):
             "id": "data_source_gtfs",
             "name": "data_source_gtfs",
             "input": {
-                "type": "url",
-                "url": ""
+                "type": "auto",
+                "url": "",
+                "frequency": {
+                    "type": "daily",
+                    "hour": 20
+                }
             }
         }
         data_source_config = {
@@ -53,8 +57,12 @@ class TestHistorical(TartareFixture):
             "name": "data_source_config",
             "data_format": "direction_config",
             "input": {
-                "type": "url",
-                "url": ""
+                "type": "auto",
+                "url": "",
+                "frequency": {
+                    "type": "daily",
+                    "hour": 20
+                }
             }
         }
         contributor['data_sources'] = [

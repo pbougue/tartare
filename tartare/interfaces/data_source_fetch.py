@@ -31,7 +31,7 @@ import flask_restful
 from flask import Response
 
 from tartare.core import models
-from tartare.core.constants import INPUT_TYPE_URL
+from tartare.core.constants import INPUT_TYPE_AUTO
 from tartare.core.contributor_export_functions import fetch_and_save_dataset
 from tartare.core.models import Contributor
 from tartare.exceptions import FetcherException, EntityNotFound
@@ -45,8 +45,8 @@ class DataSourceFetch(flask_restful.Resource):
         except (EntityNotFound, ValueError) as e:
             raise ObjectNotFound(str(e))
 
-        if not data_source.has_type(INPUT_TYPE_URL) or not data_source.input.url:
-            raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_URL))
+        if not data_source.is_auto() or not data_source.input.url:
+            raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_AUTO))
 
         try:
             fetch_and_save_dataset(Contributor.get(contributor_id), data_source_id)

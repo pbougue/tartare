@@ -213,8 +213,12 @@ class TestContributors(TartareFixture):
                     "id": data_source["id"],
                     "name": "data_source_name",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 },
             ]
@@ -280,18 +284,231 @@ class TestContributors(TartareFixture):
                 {
                     "name": "data_source_name",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
         }
         raw = self.post('/contributors', json.dumps(post_data))
-        assert raw.status_code == 201, print(self.json_to_dict(raw))
+        self.assert_sucessful_create(raw)
         raw = self.get('/contributors/id_test/')
-        r = self.json_to_dict(raw)
-        self.assert_sucessful_call(raw)
+        r = self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
+
+    def test_post_contrib_one_data_source_with_frequency(self):
+        '''
+        using /contributors endpoint
+        '''
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "continuously",
+                            "minutes": 5,
+                            "enabled": True
+                        }
+                    },
+                },
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 14,
+                            "enabled": False
+                        }
+                    },
+                },
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "weekly",
+                            "day_of_week": 5,
+                            "hour": 6,
+                            "enabled": True
+                        }
+                    },
+
+                },
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "monthly",
+                            "day_of_month": 10,
+                            "hour": 6,
+                            "enabled": True
+                        }
+                    },
+
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        self.assert_sucessful_create(raw)
+        raw = self.get('/contributors/id_test/')
+        r = self.assert_sucessful_call(raw)
+        assert len(r["contributors"][0]["data_sources"]) == 4, print(r["contributors"][0]["data_sources"])
+
+        frequency = r["contributors"][0]["data_sources"][0]['input']['frequency']
+        assert frequency['type'] == 'continuously'
+        assert frequency['minutes'] == 5
+        assert frequency['enabled'] is True
+
+        frequency = r["contributors"][0]["data_sources"][1]['input']['frequency']
+        assert frequency['type'] == 'daily'
+        assert frequency['hour'] == 14
+        assert frequency['enabled'] is False
+
+        frequency = r["contributors"][0]["data_sources"][2]['input']['frequency']
+        assert frequency['type'] == 'weekly'
+        assert frequency['day_of_week'] == 5
+        assert frequency['hour'] == 6
+        assert frequency['enabled'] is True
+
+        frequency = r["contributors"][0]["data_sources"][3]['input']['frequency']
+        assert frequency['type'] == 'monthly'
+        assert frequency['day_of_month'] == 10
+        assert frequency['hour'] == 6
+        assert frequency['enabled'] is True
+
+    @pytest.mark.parametrize("minutes", [-50, -1, 0])
+    def test_post_contrib_one_data_source_with_continuously_frequency_and_invalid_minutes(self, minutes):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "continuously",
+                            "minutes": minutes
+                        }
+                    },
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.assert_failed_call(raw)
+        assert r == {
+            'error': {'data_sources': {'0': {'input': {'frequency': {'minutes': ['minutes should be greater than 1']}}}}},
+            'message': 'Invalid arguments'
+        }
+
+    @pytest.mark.parametrize("hour", [-5, -1, 24, 50])
+    def test_post_contrib_one_data_source_with_daily_frequency_and_invalid_hour(self, hour):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": hour
+                        }
+                    },
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.assert_failed_call(raw)
+        assert r == {
+            'error': {
+                'data_sources': {'0': {'input': {'frequency': {'hour': ['hour should be between 0 and 23']}}}}},
+            'message': 'Invalid arguments'
+        }
+
+    @pytest.mark.parametrize("day_of_week,hour", [
+        (-5, -10), (-1, -1), (7, 24), (10, 36)
+    ])
+    def test_post_contrib_one_data_source_with_weekly_frequency_and_invalid_params(self, day_of_week, hour):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "weekly",
+                            "day_of_week": day_of_week,
+                            "hour": hour
+                        }
+                    },
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.assert_failed_call(raw)
+        assert r == {'error': {
+            'data_sources': {'0': {'input': {'frequency': {
+                'day_of_week': ['day_of_week should be between 0 and 6'],
+                'hour': ['hour should be between 0 and 23']
+            }}}}}, 'message': 'Invalid arguments'
+        }
+
+    @pytest.mark.parametrize("day_of_month,hour", [
+        (-5, -10), (-1, -1), (29, 24), (34, 36)
+    ])
+    def test_post_contrib_one_data_source_with_monthly_frequency_and_invalid_params(self, day_of_month, hour):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "monthly",
+                            "day_of_month": day_of_month,
+                            "hour": hour
+                        }
+                    },
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        r = self.assert_failed_call(raw)
+        assert r == {'error': {
+            'data_sources': {'0': {'input': {'frequency': {
+                'day_of_month': ['day_of_month should be between 1 and 28'],
+                'hour': ['hour should be between 0 and 23']
+            }}}}}, 'message': 'Invalid arguments'
+        }
 
     def test_post_contrib_one_data_source_with_id(self):
         """
@@ -306,8 +523,12 @@ class TestContributors(TartareFixture):
                     "id": "data_source_id",
                     "name": "data_source_name",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -333,8 +554,12 @@ class TestContributors(TartareFixture):
                     "name": "data_source_name",
                     "service_id": "Google-1",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -346,6 +571,31 @@ class TestContributors(TartareFixture):
         self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["data_sources"]) == 1
         assert r["contributors"][0]["data_sources"][0]["service_id"] == "Google-1"
+
+    def test_post_contrib_one_data_source_with_invalid_input(self):
+        """
+        using /contributors endpoint
+        """
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "data_format": "gtfs",
+                    "input": {
+                        "type": "unknown",
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', json.dumps(post_data))
+        assert raw.status_code == 400, print(self.json_to_dict(raw))
+        r = self.json_to_dict(raw)
+        assert 'error' in r
+        assert r == {'error': {'data_sources': {'0': {'input': {'type': ['Unsupported value: unknown']}}}},
+                     'message': 'Invalid arguments'}
 
     def test_post_contrib_one_data_source_with_invalid_data_format(self):
         """
@@ -360,7 +610,7 @@ class TestContributors(TartareFixture):
                     "name": "data_source_name",
                     "data_format": "Neptune",
                     "input": {
-                        "type": "url",
+                        "type": "auto",
                         "url": "http://stif.com/od.zip"
                     }
                 }
@@ -384,15 +634,23 @@ class TestContributors(TartareFixture):
                 {
                     "name": "data_source_name",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 },
                 {
                     "name": "data_source_name2",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -414,8 +672,12 @@ class TestContributors(TartareFixture):
                 {
                     "name": "data_source_name",
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -428,6 +690,38 @@ class TestContributors(TartareFixture):
         assert len(r["contributors"][0]["data_sources"]) == 1
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
+
+    def test_put_contrib_with_different_input(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', self.dict_to_json(post_data))
+        self.assert_sucessful_create(raw)
+        post_data["data_sources"][0]["name"] = "name_modified"
+        post_data["data_sources"][0]["input"] = {
+            'type': 'manual'
+        }
+        raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
+        r = self.assert_sucessful_call(raw)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        patched_data_source = r["contributors"][0]["data_sources"][0]
+        assert patched_data_source["name"] == "name_modified"
+        assert patched_data_source["input"]["type"] == "manual"
 
     def test_put_contrib_preprocesses_without_id(self, contributor):
         preprocesses = [
@@ -565,8 +859,12 @@ class TestContributors(TartareFixture):
                 "id": data_source_to_build_id,
                 "name": data_source_to_build_id,
                 "input": {
-                    "type": "url",
-                    "url": "http://stif.com/ods.zip"
+                    "type": "auto",
+                    "url": "http://stif.com/ods.zip",
+                    "frequency": {
+                        "type": "daily",
+                        "hour": 20
+                    }
                 }
             })
         post_data = {
@@ -602,8 +900,12 @@ class TestContributors(TartareFixture):
                     'id': id,
                     'data_format': data_format,
                     "input": {
-                        "type": "url",
-                        "url": "http://stif.com/od.zip"
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -891,7 +1193,7 @@ class TestContributors(TartareFixture):
         ds_input = next(data_source for data_source in contributor['data_sources'] if data_source['id'] == 'ds1')
         ds_output = next(
             data_source for data_source in contributor['data_sources'] if data_source['id'] == 'export_ds_id')
-        assert ds_input['input']['type'] == 'url'
+        assert ds_input['input']['type'] == 'auto'
         assert ds_input['export_data_source_id'] == 'export_ds_id'
         assert ds_output['input']['type'] == 'computed'
 

@@ -131,7 +131,14 @@ def data_source(app, contributor):
             "id": "ds_test",
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": "http://stif.com/od.zip"}
+            "input": {
+                "type": "auto",
+                "url": "http://stif.com/od.zip",
+                "frequency": {
+                    "type": "daily",
+                    "hour": 20
+                }
+            }
         }
     ]
     contributors = app.put('/contributors/{}'.format(contributor.get('id')),

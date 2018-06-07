@@ -52,8 +52,12 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             "name": name,
             "service_id": service_id,
             "input": {
-                "type": "url",
-                "url": url
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour": 20
+                }
             }
         }
 

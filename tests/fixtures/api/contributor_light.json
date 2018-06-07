@@ -5,8 +5,12 @@
     "data_sources" : [
         {
             "input" : {
-                "type" : "url",
-                "url" : "http://{HTTP_SERVER_IP}/compute_directions/functional.zip"
+                "type" : "auto",
+                "url" : "http://{HTTP_SERVER_IP}/compute_directions/functional.zip",
+                "frequency": {
+                  "type": "daily",
+                  "hour": 20
+                }
             },
             "id" : "data_source_to_process_id",
             "name" : "data_source_to_process_name",

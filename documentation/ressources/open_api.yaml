@@ -691,22 +691,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/coverage'
-    coverage_patch:
-      type: object
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: string
-          example: fr-auv
-        name:
-          type: string
-          example: auv
-        environments:
-          $ref: '#/components/schemas/environments_patch'
-        contributors:
-          $ref: '#/components/schemas/array_of_strings'
     coverage:
       type: object
       required:
@@ -759,32 +743,6 @@ components:
       example:
         - ABC
         - DEF
-    id_object:
-      type: object
-      properties:
-        id:
-          type: string
-          example: ABCD
-    environments_patch:
-      type: object
-      properties:
-        production:
-          $ref: '#/components/schemas/environment_type_patch'
-        preproduction:
-          $ref: '#/components/schemas/environment_type_patch'
-        integration:
-          $ref: '#/components/schemas/environment_type_patch'
-    environment_type_patch:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          example: integration
-        current_ntfs_id:
-          type: string
-          example: 5810cb2d3c96b7000108d074
     environments:
       type: object
       properties:
@@ -895,13 +853,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/contributor_preprocess'
-    contributor_preprocess_list:
-      type: object
-      properties:
-        preprocesses:
-          type: array
-          items:
-            $ref: '#/components/schemas/contributor_preprocess'
     contributor_preprocess:
       type: object
       required:
@@ -975,38 +926,6 @@ components:
             type: string
           data_source_id:
             type: string
-    coverage_preprocess_list:
-      type: object
-      properties:
-        preprocesses:
-          type: array
-          items:
-            $ref: '#/components/schemas/coverage_preprocess'
-    coverage_preprocess:
-      type: object
-      required:
-        - id
-        - type
-        - sequence
-      properties:
-        id:
-          type: string
-          example: preprocess_id
-        type:
-          type: string
-          example: FusioImport
-        sequence:
-          type: integer
-          example: 1
-        enabled:
-          type: boolean
-          example: false
-          description: tells if the preprocess will be executed during an export or not
-          default: true
-        params:
-          type: object
-          example:
-            url: 'http://fusio_host/cgi-bin/fusio.dll/'
     coverage_export_list:
       type: object
       properties:
@@ -1149,22 +1068,87 @@ components:
             - updated
           example: done
         input:
-          $ref: '#/components/schemas/input'
+          oneOf:
+            - $ref: '#/components/schemas/input_auto'
+            - $ref: '#/components/schemas/input_manual'
+            - $ref: '#/components/schemas/input_computed'
+          example: {
+            type: 'manual',
+            expected_file_name: 'gtfs.zip'
+          }
         license:
           $ref: '#/components/schemas/license'
         validity_period:
           $ref: '#/components/schemas/validity_period'
-    input:
+
+    frequency_continuously:
       type: object
       properties:
         type:
           type: string
-          example: url
-          enum:
-            - url
-            - manual
-            - computed
-          default: manual
+          example: continuously
+        minutes:
+          type: integer
+          description: The data source will be fetch every X minutes
+          example: 30
+        enabled:
+          type: boolean
+          default: true
+          example: false
+    frequency_daily:
+      type: object
+      properties:
+        type:
+          type: string
+          example: daily
+        hour:
+          type: integer
+          description: The data source will be fetch every days at X hour
+          example: 15
+        enabled:
+          type: boolean
+          default: true
+          example: false
+    frequency_weekly:
+      type: object
+      properties:
+        type:
+          type: string
+          example: weekly
+        day_of_week:
+          type: integer
+          description: The data source will be fetch every weeks the day X at Y hour
+          example: 1
+        hour:
+          type: integer
+          example: 15
+        enabled:
+          type: boolean
+          default: true
+          example: false
+    frequency_monthly:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The data source will be fetch every months the day X at Y hour
+          example: monthly
+        day_of_month:
+          type: integer
+          example: 10
+        hour:
+          type: integer
+          example: 15
+        enabled:
+          type: boolean
+          default: true
+          example: false
+    input_auto:
+      type: object
+      properties:
+        type:
+          type: string
+          example: auto
         url:
           type: string
           example:
@@ -1176,6 +1160,30 @@ components:
           example: config.json
         options:
           $ref: '#/components/schemas/options_type'
+        frequency:
+          oneOf:
+            - $ref: '#/components/schemas/frequency_continuously'
+            - $ref: '#/components/schemas/frequency_daily'
+            - $ref: '#/components/schemas/frequency_weekly'
+            - $ref: '#/components/schemas/frequency_monthly'
+    input_manual:
+      type: object
+      properties:
+        type:
+          type: string
+          example: manual
+        expected_file_name:
+          type: string
+          example: config.json
+    input_computed:
+      type: object
+      properties:
+        type:
+          type: string
+          example: computed
+        expected_file_name:
+          type: string
+          example: config.json
     license:
       type: object
       properties:

@@ -37,17 +37,19 @@ from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
 
 import pymongo
 import pytz
-from marshmallow import Schema, post_load, utils, fields
+from marshmallow import Schema, post_load, utils, fields, validates, ValidationError
+from marshmallow_oneofschema import OneOfSchema
 
 from tartare import app
 from tartare import mongo
-from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_FORMAT_DEFAULT, \
-    INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
+from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
+    DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
-    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_URL
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
+    INPUT_TYPE_MANUAL
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import ValidityPeriodException, EntityNotFound
+from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -91,10 +93,6 @@ class DataType(ChoiceField):
     def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_TYPE_VALUES, **metadata)
 
-
-class InputType(ChoiceField):
-    def __init__(self, **metadata: Any) -> None:
-        super().__init__(INPUT_TYPE_VALUES, **metadata)
 
 
 class PlatformType(ChoiceField):
@@ -144,7 +142,7 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                     id=data_source.export_data_source_id,
                     name=data_source.export_data_source_id,
                     data_format=data_source.data_format,
-                    input=Input(INPUT_TYPE_COMPUTED),
+                    input=InputComputed(),
                 )
                 self.data_sources.append(data_source_computed)
         for preprocess in self.preprocesses:
@@ -155,7 +153,7 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                         id=preprocess.params.get("target_data_source_id"),
                         name=preprocess.params.get("target_data_source_id"),
                         data_format=preprocess.params.get("export_type"),
-                        input=Input(INPUT_TYPE_COMPUTED),
+                        input=InputComputed(),
                     )
                     if not preprocess.params.get("target_data_source_id"):
                         preprocess.params['target_data_source_id'] = data_source_computed.id
@@ -163,17 +161,20 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
 
     def fill_data_source_passwords_from_existing_object(self, existing_object: 'DataSourceAndPreProcessContainer') -> None:
         for data_source in self.data_sources:
-            if data_source.input and data_source.input.type == INPUT_TYPE_URL:
+            if data_source.input and isinstance(data_source.input, InputAuto):
                 input = data_source.input
                 if input.options and input.options.authent and input.options.authent.username and \
                         not input.options.authent.password:
                     existing_data_source = next((
                         existing_data_source for existing_data_source in existing_object.data_sources if
                         existing_data_source.id == data_source.id), None)
-                    if existing_data_source and existing_data_source.input.options and \
-                            existing_data_source.input.options.authent and \
-                            existing_data_source.input.options.authent.username == input.options.authent.username and \
-                            existing_data_source.input.options.authent.password:
+
+                    if existing_data_source \
+                            and existing_data_source.is_auto() \
+                            and existing_data_source.input.options \
+                            and existing_data_source.input.options.authent \
+                            and existing_data_source.input.options.authent.username == input.options.authent.username \
+                            and existing_data_source.input.options.authent.password:
                         data_source.input.options.authent.password = existing_data_source.input.options.authent.password
 
     @classmethod
@@ -281,18 +282,6 @@ class License(object):
         return str(vars(self))
 
 
-class Input(object):
-    def __init__(self, type: str = INPUT_TYPE_DEFAULT, url: Optional[str] = None,
-                 expected_file_name: str = None, options: PlatformOptions = None) -> None:
-        self.type = type
-        self.url = url
-        self.expected_file_name = expected_file_name
-        self.options = options
-
-    def __repr__(self) -> str:
-        return str(vars(self))
-
-
 class DataSetStatus(object):
     def __init__(self, status: str, updated_at: datetime = datetime.now()) -> None:
         self.status = status
@@ -328,13 +317,82 @@ class DataSet(object):
         return str(vars(self))
 
 
+class Enabled(object):
+    def __init__(self, enabled: bool = True) -> None:
+        self.enabled = enabled
+
+
+class FrequencyContinuously(Enabled):
+    def __init__(self, minutes: int, enabled: bool = True) -> None:
+        super().__init__(enabled)
+        self.minutes = minutes
+
+    def __repr__(self) -> str:
+        return "type: {}, data: {}".format(type(self), str(vars(self)))
+
+
+class FrequencyDaily(Enabled):
+    def __init__(self, hour: int, enabled: bool = True) -> None:
+        super().__init__(enabled)
+        self.hour = hour
+
+
+class FrequencyWeekly(Enabled):
+    def __init__(self, day_of_week: int, hour: int, enabled: bool = True) -> None:
+        super().__init__(enabled)
+        self.day_of_week = day_of_week
+        self.hour = hour
+
+
+class FrequencyMonthly(Enabled):
+    def __init__(self, day_of_month: int, hour: int, enabled: bool = True) -> None:
+        super().__init__(enabled)
+        self.day_of_month = day_of_month
+        self.hour = hour
+
+
+FrequenceType = Union[FrequencyContinuously, FrequencyDaily, FrequencyWeekly, FrequencyMonthly]
+InputType = Any  # Union[InputAuto, InputManual, InputComputed] will be better mypy does not manage unions well
+
+
+class InputAuto(object):
+    def __init__(self, url: str, frequency: FrequenceType,
+                 expected_file_name: str = None, options: PlatformOptions = None) -> None:
+        self.url = url
+        self.expected_file_name = expected_file_name
+        self.options = options
+        self.frequency = frequency
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class InputManual(object):
+    def __init__(self, expected_file_name: str = None) -> None:
+        self.expected_file_name = expected_file_name
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class InputComputed(object):
+    def __init__(self, expected_file_name: str = None) -> None:
+        self.expected_file_name = expected_file_name
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
 class DataSource(object):
     def __init__(self, id: Optional[str] = None,
                  name: Optional[str] = None,
                  data_format: str = DATA_FORMAT_DEFAULT,
-                 input: Input = Input(INPUT_TYPE_DEFAULT),
-                 license: Optional[License] = None, export_data_source_id: str = None,
-                 service_id: str = None, data_sets: List[DataSet] = None) -> None:
+                 input: InputType = InputManual(),
+                 license: Optional[License] = None,
+                 export_data_source_id: str = None,
+                 service_id: str = None,
+                 data_sets: List[DataSet] = None,
+                 ) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
         self.data_format = data_format
@@ -437,8 +495,11 @@ class DataSource(object):
     def is_of_one_of_data_format(self, data_format_list: List[str]) -> bool:
         return any(self.is_of_data_format(data_format) for data_format in data_format_list)
 
-    def has_type(self, type: str) -> bool:
-        return self.input.type == type
+    def is_auto(self) -> bool:
+        return isinstance(self.input, InputAuto)
+
+    def is_computed(self) -> bool:
+        return isinstance(self.input, InputComputed)
 
     def get_last_data_set(self) -> Optional[DataSet]:
         return max(self.data_sets, key=lambda ds: ds.created_at, default=None)  # type: ignore
@@ -866,15 +927,138 @@ class MongoDataSourceLicenseSchema(Schema):
         return License(**data)
 
 
-class MongoDataSourceInputSchema(Schema):
-    type = InputType(required=False, allow_none=True)
+class DisableSchema(Schema):
+    enabled = fields.Bool(required=False)
+
+
+class FrequencyContinuouslySchema(DisableSchema):
+    minutes = fields.Int(required=True)
+
+    @post_load
+    def make(self, data: dict) -> FrequencyContinuously:
+        return FrequencyContinuously(**data)
+
+    @validates('minutes')
+    def validate(self, minutes: int) -> None:
+        if minutes < 1:
+            raise ValidationError("minutes should be greater than 1")
+
+
+class FrequencyDailySchema(DisableSchema):
+    hour = fields.Int(required=True)
+
+    @post_load
+    def make(self, data: dict) -> FrequencyDaily:
+        return FrequencyDaily(**data)
+
+    @validates('hour')
+    def validates(self, hour: int) -> None:
+        if hour < 0 or hour > 23:
+            raise ValidationError("hour should be between 0 and 23")
+
+
+class FrequencyWeeklySchema(DisableSchema):
+    day_of_week = fields.Int(required=True)
+    hour = fields.Int(required=True)
+
+    @post_load
+    def make(self, data: dict) -> FrequencyWeekly:
+        return FrequencyWeekly(**data)
+
+    @validates('day_of_week')
+    def validates_day_of_week(self, day_of_week: int) -> None:
+        if day_of_week < 0 or day_of_week > 6:
+            raise ValidationError("day_of_week should be between 0 and 6")
+
+    @validates('hour')
+    def validates_hour(self, hour: int) -> None:
+        if hour < 0 or hour > 23:
+            raise ValidationError("hour should be between 0 and 23")
+
+
+class FrequencyMonthlySchema(DisableSchema):
+    day_of_month = fields.Int(required=True)
+    hour = fields.Int(required=True)
+
+    @post_load
+    def make(self, data: dict) -> FrequencyMonthly:
+        return FrequencyMonthly(**data)
+
+    @validates('day_of_month')
+    def validates_day_of_month(self, day_of_month: int) -> None:
+        if day_of_month < 1 or day_of_month > 28:
+            raise ValidationError("day_of_month should be between 1 and 28")
+
+    @validates('hour')
+    def validates_hour(self, hour: int) -> None:
+        if hour < 0 or hour > 23:
+            raise ValidationError("hour should be between 0 and 23")
+
+
+class FrequencySchema(OneOfSchema):
+    type_schemas = {
+        'continuously': FrequencyContinuouslySchema,
+        'daily': FrequencyDailySchema,
+        'weekly': FrequencyWeeklySchema,
+        'monthly': FrequencyMonthlySchema,
+    }
+
+    def get_obj_type(self, obj: FrequenceType) -> str:
+        if isinstance(obj, FrequencyContinuously):
+            return 'continuously'
+        elif isinstance(obj, FrequencyDaily):
+            return 'daily'
+        elif isinstance(obj, FrequencyWeekly):
+            return 'weekly'
+        elif isinstance(obj, FrequencyMonthly):
+            return 'monthly'
+        else:
+            raise ParameterException('unknown frequency object type: %s' % obj.__class__.__name__)
+
+
+class InputAutoSchema(Schema):
     url = fields.String(required=False, allow_none=True)
     expected_file_name = fields.String(required=False, allow_none=True)
     options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
+    frequency = fields.Nested(FrequencySchema, required=True)
 
     @post_load
-    def make_input(self, data: dict) -> Input:
-        return Input(**data)
+    def make_input(self, data: dict) -> InputAuto:
+        return InputAuto(**data)
+
+
+class InputManualSchema(Schema):
+    expected_file_name = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_input(self, data: dict) -> InputManual:
+        return InputManual(**data)
+
+
+class InputComputedSchema(Schema):
+    expected_file_name = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_input(self, data: dict) -> InputComputed:
+        return InputComputed(**data)
+
+
+class MongoDataSourceInputSchema(OneOfSchema):
+    type_schemas = {
+        INPUT_TYPE_AUTO: InputAutoSchema,
+        INPUT_TYPE_MANUAL: InputManualSchema,
+        INPUT_TYPE_COMPUTED: InputComputedSchema,
+    }
+
+    def get_obj_type(self, obj: InputType) -> str:
+        if isinstance(obj, InputAuto):
+            return INPUT_TYPE_AUTO
+        elif isinstance(obj, InputManual):
+            return INPUT_TYPE_MANUAL
+        elif isinstance(obj, InputComputed):
+            return INPUT_TYPE_COMPUTED
+        else:
+            raise ParameterException('unknown data source input object: %s' % obj.__class__.__name__)
 
 
 class MongoDataSourceSchema(Schema):

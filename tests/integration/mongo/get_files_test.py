@@ -53,7 +53,14 @@ class TestGetFiles(TartareFixture):
             "id": "to_process",
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour": 20
+                }
+            }
         })
         self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 

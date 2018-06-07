@@ -19,7 +19,7 @@ Current STIF process:
       "data_prefix": "STF",
       "data_format": "gtfs",
       "input": {
-        "type": "url",
+        "type": "auto",
         "url": "stif.com/od.zip"
       }
     },

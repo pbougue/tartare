@@ -58,8 +58,12 @@ class TestCoverageStatus(TartareFixture):
                     "id": "ds_" + id,
                     "name": "ds_" + id,
                     "input": {
-                        "type": "url",
-                        "url": self.format_url(ip, file)
+                        "type": "auto",
+                        "url": self.format_url(ip, file),
+                        "frequency": {
+                            "type": "daily",
+                            "hour": 20
+                        }
                     }
                 }
             ]
@@ -220,8 +224,12 @@ class TestCoverageStatus(TartareFixture):
 
         # Let's make the automatic update a success
         contributor2['data_sources'][0]['input'] = {
-            "type": "url",
-            "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip')
+            "type": "auto",
+            "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip'),
+            "frequency": {
+                "type": "daily",
+                "hour": 20
+            }
         }
         
         self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
@@ -238,8 +246,12 @@ class TestCoverageStatus(TartareFixture):
 
         # We make the automatic update failing in the contributor export again
         contributor2['data_sources'][0]['input'] = {
-            "type": "url",
-            "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url')
+            "type": "auto",
+            "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url'),
+            "frequency": {
+                "type": "daily",
+                "hour": 20
+            }
         }
         self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
         coverages = self.__run_automatic_update()

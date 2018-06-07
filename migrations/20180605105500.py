@@ -6,7 +6,6 @@ from mongodb_migrations.base import BaseMigration
 # Changed contributors_ids to input_data_source_ids in coverage
 #
 ########################################################################################################################
-from tartare.core.constants import DATA_FORMAT_GTFS
 
 
 class Migration(BaseMigration):
@@ -20,7 +19,7 @@ class Migration(BaseMigration):
                         contributor = self.db['contributors'].find_one({'_id': contributor_id})
                         if contributor:
                             for data_source in contributor.get('data_sources'):
-                                if data_source.get('data_format') == DATA_FORMAT_GTFS:
+                                if data_source.get('data_format') == 'gtfs':
                                     input_data_source_ids.append(data_source.get('id'))
 
                 coverage['input_data_source_ids'] = input_data_source_ids
