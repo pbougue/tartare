@@ -1084,6 +1084,10 @@ definitions:
       id:
         type: string
         example: tram_lyon
+      export_data_source_id:
+        type: string
+        example: my-export-id
+        description: the id of the computed data source generated for the export
       name:
         type: string
         example: Tram feed for Lyon
