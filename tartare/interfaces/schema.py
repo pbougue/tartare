@@ -73,10 +73,37 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
     integration = fields.Nested(EnvironmentSchema, allow_none=True)
 
 
+class DataSourceSchema(MongoDataSourceSchema):
+    id = fields.String()
+
+    @post_dump()
+    def add_calculated_fields_for_data_source(self, data: dict) -> dict:
+        data_source_status = DataSourceStatus(data['id'], data['data_sets'])
+        data_source_status_dict = {
+            'status': data_source_status.status,
+            'fetch_started_at': data_source_status.fetch_started_at,
+            'updated_at': data_source_status.updated_at,
+            'validity_period': data_source_status.validity_period,
+        }
+        data.update(data_source_status_dict)
+
+        return data
+
+    @post_dump()
+    def remove_password(self, data: dict) -> dict:
+        try:
+            if data.get('input').get('options').get('authent').get('password'):
+                data['input']['options']['authent'].pop('password')
+        except AttributeError:
+            pass
+        return data
+
+
 class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
     id = fields.String(required=True, validate=not_blank)
     # we have to override nested field to add validation on input
     environments = fields.Nested(EnvironmentListSchema)
+    data_sources = fields.Nested(DataSourceSchema, many=True, required=False)
 
     @post_load
     def make_coverage(self, data: dict) -> Coverage:
@@ -122,23 +149,6 @@ class CoverageSchema(MongoCoverageSchema, NoUnknownFieldMixin):
 
         last_active_job = get_last_active_job(data)
         data['last_active_job'] = None if last_active_job is None else JobSchema(strict=True).dump(last_active_job).data
-
-        return data
-
-
-class DataSourceSchema(MongoDataSourceSchema):
-    id = fields.String()
-
-    @post_dump()
-    def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        data_source_status = DataSourceStatus(data['id'], data['data_sets'])
-        data_source_status_dict = {
-            'status': data_source_status.status,
-            'fetch_started_at': data_source_status.fetch_started_at,
-            'updated_at': data_source_status.updated_at,
-            'validity_period': data_source_status.validity_period,
-        }
-        data.update(data_source_status_dict)
 
         return data
 

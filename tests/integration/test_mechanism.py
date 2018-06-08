@@ -34,6 +34,7 @@ import os
 import tempfile
 from zipfile import ZipFile
 
+import tartare
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
 from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, assert_content_equals_ref_file
@@ -156,7 +157,9 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)['contributors'][0]
 
-    def init_coverage(self, id, input_data_source_ids=None, preprocesses=None, environments=None, license=None):
+    def init_coverage(self, id, input_data_source_ids=None, preprocesses=None, environments=None, license=None,
+                      data_sources=None):
+        data_sources = data_sources if data_sources else []
         preprocesses = preprocesses if preprocesses else []
         environments = environments if environments else {}
         input_data_source_ids = input_data_source_ids if input_data_source_ids else []
@@ -165,6 +168,7 @@ class TartareFixture(object):
             "name": id,
             "input_data_source_ids": input_data_source_ids,
             "preprocesses": preprocesses,
+            "data_sources": data_sources,
             "environments": environments,
             "short_description": "description of coverage {}".format(id)
         }
@@ -308,3 +312,11 @@ class TartareFixture(object):
     def assert_gridfs_equals_fixture(self, gridfs_id, fixture):
         resp = self.get('/files/{}/download'.format(gridfs_id), follow_redirects=True)
         assert_content_equals_ref_file(resp.data, fixture)
+
+    @classmethod
+    def assert_data_source_has_username_and_password(cls, data_source, username, password, model, id='cid'):
+        assert data_source['input']['options']['authent']['username'] == username
+        assert 'password' not in data_source['input']['options']['authent']
+        with tartare.app.app_context():
+            object = model.get(id)
+            assert object.data_sources[0].input.options.authent.password == password

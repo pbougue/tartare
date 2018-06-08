@@ -810,3 +810,70 @@ class TestCoverageApi(TartareFixture):
         with tartare.app.app_context():
             coverage = Coverage.get(cov_id)
             assert coverage.environments['production'].publication_platforms[0].options.authent.password is None
+
+    def test_post_coverage_with_data_source_and_password_hidden(self):
+        username = 'my_user'
+        password = 'my_secret_password'
+        self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {
+                    'type': 'url',
+                    'url': 'whatever',
+                    'options': {
+                        'authent': {
+                            'username': username,
+                            'password': password,
+                        }
+                    }
+                }
+            }
+        ])
+        data_source = self.get_coverage('cid')['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source, username, password, Coverage)
+
+    def test_put_coverage_with_data_source_and_password_hidden(self):
+        username = 'my_user'
+        password = 'my_secret_password'
+        self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {
+                    'type': 'url',
+                    'url': 'whatever',
+                    'options': {
+                        'authent': {
+                            'username': username,
+                            'password': password,
+                        }
+                    }
+                }
+            }
+        ])
+        # update coverage preserve password
+        coverage = self.get_coverage('cid')
+        coverage['name'] = 'new_name'
+        self.put('/coverages/cid', self.dict_to_json(coverage))
+        coverage_updated = self.get_coverage('cid')
+        assert coverage_updated['name'] == 'new_name'
+        data_source = coverage_updated['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source, username, password, Coverage)
+
+        # update password
+        data_source['input']['options']['authent']['password'] = 'new_password'
+        self.put('/coverages/cid', self.dict_to_json(coverage_updated))
+        coverage_updated_password = self.get_coverage('cid')
+        data_source_with_new_password = coverage_updated_password['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source_with_new_password, username, 'new_password',
+                                                          Coverage)
+
+        # update username
+        data_source_with_new_password['input']['options']['authent']['username'] = 'new_user'
+        self.put('/coverages/cid', self.dict_to_json(coverage_updated_password))
+        final_coverage = self.get_coverage('cid')
+        assert not final_coverage['data_sources'][0]['input']['options']['authent']['password']
+        with tartare.app.app_context():
+            coverage = Coverage.get('cid')
+            assert not coverage.data_sources[0].input.options.authent.password

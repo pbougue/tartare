@@ -32,9 +32,11 @@ import json
 
 import pytest
 
+import tartare
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
     DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI
+from tartare.core.models import Contributor
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -906,3 +908,44 @@ class TestContributors(TartareFixture):
         self.put('/contributors/c1', self.dict_to_json(contributor))
         contributor = self.get_contributor('c1')
         self.__assert_export_id_generated_computed_data_source(contributor)
+
+    def test_post_contributor_with_data_source_and_password_hidden(self):
+        username = 'my_user'
+        password = 'my_secret_password'
+        self.init_contributor('cid', 'dsid', "http://some_url", options={
+            'authent': {'username': username, 'password': password}
+        })
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source, username, password, Contributor)
+
+    def test_put_contributor_with_data_source_and_password_hidden(self):
+        username = 'my_user'
+        password = 'my_secret_password'
+        self.init_contributor('cid', 'dsid', "http://some_url", options={
+            'authent': {'username': username, 'password': password}
+        })
+        # update contributor preserve password
+        contributor = self.get_contributor('cid')
+        contributor['name'] = 'new_name'
+        self.put('/contributors/cid', self.dict_to_json(contributor))
+        contributor_updated = self.get_contributor('cid')
+        assert contributor_updated['name'] == 'new_name'
+        data_source = contributor_updated['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source, username, password, Contributor)
+
+        # update password
+        data_source['input']['options']['authent']['password'] = 'new_password'
+        self.put('/contributors/cid', self.dict_to_json(contributor_updated))
+        contributor_updated_password = self.get_contributor('cid')
+        data_source_with_new_password = contributor_updated_password['data_sources'][0]
+        self.assert_data_source_has_username_and_password(data_source_with_new_password, username, 'new_password',
+                                                          Contributor)
+
+        # update username
+        data_source_with_new_password['input']['options']['authent']['username'] = 'new_user'
+        self.put('/contributors/cid', self.dict_to_json(contributor_updated_password))
+        final_contributor = self.get_contributor('cid')
+        assert not final_contributor['data_sources'][0]['input']['options']['authent']['password']
+        with tartare.app.app_context():
+            contributor = Contributor.get('cid')
+            assert not contributor.data_sources[0].input.options.authent.password
