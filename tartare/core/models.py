@@ -37,7 +37,6 @@ from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
 
 import pymongo
 import pytz
-from gridfs import GridOut
 from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
@@ -48,7 +47,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import IntegrityException, ValidityPeriodException, EntityNotFound
+from tartare.exceptions import ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -647,11 +646,12 @@ class Coverage(PreProcessContainer):
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str = None) -> Optional['Coverage']:
+    def get(cls, coverage_id: str) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
-            return None
-
+            msg = "coverage '{}' not found".format(coverage_id)
+            logging.getLogger(__name__).error(msg)
+            raise EntityNotFound(msg)
         return MongoCoverageSchema(strict=True).load(raw).data
 
     @classmethod
@@ -667,14 +667,6 @@ class Coverage(PreProcessContainer):
     @classmethod
     def all(cls) -> List['Coverage']:
         return cls.find(filter={})
-
-    @classmethod
-    def update_with_dict(cls, coverage_id: str = None, dataset: dict = None) -> None:
-        # we have to use "doted notation' to only update some fields of a nested object
-        tmp_dataset = dataset if dataset else {}
-        mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(tmp_dataset)})
-
-        cls.get(coverage_id)
 
     def __fill_password_from_existing_coverage(self, existing_coverage: 'Coverage') -> None:
         for env_key, environment in self.environments.items():
@@ -697,18 +689,6 @@ class Coverage(PreProcessContainer):
 
     def update(self) -> None:
         self.update_with_object(self)
-
-    def save_ntfs(self, environment_type: str, file: Union[str, bytes, IOBase, GridOut]) -> None:
-        if environment_type not in self.environments.keys():
-            raise ValueError('invalid value for environment_type')
-        filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
-        gridfs_handler = GridFsHandler()
-        id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update_with_dict(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
-        # when we delete the file all process reading it will get invalid data
-        # TODO: We will need to implements a better solution
-        gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
-        self.environments[environment_type].current_ntfs_id = id
 
     def get_data_source(self, data_source_id: str) -> 'DataSource':
         return next(data_source for data_source in self.data_sources if data_source.id == data_source_id)
