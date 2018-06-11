@@ -22,7 +22,7 @@ RUN apk --update add \
         g++ \
         libstdc++ \
         linux-headers && \
-    pip install uwsgi && \
+    pip install uwsgi numpy==1.14.3 && \
     pip install --no-cache-dir -r requirements.txt && \
     find /usr/local \
         \( -type d -a -name test -o -name tests \) \
