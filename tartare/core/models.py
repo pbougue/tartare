@@ -45,7 +45,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
-    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_URL
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
@@ -129,7 +129,7 @@ class SequenceContainer(metaclass=ABCMeta):
         return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
 
 
-class PreProcessContainer(metaclass=ABCMeta):
+class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
@@ -160,6 +160,21 @@ class PreProcessContainer(metaclass=ABCMeta):
                     if not preprocess.params.get("target_data_source_id"):
                         preprocess.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
+
+    def fill_data_source_passwords_from_existing_object(self, existing_object: 'DataSourceAndPreProcessContainer') -> None:
+        for data_source in self.data_sources:
+            if data_source.input and data_source.input.type == INPUT_TYPE_URL:
+                input = data_source.input
+                if input.options and input.options.authent and input.options.authent.username and \
+                        not input.options.authent.password:
+                    existing_data_source = next((
+                        existing_data_source for existing_data_source in existing_object.data_sources if
+                        existing_data_source.id == data_source.id), None)
+                    if existing_data_source and existing_data_source.input.options and \
+                            existing_data_source.input.options.authent and \
+                            existing_data_source.input.options.authent.username == input.options.authent.username and \
+                            existing_data_source.input.options.authent.password:
+                        data_source.input.options.authent.password = existing_data_source.input.options.authent.password
 
     @classmethod
     def get(cls, object_id: str) -> Union['Contributor', Optional['Coverage']]:
@@ -440,7 +455,7 @@ class GenericPreProcess(SequenceContainer):
         self.type = type
         self.enabled = enabled
 
-    def save_data(self, class_name: Type[PreProcessContainer],
+    def save_data(self, class_name: Type[DataSourceAndPreProcessContainer],
                   mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                   ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
@@ -455,7 +470,7 @@ class GenericPreProcess(SequenceContainer):
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Type[PreProcessContainer],
+    def get_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                  mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                  preprocess_id: str) -> Optional[List['PreProcess']]:
         if object_id is not None:
@@ -478,7 +493,7 @@ class GenericPreProcess(SequenceContainer):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Type[PreProcessContainer],
+    def delete_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                     mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
@@ -492,7 +507,7 @@ class GenericPreProcess(SequenceContainer):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Type[PreProcessContainer],
+    def update_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                     mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str, preprocess: Optional[Dict[str, Any]] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
@@ -565,7 +580,7 @@ class PreProcess(GenericPreProcess):
         return str(vars(self))
 
 
-class Contributor(PreProcessContainer):
+class Contributor(DataSourceAndPreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
@@ -611,6 +626,7 @@ class Contributor(PreProcessContainer):
         self.update_with_object(self)
 
     def update_with_object(self, contributor_object: 'Contributor') -> None:
+        contributor_object.fill_data_source_passwords_from_existing_object(self)
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
             {'$set': MongoContributorSchema().dump(contributor_object).data})
@@ -622,7 +638,7 @@ class Contributor(PreProcessContainer):
         return self.data_type == DATA_TYPE_GEOGRAPHIC
 
 
-class Coverage(PreProcessContainer):
+class Coverage(DataSourceAndPreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
@@ -668,7 +684,7 @@ class Coverage(PreProcessContainer):
     def all(cls) -> List['Coverage']:
         return cls.find(filter={})
 
-    def __fill_password_from_existing_coverage(self, existing_coverage: 'Coverage') -> None:
+    def __fill_platform_passwords_from_existing_coverage(self, existing_coverage: 'Coverage') -> None:
         for env_key, environment in self.environments.items():
             for platform in environment.publication_platforms:
                 if platform.options and platform.options.authent and platform.options.authent.username and \
@@ -682,7 +698,8 @@ class Coverage(PreProcessContainer):
                             platform.options.authent.password = existing_platform.options.authent.password
 
     def update_with_object(self, coverage_object: 'Coverage') -> None:
-        coverage_object.__fill_password_from_existing_coverage(self)
+        coverage_object.fill_data_source_passwords_from_existing_object(self)
+        coverage_object.__fill_platform_passwords_from_existing_coverage(self)
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
             {'$set': MongoCoverageSchema().dump(coverage_object).data})
