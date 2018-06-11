@@ -683,6 +683,10 @@ definitions:
       short_description:
         type: string
         description: Description of coverage content, used for ODS export
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/data_source_type"
       comment:
         type: string
         description: Coverage detail
