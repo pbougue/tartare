@@ -79,9 +79,8 @@ This preprocess allows to modify trip_short_name and trip_headsign by "route_typ
 ### GtfsAgencyFile
 This preprocess is used to create the required *agency.txt* file in a GTFS where there is none or to fill an empty existing one :
 - If there is no *agency.txt*, the agency file will be created.  
-- If there is already an *agency.txt*, but with only the column titles, infos from the preprocess'params will be added.  
-- If there is already an *agency.txt* and there is only one agency, it will be modified with process's specified values.
-- If there is already an *agency.txt* and there is more than one agency specified, the process will fail.  
+- If there is already an *agency.txt*, but with only the column titles, info from the preprocess' params will be added.
+- If there is already an *agency.txt*, and it contains a value for at least one of the required fields (agency_name, agency_url, agency_timezone) no modifications will be done on the file
 
 
 ```json
