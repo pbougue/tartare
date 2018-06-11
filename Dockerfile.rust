@@ -4,7 +4,9 @@ FROM navitia/navitia_model as navitia_model
 
 FROM par-vm221.srv.canaltp.fr:5000/tartare:${TAG}
 USER root
-RUN apk --update add aspell aspell-fr && rm -rf /var/apk/cache/
+RUN apt-get update \
+    && apt-get install -y -qq aspell aspell-fr \
+    && rm -rf /var/lib/apt/lists/*
 USER tartare
 
 COPY --from=ruspell /app/ruspell /usr/src/app/bin/ruspell
