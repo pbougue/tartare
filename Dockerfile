@@ -1,4 +1,4 @@
-FROM python:3.6.2-alpine
+FROM python:3.6.5-slim
 
 # Used for celery
 #Running a worker with superuser privileges when the
@@ -8,8 +8,8 @@ FROM python:3.6.2-alpine
 #environment variable (but please think about this before you do).
 #
 #User information: uid=0 euid=0 gid=0 egid=0
-RUN addgroup -g 8110 tartare
-RUN adduser -H -D -u 8110 -G tartare tartare
+RUN groupadd -g 8110 tartare
+RUN useradd -M -r -u 8110 -g tartare tartare
 
 WORKDIR /usr/src/app
 
@@ -18,20 +18,17 @@ RUN chown -R tartare:tartare /usr/src/app
 COPY requirements.txt /usr/src/app
 
 # those are needed for uwsgi
-RUN apk --update add \
-        g++ \
-        libstdc++ \
-        linux-headers && \
-    pip install uwsgi numpy==1.14.3 && \
-    pip install --no-cache-dir -r requirements.txt && \
-    find /usr/local \
+RUN apt-get update \
+    && apt-get install -qq -y gcc \
+    && pip install uwsgi \
+    && pip install --no-cache-dir -r requirements.txt \
+    && find /usr/local \
         \( -type d -a -name test -o -name tests \) \
         -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
-        -exec rm -rf '{}' + && \
-    apk del \
-        g++ \
-        linux-headers && \
-    rm -rf /var/apk/cache/*
+        -exec rm -rf '{}' + \
+    && apt-get purge -y gcc \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV TARTARE_RABBITMQ_HOST amqp://guest:guest@localhost:5672//
 
