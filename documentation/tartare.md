@@ -70,6 +70,7 @@ When collecting a new `Data Set` for the `Data Source` (either manually or autom
 - `directory` : provide a sub-directory, usefull when connecting to a FTP ressource
 - `authent.username` : for a secured ressource (FTP or HTTP), contains the login
 - `authent.password` : for a secured ressource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
+If the `authent.username` is modified, the `authent.password` should also be provided.
 
 ### Contributor's Process properties
 The `Contributor` processes are described [in this page](./preprocesses.md).
@@ -131,7 +132,7 @@ sequence | Required | Order of the `Environement` in the list.
 publication_platforms | Required | A list of `Publication Plateform`s (see below). This list can be empty.
 current_ntfs_id | Not required | Id of the last file used by the environement.
 
-#### Publication Plateforms
+#### Publication Platforms
 Property | Constraint | Description |
 --- | --- | --- |
 sequence | Required | Order of the `Publication Plateform` to be processed in the containing `Environement`.
@@ -143,6 +144,27 @@ options.directory | not required | directory where the data will be stored
 options.authent | not required | contains credentials if authentifications need to be made for publication. `username` and `password` fields should be provided. (1)
 
 (1) Be carefull with `password`. For security reasons, `password` field will not be available when reading data for the `Coverage`. Only specify the `password` key when setting or modifying the `password` value.
+If the `authent.username` is modified, the `authent.password` should also be provided.
+
+**Details about `ods` Publication Plateform**
+An `ods` publication is a ZIP file containing :
+- a CSV file describing the content of the OpenDataSoft data shown to the user as an array or a JSON API. The meta-data in this file is self computed by Tartare.
+- the last `Data Set` of each `Data Source` specified in `input_data_source_ids`.
+
+Content of the CSV file :
+Property | Description
+--- | --- 
+ID | "<coverage_id>_GTFS" or "<coverage_id>_NTFS" depending on the `Data Source` type.
+Description | Content of the `short_description` property of the `Coverage`
+Format | "GTFS" or "NTFS", depending on the `Data Source` type.
+Download | File name to be downloaded. "<coverage_id>_GTFS.zip" or "<coverage_id>_NTFS.zip"
+Validity start date | Validity start date of the current `Data Set` 
+Validity end date | Validity end date of the current `Data Set` 
+Licence | License name as specified in the `Coverage` properties
+Licence Link | License link as specified in the `Coverage` properties
+Size | Size of the file in octets
+Update date | Current date of the publication process
+
 
 ### Actions on Coverages
 Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by accessing or modifying the `Coverage`.  
