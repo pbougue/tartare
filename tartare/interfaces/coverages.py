@@ -26,7 +26,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
 from typing import Optional
 
 import flask_restful
@@ -36,7 +35,9 @@ from marshmallow import ValidationError
 from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
-from tartare.decorators import JsonDataValidate, ValidateContributors, ValidatePatchCoverages, RemoveLastActiveJob
+from tartare.decorators import JsonDataValidate, RemoveLastActiveJob, \
+    ValidateInputDataSourceIds
+from tartare.exceptions import EntityNotFound
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -58,7 +59,7 @@ class Coverage(flask_restful.Resource):
             raise InvalidArguments(err.messages)
 
     @JsonDataValidate()
-    @ValidateContributors()
+    @ValidateInputDataSourceIds()
     def post(self) -> Response:
         coverage = self.__pre_save_coverage(request.json)
         try:
@@ -71,13 +72,14 @@ class Coverage(flask_restful.Resource):
         response, status = self.get(coverage.id)
         return response, 201
 
-    def get(self, coverage_id: Optional[str]=None) -> Response:
+    def get(self, coverage_id: Optional[str] = None) -> Response:
         if coverage_id:
-            c = models.Coverage.get(coverage_id)
-            if c is None:
-                raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
+            try:
+                coverage = models.Coverage.get(coverage_id)
+            except EntityNotFound as e:
+                raise ObjectNotFound(str(e))
 
-            result = schema.CoverageSchema().dump(c)
+            result = schema.CoverageSchema().dump(coverage)
             return {'coverages': [result.data]}, 200
 
         coverages = models.Coverage.all()
@@ -91,29 +93,7 @@ class Coverage(flask_restful.Resource):
         return "", 204
 
     @JsonDataValidate()
-    @ValidateContributors()
-    @ValidatePatchCoverages()
-    def patch(self, coverage_id: str) -> Response:
-        coverage = models.Coverage.get(coverage_id)
-        if coverage is None:
-            raise ObjectNotFound("coverage '{}' not found".format(coverage_id))
-        if 'id' in request.json and coverage.id != request.json['id']:
-            raise InvalidArguments('the modification of the id is not possible')
-        coverage_schema = schema.CoverageSchema(partial=True)
-        errors = coverage_schema.validate(request.json, partial=True)
-        if errors:
-            raise InvalidArguments(errors)
-
-        logging.debug(request.json)
-        try:
-            coverage = models.Coverage.update_with_dict(coverage_id, request.json)
-        except PyMongoError:
-            raise InternalServerError('impossible to update coverage with dataset {}'.format(request.json))
-
-        return self.get(coverage.id)
-
-    @JsonDataValidate()
-    @ValidateContributors()
+    @ValidateInputDataSourceIds()
     @RemoveLastActiveJob()
     def put(self, coverage_id: str) -> Response:
         post_data = request.json
@@ -124,6 +104,8 @@ class Coverage(flask_restful.Resource):
         try:
             existing_coverage = models.Coverage.get(coverage_id)
             existing_coverage.update_with_object(new_coverage)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         except DuplicateKeyError:
             raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
         except PyMongoError:

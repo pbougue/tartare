@@ -33,16 +33,14 @@ import logging.config
 import uuid
 import zipfile
 from collections.abc import Mapping
+from datetime import datetime, date
 from hashlib import md5
-from io import IOBase
+from io import StringIO
 from io import TextIOWrapper
+from typing import Optional, Dict, Iterable
 from typing import Union, Any, List
 
-import requests
 from gridfs.grid_file import GridOut
-from requests import Response
-from datetime import datetime, date
-from typing import Optional
 
 
 def grid_out_len(self: GridOut) -> int:
@@ -50,11 +48,6 @@ def grid_out_len(self: GridOut) -> int:
 
 
 GridOut.__len__ = grid_out_len
-
-
-def upload_file(url: str, filename: str, file: Union[str, bytes, IOBase, GridOut]) -> Response:
-    return requests.post(url, files={'file': file, 'filename': filename}, timeout=120)
-    # TODO: fix interaction between toolbets and gridfs file
 
 
 def configure_logger(app_config: dict) -> None:
@@ -153,3 +146,15 @@ def date_from_string(value: str, name: str) -> date:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except:
         raise ValueError("the {} argument value is not valid, you gave: {}".format(name, value))
+
+
+def dic_to_memory_csv(list_of_dict: List[Dict[str, str]], keys: Optional[Iterable[str]] = None) -> Optional[StringIO]:
+    if len(list_of_dict) == 0:
+        return None
+    if not keys:
+        keys = sorted(list_of_dict[0].keys())
+    f = StringIO()
+    w = csv.DictWriter(f, sorted(keys), lineterminator="\n")
+    w.writeheader()
+    w.writerows(list_of_dict)
+    return f

@@ -29,30 +29,26 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from tartare import app
 from flask_restful import Api
 
+from tartare import app
 from tartare.interfaces.automatic_update import AutomaticUpdateResource
-from tartare.interfaces.data_source_fetch import DataSourceFetch
-from tartare.interfaces.status import Status
-from tartare.interfaces.index import Index
-from tartare.interfaces.coverages import Coverage
-from tartare.interfaces.contributors import Contributor
-from tartare.interfaces.grid_calendar import GridCalendar
-from tartare.interfaces.data_sources import DataSource
-from tartare.interfaces.data_set import DataSet
-from tartare.interfaces.coverage_contributor_subscription import CoverageContributorSubscription
 from tartare.interfaces.contributor_export import ContributorExportResource
+from tartare.interfaces.contributors import Contributor
 from tartare.interfaces.coverage_export import CoverageExportResource
-from tartare.interfaces.jobs import Job
-from tartare.interfaces.preprocess import PreProcess
+from tartare.interfaces.coverages import Coverage
+from tartare.interfaces.data_set import DataSet
+from tartare.interfaces.data_source_fetch import DataSourceFetch
+from tartare.interfaces.data_sources import DataSource
 from tartare.interfaces.files_download import FileDownload
+from tartare.interfaces.index import Index
+from tartare.interfaces.jobs import Job
 from tartare.interfaces.preprocesses import PreProcesses
+from tartare.interfaces.status import Status
 
 api = Api(app)
 
 api.app.url_map.strict_slashes = False
-
 
 api.add_resource(Index,
                  '/',
@@ -69,10 +65,6 @@ api.add_resource(Coverage,
                  '/coverages/<string:coverage_id>',
                  endpoint='coverages')
 
-api.add_resource(GridCalendar,
-                 '/coverages/<string:coverage_id>/grid_calendar',
-                 endpoint='grid_calendar')
-
 api.add_resource(Contributor,
                  '/contributors',
                  '/contributors/<string:contributor_id>',
@@ -87,16 +79,6 @@ api.add_resource(DataSourceFetch,
 
 api.add_resource(DataSet,
                  '/contributors/<string:contributor_id>/data_sources/<string:data_source_id>/data_sets')
-
-api.add_resource(PreProcess,
-                 '/contributors/<string:contributor_id>/preprocesses',
-                 '/contributors/<string:contributor_id>/preprocesses/<string:preprocess_id>',
-                 '/coverages/<string:coverage_id>/preprocesses',
-                 '/coverages/<string:coverage_id>/preprocesses/<string:preprocess_id>')
-
-api.add_resource(CoverageContributorSubscription,
-                 '/coverages/<string:coverage_id>/contributors',
-                 '/coverages/<string:coverage_id>/contributors/<string:contributor_id>')
 
 api.add_resource(ContributorExportResource,
                  '/contributors/<string:contributor_id>/exports',

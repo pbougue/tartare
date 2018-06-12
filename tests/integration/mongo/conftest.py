@@ -33,8 +33,8 @@ import pytest
 from tartare import app, mongo
 from tartare.core import models
 from tests.docker_wrapper import MongoDocker, DownloadHttpServerDocker, DownloadFtpServerDocker, UploadFtpServerDocker, \
-    DownloadHttpServerAuthentDocker
-from tests.utils import to_json
+    DownloadHttpServerAuthentDocker, DownloadFtpServerAuthentDocker
+from tests.utils import to_json, to_dict
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -88,6 +88,12 @@ def init_ftp_download_server():
         yield download_server
 
 
+@pytest.yield_fixture(scope="session", autouse=False)
+def init_ftp_download_server_authent():
+    with DownloadFtpServerAuthentDocker() as download_server:
+        yield download_server
+
+
 @pytest.yield_fixture(scope="function")
 def get_app_context():
     with app.app_context():
@@ -99,7 +105,7 @@ def coverage_with_data_source_tram_lyon(app):
     coverage = app.post('/coverages',
                         headers={'Content-Type': 'application/json'},
                         data='{"id": "jdr", "name": "name of the coverage jdr", "data_sources": ["tram_lyon"]}')
-    return to_json(coverage)['coverages'][0]
+    return to_dict(coverage)['coverages'][0]
 
 
 @pytest.fixture(scope="function")
@@ -107,7 +113,7 @@ def coverage(app):
     coverage = app.post('/coverages',
                         headers={'Content-Type': 'application/json'},
                         data='{"id": "jdr", "name": "name of the coverage jdr"}')
-    return to_json(coverage)['coverages'][0]
+    return to_dict(coverage)['coverages'][0]
 
 
 @pytest.fixture(scope="function")
@@ -115,16 +121,23 @@ def contributor(app):
     contributor = app.post('/contributors',
                            headers={'Content-Type': 'application/json'},
                            data='{"id": "id_test", "name": "name_test", "data_prefix": "AAA"}')
-    return to_json(contributor)['contributors'][0]
+    return to_dict(contributor)['contributors'][0]
 
 
 @pytest.fixture(scope="function")
 def data_source(app, contributor):
-    data_source = app.post('/contributors/{}/data_sources'.format(contributor.get('id')),
+    contributor['data_sources'] = [
+        {
+            "id": "ds_test",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": "http://stif.com/od.zip"}
+        }
+    ]
+    contributors = app.put('/contributors/{}'.format(contributor.get('id')),
                            headers={'Content-Type': 'application/json'},
-                           data='{"name": "bobette", "data_format": "gtfs",'
-                                '"input": {"type": "url", "url": "http://stif.com/od.zip"}}')
-    ds = to_json(data_source)['data_sources'][0]
+                           data=to_json(contributor))
+    ds = to_dict(contributors)['contributors'][0]['data_sources'][0]
     calculated_fields = ['status', 'updated_at', 'fetch_started_at']
     for calculated_field in calculated_fields:
         ds.pop(calculated_field, None)
@@ -135,7 +148,8 @@ def data_source(app, contributor):
 def coverage_obj(tmpdir, get_app_context):
     coverage = models.Coverage(id='test', name='test')
     coverage.environments['production'] = models.Environment(name='prod')
-    publication_platform = models.Platform(type="navitia", protocol="http", url="http://tyr.prod/v0/instances/test")
+    publication_platform = models.PublicationPlatform(type="navitia", protocol="http",
+                                                      url="http://tyr.prod/v0/instances/test")
     coverage.environments['production'].publication_platforms.append(publication_platform)
     coverage.save()
     return coverage
@@ -145,11 +159,10 @@ def coverage_obj(tmpdir, get_app_context):
 def coverage_export_obj(tmpdir, get_app_context):
     p = models.ValidityPeriod(date(2017, 1, 1), date(2017, 1, 30))
     c = models.ContributorExportDataSource(data_source_id='1234', validity_period=p)
-    contributors = models.CoverageExportContributor(contributor_id='fr-idf',
-                                                    validity_period=p, data_sources=[c])
     coverage_export = models.CoverageExport(coverage_id='coverage1',
                                             gridfs_id='1234',
-                                            validity_period=p,
-                                            contributors=[contributors])
+                                            validity_period=p
+                                            )
+
     coverage_export.save()
     return coverage_export

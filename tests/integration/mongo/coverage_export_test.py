@@ -31,7 +31,7 @@
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tests.integration.test_mechanism import TartareFixture
 import mock
-from tests.utils import mock_urlretrieve, mock_requests_post
+from tests.utils import mock_requests_post
 
 
 class TestCoverageExport(TartareFixture):
@@ -40,7 +40,7 @@ class TestCoverageExport(TartareFixture):
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
         assert 'error' in r
-        assert r.get('error') == 'coverage not found: toto'
+        assert r.get('error') == "coverage 'toto' not found"
 
     def test_coverage_export(self):
         raw = self.post('/coverages', '{"id": "id_test", "name":"name_test"}')
@@ -81,10 +81,6 @@ class TestCoverageExport(TartareFixture):
         assert r["exports"][0]["coverage_id"] == "coverage1"
         assert r["exports"][0]['validity_period']['start_date'] == '2017-01-01'
         assert r["exports"][0]['validity_period']['end_date'] == '2017-01-30'
-        assert len(r["exports"][0]["contributors"]) == 1
-        assert r["exports"][0]["contributors"][0]['contributor_id'] == 'fr-idf'
-        assert r["exports"][0]['contributors'][0]['validity_period']['start_date'] == '2017-01-01'
-        assert r["exports"][0]['contributors'][0]['validity_period']['end_date'] == '2017-01-30'
 
         # Exports for coverage2, 0 export
         exports = self.get('/coverages/coverage2/exports')
@@ -97,38 +93,4 @@ class TestCoverageExport(TartareFixture):
         assert exports.status_code == 404
         r = self.json_to_dict(exports)
         assert r['message'] == 'Object Not Found. You have requested this URI [/coverages/bob/exports] but did you mean /coverages/<string:coverage_id>/exports or /coverages/<string:coverage_id>/actions/export or /coverages/<string:coverage_id>/jobs ?'
-        assert r['error'] == 'coverage not found: bob'
-
-    @mock.patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve)
-    def test_save_coverage_export(self, mock_urlretrieve):
-        # Add contributor with data_sources
-        contrib_data = '''{
-            "id": "id_test",
-            "name": "name_test",
-            "data_prefix": "AAA",
-            "data_sources": [
-                {
-                    "name": "bobette",
-                    "data_format": "gtfs",
-                    "input": {"type": "url", "url": "http://stif.com/od.zip"}}
-            ]
-        }'''
-        self.post('/contributors', contrib_data)
-        # Add coverage with coverages
-        self.post('/coverages', '{"id": "coverage1", "name":"name_test", "contributors": ["id_test"]}')
-        # launch contributor export
-        with mock.patch('requests.post', mock_requests_post):
-            self.contributor_export('id_test')
-            self.coverage_export('coverage1', '2015-08-10')
-
-            # jobs of coverage
-            jobs = self.json_to_dict(self.get("/jobs"))['jobs']
-            assert len(jobs) == 3
-
-        # coverage export
-        ce = self.get("/coverages/coverage1/exports")
-        assert ce.status_code == 200
-        json = self.json_to_dict(ce)
-        assert "exports" in json
-        assert len(json.get("exports")) == 1
-        assert json.get("exports")[0].get("gridfs_id")
+        assert r['error'] == "coverage 'bob' not found"

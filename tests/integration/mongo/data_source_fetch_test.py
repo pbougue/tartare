@@ -31,12 +31,11 @@
 import os
 import tempfile
 
-from tartare import app, mongo
-from tartare.core import models
+from tartare import app
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Job
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import _get_file_fixture_full_path, assert_files_equals
+from tests.utils import _get_file_fixture_full_path, assert_text_files_equals
 
 fixtures_path = _get_file_fixture_full_path('gtfs/some_archive.zip')
 
@@ -46,7 +45,7 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "bad contributor unknown"
+        assert r["error"] == "contributor 'unknown' not found"
 
     def test_fetch_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')
@@ -57,18 +56,23 @@ class TestDataSourceFetchAction(TartareFixture):
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = self.format_url(ip, 'sample_1.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         raw = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
 
         self.assert_sucessful_call(raw, 204)
 
-        data_source = self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))['data_sources'][0]
+        data_source = \
+            self.json_to_dict(self.get('contributors/{}/data_sources/{}'.format(contributor['id'], data_source_id)))[
+                'data_sources'][0]
         data_set = data_source['data_sets'][0]
         # Test that source file and saved file are the same
         with app.app_context():
@@ -79,7 +83,7 @@ class TestDataSourceFetchAction(TartareFixture):
                 gridout_path = os.path.join(path, gridout.filename)
                 with open(gridout_path, 'wb+') as f:
                     f.write(gridout.read())
-                    assert_files_equals(gridout_path, expected_path)
+                    assert_text_files_equals(gridout_path, expected_path)
             jobs = Job.get_some(contributor_id=contributor['id'])
             assert len(jobs) == 1
             job = jobs[0]
@@ -96,12 +100,15 @@ class TestDataSourceFetchAction(TartareFixture):
     def test_fetch_invalid_type(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr
         url = "http://{ip}/{filename}".format(ip=ip, filename='unknown.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "manual", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "manual", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
         json_response = self.json_to_dict(response)
@@ -111,19 +118,15 @@ class TestDataSourceFetchAction(TartareFixture):
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         url = self.format_url(init_http_download_server.ip_addr, 'unknown.zip', path='')
-        params = {
+        contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {
-                "type": "url",
-                "url": url
-            }
-        }
-        raw = self.post('/contributors/id_test/data_sources', self.dict_to_json(params))
-        self.assert_sucessful_create(raw)
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
         json_response = self.json_to_dict(raw)
-        data_source_id = json_response['data_sources'][0]['id']
+        data_source_id = json_response['contributors'][0]['data_sources'][0]['id']
 
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor['id'], data_source_id))
         json_response = self.json_to_dict(response)
@@ -156,6 +159,56 @@ class TestDataSourceFetchAction(TartareFixture):
         )
         self.init_contributor('cid', 'dsid', url)
         self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_authent_in_options_ok(self, init_http_download_authent_server):
+        props = init_http_download_authent_server.properties
+        url = "http://{ip}/{alias}gtfs/{filename}".format(
+            alias=props['ROOT'],
+            ip=init_http_download_authent_server.ip_addr,
+            filename='some_archive.zip'
+        )
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': props['USERNAME'], 'password': props['PASSWORD']}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_ftp_authent_in_options_ok(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        self.fetch_data_source('cid', 'dsid')
+        data_source = self.get_contributor('cid')['data_sources'][0]
+        assert len(data_source['data_sets']) == 1
+
+    def test_fetch_ftp_authent_in_options_unauthorized(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': 'wrong_user',
+                        'password': 'wrong_password'}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': 'fetching {} failed: error during download of file: 530 Login authentication failed'.format(url),
+            'message': 'Internal Server Error'}
+
+    def test_fetch_ftp_authent_in_options_not_found(self, init_ftp_download_server_authent):
+        url = self.format_url(init_ftp_download_server_authent.ip_addr, 'some_archive_unknown.zip', method='ftp')
+        self.init_contributor('cid', 'dsid', url, options={
+            'authent': {'username': init_ftp_download_server_authent.user,
+                        'password': init_ftp_download_server_authent.password}
+        })
+        raw = self.fetch_data_source('cid', 'dsid', check_success=False)
+        details = self.assert_failed_call(raw, 500)
+        assert details == {
+            'error': "fetching {} failed: error during download of file: 550 Can't open /gtfs/some_archive_unknown.zip: No such file or directory".format(url),
+            'message': 'Internal Server Error'}
 
     def test_fetch_authent_in_http_url_unauthorized(self, init_http_download_authent_server):
         props = init_http_download_authent_server.properties

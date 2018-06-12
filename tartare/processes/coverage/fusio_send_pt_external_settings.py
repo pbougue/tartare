@@ -39,13 +39,12 @@ from tartare.processes.utils import preprocess_registry
 @preprocess_registry('coverage')
 class FusioSendPtExternalSettings(AbstractFusioProcess):
     def do(self) -> Context:
-        for contributor_context in self.context.contributor_contexts:
-            for data_source_context in contributor_context.data_source_contexts:
-                data_source = DataSource.get_one(data_source_id=data_source_context.data_source_id)
-                if data_source.is_of_data_format(DATA_FORMAT_PT_EXTERNAL_SETTINGS):
-                    if data_source.id in self.params.get('input_data_source_ids', []):
-                        resp = self.fusio.call(requests.post, api='api',
-                                               data={'action': 'externalstgupdate'},
-                                               files=self.get_files_from_gridfs(data_source_context.gridfs_id))
-                        self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
+        for data_source_id in self.params.get('input_data_source_ids', []):
+            data_source = DataSource.get_one(data_source_id=data_source_id)
+            data_set = data_source.get_last_data_set()
+            if data_source.is_of_data_format(DATA_FORMAT_PT_EXTERNAL_SETTINGS):
+                resp = self.fusio.call(requests.post, api='api',
+                                       data={'action': 'externalstgupdate'},
+                                       files=self.get_files_from_gridfs(data_set.gridfs_id))
+                self.fusio.wait_for_action_terminated(self.fusio.get_action_id(resp.content))
         return self.context

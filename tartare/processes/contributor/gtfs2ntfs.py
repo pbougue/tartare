@@ -33,8 +33,9 @@ import json
 
 from zipfile import ZipFile
 
+from tartare.core.constants import DATA_FORMAT_NTFS
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import PreProcess
+from tartare.core.models import PreProcess, DataSource
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
@@ -87,15 +88,12 @@ class Gtfs2Ntfs(AbstractContributorProcess):
         return config_file_path
 
     def do(self) -> Context:
-        # TODO: Check every files in a gtfs?
+        # @TODO: Check every files in a gtfs?
         with tempfile.TemporaryDirectory() as config_dir_path, \
                 tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as dst_dir_path:
             for data_source_id_to_process in self.data_source_ids:
-                data_source_to_process_context = self.context.get_contributor_data_source_context(
-                    contributor_id=self.contributor.id,
-                    data_source_id=data_source_id_to_process)
-
-                data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
+                data_source_export = self.context.get_data_source_export_from_data_source(data_source_id_to_process)
+                data_source_gridout = self.gfs.get_file_from_gridfs(data_source_export.gridfs_id)
 
                 with ZipFile(data_source_gridout, 'r') as files_zip:
                     files_zip.extractall(extract_dir_path)
@@ -106,10 +104,9 @@ class Gtfs2Ntfs(AbstractContributorProcess):
                                       extract_dir_path,
                                       dst_dir_path,
                                       self.contributor.data_prefix)
-
-                    data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                        old_gridfs_id=data_source_to_process_context.gridfs_id,
+                    new_gridfs_id = self.create_archive_and_add_in_grid_fs(
                         files=dst_dir_path,
                         computed_file_name=data_source_id_to_process)
+                    data_source_export.update_data_set_state(new_gridfs_id, DATA_FORMAT_NTFS)
 
         return self.context

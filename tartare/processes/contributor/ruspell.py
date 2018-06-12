@@ -37,7 +37,7 @@ from tartare.core.context import ContributorExportContext, Context
 from tartare.core.models import DataSource
 from tartare.core.models import PreProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
-from tartare.exceptions import ParameterException, RuntimeException
+from tartare.exceptions import ParameterException, RuntimeException, EntityNotFound
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
 
@@ -80,9 +80,10 @@ class Ruspell(AbstractContributorProcess):
                 file_path = os.path.join(path, gridout.filename)
                 with open(file_path, 'wb+') as f:
                     f.write(gridout.read())
-            except ValueError:
-                msg = 'data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(data_source_id,
-                                                                                                           contributor_id)
+            except (ValueError, EntityNotFound):
+                msg = 'data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
+                    data_source_id, contributor_id
+                )
                 raise ParameterException(self.format_error_message(msg))
         return file_path
 
@@ -108,23 +109,20 @@ class Ruspell(AbstractContributorProcess):
             self.__extract_data_sources_from_gridfs(DATA_FORMAT_BANO_FILE, ruspell_dir_path)
 
             for data_source_id_to_process in self.data_source_ids:
-                data_source_to_process_context = self.context.get_contributor_data_source_context(
-                    contributor_id=self.contributor_id,
-                    data_source_id=data_source_id_to_process)
+                data_source_export = self.context.get_data_source_export_from_data_source(data_source_id_to_process)
 
-                data_source_gridout = self.gfs.get_file_from_gridfs(data_source_to_process_context.gridfs_id)
+                data_source_gridout = self.gfs.get_file_from_gridfs(data_source_export.gridfs_id)
                 zip.edit_file_in_zip_file(data_source_gridout,
-                                                   self.stops_filename,
-                                                   extract_dir_path,
-                                                   callback=partial(self.do_ruspell,
-                                                                    stops_output_path=stops_output_path,
-                                                                    config_path=config_path
-                                                                    )
-                                                   )
+                                          self.stops_filename,
+                                          extract_dir_path,
+                                          callback=partial(self.do_ruspell,
+                                                           stops_output_path=stops_output_path,
+                                                           config_path=config_path
+                                                           )
+                                          )
 
-                data_source_to_process_context.gridfs_id = self.create_archive_and_replace_in_grid_fs(
-                    old_gridfs_id=data_source_to_process_context.gridfs_id,
+                data_source_export.update_data_set_state(self.create_archive_and_add_in_grid_fs(
                     files=extract_dir_path,
-                )
+                ))
 
         return self.context

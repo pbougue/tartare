@@ -38,19 +38,19 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import requests
 
 from tartare import app
-from tartare.core.calendar_handler import dic_to_memory_csv
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
     PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Coverage, CoverageExport, DataSource, Platform
+from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
     PublisherException
+from tartare.helper import dic_to_memory_csv
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractProtocol(metaclass=ABCMeta):
-    def __init__(self, url: str, options: dict) -> None:
+    def __init__(self, url: str, options: Optional[PlatformOptions]) -> None:
         self.url = url
         self.options = options
 
@@ -62,9 +62,9 @@ class HttpProtocol(AbstractProtocol):
     def publish(self, file: BinaryIO, filename: str) -> None:
         timeout = app.config.get('TYR_UPLOAD_TIMEOUT')
         logger.info('publishing file {filename} on {url}...'.format(filename=filename, url=self.url))
-        if self.options:
+        if self.options and self.options.authent:
             response = requests.post(self.url,
-                                     auth=(self.options['authent']['username'], self.options['authent']['password']),
+                                     auth=(self.options.authent.username, self.options.authent.password),
                                      files={'file': (filename, file)}, timeout=timeout)
         else:
             response = requests.post(self.url, files={'file': (filename, file)}, timeout=timeout)
@@ -76,19 +76,17 @@ class HttpProtocol(AbstractProtocol):
 
 
 class FtpProtocol(AbstractProtocol):
-    def __init__(self, url: str, options: dict) -> None:
+    def __init__(self, url: str, options: Optional[PlatformOptions]) -> None:
         super().__init__(url, options)
         self.url = self.url.replace('ftp://', '') if self.url.startswith('ftp://') else self.url
 
     def publish(self, file: BinaryIO, filename: str) -> None:
-        directory = None
-        if 'directory' in self.options and self.options['directory']:
-            directory = self.options['directory']
+        directory = self.options.directory if self.options and self.options.directory else ''
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
-                                                                              directory=directory if directory else ''))
-        if 'authent' in self.options:
-            session = ftplib.FTP(self.url, self.options['authent']['username'], self.options['authent']['password'])
+                                                                              directory=directory))
+        if self.options and self.options.authent:
+            session = ftplib.FTP(self.url, self.options.authent.username, self.options.authent.password)
         else:
             session = ftplib.FTP(self.url)
         if directory:
@@ -126,7 +124,7 @@ class ProtocolManager:
 class AbstractPublisher(metaclass=ABCMeta):
     @abstractmethod
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: Optional[CoverageExport], input_data_source_ids: Optional[List[str]] = None) -> None:
+                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         pass
 
 
@@ -135,23 +133,23 @@ class NavitiaPublisher(AbstractPublisher):
                 coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
-        for cov_export_contrib in coverage_export.contributors:
-            for contrib_export_data_source in cov_export_contrib.data_sources:
-                data_source_obj = DataSource.get_one(cov_export_contrib.contributor_id,
-                                                     contrib_export_data_source.data_source_id)
-                # osm and poly file are published only once by coverage because of the following constraints:
-                # - one geo contributor allowed by coverage
-                # - one osm data source allowed by geo contributor
-                # - one poly data source allowed by geo contributor
-                # see tartare.decorators.check_contributor_data_source_osm_and_poly_constraint
-                if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or \
-                                data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
-                    file_to_publish = GridFsHandler().get_file_from_gridfs(contrib_export_data_source.gridfs_id)
-                    protocol_uploader.publish(file_to_publish, file_to_publish.filename)
+        for data_source_id in Coverage.get(coverage_export.coverage_id).input_data_source_ids:
+            data_source_obj = DataSource.get_one(data_source_id=data_source_id)
+            # osm and poly file are published only once by coverage because of the following constraints:
+            # - one geo contributor allowed by coverage
+            # - one osm data source allowed by geo contributor
+            # - one poly data source allowed by geo contributor
+            # see tartare.decorators.check_contributor_data_source_osm_and_poly_constraint
+            if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or \
+                            data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
+                data_set = data_source_obj.get_last_data_set()
+                file_to_publish = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
+                protocol_uploader.publish(file_to_publish, file_to_publish.filename)
 
 
 class ODSPublisher(AbstractPublisher):
     format_date = '%Y%m%d'
+
     @property
     def metadata_ordered_columns(self) -> List[str]:
         return ['ID', 'Description', 'Format', 'Download', 'Validity start date', 'Validity end date',
@@ -169,6 +167,9 @@ class ODSPublisher(AbstractPublisher):
             data_set = data_source.get_last_data_set()
             if not data_set:
                 raise PublisherException('data source {} has no data set for ods publication'.format(data_source.id))
+            if not data_set.validity_period:
+                raise PublisherException(
+                    'data set of data source {} has no validity period for ods publication'.format(data_source.id))
             data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
             data_sets_with_format[data_format_formatted] = data_set_file
             file_size = data_set_file.length
@@ -220,7 +221,7 @@ class PublisherManager:
     }
 
     @classmethod
-    def select_from_platform(cls, platform: Platform) -> AbstractPublisher:
+    def select_from_publication_platform(cls, platform: PublicationPlatform) -> AbstractPublisher:
         if platform.type not in cls.publishers_by_type:
             error_message = 'unknown platform type "{type}"'.format(type=platform.type)
             raise PublisherManagerException(error_message)

@@ -33,7 +33,7 @@ from zipfile import ZipFile
 
 import requests
 
-from tests.utils import assert_files_equals
+from tests.utils import assert_text_files_equals, assert_content_equals_ref_file
 
 
 class AbstractRequestClient:
@@ -61,9 +61,8 @@ class AbstractRequestClient:
     def post(self, uri, payload=None, files=None, headers=None):
         return requests.post(self.get_url() + uri, json=payload, files=files, headers=headers)
 
-    def patch(self, uri, params=None, headers={'Content-Type': 'application/json'}):
-        data = params if params else {}
-        return requests.patch(self.get_url() + uri, data=data, headers=headers)
+    def put(self, uri, payload=None, headers={'Content-Type': 'application/json'}):
+        return requests.put(self.get_url() + uri, json=payload, headers=headers)
 
     def get_json_from_dict(self, dict):
         return json.dumps(dict)
@@ -81,47 +80,22 @@ class AbstractRequestClient:
                 self.assert_sucessful_call(raw, 204)
 
     def assert_export_file_equals_ref_file(self, contributor_id, data_source_id, ref_file, expected_filename=None):
-        # list of exports
-        raw = self.get('contributors/{contributor_id}/exports'.format(contributor_id=contributor_id))
-        self.assert_sucessful_call(raw)
-        exports = self.get_dict_from_response(raw)
-        assert "exports" in exports
-        assert len(exports["exports"]) == 1
-        gridfs_id = next(
-            ds['gridfs_id'] for ds in exports["exports"][0]['data_sources'] if ds['data_source_id'] == data_source_id)
-        assert gridfs_id
-        export_id = exports["exports"][0]["id"]
-        assert export_id
+        contributor = self.get_dict_from_response(
+            self.get('/contributors/{}'.format(contributor_id))
+        )['contributors'][0]
+        gridfs_id = next(data_source['data_sets'][0]['gridfs_id'] for data_source in contributor['data_sources'] if
+                         data_source['id'] == data_source_id)
 
         # get export file
-        raw = self.get('/files/{gridfs_id}/download'.format(export_id=export_id,
-                                                                                                    gridfs_id=gridfs_id,
-                                                                                                    contributor_id=contributor_id))
+        raw = self.get('/files/{gridfs_id}/download'.format(gridfs_id=gridfs_id,
+                                                            contributor_id=contributor_id))
         if expected_filename:
             import re
             d = raw.headers['Content-Disposition']
             fname = re.findall("filename=(.+)", d)
             assert fname[0] == expected_filename
 
-        self.assert_content_equals_ref_file(raw.content, ref_file)
-
-    def assert_content_equals_ref_file(self, content, ref_zip_file):
-        with tempfile.TemporaryDirectory() as extract_result_tmp, tempfile.TemporaryDirectory() as ref_tmp:
-            dest_zip_res = '{}/gtfs.zip'.format(extract_result_tmp)
-            with open(dest_zip_res, 'wb') as f:
-                f.write(content)
-
-            with ZipFile(dest_zip_res, 'r') as files_zip_res, ZipFile(self.get_fixtures_relative_path(ref_zip_file),
-                                                                      'r') as files_zip:
-                except_files_list = files_zip.namelist()
-                response_files_list = files_zip_res.namelist()
-
-                assert len(except_files_list) == len(response_files_list)
-                files_zip_res.extractall(extract_result_tmp)
-                files_zip.extractall(ref_tmp)
-
-                for f in except_files_list:
-                    assert_files_equals('{}/{}'.format(ref_tmp, f), '{}/{}'.format(extract_result_tmp, f))
+        assert_content_equals_ref_file(raw.content, ref_file)
 
     def replace_server_id_in_input_data_source_fixture(self, fixture_path):
         with open(self.get_api_fixture_path(fixture_path), 'rb') as file:
@@ -189,6 +163,8 @@ class AbstractRequestClient:
         json_file = self.replace_server_id_in_input_data_source_fixture(fixture)
         raw = self.post('contributors', json_file)
         self.assert_sucessful_create(raw)
+
+        return self.get_dict_from_response(raw)['contributors'][0]
 
     def init_coverage(self, fixture):
         with open(self.get_api_fixture_path(fixture), 'rb') as file:

@@ -27,18 +27,21 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+import logging
+
 import flask_restful
 from flask import Response
 
+from tartare.core import models
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import CoverageExportContext
-from tartare.interfaces.common_argrs import CommonArgs
-from tartare.tasks import coverage_export
-from tartare.interfaces.schema import JobSchema
 from tartare.core.models import Job, Coverage, CoverageExport
+from tartare.exceptions import EntityNotFound
 from tartare.http_exceptions import ObjectNotFound
+from tartare.interfaces.common_argrs import CommonArgs
 from tartare.interfaces.schema import CoverageExportSchema
-import logging
+from tartare.interfaces.schema import JobSchema
+from tartare.tasks import coverage_export
 
 
 class CoverageExportResource(flask_restful.Resource, CommonArgs):
@@ -53,21 +56,19 @@ class CoverageExportResource(flask_restful.Resource, CommonArgs):
         return job
 
     def post(self, coverage_id: str) -> Response:
-        coverage = Coverage.get(coverage_id)
-        if not coverage:
-            msg = 'coverage not found: {}'.format(coverage_id)
-            logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
+        try:
+            coverage = models.Coverage.get(coverage_id)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
         job = self._export(coverage)
         job_schema = JobSchema(strict=True)
         return {'job': job_schema.dump(job).data}, 201
 
     def get(self, coverage_id: str) -> Response:
-        coverage = Coverage.get(coverage_id)
-        if not coverage:
-            msg = 'coverage not found: {}'.format(coverage_id)
-            logging.getLogger(__name__).error(msg)
-            raise ObjectNotFound(msg)
+        try:
+            coverage = models.Coverage.get(coverage_id)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
 
         exports = CoverageExport.get(coverage_id=coverage.id)
         return {'exports': CoverageExportSchema(many=True, strict=True).dump(exports).data}, 200

@@ -31,6 +31,9 @@
 import copy
 import ftplib
 import json
+import os
+import tempfile
+from zipfile import ZipFile
 
 import mock
 import pytest
@@ -39,8 +42,7 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_requests_post, get_response, \
-    _get_file_fixture_full_path
+from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file
 
 
 class TestDataPublisher(TartareFixture):
@@ -53,6 +55,7 @@ class TestDataPublisher(TartareFixture):
             "data_prefix": id,
             "data_sources": [
                 {
+                    "id": 'ds_' + data_format,
                     "name": 'ds' + data_format,
                     "data_format": data_format,
                     "input": {
@@ -66,10 +69,10 @@ class TestDataPublisher(TartareFixture):
         assert resp.status_code == 201
         return resp
 
-    def _create_coverage(self, id, contributor_id, publication_platform, license=None):
-        contributor_ids = contributor_id if type(contributor_id) == list else [contributor_id]
+    def _create_coverage(self, id, input_data_source_id, publication_platform, license=None):
+        input_data_source_ids = input_data_source_id if type(input_data_source_id) == list else [input_data_source_id]
         coverage = {
-            "contributors": contributor_ids,
+            "input_data_source_ids": input_data_source_ids,
             "environments": {
                 "production": {
                     "name": "production",
@@ -101,7 +104,7 @@ class TestDataPublisher(TartareFixture):
             "url": "http://bob/v0/jobs"
         }
         self._create_contributor(contributor_id, url=url)
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         # Launch contributor export
         with mock.patch('requests.post', mock_requests_post):
@@ -127,11 +130,6 @@ class TestDataPublisher(TartareFixture):
         assert exports[0]["validity_period"]["start_date"] == "2015-02-16"
         assert exports[0]["validity_period"]["end_date"] == "2017-01-15"
         assert exports[0]["gridfs_id"]
-        contributors = exports[0]["contributors"]
-        assert len(contributors) == 1
-        assert contributors[0]["validity_period"]
-        assert len(contributors[0]["data_sources"]) == 1
-        assert contributors[0]["data_sources"][0]["validity_period"]
 
     def test_publish_ftp(self, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'fr-idf'
@@ -152,7 +150,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -194,7 +192,7 @@ class TestDataPublisher(TartareFixture):
                 "directory": directory
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id)
 
@@ -260,7 +258,7 @@ class TestDataPublisher(TartareFixture):
             "name": 'my license',
             "url": 'http://license.org/mycompany'
         }
-        self.init_coverage(coverage_id, [contributor_id], preprocesses, environments, license)
+        self.init_coverage(coverage_id, ["my_gtfs"], preprocesses, environments, license)
 
         fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
         fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
@@ -297,7 +295,7 @@ class TestDataPublisher(TartareFixture):
                 }
             }
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -321,8 +319,8 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors": [
-                contributor_id
+            "input_data_source_ids": [
+                'ds_gtfs'
             ],
             "environments": {},
             "id": cov_id,
@@ -380,8 +378,8 @@ class TestDataPublisher(TartareFixture):
                 "url": url.format(seq=idx)
             })
         coverage = {
-            "contributors": [
-                contributor_id
+            "input_data_source_ids": [
+                'ds_gtfs'
             ],
             "environments": {
                 "production": {
@@ -412,8 +410,8 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, self.format_url(ip=init_http_download_server.ip_addr,
                                                                  filename='sample_1.zip'))
         coverage = {
-            "contributors": [
-                contributor_id
+            "input_data_source_ids": [
+                'ds_gtfs'
             ],
             "environments": {},
             "id": cov_id,
@@ -460,7 +458,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_id, publication_platform)
+        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
         resp = self.full_export(contributor_id, coverage_id, '2015-08-10')
 
@@ -494,7 +492,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+        self._create_coverage(coverage_id, ['ds_gtfs', 'ds_'+data_format], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo)
@@ -514,28 +512,29 @@ class TestDataPublisher(TartareFixture):
         contributor_id = 'fr-idf'
         coverage_id = 'default'
         filename = 'some_archive.zip'
-        contributor_geo = 'geo'
+        contributor_geo_id = 'geo'
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
         self.init_contributor(contributor_id, 'gtfs_ds_id', fetch_url)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data', filename='empty_pbf.osm.pbf')
-        self.init_contributor(contributor_geo, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
+        self.init_contributor(contributor_geo_id, 'osm_ds_id', fetch_url, data_format=DATA_FORMAT_OSM_FILE,
                               data_type=DATA_TYPE_GEOGRAPHIC)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data',
                                     filename='ile-de-france.poly')
-        self.add_data_source_to_contributor(contributor_geo, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+        self.add_data_source_to_contributor(contributor_geo_id, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+
         publication_platform = {
             "sequence": 0,
             "type": "navitia",
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, [contributor_id, contributor_geo], publication_platform)
+        self._create_coverage(coverage_id, ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
 
         self.contributor_export(contributor_id)
-        self.contributor_export(contributor_geo)
+        self.contributor_export(contributor_geo_id)
         resp = self.coverage_export(coverage_id)
 
-        assert post_mock.call_count == 3
+        assert post_mock.call_count == 2
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
@@ -561,7 +560,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, contributor_geo, publication_platform)
+        self._create_coverage(coverage_id, 'ds_' + data_format, publication_platform)
 
         resp = self.full_export(contributor_geo, coverage_id, '2015-08-10')
 
@@ -574,3 +573,59 @@ class TestDataPublisher(TartareFixture):
                    'error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(
             job)
         assert job['state'] == 'failed', print(job)
+
+    def test_publish_modified_fixture_from_contributor_preprocess(self, init_ftp_upload_server,
+                                                                  init_http_download_server):
+        self.init_contributor('c1', 'ds1', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+                              export_id='export_id')
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": ['ds1'],
+            "type": "GtfsAgencyFile",
+            "params": {
+            }
+        }, 'c1')
+        self.contributor_export('c1')
+        self.init_coverage('cov_id', input_data_source_ids=['export_id'])
+        publication_platform = {
+            "sequence": 0,
+            "type": "navitia",
+            "protocol": "ftp",
+            "url": init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
+                }
+            }
+        }
+        self.add_publication_platform_to_coverage(publication_platform, 'cov_id')
+        self.coverage_export('cov_id')
+        # check that ds1 data set is the original gtfs
+        export_gridfs_id = self.get_gridfs_id_from_data_source('c1', 'export_id')
+        export_fixture = 'gtfs/minimal_gtfs_and_agency.zip'
+        self.assert_gridfs_equals_fixture(export_gridfs_id, export_fixture)
+        # check that export_id data set is the updated gtfs
+        input_gridfs_id = self.get_gridfs_id_from_data_source('c1', 'ds1')
+        input_fixture = 'gtfs/minimal_gtfs.zip'
+        self.assert_gridfs_equals_fixture(input_gridfs_id, input_fixture)
+        # check that published data set is the updated gtfs
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
+
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        expected_filename = 'cov_id.zip'
+        assert 'cov_id.zip' in directory_content
+
+        # check that meta data from file on ftp server are correct
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete(expected_filename)
+            with tempfile.TemporaryDirectory() as fixture_tmp_dir:
+                assert_zip_file_equals_ref_zip_file(transfered_full_name, tmp_dirname, export_fixture, fixture_tmp_dir)
+        session.quit()
+

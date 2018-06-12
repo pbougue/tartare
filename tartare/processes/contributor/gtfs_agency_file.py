@@ -33,9 +33,8 @@ import tempfile
 from typing import List
 from zipfile import ZipFile
 
-from tartare.core.context import Context, DataSourceContext
+from tartare.core.context import Context, DataSourceExport
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import ParameterException
 from tartare.helper import get_content_file_from_grid_out_file
 from tartare.processes.abstract_preprocess import AbstractContributorProcess
 from tartare.processes.utils import preprocess_registry
@@ -73,32 +72,21 @@ class GtfsAgencyFile(AbstractContributorProcess):
         new_zip = '{}/{}'.format(zip_destination, filename.split(".")[0])
         return shutil.make_archive(new_zip, 'zip', tmp_dir_name)
 
-    def manage_agency_file(self, data_source_context: DataSourceContext) -> None:
-        grid_out = GridFsHandler().get_file_from_gridfs(data_source_context.gridfs_id)
+    def manage_agency_file(self, data_source_export: DataSourceExport) -> None:
+        grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
         filename = grid_out.filename
         data = get_content_file_from_grid_out_file(grid_out, 'agency.txt')
         if not self._is_agency_dict_valid(data):
             logging.getLogger(__name__).debug('data source {}  without or empty agency.txt file'.
-                                              format(data_source_context.data_source_id))
+                                              format(data_source_export.data_source_id))
             with ZipFile(grid_out, 'r') as files_zip:
                 with tempfile.TemporaryDirectory() as tmp_dir_name:
                     with tempfile.TemporaryDirectory() as zip_destination:
                         new_zip = self.create_new_zip(files_zip, tmp_dir_name, grid_out.filename, zip_destination)
-                        with open(new_zip, 'rb') as file:
-                            old_gridfs_id = data_source_context.gridfs_id
-                            data_source_context.gridfs_id = GridFsHandler().save_file_in_gridfs(file=file,
-                                                                                                filename=filename)
-                            GridFsHandler().delete_file_from_gridfs(old_gridfs_id)
+                        data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename))
 
     def do(self) -> Context:
-        contributor = self.context.contributor_contexts[0].contributor
         for data_source_id in self.data_source_ids:
-            data_source_context = self.context.get_contributor_data_source_context(contributor_id=contributor.id,
-                                                                                   data_source_id=data_source_id)
-            if not data_source_context:
-                msg = 'impossible to build preprocess GtfsAgencyFile : ' \
-                      'data source {} not exist for contributor {}'.format(data_source_id, contributor.id)
-                logging.getLogger(__name__).warning(msg)
-                raise ParameterException(msg)
-            self.manage_agency_file(data_source_context)
+            data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
+            self.manage_agency_file(data_source_export)
         return self.context

@@ -32,7 +32,7 @@
 
 import json
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import assert_files_equals, _get_file_fixture_full_path
+from tests.utils import assert_text_files_equals, _get_file_fixture_full_path
 
 file_used = "some_archive.zip"
 fixtures_file = _get_file_fixture_full_path('gtfs/{}'.format(file_used))
@@ -49,8 +49,16 @@ class TestGetFiles(TartareFixture):
     def test_get_files(self, init_http_download_server, init_ftp_upload_server, contributor):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=file_used)
 
+        contributor['data_sources'].append({
+            "id": "to_process",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        self.put('/contributors/id_test', params=self.dict_to_json(contributor))
+
         coverage = {
-            "contributors": [contributor['id']],
+            "input_data_source_ids": ['to_process'],
             "environments": {
                 "production": {
                     "name": "production",
@@ -74,11 +82,6 @@ class TestGetFiles(TartareFixture):
             "id": "default",
             "name": "default"
         }
-        # Data sources added
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", '
-                               '"data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
 
         # Coverage added
         raw = self.post('/coverages', params=json.dumps(coverage))
@@ -96,7 +99,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
         raw = self.post('/coverages/{}/actions/export?current_date=2015-08-10'.format(coverage['id']), {})
         assert raw.status_code == 201
@@ -108,7 +111,7 @@ class TestGetFiles(TartareFixture):
 
         resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['gridfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)
 
         resp = self.get('/coverages/{coverage_id}'.format(coverage_id=coverage['id']))
         assert raw.status_code == 200
@@ -118,4 +121,4 @@ class TestGetFiles(TartareFixture):
         resp = self.get('/files/{gridfs_id}/download'.
                         format(gridfs_id=environments['production']['current_ntfs_id']), follow_redirects=True)
         assert resp.status_code == 200
-        assert_files_equals(resp.data, fixtures_file)
+        assert_text_files_equals(resp.data, fixtures_file)

@@ -36,8 +36,9 @@ from flask import request
 
 from tartare.core import models
 from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_DEFAULT, \
-    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED
+    DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED, DATA_TYPE_GEOGRAPHIC
 from tartare.core.models import DataSource
+from tartare.exceptions import EntityNotFound
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
 from tartare.processes.processes import PreProcessManager
 
@@ -91,18 +92,31 @@ class JsonDataValidate(object):
         return wrapper
 
 
-class ValidateContributors(object):
+class ValidateInputDataSourceIds(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
+            geographic_contributor_ids = []
             post_data = request.json
-            if "contributors" in post_data:
-                for contributor_id in post_data.get("contributors"):
-                    contributor_model = models.Contributor.get(contributor_id)
+            if "input_data_source_ids" in post_data:
+                input_data_source_ids = set(post_data.get("input_data_source_ids"))
+                for data_source_id in input_data_source_ids:
+                    contributor_model = models.DataSource.get_contributor_of_data_source(data_source_id)
                     if not contributor_model:
-                        msg = "contributor {} not found".format(contributor_id)
+                        msg = "data source {} not found".format(data_source_id)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
+
+                    if contributor_model.is_geographic():
+                        geographic_contributor_ids.append(contributor_model.id)
+
+                    if len(geographic_contributor_ids) > 1:
+                        msg = 'unable to have more than one data source from more than 2 contributors of type {} by coverage'.format(
+                                DATA_TYPE_GEOGRAPHIC)
+                        logging.getLogger(__name__).error(msg)
+                        raise InvalidArguments(msg)
+
+                request.json["input_data_source_ids"] = list(input_data_source_ids)
             return func(*args, **kwargs)
 
         return wrapper
@@ -137,94 +151,19 @@ class RemoveComputedDataSources(object):
 
 
 class CheckContributorIntegrity(object):
-    def __init__(self, method: str) -> None:
-        self.method = method
+    def __init__(self, update: bool=False) -> None:
+        self.update = update
 
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
             post_data = request.json
-            contributor_id = kwargs.get('contributor_id', None)
-
-            if not self.method == 'POST' and not contributor_id:
-                msg = "contributor_id not present in request"
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-
-            if contributor_id:
-                contributor = models.Contributor.get(contributor_id)
-                if not contributor:
-                    msg = "contributor '{}' not found".format(contributor_id)
-                    logging.getLogger(__name__).error(msg)
-                    raise ObjectNotFound(msg)
-                data_type = post_data.get('data_type', contributor.data_type)
-                existing_data_sources = contributor.data_sources
-            else:
-                data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
-                existing_data_sources = []
+            data_type = post_data.get('data_type', DATA_TYPE_PUBLIC_TRANSPORT)
             data_sources = post_data.get('data_sources', [])
-            if self.method == 'PATCH':
-                for existing_data_source in existing_data_sources:
-                    check_excepted_data_format(existing_data_source.data_format, data_type)
             if data_sources:
                 for data_source in post_data.get('data_sources', []):
                     check_excepted_data_format(data_source.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-                check_contributor_data_source_osm_and_poly_constraint(existing_data_sources, data_sources)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
-class CheckDataSourceIntegrity(object):
-    def __init__(self, data_source_id_required: bool = False) -> None:
-        self.data_source_id_required = data_source_id_required
-
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            post_data = request.json
-            contributor_id = kwargs.get('contributor_id', None)
-            data_source_id = kwargs.get('data_source_id', None)
-            if self.data_source_id_required and not data_source_id:
-                msg = "data_source_id not present in request"
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            contributor = models.Contributor.get(contributor_id)
-            if not contributor:
-                msg = "contributor '{}' not found".format(contributor_id)
-                logging.getLogger(__name__).error(msg)
-                raise ObjectNotFound(msg)
-            data_type = contributor.data_type
-            new_data_source = post_data.copy()
-            if self.data_source_id_required:
-                try:
-                    models.DataSource.get_one(contributor_id, data_source_id)
-                except ValueError as e:
-                    raise ObjectNotFound(str(e))
-                new_data_source['id'] = data_source_id
-                if post_data.get('data_format'):
-                    check_excepted_data_format(post_data.get('data_format'), data_type)
-            else:
-                check_excepted_data_format(post_data.get('data_format', DATA_FORMAT_DEFAULT), data_type)
-            check_contributor_data_source_osm_and_poly_constraint(contributor.data_sources, [new_data_source])
-
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
-class ValidatePatchCoverages(object):
-    def __call__(self, func: Callable) -> Any:
-        @wraps(func)
-        def wrapper(*args: list, **kwargs: str) -> Any:
-            post_data = request.json
-            if "environments" in post_data:
-                for environment_name in post_data.get("environments"):
-                    environment = post_data.get("environments").get(environment_name)
-                    if environment is not None and "publication_platforms" in environment:
-                        msg = "'publication_platforms' field can't be updated"
-                        logging.getLogger(__name__).error(msg)
-                        raise InvalidArguments(msg)
+                check_contributor_data_source_osm_and_poly_constraint([], data_sources)
             return func(*args, **kwargs)
 
         return wrapper
@@ -238,7 +177,7 @@ def validate_post_data_set(func: Callable) -> Any:
 
         try:
             data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
-        except ValueError as e:
+        except (EntityNotFound, ValueError) as e:
             raise ObjectNotFound(str(e))
 
         if data_source is None:

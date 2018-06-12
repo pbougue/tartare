@@ -80,10 +80,11 @@ class IntegrityException(Exception):
     pass
 
 
+class EntityNotFound(Exception):
+    pass
+
+
 class ParameterException(Exception):
-    """
-    Missing or invalid parameter
-    """
     pass
 
 

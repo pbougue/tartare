@@ -37,7 +37,6 @@ from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
 
 import pymongo
 import pytz
-from gridfs import GridOut
 from marshmallow import Schema, post_load, utils, fields
 
 from tartare import app
@@ -46,9 +45,9 @@ from tartare.core.constants import DATA_FORMAT_VALUES, INPUT_TYPE_VALUES, DATA_F
     INPUT_TYPE_DEFAULT, DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
-    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_URL
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import IntegrityException, ValidityPeriodException
+from tartare.exceptions import ValidityPeriodException, EntityNotFound
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -130,15 +129,24 @@ class SequenceContainer(metaclass=ABCMeta):
         return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
 
 
-class PreProcessContainer(metaclass=ABCMeta):
+class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
     def __init__(self, preprocesses: List['PreProcess'] = None, data_sources: List['DataSource'] = None) -> None:
         self.preprocesses = [] if preprocesses is None else preprocesses  # type: List['PreProcess']
-        self.data_sources = data_sources if data_sources else []
+        self.data_sources = data_sources if data_sources else []  # type: List['DataSource']
 
     def add_computed_data_sources(self) -> None:
+        for data_source in self.data_sources:
+            if data_source.export_data_source_id:
+                data_source_computed = DataSource(
+                    id=data_source.export_data_source_id,
+                    name=data_source.export_data_source_id,
+                    data_format=data_source.data_format,
+                    input=Input(INPUT_TYPE_COMPUTED),
+                )
+                self.data_sources.append(data_source_computed)
         for preprocess in self.preprocesses:
             if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
                 if not any(data_source for data_source in self.data_sources if
@@ -153,29 +161,68 @@ class PreProcessContainer(metaclass=ABCMeta):
                         preprocess.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
 
+    def fill_data_source_passwords_from_existing_object(self, existing_object: 'DataSourceAndPreProcessContainer') -> None:
+        for data_source in self.data_sources:
+            if data_source.input and data_source.input.type == INPUT_TYPE_URL:
+                input = data_source.input
+                if input.options and input.options.authent and input.options.authent.username and \
+                        not input.options.authent.password:
+                    existing_data_source = next((
+                        existing_data_source for existing_data_source in existing_object.data_sources if
+                        existing_data_source.id == data_source.id), None)
+                    if existing_data_source and existing_data_source.input.options and \
+                            existing_data_source.input.options.authent and \
+                            existing_data_source.input.options.authent.username == input.options.authent.username and \
+                            existing_data_source.input.options.authent.password:
+                        data_source.input.options.authent.password = existing_data_source.input.options.authent.password
+
     @classmethod
-    def get(cls, object_id: str) -> Union['Contributor', 'Coverage']:
+    def get(cls, object_id: str) -> Union['Contributor', Optional['Coverage']]:
         pass
 
 
-class Platform(SequenceContainer):
-    def __init__(self, protocol: str, type: str, url: str, options: dict = None, sequence: Optional[int] = 0,
-                 input_data_source_ids: List[str] = None) -> None:
-        super().__init__(sequence)
-        self.type = type
+class PlatformOptionsAuthent:
+    def __init__(self, username: str = None, password: str = None) -> None:
+        self.username = username
+        self.password = password
+
+
+class PlatformOptions:
+    def __init__(self, authent: PlatformOptionsAuthent = None, directory: str = None) -> None:
+        self.authent = authent
+        self.directory = directory
+
+
+class Platform(object):
+    def __init__(self, protocol: str, url: str, options: PlatformOptions = None) -> None:
         self.protocol = protocol
         self.url = url
-        self.options = {} if options is None else options
+        self.options = options
+
+
+class PublicationPlatform(SequenceContainer, Platform):
+    def __init__(self, protocol: str, type: str, url: str, options: PlatformOptions = None, sequence: int = 0,
+                 input_data_source_ids: List[str] = None) -> None:
+        SequenceContainer.__init__(self, sequence)
+        Platform.__init__(self, protocol, url, options)
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
+        self.type = type
 
 
 class Environment(SequenceContainer):
-    def __init__(self, name: str = None, current_ntfs_id: str = None, publication_platforms: List[Platform] = None,
-                 sequence: Optional[int] = 0) -> None:
+    def __init__(self, name: str = None, current_ntfs_id: str = None,
+                 publication_platforms: List[PublicationPlatform] = None,
+                 sequence: int = 0) -> None:
         super().__init__(sequence)
         self.name = name
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
+
+    def get_publication_platform_for_type_with_user(self, type: str, username: str) -> Optional[PublicationPlatform]:
+        return next((existing_platform for existing_platform in self.publication_platforms
+                     if existing_platform.type == type and existing_platform.options and
+                     existing_platform.options.authent and existing_platform.options.authent.username == username),
+                    None)
 
 
 class ValidityPeriod(object):
@@ -236,10 +283,11 @@ class License(object):
 
 class Input(object):
     def __init__(self, type: str = INPUT_TYPE_DEFAULT, url: Optional[str] = None,
-                 expected_file_name: str = None) -> None:
+                 expected_file_name: str = None, options: PlatformOptions = None) -> None:
         self.type = type
         self.url = url
         self.expected_file_name = expected_file_name
+        self.options = options
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -260,7 +308,7 @@ class DataSet(object):
         self.validity_period = validity_period
         self.status_history = status_history if status_history else []
 
-    def get_md5(self) -> str:
+    def get_md5(self) -> Optional[str]:
         if not self.gridfs_id:
             return None
         file = GridFsHandler().get_file_from_gridfs(self.gridfs_id)
@@ -283,9 +331,9 @@ class DataSet(object):
 class DataSource(object):
     def __init__(self, id: Optional[str] = None,
                  name: Optional[str] = None,
-                 data_format: Optional[str] = DATA_FORMAT_DEFAULT,
-                 input: Optional[Input] = Input(INPUT_TYPE_DEFAULT),
-                 license: Optional[License] = None,
+                 data_format: str = DATA_FORMAT_DEFAULT,
+                 input: Input = Input(INPUT_TYPE_DEFAULT),
+                 license: Optional[License] = None, export_data_source_id: str = None,
                  service_id: str = None, data_sets: List[DataSet] = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
@@ -293,13 +341,14 @@ class DataSource(object):
         self.input = input
         self.license = license if license else License()
         self.service_id = service_id
+        self.export_data_source_id = export_data_source_id
         self.data_sets = data_sets if data_sets else []
 
     def __repr__(self) -> str:
         return str(vars(self))
 
     def save(self, contributor_id: str) -> None:
-        contributor = get_contributor(contributor_id)
+        contributor = Contributor.get(contributor_id)
         if self.id in [ds.id for ds in contributor.data_sources]:
             raise ValueError("duplicate data_source id '{}' for contributor '{}'".format(self.id, contributor_id))
         contributor.data_sources.append(self)
@@ -309,12 +358,9 @@ class DataSource(object):
     @classmethod
     def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
         if contributor_id is not None:
-            contributor = get_contributor(contributor_id)
+            contributor = Contributor.get(contributor_id)
         elif data_source_id is not None:
-            raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
-            if raw is None:
-                return None
-            contributor = MongoContributorSchema(strict=True).load(raw).data
+            contributor = cls.get_contributor_of_data_source(data_source_id)
         else:
             raise ValueError("to get data_sources you must provide a contributor_id or a data_source_id")
 
@@ -335,10 +381,19 @@ class DataSource(object):
         return data_sources[0]
 
     @classmethod
-    def delete(cls, contributor_id: str, data_source_id: str = None) -> int:
+    def get_contributor_of_data_source(cls, data_source_id: str) -> Optional['Contributor']:
+        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
+
+        if not raw:
+            return None
+
+        return MongoContributorSchema(strict=True).load(raw).data
+
+    @classmethod
+    def delete(cls, contributor_id: str, data_source_id: str) -> int:
         if data_source_id is None:
             raise ValueError('a data_source id is required')
-        contributor = get_contributor(contributor_id)
+        contributor = Contributor.get(contributor_id)
         nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
         contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
         raw_contrib = MongoContributorSchema().dump(contributor).data
@@ -346,11 +401,11 @@ class DataSource(object):
         return nb_delete
 
     @classmethod
-    def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> 'DataSource':
+    def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> Optional['DataSource']:
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
             raise ValueError('a data_source id is required')
-        if not [ds for ds in get_contributor(contributor_id).data_sources if ds.id == data_source_id]:
+        if not [ds for ds in Contributor.get(contributor_id).data_sources if ds.id == data_source_id]:
             raise ValueError("no data_source id {} exists in contributor with id {}"
                              .format(contributor_id, data_source_id))
         if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
@@ -359,12 +414,11 @@ class DataSource(object):
 
         # `$` acts as a placeholder of the first match in the list
         contrib_dataset = {'data_sources': {'$': tmp_dataset}}
-        raw = mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
-                                                                {'$set': to_doted_notation(contrib_dataset)})
-        if raw.matched_count == 0:
-            return None
+        mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
+                                                          {'$set': to_doted_notation(contrib_dataset)})
 
-        return cls.get(contributor_id, data_source_id)[0]
+        data_sources = cls.get(contributor_id, data_source_id)
+        return data_sources[0] if data_sources else None
 
     def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
@@ -372,7 +426,8 @@ class DataSource(object):
         if len(self.data_sets) > data_sets_number:
             sorted_data_set = sorted(self.data_sets, key=lambda ds: ds.created_at, reverse=True)
             for data_set_to_be_removed in sorted_data_set[data_sets_number:]:
-                GridFsHandler().delete_file_from_gridfs(data_set_to_be_removed.gridfs_id)
+                if data_set_to_be_removed.gridfs_id:
+                    GridFsHandler().delete_file_from_gridfs(data_set_to_be_removed.gridfs_id)
             self.data_sets = sorted_data_set[0:data_sets_number]
         model.update()
 
@@ -386,12 +441,12 @@ class DataSource(object):
         return self.input.type == type
 
     def get_last_data_set(self) -> Optional[DataSet]:
-        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)
+        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)  # type: ignore
 
 
 class GenericPreProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
-                 sequence: Optional[int] = 0, data_source_ids: Optional[List[str]] = None,
+                 sequence: int = 0, data_source_ids: Optional[List[str]] = None,
                  enabled: bool = True) -> None:
         super().__init__(sequence)
         self.id = str(uuid.uuid4()) if not id else id
@@ -400,7 +455,7 @@ class GenericPreProcess(SequenceContainer):
         self.type = type
         self.enabled = enabled
 
-    def save_data(self, class_name: Type[PreProcessContainer],
+    def save_data(self, class_name: Type[DataSourceAndPreProcessContainer],
                   mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                   ref_model_object: 'PreProcess') -> None:
         data = class_name.get(object_id)
@@ -415,7 +470,7 @@ class GenericPreProcess(SequenceContainer):
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Type[PreProcessContainer],
+    def get_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                  mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                  preprocess_id: str) -> Optional[List['PreProcess']]:
         if object_id is not None:
@@ -438,7 +493,7 @@ class GenericPreProcess(SequenceContainer):
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Type[PreProcessContainer],
+    def delete_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                     mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
                     preprocess_id: str) -> int:
         data = class_name.get(object_id)
@@ -452,9 +507,9 @@ class GenericPreProcess(SequenceContainer):
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Type[PreProcessContainer],
+    def update_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
                     mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
-                    preprocess_id: str, preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
+                    preprocess_id: str, preprocess: Optional[Dict[str, Any]] = None) -> Optional[List['PreProcess']]:
         data = class_name.get(object_id)
         if not data:
             raise ValueError('bad {} {}'.format(class_name.label, object_id))
@@ -462,7 +517,7 @@ class GenericPreProcess(SequenceContainer):
         if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
             raise ValueError("no preprocesses id {} exists in {} with id {}"
                              .format(object_id, class_name.label, preprocess_id))
-        if 'id' in preprocess and preprocess['id'] != preprocess_id:
+        if preprocess and 'id' in preprocess and preprocess['id'] != preprocess_id:
             raise ValueError("id from request {} doesn't match id from url {}"
                              .format(preprocess['id'], preprocess_id))
 
@@ -487,7 +542,7 @@ class PreProcess(GenericPreProcess):
             self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
 
     @classmethod
-    def get(cls, preprocess_id: Optional[str] = None, contributor_id: Optional[str] = None,
+    def get(cls, preprocess_id: str, contributor_id: Optional[str] = None,
             coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('bad arguments')
@@ -525,7 +580,7 @@ class PreProcess(GenericPreProcess):
         return str(vars(self))
 
 
-class Contributor(PreProcessContainer):
+class Contributor(DataSourceAndPreProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
@@ -548,7 +603,9 @@ class Contributor(PreProcessContainer):
     def get(cls, contributor_id: str) -> 'Contributor':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': contributor_id})
         if raw is None:
-            return None
+            msg = "contributor '{}' not found".format(contributor_id)
+            logging.getLogger(__name__).error(msg)
+            raise EntityNotFound(msg)
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
@@ -565,19 +622,11 @@ class Contributor(PreProcessContainer):
     def all(cls) -> List['Contributor']:
         return cls.find(filter={})
 
-    @classmethod
-    def update_with_dict(cls, contributor_id: str = None, contributor_dict: dict = None) -> Optional['Contributor']:
-        contributor_dict = contributor_dict if contributor_dict else {}
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': contributor_id}, {'$set': contributor_dict})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get(contributor_id)
-
     def update(self) -> None:
         self.update_with_object(self)
 
     def update_with_object(self, contributor_object: 'Contributor') -> None:
+        contributor_object.fill_data_source_passwords_from_existing_object(self)
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
             {'$set': MongoContributorSchema().dump(contributor_object).data})
@@ -585,64 +634,40 @@ class Contributor(PreProcessContainer):
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
         return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
 
-
-def get_contributor(contributor_id: str) -> Contributor:
-    contributor = Contributor.get(contributor_id)
-    if contributor is None:
-        raise ValueError('bad contributor {}'.format(contributor_id))
-    return contributor
+    def is_geographic(self) -> bool:
+        return self.data_type == DATA_TYPE_GEOGRAPHIC
 
 
-class Coverage(PreProcessContainer):
+class Coverage(DataSourceAndPreProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
-    def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None, grid_calendars_id: str = None,
-                 contributors: List[str] = None, license: License = None,
+    def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None,
+                 input_data_source_ids: List[str] = None, license: License = None,
                  preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
         super(Coverage, self).__init__(preprocesses)
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
-        self.grid_calendars_id = grid_calendars_id
-        self.contributors = [] if contributors is None else contributors
+        self.input_data_source_ids = [] if input_data_source_ids is None else input_data_source_ids
         self.license = license if license else License()
         self.data_sources = data_sources if data_sources else []
         self.type = type
         self.short_description = short_description
         self.comment = comment
 
-    def save_grid_calendars(self, file: Union[str, bytes, IOBase, GridOut]) -> None:
-        gridfs_handler = GridFsHandler()
-        filename = '{coverage}_calendars.zip'.format(coverage=self.id)
-        id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update_with_dict(self.id, {'grid_calendars_id': id})
-        # when we delete the file all process reading it will get invalid data
-        # TODO: We will need to implement a better solution
-        gridfs_handler.delete_file_from_gridfs(self.grid_calendars_id)
-        self.grid_calendars_id = id
-
-    def get_environment(self, environment_id: str) -> Environment:
-        return self.environments.get(environment_id)
-
-    def get_grid_calendars(self) -> str:
-        if not self.grid_calendars_id:
-            return None
-
-        gridfs_handler = GridFsHandler()
-        return gridfs_handler.get_file_from_gridfs(self.grid_calendars_id)
-
     def save(self) -> None:
         raw = MongoCoverageSchema(strict=True).dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
 
     @classmethod
-    def get(cls, coverage_id: str = None) -> 'Coverage':
+    def get(cls, coverage_id: str) -> 'Coverage':
         raw = mongo.db[cls.mongo_collection].find_one({'_id': coverage_id})
         if raw is None:
-            return None
-
+            msg = "coverage '{}' not found".format(coverage_id)
+            logging.getLogger(__name__).error(msg)
+            raise EntityNotFound(msg)
         return MongoCoverageSchema(strict=True).load(raw).data
 
     @classmethod
@@ -659,17 +684,22 @@ class Coverage(PreProcessContainer):
     def all(cls) -> List['Coverage']:
         return cls.find(filter={})
 
-    @classmethod
-    def update_with_dict(cls, coverage_id: str = None, dataset: dict = None) -> 'Coverage':
-        # we have to use "doted notation' to only update some fields of a nested object
-        tmp_dataset = dataset if dataset else {}
-        raw = mongo.db[cls.mongo_collection].update_one({'_id': coverage_id}, {'$set': to_doted_notation(tmp_dataset)})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get(coverage_id)
+    def __fill_platform_passwords_from_existing_coverage(self, existing_coverage: 'Coverage') -> None:
+        for env_key, environment in self.environments.items():
+            for platform in environment.publication_platforms:
+                if platform.options and platform.options.authent and platform.options.authent.username and \
+                        not platform.options.authent.password:
+                    if env_key in existing_coverage.environments:
+                        existing_platform = existing_coverage.environments[env_key] \
+                            .get_publication_platform_for_type_with_user(
+                            platform.type, platform.options.authent.username
+                        )
+                        if existing_platform:
+                            platform.options.authent.password = existing_platform.options.authent.password
 
     def update_with_object(self, coverage_object: 'Coverage') -> None:
+        coverage_object.fill_data_source_passwords_from_existing_object(self)
+        coverage_object.__fill_platform_passwords_from_existing_coverage(self)
         mongo.db[self.mongo_collection].update_one(
             {'_id': self.id},
             {'$set': MongoCoverageSchema().dump(coverage_object).data})
@@ -677,39 +707,11 @@ class Coverage(PreProcessContainer):
     def update(self) -> None:
         self.update_with_object(self)
 
-    def save_ntfs(self, environment_type: str, file: Union[str, bytes, IOBase, GridOut]) -> None:
-        if environment_type not in self.environments.keys():
-            raise ValueError('invalid value for environment_type')
-        filename = '{coverage}_{type}_ntfs.zip'.format(coverage=self.id, type=environment_type)
-        gridfs_handler = GridFsHandler()
-        id = gridfs_handler.save_file_in_gridfs(file, filename=filename, coverage=self.id)
-        Coverage.update_with_dict(self.id, {'environments.{}.current_ntfs_id'.format(environment_type): id})
-        # when we delete the file all process reading it will get invalid data
-        # TODO: We will need to implements a better solution
-        gridfs_handler.delete_file_from_gridfs(self.environments[environment_type].current_ntfs_id)
-        self.environments[environment_type].current_ntfs_id = id
+    def get_data_source(self, data_source_id: str) -> 'DataSource':
+        return next(data_source for data_source in self.data_sources if data_source.id == data_source_id)
 
-    def has_contributor(self, contributor: Contributor) -> bool:
-        return contributor.id in self.contributors
-
-    def add_contributor(self, contributor: Contributor) -> None:
-        if contributor.data_type == DATA_TYPE_GEOGRAPHIC and any(
-                        Contributor.get(contributor_id).data_type == DATA_TYPE_GEOGRAPHIC for contributor_id in
-                        self.contributors):
-            raise IntegrityException(
-                'unable to have more than one contributor of type {} by coverage'.format(DATA_TYPE_GEOGRAPHIC)
-            )
-
-        self.contributors.append(contributor.id)
-        self.update_with_dict(self.id, {"contributors": self.contributors})
-
-    def remove_contributor(self, contributor_id: str) -> None:
-        if contributor_id in self.contributors:
-            self.contributors.remove(contributor_id)
-            self.update_with_dict(self.id, {"contributors": self.contributors})
-
-    def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
-        return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class MongoValidityPeriodSchema(Schema):
@@ -748,24 +750,55 @@ class MongoContributorExportDataSourceSchema(Schema):
         return ContributorExportDataSource(**data)
 
 
+class MongoPlatformOptionsAuthentSchema(Schema):
+    username = fields.String(required=True)
+    password = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_platform_options_authent(self, data: dict) -> PlatformOptionsAuthent:
+        return PlatformOptionsAuthent(**data)
+
+
+class MongoPlatformOptionsSchema(Schema):
+    authent = fields.Nested(MongoPlatformOptionsAuthentSchema, required=False)
+    directory = fields.String(required=False, allow_none=True)
+
+    @post_load
+    def make_platform_options(self, data: dict) -> PlatformOptions:
+        return PlatformOptions(**data)
+
+
 class MongoPlatformSchema(Schema):
-    type = PlatformType(required=True)
     protocol = PlatformProtocol(required=True)
-    sequence = fields.Integer(required=True)
     url = fields.String(required=True)
-    options = fields.Dict(required=False)
-    input_data_source_ids = fields.List(fields.String())
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
 
     @post_load
     def make_platform(self, data: dict) -> Platform:
         return Platform(**data)
 
 
+class MongoPublicationPlatformSchema(Schema):
+    # inherited attributes from MongoPlatformSchema because if we extend it, it makes 2 decorators
+    # and confuses the post_load
+    protocol = PlatformProtocol(required=True)
+    url = fields.String(required=True)
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
+    # end of duplicate
+    type = PlatformType(required=True)
+    input_data_source_ids = fields.List(fields.String())
+    sequence = fields.Integer(required=True)
+
+    @post_load
+    def make_publication_platform(self, data: dict) -> PublicationPlatform:
+        return PublicationPlatform(**data)
+
+
 class MongoEnvironmentSchema(Schema):
     name = fields.String(required=True)
     sequence = fields.Integer(required=True)
     current_ntfs_id = fields.String(allow_none=True)
-    publication_platforms = fields.Nested(MongoPlatformSchema, many=True)
+    publication_platforms = fields.Nested(MongoPublicationPlatformSchema, many=True)
 
     @post_load
     def make_environment(self, data: dict) -> Environment:
@@ -817,8 +850,8 @@ class Historisable(object):
             # Delete old data_sources_fetched
             num_deleted = self.delete_many([row.get('_id') for row in old_rows])
             # Delete all associated gridFS
+            gridfs_ids = []  # type: List[str]
             if num_deleted:
-                gridfs_ids = []  # type: List[str]
                 get_values_by_key(old_rows, gridfs_ids)
             for gridf_id in gridfs_ids:
                 GridFsHandler().delete_file_from_gridfs(gridf_id)
@@ -837,6 +870,7 @@ class MongoDataSourceInputSchema(Schema):
     type = InputType(required=False, allow_none=True)
     url = fields.String(required=False, allow_none=True)
     expected_file_name = fields.String(required=False, allow_none=True)
+    options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
 
     @post_load
     def make_input(self, data: dict) -> Input:
@@ -850,6 +884,7 @@ class MongoDataSourceSchema(Schema):
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=False)
     input = fields.Nested(MongoDataSourceInputSchema, required=False, allow_none=True)
     service_id = fields.String(required=False, allow_none=True)
+    export_data_source_id = fields.String(required=False, allow_none=True)
     data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
 
     @post_load
@@ -878,8 +913,7 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
-    grid_calendars_id = fields.String(allow_none=True)
-    contributors = fields.List(fields.String())
+    input_data_source_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
     preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)
@@ -1091,13 +1125,12 @@ class CoverageExport(Historisable):
     mongo_collection = 'coverage_exports'
 
     def __init__(self, coverage_id: str, gridfs_id: str, validity_period: ValidityPeriod,
-                 contributors: List[CoverageExportContributor] = None, id: str = None, created_at: str = None) -> None:
+                 id: str = None, created_at: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
         self.created_at = created_at if created_at else datetime.utcnow()
-        self.contributors = [] if contributors is None else contributors
 
     def save(self) -> None:
         raw = MongoCoverageExportSchema().dump(self).data
@@ -1114,8 +1147,6 @@ class CoverageExport(Historisable):
 
     @classmethod
     def get_last(cls, coverage_id: str) -> Optional['CoverageExport']:
-        if not coverage_id:
-            return None
         raw = mongo.db[cls.mongo_collection].find({'coverage_id': coverage_id}).sort("created_at", -1).limit(1)
         lasts = MongoCoverageExportSchema(many=True).load(raw).data
         return lasts[0] if lasts else None
@@ -1130,7 +1161,6 @@ class MongoCoverageExportSchema(Schema):
     gridfs_id = fields.String(required=True)
     created_at = fields.DateTime(required=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
-    contributors = fields.Nested(MongoCoverageExportContributorSchema, many=True)
 
     @post_load
     def make_coverage_export(self, data: dict) -> CoverageExport:

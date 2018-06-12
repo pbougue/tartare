@@ -28,7 +28,6 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from time import sleep
 
 import pytest
 
@@ -45,7 +44,12 @@ class TestContributorExport(TartareFixture):
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
         assert 'error' in r
-        assert r.get('error') == 'contributor not found: toto'
+        assert r.get('error') == "contributor 'toto' not found"
+
+    def test_get_contributor_export_contributor_not_found(self):
+        raw = self.get('/contributors/toto/actions/export')
+        r = self.assert_failed_call(raw, 404)
+        assert r.get('error') == "contributor 'toto' not found"
 
     def test_contributor_export(self):
         raw = self.post('/contributors', '{"id": "id_test", "name":"name_test", "data_prefix":"AAA"}')
@@ -113,10 +117,14 @@ class TestContributorExport(TartareFixture):
         url = self.format_url(method=method, ip=ip, filename=filename)
         if error_message and '%url%' in error_message:
             error_message = error_message.replace('%url%', url)
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", '
-                               '"input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
         resp = self.contributor_export(contributor['id'], check_done=False)
         job = self.get_job_from_export_response(resp)
@@ -128,24 +136,38 @@ class TestContributorExport(TartareFixture):
     def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
 
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"id": "to_process", "name": "bobette", "data_format": "gtfs", '
-                               '"input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
-        raw = self.post('/contributors/id_test/preprocesses',
-                        params='{"type":"GtfsAgencyFile","sequence":0,"data_source_ids":["to_process"],'
-                               '"params":{"data":{"agency_id":"112","agency_name":"stif",'
-                               '"agency_url":"http://stif.com"}}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "id": "to_process",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "export_data_source_id": "export_id",
+            "input": {"type": "url", "url": url}
+        })
+        contributor['preprocesses'].append({
+            "type": "GtfsAgencyFile",
+            "sequence": 0,
+            "data_source_ids": ["to_process"],
+            "params": {"data": {
+                "agency_id": "112",
+                "agency_name": "stif",
+                "agency_url": "http://stif.com"
+            }}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
         job = self.contributor_export(contributor['id'])
         assert job['state'] == 'done', print(job)
 
     def test_contributor_export_cleans_files(self, contributor, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
         self.contributor_export(contributor['id'])
         with app.app_context():
@@ -154,18 +176,22 @@ class TestContributorExport(TartareFixture):
 
     def test_contributor_and_coverage_export_cleans_files(self, contributor, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='sample_1.zip')
-        raw = self.post('/contributors/id_test/data_sources',
-                        params='{"name": "bobette", "data_format": "gtfs", "input": {"type": "url", "url": "' + url + '"}}')
-        self.assert_sucessful_create(raw)
+        contributor['data_sources'].append({
+            "id": "bobette",
+            "name": "bobette",
+            "data_format": "gtfs",
+            "input": {"type": "url", "url": url}
+        })
+        raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
         raw = self.post('/coverages',
-                        params='{"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}')
+                        params='{"id": "jdr", "name": "name of the coverage jdr", "input_data_source_ids": ["bobette"]}')
         self.assert_sucessful_create(raw)
 
         self.contributor_export(contributor['id'])
         self.coverage_export('jdr')
         with app.app_context():
             grid_fs_list = GridFsHandler().gridfs.find()
-            assert grid_fs_list.count() == 4
+            assert grid_fs_list.count() == 3
 
     @pytest.mark.parametrize("filename,path,data_format", [
         ('bano-75.csv', 'ruspell', DATA_FORMAT_BANO_FILE),
@@ -176,10 +202,13 @@ class TestContributorExport(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename, path=path)
         raw = self.post('/contributors',
                         '{"id": "' + cid + '", "name":"geographic", "data_prefix":"BBB", "data_type": "geographic"}')
-        assert raw.status_code == 201
-        raw = self.post('/contributors/{}/data_sources'.format(cid),
-                        params='{"name": "bobette", "data_format": "' + data_format + '", "input": {"type": "url", "url": "' + url + '"}}')
-        assert raw.status_code == 201
+        contributor = self.assert_sucessful_create(raw)['contributors'][0]
+        contributor['data_sources'].append({
+            "name": "bobette",
+            "data_format": data_format,
+            "input": {"type": "url", "url": url}
+        })
+        self.put('/contributors/'+cid, params=self.dict_to_json(contributor))
 
         job = self.contributor_export(cid)
         assert job['state'] == 'done', print(job)

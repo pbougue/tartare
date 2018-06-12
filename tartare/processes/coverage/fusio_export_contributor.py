@@ -31,9 +31,10 @@ import tempfile
 
 import requests
 
+from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
-from tartare.core.models import Platform
+from tartare.core.models import MongoPlatformSchema, Input
 from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -49,7 +50,7 @@ class FusioExportContributor(AbstractFusioProcess):
     def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             dest_full_file_name, expected_file_name = HttpFetcher().fetch(
-                url, tmp_dir_name, self.params.get('expected_file_name')
+                Input(type=INPUT_TYPE_URL, url=url, expected_file_name=self.params.get('expected_file_name')), tmp_dir_name
             )
             with open(dest_full_file_name, 'rb') as file:
                 protocol_uploader.publish(file, expected_file_name)
@@ -77,10 +78,9 @@ class FusioExportContributor(AbstractFusioProcess):
 
         logging.getLogger(__name__).info('fusio export contributor has generated url {}'.format(export_url))
 
-        publication_platform_dict = self.params.get('publication_platform')
-        publication_platform_object = Platform(publication_platform_dict.get('protocol'), '',
-                                               publication_platform_dict.get('url'),
-                                               publication_platform_dict.get('options'))
-        protocol_uploader = ProtocolManager.select_from_platform(publication_platform_object)
+        platform_object = MongoPlatformSchema(strict=True).load(
+            self.params.get('publication_platform')
+        ).data
+        protocol_uploader = ProtocolManager.select_from_platform(platform_object)
         self.publish(protocol_uploader, export_url)
         return self.context

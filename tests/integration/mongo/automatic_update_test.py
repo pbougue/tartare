@@ -100,18 +100,18 @@ class TestAutomaticUpdate(TartareFixture):
         job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
         self.__assert_job_is_automatic_update_contributor_export(job)
 
-    def __create_coverage(self, contributor_ids, coverage_id='auto_update_coverage'):
+    def __create_coverage(self, input_data_source_ids, coverage_id='auto_update_coverage'):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
-            'contributors': contributor_ids,
+            'input_data_source_ids': input_data_source_ids
         }
         raw = self.post('coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 
     def test_automatic_update_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['auto_update_contrib'])
+        self.__create_coverage(['ds_auto_update_contrib'])
         jobs = self.run_automatic_update()
         assert len(jobs) == 3
         for job in jobs:
@@ -124,7 +124,7 @@ class TestAutomaticUpdate(TartareFixture):
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['auto_update_contrib'])
+        self.__create_coverage(['ds_auto_update_contrib'])
         jobs_first_run = self.run_automatic_update()
         jobs_second_run = self.run_automatic_update()
         assert len(jobs_first_run) == 3
@@ -151,11 +151,11 @@ class TestAutomaticUpdate(TartareFixture):
     # x  ----> cC
     def test_automatic_update_twice_multi_contributor_and_multi_coverage(self, init_http_download_server):
         contributors = ['c1', 'c2', 'c3', 'c4']
-        coverages = {'cA': ['c1', 'c2'], 'cB': ['c3'], 'cC': []}
+        coverages = {'cA': ['ds_c1', 'ds_c2'], 'cB': ['ds_c3'], 'cC': []}
         for contributor in contributors:
             self.__create_contributor(init_http_download_server.ip_addr, contributor)
-        for cov, contribs in coverages.items():
-            self.__create_coverage(contribs, cov)
+        for cov, ds in coverages.items():
+            self.__create_coverage(ds, cov)
         jobs_first_run = self.run_automatic_update()
         assert len(jobs_first_run) == 10
         contributor_export_jobs = list(
@@ -170,8 +170,7 @@ class TestAutomaticUpdate(TartareFixture):
             mongo.db['jobs'].delete_many({})
 
         # update c1 data source
-        self.patch('/contributors/{}/data_sources/{}'.format('c1', 'ds_c1'),
-                   json.dumps({'input': {'url': self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')}}))
+        self.update_data_source_url('c1', 'ds_c1', self.format_url(init_http_download_server.ip_addr, 'sample_1.zip'))
         jobs_second_run = self.run_automatic_update()
         contributor_export_jobs = list(
             filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))

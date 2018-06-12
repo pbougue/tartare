@@ -125,44 +125,6 @@ paths:
           description: Resource not found
           schema :
             $ref: '#/definitions/error_404'
-    patch:
-      deprecated: true
-      summary: Modify a coverage configuration
-      tags:
-        - coverages
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: body
-          name: body
-          description: Attributes of the coverage {coverage_id} that needs to be modified
-          required: true
-          schema:
-            $ref: "#/definitions/coverage_patch"
-      responses:
-        200:
-          description: Modified coverage
-          schema:
-            $ref: "#/definitions/coverages"
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
     put:
       summary: Modify a coverage configuration
       tags:
@@ -234,173 +196,6 @@ paths:
           description: Job created
           schema:
             $ref: "#/definitions/job"
-
-  /coverages/{coverage_id}/grid_calendar:
-    post:
-      summary: Handle a grid_calendar file to coverage {coverage_id} for processing
-      tags:
-        - coverages
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
-          required: true
-      responses:
-        200:
-          description: OK
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/contributors:
-    post:
-      summary: Subscribe a coverage to a contributor
-      tags:
-        - coverages
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: body
-          name: body
-          description: contributor_id to which you want the coverage to subscribe
-          schema:
-            $ref: "#/definitions/id_object"
-          required: true
-      responses:
-        200:
-          description: OK
-          schema :
-            $ref: '#/definitions/coverages'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /coverages/{coverage_id}/contributors/{contributor_id}:
-    delete:
-      summary: Delete a contributor from a coverage {coverage_id}
-      tags:
-        - coverages
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor that needs to be removed from the coverage
-          required: true
-      responses:
-        204:
-          description: When data source {contributor_id} is correctly deleted from coverage
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/environments/{environment_type}/data/{data_type}:
-    get:
-      summary: Retrieve the latest data file of the specified coverage
-      tags:
-        - data
-      produces:
-        - application/json
-        - application/zip
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the manipulated coverage
-          required: true
-        - in: path
-          name: environment_type
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} to be requested
-          required: true
-        - in: path
-          name: data_type
-          type: string
-          enum: ["ntfs"]
-          description: Type of data beeing manipulated
-          required: true
-      responses:
-        200:
-          description: Return the data file requested
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-    post:
-      summary: Send a new data file to coverage {coverage_id} for processing
-      tags:
-        - data
-      consumes:
-        - multipart/form-data
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the manipulated coverage
-          required: true
-        - in: path
-          name: environment_type
-          type: string
-          enum: ["integration", "preproduction", "production"]
-          description: Environment of the coverage {coverage_id} the data will be sent to
-          required: true
-        - in: path
-          name: data_type
-          type: string
-          enum: ["ntfs"]
-          description: Type of data beeing manipulated
-          required: true
-        - in: formData
-          name: file
-          type: file
-          description: File to be sent to the coverage. Data type is automatically detected
-          required: true
-      responses:
-        200:
-          description: Return the data file requested
 
   /coverages/{coverage_id}/exports:
     get:
@@ -575,44 +370,6 @@ paths:
           description: Unsupported Media Type
           schema :
             $ref: '#/definitions/error_415'
-    patch:
-      deprecated: true
-      summary: Modify contributor info (use PUT instead)
-      tags:
-        - contributors
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor
-          required: true
-        - in: body
-          name: body
-          description: Attributes of the contributor {contributor_id} that needs to be modified.
-          required: true
-          schema:
-            $ref: "#/definitions/contributor_type"
-      responses:
-        200:
-          description: Requested contributor
-          schema:
-            $ref: '#/definitions/contributor_obj'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
 
   /contributors/{contributor_id}/actions/export:
     post:
@@ -655,104 +412,6 @@ paths:
           description: Invalid arguments
           schema :
             $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-    post:
-      summary: Create a new data source for a contributor
-      tags:
-        - contributors
-      parameters:
-        - in: body
-          name: body
-          description: Data source object that needs to be added to given contributor
-          required: true
-          schema:
-            $ref: "#/definitions/data_source_type"
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      responses:
-        201:
-          description: Data source created
-          schema:
-            $ref: '#/definitions/data_source_obj'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        409:
-          description: Duplicate data_source id
-          schema :
-            $ref: '#/definitions/error_409'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /contributors/{contributor_id}/data_sources/{data_source_id}:
-    patch:
-      summary: Modify a data source for a contributor
-      tags:
-        - contributors
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: data_source_id
-          type: string
-          description: Identifier of the data source that needs to be modified
-          required: true
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor of the data source
-          required: true
-        - in: body
-          name: body
-          description: Attributes of the contributor {contributor_id} that needs to be modified
-          required: true
-          schema:
-            $ref: "#/definitions/data_source_type"
-      responses:
-        200:
-          description: Data source modified
-          schema:
-            $ref: '#/definitions/data_source_obj'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Contributor not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-    delete:
-      summary: Delete a data_source from a contributor {contributor_id}
-      tags:
-        - contributors
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor that needs to be modified
-          required: true
-        - in: path
-          name: data_source_id
-          type: string
-          description: Identifier of the data_source that needs to be removed from the contributor
-          required: true
-      responses:
-        204:
-          description: When data source {data_source_id} is correctly deleted from contributor
         404:
           description: Resource not found
           schema :
@@ -823,257 +482,6 @@ paths:
           description: "Internal Server Error"
           schema:
             $ref: "#/definitions/error_500"
-
-  /contributors/{contributor_id}/preprocesses:
-    get:
-      summary: Display contributor preprocesses
-      tags:
-        - contributors
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor
-          required: true
-      responses:
-        200:
-          description: Requested contributor preprocesses
-          schema:
-            $ref: '#/definitions/contributor_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-    post:
-      summary: Create preprocess for a contributor
-      tags:
-        - contributors
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor of the preprocess
-          required: true
-        - in: body
-          name: body
-          description: Preprocess object that needs to be added to given contributor
-          required: true
-          schema:
-            $ref: "#/definitions/contributor_preprocess"
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      responses:
-        201:
-          description: Preprocess created
-          schema:
-            $ref: '#/definitions/contributor_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /contributors/{contributor_id}/preprocesses/{preprocess_id}:
-    patch:
-      summary: Modify a preprocess for a contributor
-      tags:
-        - contributors
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: preprocess_id
-          type: string
-          description: Identifier of the preprocess that needs to be modified
-          required: true
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor of the preprocess
-          required: true
-        - in: body
-          name: body
-          description: Attributes of the contributor's preprocess that needs to be modified
-          required: true
-          schema:
-            $ref: "#/definitions/contributor_preprocess"
-      responses:
-        200:
-          description: Preprocess modified
-          schema:
-            $ref: '#/definitions/contributor_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Object not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-    delete:
-      summary: Delete a preprocess from the contributor {contributor_id}
-      tags:
-        - contributors
-      parameters:
-        - in: path
-          name: contributor_id
-          type: string
-          description: Identifier of the contributor that needs to be modified
-          required: true
-        - in: path
-          name: preprocess_id
-          type: string
-          description: Identifier of the preprocess that needs to be removed from the contributor
-          required: true
-      responses:
-        204:
-          description: When preprocess {preprocess_id} is correctly deleted from contributor
-        404:
-          description: Object not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-
-  /coverages/{coverage_id}/preprocesses:
-    parameters:
-      - in: path
-        name: coverage_id
-        type: string
-        description: Identifier of the coverage
-        required: true
-    get:
-      summary: Display coverage preprocesses
-      tags:
-        - coverages
-      produces:
-        - application/json
-      responses:
-        200:
-          description: Requested coverage preprocesses
-          schema:
-            $ref: '#/definitions/coverage_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-    post:
-      summary: Create preprocess for a coverage
-      tags:
-        - coverages
-      parameters:
-        - in: body
-          name: body
-          description: Preprocess object that needs to be added to given coverage
-          required: true
-          schema:
-            $ref: "#/definitions/coverage_preprocess"
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      responses:
-        201:
-          description: Preprocess created
-          schema:
-            $ref: '#/definitions/coverage_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /coverages/{coverage_id}/preprocesses/{preprocess_id}:
-    patch:
-      summary: Modify a preprocess for a coverage
-      tags:
-        - coverages
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: preprocess_id
-          type: string
-          description: Identifier of the preprocess that needs to be modified
-          required: true
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage of the preprocess
-          required: true
-        - in: body
-          name: body
-          description: Attributes of the coverage's preprocess that needs to be modified
-          required: true
-          schema:
-            $ref: "#/definitions/coverage_preprocess"
-      responses:
-        200:
-          description: Preprocess modified
-          schema:
-            $ref: '#/definitions/coverage_preprocess_list'
-        400:
-          description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
-          description: Object not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
-          description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-    delete:
-      summary: Delete a preprocess from the coverage {coverage_id}
-      tags:
-        - coverages
-      parameters:
-        - in: path
-          name: coverage_id
-          type: string
-          description: Identifier of the coverage that needs to be modified
-          required: true
-        - in: path
-          name: preprocess_id
-          type: string
-          description: Identifier of the preprocess that needs to be removed from the coverage
-          required: true
-      responses:
-        204:
-          description: When preprocess {preprocess_id} is correctly deleted from coverage
-        404:
-          description: Object not found
-          schema :
-            $ref: '#/definitions/error_404'
-
 
   /contributors/{contributor_id}/jobs:
     get:
@@ -1251,9 +659,6 @@ definitions:
       name:
         type: string
         example: auv
-      grid_calendars_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments_patch"
       contributors:
@@ -1278,15 +683,16 @@ definitions:
       short_description:
         type: string
         description: Description of coverage content, used for ODS export
+      data_sources:
+        type: array
+        items:
+          $ref: "#/definitions/data_source_type"
       comment:
         type: string
         description: Coverage detail
-      grid_calendars_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
       environments:
         $ref: "#/definitions/environments"
-      contributors:
+      input_data_source_ids:
         $ref: "#/definitions/array_of_strings"
       preprocesses:
         type: array
@@ -1350,6 +756,22 @@ definitions:
       integration:
         $ref: "#/definitions/environment_type"
 
+  options_type:
+    type: object
+    properties:
+      authent:
+        type: object
+        properties:
+          username:
+            type: string
+            example: "my_user"
+          password:
+            type: string
+            example: "my_secret_password"
+      directory:
+        type: string
+        example: "/path/"
+
   environment_type:
     type: object
     required: [
@@ -1398,8 +820,7 @@ definitions:
         type: integer
         example: 0
       options:
-        type: object
-        example: {"authent": {"password": "XXXX", "username": "ftp_user"}, "directory": "/path/" }
+        $ref: "#/definitions/options_type"
 
   contributor_obj:
     type: object
@@ -1667,6 +1088,10 @@ definitions:
       id:
         type: string
         example: tram_lyon
+      export_data_source_id:
+        type: string
+        example: my-export-id
+        description: the id of the computed data source generated for the export
       name:
         type: string
         example: Tram feed for Lyon
@@ -1728,6 +1153,8 @@ definitions:
       expected_file_name:
         type: string
         example: "config.json"
+      options:
+        $ref: "#/definitions/options_type"
 
   license:
     type: object

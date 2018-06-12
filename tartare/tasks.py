@@ -27,12 +27,8 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import datetime
 import logging
-import os
-import tempfile
 from typing import Optional, List, Union
-from zipfile import ZipFile
 
 from billiard.einfo import ExceptionInfo
 from celery import chain, chord, group
@@ -43,30 +39,20 @@ from celery.utils.dispatch import Signal
 
 import tartare
 from tartare import celery
-from tartare.core import calendar_handler, models
 from tartare.core import contributor_export_functions
 from tartare.core import coverage_export_functions
-from tartare.core.calendar_handler import GridCalendarData
+from tartare.core import models
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
     JOB_STATUS_FAILED, JOB_STATUS_RUNNING, JOB_STATUS_DONE
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Platform, Contributor, PreProcess, SequenceContainer, \
-    ContributorExport
+from tartare.core.models import CoverageExport, Coverage, Job, Contributor, PreProcess, SequenceContainer, \
+    ContributorExport, PublicationPlatform, DataSource
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
-from tartare.helper import upload_file
 from tartare.processes.processes import PreProcessManager
 
 logger = logging.getLogger(__name__)
-
-
-def _do_merge_calendar(calendar_file: str, ntfs_file: str, output_file: str) -> None:
-    with ZipFile(calendar_file, 'r') as calendars_zip, ZipFile(ntfs_file, 'r') as ntfs_zip:
-        grid_calendar_data = GridCalendarData()
-        grid_calendar_data.load_zips(calendars_zip, ntfs_zip)
-        new_ntfs_zip = calendar_handler.merge_calendars_ntfs(grid_calendar_data, ntfs_zip)
-        calendar_handler.save_zip_as_file(new_ntfs_zip, output_file)
 
 
 class CallbackTask(tartare.ContextTask):
@@ -89,53 +75,31 @@ class CallbackTask(tartare.ContextTask):
                 job.update(state=JOB_STATUS_FAILED, error_message=str(exc))
 
 
-def publish_data_on_platform(platform: Platform, coverage: Coverage, environment_id: str, job: Job) -> None:
+def publish_data_on_platform(platform: PublicationPlatform, coverage: Coverage, environment_id: str, job: Job) -> None:
     step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
     job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
-    gridfs_handler = GridFsHandler()
-    file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
+    if coverage_export:
+        gridfs_handler = GridFsHandler()
+        file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
-    try:
-        publisher = PublisherManager.select_from_platform(platform)
-        protocol_uploader = ProtocolManager.select_from_platform(platform)
-        publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
-        # Upgrade current_ntfs_id
-        current_ntfs_id = coverage_export.gridfs_id
-        coverage.update_with_dict(coverage.id, {'environments.{}.current_ntfs_id'.format(environment_id): current_ntfs_id})
-    except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
-        msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
-            error=str(exc), url=platform.url, type=platform.type)
-        logger.error(msg)
-        raise exc
+        try:
+            publisher = PublisherManager.select_from_publication_platform(platform)
+            protocol_uploader = ProtocolManager.select_from_platform(platform)
+            publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
+            # Upgrade current_ntfs_id
+            current_ntfs_id = coverage_export.gridfs_id
+            coverage.environments[environment_id].current_ntfs_id = current_ntfs_id
+            coverage.update()
+        except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
+            msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
+                error=str(exc), url=platform.url, type=platform.type)
+            logger.error(msg)
+            raise exc
 
 
 def finish_job(context: Context) -> None:
     context.job = context.job.update(state=JOB_STATUS_DONE)
-
-
-@celery.task(bind=True, default_retry_delay=300, max_retries=5, acks_late=True)
-def send_ntfs_to_tyr(self: Task, coverage_id: str, environment_type: str) -> None:
-    coverage = models.Coverage.get(coverage_id)
-    url = coverage.environments[environment_type].publication_platforms[0].url
-    grifs_handler = GridFsHandler()
-    ntfs_file = grifs_handler.get_file_from_gridfs(coverage.environments[environment_type].current_ntfs_id)
-    grid_calendars_file = coverage.get_grid_calendars()
-    if grid_calendars_file:
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            output_ntfs_file = os.path.join(tmpdirname, '{}-database.zip'
-                                            .format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-            logger.debug("Working to generate [{}]".format(output_ntfs_file))
-            _do_merge_calendar(grid_calendars_file, ntfs_file, output_ntfs_file)
-            logger.info('trying to send data to %s', url)
-            # TODO: how to handle the timeout?
-            with open(output_ntfs_file, 'rb') as file:
-                response = upload_file(url, output_ntfs_file, file)
-    else:
-        response = upload_file(url, ntfs_file.filename, ntfs_file)
-
-    if response.status_code != 200:
-        raise self.retry()
 
 
 @celery.task(bind=True, default_retry_delay=180,
@@ -213,22 +177,22 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
 
     # insert export in mongo db
     context.job.update(step="save_coverage_export")
-    export = coverage_export_functions.save_export(coverage, context)
-    if export:
-        # launch publish for all environment
-        sorted_environments = {}
-        # flip env: object in object: env
-        flipped_environments = dict((v, k) for k, v in coverage.environments.items())
-        # sort envs
-        raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
-        # restore mapping
-        for environment in raw_sorted_environments:
-            sorted_environments[flipped_environments[environment]] = environment
-        for env in sorted_environments:
-            environment = coverage.get_environment(env)
-            sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
-            for platform in sorted_publication_platforms:
-                publish_data_on_platform(platform, coverage, env, job)
+    coverage_export_functions.save_export(coverage, context)
+
+    # launch publish for all environment
+    sorted_environments = {}
+    # flip env: object in object: env
+    flipped_environments = dict((v, k) for k, v in coverage.environments.items())
+    # sort envs
+    raw_sorted_environments = SequenceContainer.sort_by_sequence(list(coverage.environments.values()))
+    # restore mapping
+    for environment in raw_sorted_environments:
+        sorted_environments[flipped_environments[environment]] = environment
+    for env in sorted_environments:
+        environment = coverage.environments[env]
+        sorted_publication_platforms = SequenceContainer.sort_by_sequence(environment.publication_platforms)
+        for publication_platform in sorted_publication_platforms:
+            publish_data_on_platform(publication_platform, coverage, env, job)
     finish_job(context)
     return context
 
@@ -323,7 +287,8 @@ def automatic_update_launch_coverage_exports(self: Task,
         logger.info("fetching {} coverages".format(len(coverages)))
         actions = []
         for coverage in coverages:
-            if any(contributor_id in updated_contributors for contributor_id in coverage.contributors):
+            contributors = {DataSource.get_contributor_of_data_source(data_source_id) for data_source_id in coverage.input_data_source_ids}
+            if any(contributor.id in updated_contributors for contributor in contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
                 actions.append(coverage_export.si(CoverageExportContext(job, coverage=coverage)))

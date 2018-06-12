@@ -39,7 +39,7 @@ from tests.integration.test_mechanism import TartareFixture
 
 
 class TestHistorical(TartareFixture):
-    def __init_contributor_config(self):
+    def __init_contributor_config(self, contributor):
         data_source_gtfs = {
             "id": "data_source_gtfs",
             "name": "data_source_gtfs",
@@ -57,46 +57,44 @@ class TestHistorical(TartareFixture):
                 "url": ""
             }
         }
-        raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_gtfs))
-        self.assert_sucessful_create(raw)
-        raw = self.post('/contributors/id_test/data_sources', json.dumps(data_source_config))
-        self.assert_sucessful_create(raw)
+        contributor['data_sources'] = [
+            data_source_gtfs,
+            data_source_config
+        ]
+        raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
+        return self.assert_sucessful_call(raw)['contributors'][0]
 
     def __init_coverage_config(self):
-        coverage = {"id": "jdr", "name": "name of the coverage jdr", "contributors": ["id_test"]}
+        coverage = {"id": "jdr", "name": "name of the coverage jdr", "input_data_source_ids": ["data_source_gtfs"]}
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     @pytest.mark.parametrize("exports_number", [1, 2, 3, 4, 5])
     def test_historisation(self, contributor, init_http_download_server, exports_number):
-        self.__init_contributor_config()
+        contributor = self.__init_contributor_config(contributor)
         self.__init_coverage_config()
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
         url_config = self.format_url(ip=init_http_download_server.ip_addr,
                                      filename='historisation/config-{number}.json')
 
         for i in range(1, exports_number + 1):
-            raw = self.patch('/contributors/id_test/data_sources/data_source_gtfs', json.dumps(
-                {"input": {"url": url_gtfs.format(number=i)}}
-            ))
-            self.assert_sucessful_call(raw)
-            raw = self.patch('/contributors/id_test/data_sources/data_source_config', json.dumps(
-                {"input": {"url": url_config.format(number=i)}}
-            ))
-            self.assert_sucessful_call(raw)
-
+            contributor['data_sources'][0]['input']["url"] = url_gtfs.format(number=i)
+            contributor['data_sources'][1]['input']["url"] = url_config.format(number=i)
+            raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
             self.full_export('id_test', 'jdr')
+            raw = self.get('/contributors/id_test')
+            contributor = self.assert_sucessful_call(raw)['contributors'][0]
 
         with app.app_context():
-            self.assert_data_set_number(contributor['id'], 'data_source_gtfs', exports_number)
-            self.assert_data_set_number(contributor['id'], 'data_source_config', exports_number)
+            self.assert_data_set_number('data_source_gtfs', exports_number)
+            self.assert_data_set_number('data_source_config', exports_number)
             self.assert_contributor_exports_number(exports_number)
             self.assert_coverage_exports_number(exports_number)
             self.assert_files_number(exports_number)
 
-    def assert_data_set_number(self, contributor_id, data_source_id, exports_number):
-        data_sources = DataSource.get_one(contributor_id, data_source_id)
+    def assert_data_set_number(self, data_source_id, exports_number):
+        data_sources = DataSource.get_one(data_source_id=data_source_id)
         assert len(data_sources.data_sets) == min(exports_number, tartare.app.config.get('HISTORICAL'))
 
     def assert_contributor_exports_number(self, exports_number):
@@ -113,7 +111,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 7)
+        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 5)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_sets_histo_and_cleaning(self, init_http_download_server):
@@ -144,7 +142,7 @@ class TestHistorical(TartareFixture):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
         self.init_contributor('cid', 'dsid', url_gtfs)
         self.contributor_export('cid')
-        self.init_coverage('covid', ['cid'])
+        self.init_coverage('covid', ['dsid'])
         self.coverage_export('covid')
         self.coverage_export('covid')
         self.coverage_export('covid')

@@ -34,9 +34,10 @@ import os
 import tempfile
 from zipfile import ZipFile
 
+import tartare
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
-from tests.utils import _get_file_fixture_full_path, assert_files_equals
+from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, assert_content_equals_ref_file
 
 
 class TartareFixture(object):
@@ -83,7 +84,7 @@ class TartareFixture(object):
         return "{method}://{ip}/{path}/{filename}".format(method=method, ip=ip, filename=filename, path=path)
 
     def assert_sucessful_create(self, raw):
-        self.assert_sucessful_call(raw, 201)
+        return self.assert_sucessful_call(raw, 201)
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
         debug = self.json_to_dict(raw) if status_code_expected != 204 else 'no body'
@@ -126,11 +127,14 @@ class TartareFixture(object):
         return self.coverage_export(coverage_id, current_date)
 
     def init_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
-                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None, data_prefix=None):
+                         data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None, data_prefix=None, export_id=None,
+                         options=None):
         input = {'type': 'manual'} if manual else {
             "type": "url",
             "url": url
         }
+        if options:
+            input['options'] = options
         data_prefix = data_prefix if data_prefix else contributor_id + '_prefix'
 
         data_source = {
@@ -140,6 +144,8 @@ class TartareFixture(object):
             "service_id": service_id,
             "input": input
         }
+        if export_id:
+            data_source['export_data_source_id'] = export_id
         contributor = {
             "data_type": data_type,
             "id": contributor_id,
@@ -149,16 +155,20 @@ class TartareFixture(object):
         }
         raw = self.post('/contributors', self.dict_to_json(contributor))
         self.assert_sucessful_create(raw)
+        return self.json_to_dict(raw)['contributors'][0]
 
-    def init_coverage(self, id, contributor_ids=None, preprocesses=None, environments=None, license=None):
-        contributor_ids = contributor_ids if contributor_ids else []
+    def init_coverage(self, id, input_data_source_ids=None, preprocesses=None, environments=None, license=None,
+                      data_sources=None):
+        data_sources = data_sources if data_sources else []
         preprocesses = preprocesses if preprocesses else []
         environments = environments if environments else {}
+        input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         coverage = {
             "id": id,
             "name": id,
-            "contributors": contributor_ids,
+            "input_data_source_ids": input_data_source_ids,
             "preprocesses": preprocesses,
+            "data_sources": data_sources,
             "environments": environments,
             "short_description": "description of coverage {}".format(id)
         }
@@ -166,18 +176,33 @@ class TartareFixture(object):
             coverage['license'] = license
         raw = self.post('/coverages', json.dumps(coverage))
         self.assert_sucessful_create(raw)
-        return self.json_to_dict(raw)
+        return self.json_to_dict(raw)['coverages'][0]
 
     def add_preprocess_to_coverage(self, preprocess, coverage_id):
-        raw = self.post('coverages/{}/preprocesses'.format(coverage_id), self.dict_to_json(preprocess))
-        self.assert_sucessful_create(raw)
+        coverage = self.get_coverage(coverage_id)
+        coverage['preprocesses'].append(preprocess)
+        raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
+
+    def add_publication_platform_to_coverage(self, platform, coverage_id, environment_name='production'):
+        coverage = self.get_coverage(coverage_id)
+        if environment_name not in coverage['environments']:
+            coverage['environments'][environment_name] = {'sequence': 0, 'name': environment_name,
+                                                          'publication_platforms': []}
+        coverage['environments'][environment_name]['publication_platforms'].append(platform)
+        raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
+        self.assert_sucessful_call(raw)
 
     def add_preprocess_to_contributor(self, preprocess, contributor_id):
-        raw = self.post('contributors/{}/preprocesses'.format(contributor_id), self.dict_to_json(preprocess))
-        self.assert_sucessful_create(raw)
+        contributor = self.get_contributor(contributor_id)
+        contributor['preprocesses'].append(preprocess)
+        raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
-    def add_data_source_to_contributor(self, contrib_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
-        data_source = {
+    def add_data_source_to_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT):
+        raw = self.get('contributors/{}'.format(contributor_id))
+        contributor = self.json_to_dict(raw)['contributors'][0]
+        contributor['data_sources'].append({
             "id": data_source_id,
             "name": data_source_id,
             "data_format": data_format,
@@ -185,14 +210,15 @@ class TartareFixture(object):
                 "type": "url",
                 "url": url
             }
-        }
-        raw = self.post('/contributors/{}/data_sources'.format(contrib_id), self.dict_to_json(data_source))
-        self.assert_sucessful_create(raw)
+        })
+        self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
+        self.assert_sucessful_call(raw)
 
     def update_data_source_url(self, contrib_id, ds_id, url):
-        raw = self.patch('/contributors/{}/data_sources/{}'.format(contrib_id, ds_id),
-                         json.dumps({'input': {
-                             'url': url}}))
+        contributor = self.get_contributor(contrib_id)
+        data_source = next(data_source for data_source in contributor['data_sources'] if data_source['id'] == ds_id)
+        data_source['input']['url'] = url
+        raw = self.put('/contributors/{}'.format(contrib_id), self.dict_to_json(contributor))
         return self.assert_sucessful_call(raw, 200)
 
     def run_automatic_update(self):
@@ -250,7 +276,7 @@ class TartareFixture(object):
                 ods_zip.extract(metadata_file_name, tmp_dirname)
                 fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_files_equals(metadata, fixture)
+                assert_text_files_equals(metadata, fixture)
         session.quit()
 
     def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
@@ -276,3 +302,21 @@ class TartareFixture(object):
         raw = self.get('contributors/{}'.format(contributor_id))
         self.assert_sucessful_call(raw)
         return self.json_to_dict(raw)['contributors'][0]
+
+    def get_gridfs_id_from_data_source(self, contributor_id, data_source_id):
+        return next(
+            data_source['data_sets'][0]['gridfs_id'] for data_source in
+            self.get_contributor(contributor_id)['data_sources']
+            if data_source['id'] == data_source_id)
+
+    def assert_gridfs_equals_fixture(self, gridfs_id, fixture):
+        resp = self.get('/files/{}/download'.format(gridfs_id), follow_redirects=True)
+        assert_content_equals_ref_file(resp.data, fixture)
+
+    @classmethod
+    def assert_data_source_has_username_and_password(cls, data_source, username, password, model, id='cid'):
+        assert data_source['input']['options']['authent']['username'] == username
+        assert 'password' not in data_source['input']['options']['authent']
+        with tartare.app.app_context():
+            object = model.get(id)
+            assert object.data_sources[0].input.options.authent.password == password

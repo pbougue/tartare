@@ -49,7 +49,7 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
-                                                data_source_id='data_source_to_process_id',
+                                                data_source_id='export_id',
                                                 ref_file='compute_directions/ref_functional.zip')
 
     def test_contrib_export_with_ruspell(self):
@@ -67,7 +67,7 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
         self.assert_export_file_equals_ref_file(contributor_id='AMI', ref_file='ruspell/ref_gtfs.zip',
-                                                data_source_id="Google-1", expected_filename='gtfs-processed.zip')
+                                                data_source_id="export_id", expected_filename='gtfs-processed.zip')
 
     def test_exports_combined(self):
         self.init_contributor('contributor_light.json')
@@ -76,7 +76,7 @@ class TestFullExport(AbstractRequestClient):
 
         self.assert_export_file_equals_ref_file(contributor_id='contributor_id',
                                                 ref_file='compute_directions/functional.zip',
-                                                data_source_id="data_source_to_process_id")
+                                                data_source_id="export_id")
 
     def test_exports_combined_two_coverages(self):
         self.init_contributor('contributor_light.json')
@@ -100,16 +100,16 @@ class TestFullExport(AbstractRequestClient):
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
     def test_coverage_exports_callback_waits_for_contributor_full_export(self):
-        self.init_contributor('contributor_sleeping.json')
+        contributor = self.init_contributor('contributor_sleeping.json')
         self.init_contributor('contributor_light.json')
         self.init_coverage('coverage_triggered.json')
 
         self.post('/actions/automatic_update?current_date=2017-08-15')
         self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
-        self.patch(
-            '/contributors/{}/data_sources/{}'.format('contributor_id_sleeping', 'data_source_to_process_id_sleeping'),
-            json.dumps({'input': {'url': "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
-                HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))}}))
+
+        contributor['data_sources'][0]['input']['url'] = "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
+                HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
+        self.put('/contributors/contributor_id_sleeping', contributor)
         self.post('/actions/automatic_update?current_date=2017-08-15')
         # here there should be 2 coverage exports:
         # - one for the first automatic update because all data set were new

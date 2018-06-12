@@ -29,12 +29,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import os
-from tests.utils import to_json
+from tests.utils import to_json, to_dict
 
 
 def test_unkown_version_status(app):
     raw = app.get('/status')
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 200
     assert r.get('version') == 'unknown_version'
 
@@ -44,7 +44,7 @@ def test_kown_version_status(app, monkeypatch):
     version = 'v1.42.12'
     monkeypatch.setitem(os.environ, 'TARTARE_VERSION', version)
     raw = app.get('/status')
-    r = to_json(raw)
+    r = to_dict(raw)
     assert raw.status_code == 200
     assert r.get('version') == version
 
@@ -52,5 +52,5 @@ def test_kown_version_status(app, monkeypatch):
 def test_index(app):
     response = app.get('/')
     assert response.status_code == 200
-    r = to_json(response)
+    r = to_dict(response)
     assert '_links' in r

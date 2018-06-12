@@ -136,19 +136,8 @@ Python sub-scripts are meant to be included into tartare (at least on deploy) ma
 Other sub-scripts (rust and all) on same machines and binded in python.
 
 
-### Questions dangling
-
-* What about the beat to sync and manage all that?
-* Mongo + Celery OK?
-* How to manage params for sub-exe (ex: ruspell)? data_sources (Hmm, ya?), github (Na!)
-
-
 ### TODO
 
 * retrieve and cleanup python sub-scripts
 * have all working around a central format (able to model all, whether NTFS or chouette or ...). This would require some converters and to migrate the maximum of scripts to using that format.
 
-
-### To be done later
-
-* Necessity to add special "contributors" to manage BANO/OSM to provide central point for "real" contributors
