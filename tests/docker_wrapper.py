@@ -341,16 +341,16 @@ class DownloadFtpServerAuthentDocker(UploadFtpServerDocker):
         return volumes_binding
 
     @property
-    def command(self):
-        return '/run.sh -c 5 -C 5 -l puredb:/etc/pure-ftpd/pureftpd.pdb -E -j -R -P localhost -p 30010:30019'
-
-    @property
     def port_bindings(self):
         return {nb: nb for nb in range(30010, 30020)}
 
     @property
     def ports(self):
         return [nb for nb in range(30010, 30020)]
+
+    @property
+    def env_vars(self):
+        return {'PUBLICHOST': 'localhost', 'FTP_PASSIVE_PORTS': '30010:30019'}
 
 
 class MongoDocker(AbstractDocker):
