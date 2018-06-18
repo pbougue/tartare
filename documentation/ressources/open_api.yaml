@@ -1,8 +1,4 @@
----
-swagger: '2.0'
-host: "mut-dev-tartare2.canaltp.local"
-schemes:
-  - http
+openapi: 3.0.0
 info:
   description: |
     API managing data integration.
@@ -11,538 +7,570 @@ info:
     Also offers the possibility to POST data to update.
 
     You can help on [Tartare's github page](https://github.com/CanalTP/tartare).
-
   version: 1.3.0
   title: Tartare API
   contact:
     name: www.navitia.io
   license:
     name: AGPLv3
-    url: http://www.gnu.org/licenses/
-# format of bodies a client can send (Content-Type)
-consumes:
-  - application/json
-  - multipart/form-data
-# format of the responses to the client (Accepts)
-produces:
-  - application/json
-  - multipart/form-data
-
+    url: 'http://www.gnu.org/licenses/'
 tags:
-  -
-    name: "coverages"
-    description: "Manage coverages"
-  -
-    name: "contributors"
-    description: "Manage contributors"
-  -
-    name: "data"
-    description: "Manage data api"
-  -
-    name: "jobs"
-    description: "Display job informations"
-  -
-    name: "preprocesses"
-    description: "Display preprocesses"
-  -
-    name: "files"
-    description: "Download files"
+  - name: coverages
+    description: Manage coverages
+  - name: contributors
+    description: Manage contributors
+  - name: data
+    description: Manage data api
+  - name: jobs
+    description: Display job informations
+  - name: preprocesses
+    description: Display preprocesses
+  - name: files
+    description: Download files
+servers:
+  - url: 'http://mut-dev-tartare2.canaltp.local/'
 
 paths:
   /:
     get:
       summary: Display available endpoints
-      produces:
-        - application/json
       responses:
-        200:
+        '200':
           description: Array of links
-
-
   /coverages:
     get:
       summary: Display available coverages
       tags:
         - coverages
       responses:
-        200:
+        '200':
           description: Array of coverages
-          schema:
-            $ref: '#/definitions/coverages'
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/coverages'
     post:
       summary: Create a new coverage
       tags:
         - coverages
-      consumes:
-        - application/json
-      produces:
-        - application/json
-      parameters:
-        - in: body
-          name: body
-          description: Coverage object that needs to be added to Tartare
-          required: true
-          schema:
-            $ref: "#/definitions/coverage"
       responses:
-        200:
+        '200':
           description: Created coverage
-          schema:
-            $ref: "#/definitions/coverages"
-        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/coverages'
+        '400':
           description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        409:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '409':
           description: Duplicate entry
-          schema :
-            $ref: '#/definitions/error_409'
-        415:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_409'
+        '415':
           description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /coverages/{coverage_id}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_415'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/coverage'
+        description: Coverage object that needs to be added to Tartare
+        required: true
+  '/coverages/{coverage_id}':
     get:
       summary: Display coverage info
       tags:
         - coverages
-      produces:
-        - application/json
       parameters:
         - in: path
           name: coverage_id
-          type: string
           description: Identifier of the coverage
           required: true
-      responses:
-        200:
-          description: Requested contributor
           schema:
-            $ref: '#/definitions/coverages'
-        404:
+            type: string
+      responses:
+        '200':
+          description: Requested contributor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/coverages'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
     put:
       summary: Modify a coverage configuration
       tags:
         - coverages
-      consumes:
-        - application/json
-      produces:
-        - application/json
       parameters:
         - in: path
           name: coverage_id
-          type: string
           description: Identifier of the coverage that needs to be modified
           required: true
-        - in: body
-          name: body
-          description: All the Attributes of the coverage {coverage_id}
-          required: true
           schema:
-            $ref: "#/definitions/coverages"
+            type: string
       responses:
-        200:
+        '200':
           description: Modified coverage
-          schema:
-            $ref: "#/definitions/coverages"
-        404:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/coverages'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-        409:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+        '409':
           description: Duplicate entry
-          schema :
-            $ref: '#/definitions/error_409'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_409'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/coverages'
+        description: 'All the Attributes of the coverage {coverage_id}'
+        required: true
     delete:
       summary: Delete a coverage
       tags:
         - coverages
-      produces:
-        - application/json
       parameters:
         - in: path
           name: coverage_id
-          type: string
           description: Identifier of the coverage that needs to be modified
           required: true
+          schema:
+            type: string
       responses:
-        204:
-          description: Coverage {coverage_id} correctly deleted
-        404:
+        '204':
+          description: 'Coverage {coverage_id} correctly deleted'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /coverages/{coverage_id}/actions/export:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+  '/coverages/{coverage_id}/actions/export':
     post:
       summary: Export a coverage
       tags:
         - coverages
-      produces:
-        - application/json
       parameters:
         - in: path
           name: coverage_id
-          type: string
           description: which we want an export from
           required: true
-      responses:
-        201:
-          description: Job created
           schema:
-            $ref: "#/definitions/job"
-
-  /coverages/{coverage_id}/exports:
+            type: string
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job'
+  '/coverages/{coverage_id}/exports':
     get:
       summary: Display coverage exports
       tags:
         - coverages
-      produces:
-        - application/json
       parameters:
         - in: path
           name: coverage_id
-          type: string
           description: Identifier of the coverage
           required: true
-      responses:
-        200:
-          description: Requested coverage exports
           schema:
-            $ref: '#/definitions/coverage_export_list'
-        404:
+            type: string
+      responses:
+        '200':
+          description: Requested coverage exports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/coverage_export_list'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /files/{file_id}/download:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+  '/files/{file_id}/download':
     get:
-      summary: download file {file_id}
+      summary: 'download file {file_id}'
       tags:
         - files
-      produces:
-        - multipart/form-data
       parameters:
         - in: path
           name: file_id
-          type: string
           description: Identifier of the file
           required: true
-      responses:
-        200:
-          description: Requested file
           schema:
-            type: file
-        400:
+            type: string
+      responses:
+        '200':
+          description: Requested file
+          content:
+            multipart/form-data:
+              schema:
+                type: string
+                format: binary
+        '400':
           description: invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
+          content:
+            multipart/form-data:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
+          content:
+            multipart/form-data:
+              schema:
+                $ref: '#/components/schemas/error_404'
   /contributors:
     get:
       summary: Display available contributors
       tags:
         - contributors
-      produces:
-        - application/json
       responses:
-        200:
+        '200':
           description: Array of contributors
-          schema:
-            $ref: '#/definitions/contributor_obj'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contributor_obj'
     post:
       summary: Create a new contributor
       tags:
         - contributors
-      parameters:
-        - in: body
-          name: body
-          description: Contributor object that needs to be added to Tartare
-          required: true
-          schema:
-            $ref: "#/definitions/contributor_type"
-      produces:
-        - application/json
-      consumes:
-        - application/json
       responses:
-        201:
+        '201':
           description: Contributor created
-          schema:
-            $ref: '#/definitions/contributor_obj'
-        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contributor_obj'
+        '400':
           description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        409:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '409':
           description: Duplicate entry
-          schema :
-            $ref: '#/definitions/error_409'
-        415:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_409'
+        '415':
           description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /contributors/{contributor_id}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_415'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/contributor_type'
+        description: Contributor object that needs to be added to Tartare
+        required: true
+  '/contributors/{contributor_id}':
     get:
       summary: Display contributor info
       tags:
         - contributors
-      produces:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: Identifier of the contributor
           required: true
-      responses:
-        200:
-          description: Requested contributor
           schema:
-            $ref: '#/definitions/contributor_obj'
-        404:
+            type: string
+      responses:
+        '200':
+          description: Requested contributor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contributor_obj'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
     delete:
       summary: delete contributor
       tags:
         - contributors
-      produces:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: Identifier of the contributor
           required: true
+          schema:
+            type: string
       responses:
-        204:
+        '204':
           description: Delete OK
-        404:
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
     put:
       summary: Modify contributor info using full resource
       tags:
         - contributors
-      produces:
-        - application/json
-      consumes:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: Identifier of the contributor
           required: true
-        - in: body
-          name: body
-          description: All the attributes of the contributor {contributor_id}.
-          required: true
           schema:
-            $ref: "#/definitions/contributor_type"
+            type: string
       responses:
-        200:
+        '200':
           description: Requested contributor
-          schema:
-            $ref: '#/definitions/contributor_obj'
-        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contributor_obj'
+        '400':
           description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-        415:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+        '415':
           description: Unsupported Media Type
-          schema :
-            $ref: '#/definitions/error_415'
-
-  /contributors/{contributor_id}/actions/export:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_415'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/contributor_type'
+        description: 'All the attributes of the contributor {contributor_id}.'
+        required: true
+  '/contributors/{contributor_id}/actions/export':
     post:
       summary: Export a contributor
       tags:
         - contributors
-      produces:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: which we want an export from
           required: true
-      responses:
-        201:
-          description: Job created
           schema:
-            $ref: "#/definitions/job"
-
-  /contributors/{contributor_id}/data_sources:
+            type: string
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job'
+  '/contributors/{contributor_id}/data_sources':
     parameters:
       - in: path
         name: contributor_id
-        type: string
         description: Identifier of the contributor
         required: true
+        schema:
+          type: string
     get:
       summary: Display contributor data sources
       tags:
         - contributors
-      produces:
-        - application/json
       responses:
-        200:
+        '200':
           description: Requested contributor data source
-          schema:
-            $ref: '#/definitions/data_source_obj'
-        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/data_source_obj'
+        '400':
           description: Invalid arguments
-          schema :
-            $ref: '#/definitions/error_400'
-        404:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /contributors/{contributor_id}/data_sources/{data_source_id}/data_sets:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+  '/contributors/{contributor_id}/data_sources/{data_source_id}/data_sets':
     post:
-      tags:
-      - "contributors"
-      summary: "Upload a data set"
-      description: "POST a data set and attach it to a data source"
-      consumes:
-      - "multipart/form-data"
-      produces:
-      - "application/json"
-      parameters:
-      - name: "file"
-        in: "formData"
-        required: true
-        type: "file"
-        description: "File to upload"
-      - name: "contributor_id"
-        in: "path"
-        required: true
-        type: "string"
-      - name: "data_source_id"
-        in: "path"
-        required: true
-        type: "string"
-      responses:
-        201:
-          description: "Data set created"
-          schema:
-            $ref: "#/definitions/data_sets"
-        400:
-          description: "Invalid arguments"
-          schema:
-            $ref: "#/definitions/error_400"
-        404:
-          description: "Object not found"
-          schema:
-            $ref: "#/definitions/error_404"
-
-  /contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch:
-    post:
-      summary: Fetch data source and save to database
       tags:
         - contributors
-      produces:
-        - application/json
+      summary: Upload a data set
+      description: POST a data set and attach it to a data source
       parameters:
         - name: contributor_id
           in: path
           required: true
-          type: string
+          schema:
+            type: string
         - name: data_source_id
           in: path
           required: true
-          type: string
+          schema:
+            type: string
       responses:
-        204:
+        '201':
+          description: Data set created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/data_sets'
+        '400':
+          description: Invalid arguments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '404':
+          description: Object not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  description: File to upload
+                  type: string
+                  format: binary
+              required:
+                - file
+  '/contributors/{contributor_id}/data_sources/{data_source_id}/actions/fetch':
+    post:
+      summary: Fetch data source and save to database
+      tags:
+        - contributors
+      parameters:
+        - name: contributor_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: data_source_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
           description: Data source is fetched (and saved to database if it has changed)
-        400:
-          description: "Invalid arguments"
-          schema:
-            $ref: "#/definitions/error_400"
-        500:
-          description: "Internal Server Error"
-          schema:
-            $ref: "#/definitions/error_500"
-
-  /contributors/{contributor_id}/jobs:
+        '400':
+          description: Invalid arguments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_500'
+  '/contributors/{contributor_id}/jobs':
     get:
       summary: Display contributor jobs
       tags:
         - contributors
-      produces:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: Identifier of the contributor
           required: true
-      responses:
-        200:
-          description: Requested contributor jobs
           schema:
-            $ref: '#/definitions/job_list'
-        404:
+            type: string
+      responses:
+        '200':
+          description: Requested contributor jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job_list'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
-  /contributors/{contributor_id}/exports:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
+  '/contributors/{contributor_id}/exports':
     get:
       summary: Display contributor exports
       tags:
         - contributors
-      produces:
-        - application/json
       parameters:
         - in: path
           name: contributor_id
-          type: string
           description: Identifier of the contributor
           required: true
-      responses:
-        200:
-          description: Requested contributor exports
           schema:
-            $ref: '#/definitions/contributor_export_list'
-        404:
+            type: string
+      responses:
+        '200':
+          description: Requested contributor exports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contributor_export_list'
+        '404':
           description: Resource not found
-          schema :
-            $ref: '#/definitions/error_404'
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_404'
   /jobs:
     get:
       summary: Display list of jobs
       tags:
         - jobs
-      produces:
-        - application/json
       responses:
-        200:
+        '200':
           description: List of jobs
-          schema:
-            $ref: '#/definitions/job_list'
-
-  /jobs/{job_id}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job_list'
+  '/jobs/{job_id}':
     get:
       summary: Display information about a job
       tags:
@@ -550,17 +578,17 @@ paths:
       parameters:
         - in: path
           name: job_id
-          type: string
           description: Identifier of a job
           required: true
-      produces:
-        - application/json
-      responses:
-        200:
-          description: Information about the job
           schema:
-            $ref: '#/definitions/job_list'
-
+            type: string
+      responses:
+        '200':
+          description: Information about the job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job_list'
   /preprocesses:
     get:
       summary: Display list of preprocesses
@@ -569,701 +597,684 @@ paths:
       parameters:
         - in: query
           name: owner
-          type: string
-          enum: [coverage, contributor]
-      produces:
-        - application/json
+          schema:
+            type: string
+            enum:
+              - coverage
+              - contributor
       responses:
-        200:
+        '200':
           description: List of preprocesses
-          schema:
-            $ref: '#/definitions/preprocesses_list'
-        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/preprocesses_list'
+        '400':
           description: List of preprocesses
-          schema:
-            $ref: '#/definitions/error_400'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_400'
 
-definitions:
-  preprocesses_list:
-    type: object
-    properties:
-      preprocesses:
-        type: object
-        example: {contributor: ['ComputeDirections', 'GtfsAgencyFile'], coverage: ['FusioDataUpdate', 'FusioExport', 'FusioImport', 'FusioPreprod', 'FusioExportContributor']}
-
-  job_list:
-    type: object
-    properties:
-      jobs:
-        type: array
-        items:
-          $ref: "#/definitions/job"
-
-  job:
-    type: object
-    properties:
-      id:
+components:
+  schemas:
+    preprocesses_list:
+      type: object
+      properties:
+        preprocesses:
+          type: object
+          example:
+            contributor:
+              - ComputeDirections
+              - GtfsAgencyFile
+            coverage:
+              - FusioDataUpdate
+              - FusioExport
+              - FusioImport
+              - FusioPreprod
+              - FusioExportContributor
+    job_list:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/job'
+    job:
+      type: object
+      properties:
+        id:
+          type: string
+          example: jobx
+        action_type:
+          type: string
+          enum:
+            - contributor_export
+            - coverage_export
+            - automatic_update_contributor_export
+            - automatic_update_coverage_export
+          example: contributor_export
+        coverage_id:
+          type: string
+          example: fr-idf
+        state:
+          type: string
+          description: Status of a step during an export
+          example: pending
+        step:
+          type: string
+          description: Last action of an export when it failed or succeeded
+          example: fetching data
+        error_message:
+          type: string
+          description: Error message
+          example: >-
+            error during publishing on http://whatever.fr/pub, status code =>
+            500
+        started_at:
+          type: string
+          format: date-time
+          description: Start date of an export
+          example: '2017-05-29T13:37:55.967795+00:00'
+        updated_at:
+          type: string
+          format: date-time
+          description: Date of the last step that failed or succeeded
+          example: '2017-05-29T13:37:55.967795+00:00'
+        contributor_id:
+          type: string
+          example: contributor_stif
+    coverages:
+      type: object
+      properties:
+        coverages:
+          type: array
+          items:
+            $ref: '#/components/schemas/coverage'
+    coverage_patch:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          example: fr-auv
+        name:
+          type: string
+          example: auv
+        environments:
+          $ref: '#/components/schemas/environments_patch'
+        contributors:
+          $ref: '#/components/schemas/array_of_strings'
+    coverage:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          example: fr-auv
+        name:
+          type: string
+          example: auv
+        type:
+          enum:
+            - navitia.io
+            - keolis
+            - regional
+            - other
+          description: Coverage typology
+        short_description:
+          type: string
+          description: 'Description of coverage content, used for ODS export'
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/data_source_type'
+        comment:
+          type: string
+          description: Coverage detail
+        environments:
+          $ref: '#/components/schemas/environments'
+        input_data_source_ids:
+          $ref: '#/components/schemas/array_of_strings'
+        preprocesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_preprocess'
+          example:
+            - id: fusio
+              type: FusioDataUpdate
+              params:
+                url: 'http://fusio_host/cgi-bin/fusio.dll/api'
+              sequence: 0
+        last_active_job:
+          $ref: '#/components/schemas/job'
+    array_of_strings:
+      type: array
+      items:
         type: string
-        example: jobx
-      action_type:
-        type: string
-        enum: [contributor_export, coverage_export, automatic_update_contributor_export, automatic_update_coverage_export]
-        example: contributor_export
-      coverage_id:
-        type: string
-        example: fr-idf
-      state:
-        type: string
-        description: Status of a step during an export
-        example: pending
-      step:
-        type: string
-        description: "Last action of an export when it failed or succeeded"
-        example: fetching data
-      error_message:
-        type: string
-        description: "Error message"
-        example: "error during publishing on http://whatever.fr/pub, status code => 500"
-      started_at:
-        type: string
-        format: date-time
-        description: "Start date of an export"
-        example: "2017-05-29T13:37:55.967795+00:00"
-      updated_at:
-        type: string
-        format: date-time
-        description: "Date of the last step that failed or succeeded"
-        example: "2017-05-29T13:37:55.967795+00:00"
-      contributor_id:
-        type: string
-        example: "contributor_stif"
-
-  coverages:
-    type: object
-    properties:
-      coverages:
-        type: array
-        items:
-          $ref: "#/definitions/coverage"
-
-  coverage_patch:
-    type: object
-    required: [
-      id,
-      name
-    ]
-    properties:
-      id:
-        type: string
-        example: fr-auv
-      name:
-        type: string
-        example: auv
-      environments:
-        $ref: "#/definitions/environments_patch"
-      contributors:
-        $ref: "#/definitions/array_of_strings"
-
-  coverage:
-    type: object
-    required: [
-      id,
-      name
-    ]
-    properties:
-      id:
-        type: string
-        example: fr-auv
-      name:
-        type: string
-        example: auv
-      type:
-        enum: ["navitia.io", "keolis", "regional", "other"]
-        description: Coverage typology
-      short_description:
-        type: string
-        description: Description of coverage content, used for ODS export
-      data_sources:
-        type: array
-        items:
-          $ref: "#/definitions/data_source_type"
-      comment:
-        type: string
-        description: Coverage detail
-      environments:
-        $ref: "#/definitions/environments"
-      input_data_source_ids:
-        $ref: "#/definitions/array_of_strings"
-      preprocesses:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_preprocess"
-        example:
-          - {
-            id: "fusio",
-            type: "FusioDataUpdate",
-            params: {
-              url: "http://fusio_host/cgi-bin/fusio.dll/api"
-            },
-            sequence: 0
-          }
-      last_active_job:
-        $ref: "#/definitions/job"
-
-  array_of_strings:
-    type: array
-    items:
-      type: string
-    example: [ABC, DEF]
-
-  id_object:
-    type: object
-    properties:
-      id:
-        type: string
-        example: ABCD
-
-  environments_patch:
-    type: object
-    properties:
-      production:
-        $ref: "#/definitions/environment_type_patch"
-      preproduction:
-        $ref: "#/definitions/environment_type_patch"
-      integration:
-        $ref: "#/definitions/environment_type_patch"
-
-  environment_type_patch:
-    type: object
-    required: [
-      name
-    ]
-    properties:
-      name:
-        type: string
-        example: integration
-      current_ntfs_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
-
-  environments:
-    type: object
-    properties:
-      production:
-        $ref: "#/definitions/environment_type"
-      preproduction:
-        $ref: "#/definitions/environment_type"
-      integration:
-        $ref: "#/definitions/environment_type"
-
-  options_type:
-    type: object
-    properties:
-      authent:
-        type: object
-        properties:
-          username:
-            type: string
-            example: "my_user"
-          password:
-            type: string
-            example: "my_secret_password"
-      directory:
-        type: string
-        example: "/path/"
-
-  environment_type:
-    type: object
-    required: [
-      name,
-      sequence
-    ]
-    properties:
-      name:
-        type: string
-        example: integration
-      sequence:
-        type: integer
-        example: 0
-      current_ntfs_id:
-        type: string
-        example: 5810cb2d3c96b7000108d074
-      publication_platforms:
-        type: array
-        items:
-          $ref: "#/definitions/publication_platform"
-
-
-  publication_platform:
-    type: object
-    required: [
-      type,
-      protocol,
-      url,
-      sequence
-    ]
-    properties:
-      type:
-        type: string
-        enum: ["navitia", "ods", "stop_area"]
-        description: This determines which treatment will be performed on the platforms
-        example: ods
-      protocol:
-        type: string
-        enum: ["http", "ftp"]
-        description: Protocol used to send file
-        example: ftp
-      url:
-        type: string
-        example: ftp.ods.com
-      sequence:
-        type: integer
-        example: 0
-      options:
-        $ref: "#/definitions/options_type"
-
-  contributor_obj:
-    type: object
-    properties:
-      contributors:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_type"
-
-  contributor_type:
-    type: object
-    required: [
-      name,
-      data_prefix
-    ]
-    properties:
-      id:
-        type: string
-        example: contrib-tan
-      name:
-        type: string
-        example: TAN
-      data_prefix:
-        type: string
-        example: AAA
-      data_type:
-        type: string
-        default: public_transport
-        enum:
+      example:
+        - ABC
+        - DEF
+    id_object:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ABCD
+    environments_patch:
+      type: object
+      properties:
+        production:
+          $ref: '#/components/schemas/environment_type_patch'
+        preproduction:
+          $ref: '#/components/schemas/environment_type_patch'
+        integration:
+          $ref: '#/components/schemas/environment_type_patch'
+    environment_type_patch:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: integration
+        current_ntfs_id:
+          type: string
+          example: 5810cb2d3c96b7000108d074
+    environments:
+      type: object
+      properties:
+        production:
+          $ref: '#/components/schemas/environment_type'
+        preproduction:
+          $ref: '#/components/schemas/environment_type'
+        integration:
+          $ref: '#/components/schemas/environment_type'
+    options_type:
+      type: object
+      properties:
+        authent:
+          type: object
+          properties:
+            username:
+              type: string
+              example: my_user
+            password:
+              type: string
+              example: my_secret_password
+        directory:
+          type: string
+          example: /path/
+    environment_type:
+      type: object
+      required:
+        - name
+        - sequence
+      properties:
+        name:
+          type: string
+          example: integration
+        sequence:
+          type: integer
+          example: 0
+        current_ntfs_id:
+          type: string
+          example: 5810cb2d3c96b7000108d074
+        publication_platforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/publication_platform'
+    publication_platform:
+      type: object
+      required:
+        - type
+        - protocol
+        - url
+        - sequence
+      properties:
+        type:
+          type: string
+          enum:
+            - navitia
+            - ods
+            - stop_area
+          description: This determines which treatment will be performed on the platforms
+          example: ods
+        protocol:
+          type: string
+          enum:
+            - http
+            - ftp
+          description: Protocol used to send file
+          example: ftp
+        url:
+          type: string
+          example: ftp.ods.com
+        sequence:
+          type: integer
+          example: 0
+        options:
+          $ref: '#/components/schemas/options_type'
+    contributor_obj:
+      type: object
+      properties:
+        contributors:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_type'
+    contributor_type:
+      type: object
+      required:
+        - name
+        - data_prefix
+      properties:
+        id:
+          type: string
+          example: contrib-tan
+        name:
+          type: string
+          example: TAN
+        data_prefix:
+          type: string
+          example: AAA
+        data_type:
+          type: string
+          default: public_transport
+          enum:
             - public_transport
             - geographic
-      data_sources:
-        type: array
-        items:
-          $ref: "#/definitions/data_source_type"
-      preprocesses:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_preprocess"
-
-  contributor_preprocess_list:
-    type: object
-    properties:
-      preprocesses:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_preprocess"
-
-  contributor_preprocess:
-    type: object
-    required: [
-      id,
-      type,
-      sequence
-    ]
-    properties:
-      id:
-        type: string
-        example: preprocess_id
-      type:
-        type: string
-        example: Ruspell
-        enum:
-          - Gtfs2Ntfs
-          - Ruspell
-          - ComputeDirections
-          - GtfsAgencyFile
-          - HeadsignShortName
-      data_source_ids:
-        type: array
-        items:
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/data_source_type'
+        preprocesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_preprocess'
+    contributor_preprocess_list:
+      type: object
+      properties:
+        preprocesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_preprocess'
+    contributor_preprocess:
+      type: object
+      required:
+        - id
+        - type
+        - sequence
+      properties:
+        id:
           type: string
-          example: datasource_stif_id
-        uniqueItems: true
-      sequence:
-        type: integer
-        example: 1
-      enabled:
-        type: boolean
-        example: false
-        description: tells if the preprocess will be executed during an export or not
-        default: true
-      params:
-        description: Process parameters object.
-        type: object
-        example: {
-          links: [
-            {
-              contributor_id: "stif",
-              data_source_id: "ds_stif"
-            }
-          ]
-        }
-  Gtfs2Ntfs:
-    type: object
-  Ruspell:
-    type: object
-    properties:
-      links:
-        $ref: "#/definitions/params_links"
-  GtfsAgencyFile:
-    type: object
-    properties:
-      data:
+          example: preprocess_id
+        type:
+          type: string
+          example: Ruspell
+          enum:
+            - Gtfs2Ntfs
+            - Ruspell
+            - ComputeDirections
+            - GtfsAgencyFile
+            - HeadsignShortName
+        data_source_ids:
+          type: array
+          items:
+            type: string
+            example: datasource_stif_id
+          uniqueItems: true
+        sequence:
+          type: integer
+          example: 1
+        enabled:
+          type: boolean
+          example: false
+          description: tells if the preprocess will be executed during an export or not
+          default: true
+        params:
+          description: Process parameters object.
+          type: object
+          example:
+            links:
+              - contributor_id: stif
+                data_source_id: ds_stif
+    Gtfs2Ntfs:
+      type: object
+    Ruspell:
+      type: object
+      properties:
+        links:
+          $ref: '#/components/schemas/params_links'
+    GtfsAgencyFile:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            agency_id:
+              type: string
+            agency_name:
+              type: string
+            agency_url:
+              type: string
+    ComputeDirections:
+      type: object
+      properties:
+        links:
+          $ref: '#/components/schemas/params_links'
+    params_links:
+      type: array
+      items:
         type: object
         properties:
-          agency_id:
+          contributor_id:
             type: string
-          agency_name:
+          data_source_id:
             type: string
-          agency_url:
-            type: string
-  ComputeDirections:
-    type: object
-    properties:
-      links:
-        $ref: "#/definitions/params_links"
-  params_links:
-    type: array
-    items:
+    coverage_preprocess_list:
+      type: object
+      properties:
+        preprocesses:
+          type: array
+          items:
+            $ref: '#/components/schemas/coverage_preprocess'
+    coverage_preprocess:
+      type: object
+      required:
+        - id
+        - type
+        - sequence
+      properties:
+        id:
+          type: string
+          example: preprocess_id
+        type:
+          type: string
+          example: FusioImport
+        sequence:
+          type: integer
+          example: 1
+        enabled:
+          type: boolean
+          example: false
+          description: tells if the preprocess will be executed during an export or not
+          default: true
+        params:
+          type: object
+          example:
+            url: 'http://fusio_host/cgi-bin/fusio.dll/'
+    coverage_export_list:
+      type: object
+      properties:
+        exports:
+          type: array
+          items:
+            $ref: '#/components/schemas/coverage_export'
+    coverage_export:
+      type: object
+      required:
+        - id
+        - coverage_id
+        - gridfs_id
+        - created_at
+      properties:
+        id:
+          type: string
+          example: 443e81b8-9e45-489c-9bd8-c24c2c398995
+        coverage_id:
+          type: string
+          example: fr-idf
+        created_at:
+          type: string
+          format: date-time
+          example: '2017-06-14T13:05:30.008401+00:00'
+        contributors:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_source_list'
+        gridfs_id:
+          type: string
+          example: 592d4b327053ad21a7626578
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+    contributor_source_list:
       type: object
       properties:
         contributor_id:
           type: string
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_export_list'
+    contributor_export_list:
+      type: object
+      properties:
+        exports:
+          type: array
+          items:
+            $ref: '#/components/schemas/contributor_export'
+    contributor_export:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 5b95dc75-bf5d-4563-b227-8374196deeb4
+        contributor_id:
+          type: string
+          example: contributor_stif
+        created_at:
+          type: string
+          format: date-time
+          example: '2017-06-14T12:46:21.119813+00:00'
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/export_data_source_list'
+        gridfs_id:
+          type: string
+          example: 592d4b327053ad21a7626578
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+    export_data_source_list:
+      type: object
+      properties:
         data_source_id:
           type: string
-
-
-  coverage_preprocess_list:
-    type: object
-    properties:
-      preprocesses:
-        type: array
-        items:
-          $ref: "#/definitions/coverage_preprocess"
-
-  coverage_preprocess:
-    type: object
-    required: [
-      id,
-      type,
-      sequence
-    ]
-    properties:
-      id:
-        type: string
-        example: preprocess_id
-      type:
-        type: string
-        example: FusioImport
-      sequence:
-        type: integer
-        example: 1
-      enabled:
-        type: boolean
-        example: false
-        description: tells if the preprocess will be executed during an export or not
-        default: true
-      params:
-        type: object
-        example: {url: "http://fusio_host/cgi-bin/fusio.dll/"}
-
-  coverage_export_list:
-    type: object
-    properties:
-      exports:
-        type: array
-        items:
-          $ref: "#/definitions/coverage_export"
-
-  coverage_export:
-    type: object
-    required: [
-      id,
-      coverage_id,
-      gridfs_id,
-      created_at
-    ]
-    properties:
-      id:
-        type: string
-        example: 443e81b8-9e45-489c-9bd8-c24c2c398995
-      coverage_id:
-        type: string
-        example: fr-idf
-      created_at:
-        type: string
-        format: date-time
-        example: "2017-06-14T13:05:30.008401+00:00"
-      contributors:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_source_list"
-      gridfs_id:
-        type: string
-        example: 592d4b327053ad21a7626578
-      validity_period:
-        $ref: "#/definitions/validity_period"
-
-  contributor_source_list:
-    type: object
-    properties:
-      contributor_id:
-        type: string
-      validity_period:
-        $ref: "#/definitions/validity_period"
-      data_sources:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_export_list"
-
-
-  contributor_export_list:
-    type: object
-    properties:
-      exports:
-        type: array
-        items:
-          $ref: "#/definitions/contributor_export"
-
-  contributor_export:
-    type: object
-    properties:
-      id:
-        type: string
-        example: 5b95dc75-bf5d-4563-b227-8374196deeb4
-      contributor_id:
-        type: string
-        example: contributor_stif
-      created_at:
-        type: string
-        format: date-time
-        example: "2017-06-14T12:46:21.119813+00:00"
-      data_sources:
-        type: array
-        items:
-          $ref: "#/definitions/export_data_source_list"
-      gridfs_id:
-        type: string
-        example: 592d4b327053ad21a7626578
-      validity_period:
-        $ref: "#/definitions/validity_period"
-
-  export_data_source_list:
-    type: object
-    properties:
-      data_source_id:
-        type: string
-        example: data_source_stif
-      validity_period:
-        $ref: "#/definitions/validity_period"
-
-  data_source_obj:
-    type: object
-    properties:
-      data_sources:
-        type: array
-        items:
-          $ref: "#/definitions/data_source_type"
-
-  data_source_type:
-    type: object
-    required: [name]
-    properties:
-      id:
-        type: string
-        example: tram_lyon
-      export_data_source_id:
-        type: string
-        example: my-export-id
-        description: the id of the computed data source generated for the export
-      name:
-        type: string
-        example: Tram feed for Lyon
-      service_id:
-        type: string
-        description: Service id used by FusioDataUpdate preprocess
-        example: Google-1
-      data_format:
-        type: string
-        example: "gtfs"
-        enum: [
-          gtfs,
-          bano_file,
-          osm_file,
-          direction_config,
-          ruspell_config,
-          lines_referential,
-          tr_perimeter,
-          pt_external_settings
-        ]
-        default: gtfs
-      fetch_started_at:
-        type: "string"
-        description: "Date when the data source fetch is starting"
-        example: "2017-08-08T13:43:53.601089+00:00"
-        format: date-time
-      updated_at:
-        type: "string"
-        description: "UTC Date when the data source is updated"
-        example: "2017-08-08T13:45:00.601089+00:00"
-        format: date-time
-      status:
-        type: "string"
-        description: "UTC Data source fetching status"
-        enum: [never_fetched, fetching, failed, unchanged, updated]
-        example: "done"
-      input:
-        $ref: "#/definitions/input"
-      license:
-        $ref: "#/definitions/license"
-      validity_period:
-        $ref: "#/definitions/validity_period"
-
-
-  input:
-    type: object
-    properties:
-      type:
-        type: string
-        example: "url"
-        enum: [url, manual, computed]
-        default: manual
-      url:
-        type: string
-        example:
-          - "http://stif.com/od.zip"
-          - "http://bob@domain.tld:password@stif.com/od.zip"
-          - "https://user:password@stif.com/get.php?param=value"
-      expected_file_name:
-        type: string
-        example: "config.json"
-      options:
-        $ref: "#/definitions/options_type"
-
-  license:
-    type: object
-    properties:
-      name:
-        type: string
-        example: "navitia.io license"
-      url:
-        type: string
-        example: "http://navitia.io"
-
-  error_400:
-    type: object
-    properties:
-      message:
-        type: string
-        example: Invalid arguments
-      error:
-        type: string
-        example: Detailed message
-
-  error_409:
-    type: object
-    properties:
-      message:
-        type: string
-        example: Duplicate entry
-      error:
-        type: string
-        example: Detailed message
-
-  error_404:
-    type: object
-    properties:
-      message:
-        type: string
-        example: Object not found
-      error:
-        type: string
-        example: Detailed message
-
-  error_415:
-    type: object
-    properties:
-      message:
-        type: string
-        example: Unsupported Media Type
-      error:
-        type: string
-        example: Detailed message
-
-  error_500:
-    type: object
-    properties:
-      message:
-        type: string
-        example: Internal Server Error
-      error:
-        type: string
-        example: An error occured
-
-  data_sets:
-    description: "List of data sets"
-    type: "object"
-    properties:
-      data_sets:
-        type: "array"
-        items:
-          $ref: "#/definitions/data_source_fetch"
-
-  data_source_fetch:
-    type: "object"
-    properties:
-      data_source_id:
-        type: "string"
-        description: "Data source id"
-        example: "9959fec9-1c95-4d03-a7a3-12c50a4ed83"
-      created_at:
-        type: "string"
-        format: date-time
-        description: "Creation date"
-        example: "2017-08-08T13:43:53.601089+00:00"
-      gridfs_id:
-        type: "string"
-        description: "GridFS id"
-        example: "5989c01909467413b7e7c59f"
-      validity_period:
-        $ref: "#/definitions/validity_period"
-      id:
-        type: "string"
-        description: "Unique id"
-        example: "966a5da4-cccb-4b33-8814-7b6a2ce4f6cf"
-      contributor_id:
-        type: "string"
-        description: "Contributor id"
-        example: "fr-idf"
-
-
-  validity_period:
-    type: "object"
-    properties:
-      start_date:
-        type: "string"
-        format: date
-        description: "Start date"
-        example: "2017-06-14"
-      end_date:
-        type: "string"
-        format: date
-        description: "End date"
-        example: "2017-06-20"
-    description: "Validity period"
+          example: data_source_stif
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+    data_source_obj:
+      type: object
+      properties:
+        data_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/data_source_type'
+    data_source_type:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          example: tram_lyon
+        export_data_source_id:
+          type: string
+          example: my-export-id
+          description: the id of the computed data source generated for the export
+        name:
+          type: string
+          example: Tram feed for Lyon
+        service_id:
+          type: string
+          description: Service id used by FusioDataUpdate preprocess
+          example: Google-1
+        data_format:
+          type: string
+          example: gtfs
+          enum:
+            - gtfs
+            - bano_file
+            - osm_file
+            - direction_config
+            - ruspell_config
+            - lines_referential
+            - tr_perimeter
+            - pt_external_settings
+          default: gtfs
+        fetch_started_at:
+          type: string
+          description: Date when the data source fetch is starting
+          example: '2017-08-08T13:43:53.601089+00:00'
+          format: date-time
+        updated_at:
+          type: string
+          description: UTC Date when the data source is updated
+          example: '2017-08-08T13:45:00.601089+00:00'
+          format: date-time
+        status:
+          type: string
+          description: UTC Data source fetching status
+          enum:
+            - never_fetched
+            - fetching
+            - failed
+            - unchanged
+            - updated
+          example: done
+        input:
+          $ref: '#/components/schemas/input'
+        license:
+          $ref: '#/components/schemas/license'
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+    input:
+      type: object
+      properties:
+        type:
+          type: string
+          example: url
+          enum:
+            - url
+            - manual
+            - computed
+          default: manual
+        url:
+          type: string
+          example:
+            - 'http://stif.com/od.zip'
+            - 'http://bob@domain.tld:password@stif.com/od.zip'
+            - 'https://user:password@stif.com/get.php?param=value'
+        expected_file_name:
+          type: string
+          example: config.json
+        options:
+          $ref: '#/components/schemas/options_type'
+    license:
+      type: object
+      properties:
+        name:
+          type: string
+          example: navitia.io license
+        url:
+          type: string
+          example: 'http://navitia.io'
+    error_400:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Invalid arguments
+        error:
+          type: string
+          example: Detailed message
+    error_409:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Duplicate entry
+        error:
+          type: string
+          example: Detailed message
+    error_404:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Object not found
+        error:
+          type: string
+          example: Detailed message
+    error_415:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unsupported Media Type
+        error:
+          type: string
+          example: Detailed message
+    error_500:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Internal Server Error
+        error:
+          type: string
+          example: An error occured
+    data_sets:
+      description: List of data sets
+      type: object
+      properties:
+        data_sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/data_source_fetch'
+    data_source_fetch:
+      type: object
+      properties:
+        data_source_id:
+          type: string
+          description: Data source id
+          example: 9959fec9-1c95-4d03-a7a3-12c50a4ed83
+        created_at:
+          type: string
+          format: date-time
+          description: Creation date
+          example: '2017-08-08T13:43:53.601089+00:00'
+        gridfs_id:
+          type: string
+          description: GridFS id
+          example: 5989c01909467413b7e7c59f
+        validity_period:
+          $ref: '#/components/schemas/validity_period'
+        id:
+          type: string
+          description: Unique id
+          example: 966a5da4-cccb-4b33-8814-7b6a2ce4f6cf
+        contributor_id:
+          type: string
+          description: Contributor id
+          example: fr-idf
+    validity_period:
+      type: object
+      properties:
+        start_date:
+          type: string
+          format: date
+          description: Start date
+          example: '2017-06-14'
+        end_date:
+          type: string
+          format: date
+          description: End date
+          example: '2017-06-20'
+      description: Validity period
