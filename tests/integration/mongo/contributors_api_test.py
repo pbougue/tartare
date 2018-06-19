@@ -1328,3 +1328,27 @@ class TestContributors(TartareFixture):
             'error': 'unable to delete contributor cid because the following coverages are using one of its data sources: covid',
             'message': 'Invalid arguments'
         }
+
+    def test_delete_contributor_remove_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              export_id='export_id')
+        self.contributor_export('cid')
+        with tartare.app.app_context():
+            assert tartare.mongo.db['fs.files'].find({}).count() == 1
+            self.delete('/contributors/cid')
+            assert tartare.mongo.db['fs.files'].find({}).count() == 0
+
+    def test_delete_contributor_with_preprocess_remove_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              export_id='export_id')
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": ['dsid'],
+            "type": "GtfsAgencyFile",
+            "params": {}
+        }, 'cid')
+        self.contributor_export('cid')
+        with tartare.app.app_context():
+            assert tartare.mongo.db['fs.files'].find({}).count() == 2
+            self.delete('/contributors/cid')
+            assert tartare.mongo.db['fs.files'].find({}).count() == 0

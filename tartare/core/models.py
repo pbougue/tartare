@@ -453,17 +453,6 @@ class DataSource(object):
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
-    def delete(cls, contributor_id: str, data_source_id: str) -> int:
-        if data_source_id is None:
-            raise ValueError('a data_source id is required')
-        contributor = Contributor.get(contributor_id)
-        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
-        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
-        return nb_delete
-
-    @classmethod
     def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> Optional['DataSource']:
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
@@ -674,28 +663,43 @@ class Contributor(DataSourceAndPreProcessContainer):
             raise EntityNotFound(msg)
         return MongoContributorSchema(strict=True).load(raw).data
 
-    @classmethod
-    def delete(cls, contributor_id: str) -> int:
-        contributors_using = cls.find({
-            'preprocesses.params.links.contributor_id': contributor_id
+    def __check_contributors_using_integrity(self) -> None:
+        contributors_using = self.find({
+            'preprocesses.params.links.contributor_id': self.id
         })
         if contributors_using:
             contributors_ids = [contributor.id for contributor in contributors_using]
             raise IntegrityException(
                 'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
-                    contributor_id, ', '.join(contributors_ids)
+                    self.id, ', '.join(contributors_ids)
                 ))
+
+    def __check_coverages_using_integrity(self) -> None:
         coverages_using = Coverage.find({
-            'input_data_source_ids': {'$in': [data_source.id for data_source in cls.get(contributor_id).data_sources]}
+            'input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}
         })
         if coverages_using:
             coverages_ids = [coverage.id for coverage in coverages_using]
             raise IntegrityException(
                 'unable to delete contributor {} because the following coverages are using one of its data sources: {}'.format(
-                    contributor_id, ', '.join(coverages_ids)
+                    self.id, ', '.join(coverages_ids)
                 ))
 
+    def __delete_files_linked(self):
+        data_sets_gridfs_ids = []
+        for data_source in self.data_sources:
+            data_sets_gridfs_ids += [data_set.gridfs_id for data_set in data_source.data_sets]
+        for data_sets_gridfs_id in data_sets_gridfs_ids:
+            GridFsHandler().delete_file_from_gridfs(data_sets_gridfs_id)
+
+    @classmethod
+    def delete(cls, contributor_id: str) -> int:
+        contributor = cls.get(contributor_id)
+        contributor.__check_contributors_using_integrity()
+        contributor.__check_coverages_using_integrity()
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
+        if raw.deleted_count:
+            contributor.__delete_files_linked()
         return raw.deleted_count
 
     @classmethod
