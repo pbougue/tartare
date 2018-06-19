@@ -685,6 +685,16 @@ class Contributor(DataSourceAndPreProcessContainer):
                 'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
                     contributor_id, ', '.join(contributors_ids)
                 ))
+        coverages_using = Coverage.find({
+            'input_data_source_ids': {'$in': [data_source.id for data_source in cls.get(contributor_id).data_sources]}
+        })
+        if coverages_using:
+            coverages_ids = [coverage.id for coverage in coverages_using]
+            raise IntegrityException(
+                'unable to delete contributor {} because the following coverages are using one of its data sources: {}'.format(
+                    contributor_id, ', '.join(coverages_ids)
+                ))
+
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
         return raw.deleted_count
 

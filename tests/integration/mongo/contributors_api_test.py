@@ -1317,3 +1317,14 @@ class TestContributors(TartareFixture):
             'error': 'unable to delete contributor geo because the following contributors are using one of its data sources: cid',
             'message': 'Invalid arguments'
         }
+
+    def test_delete_contributor_with_data_source_used_by_coverage(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.init_contributor('cid2', 'dsid2', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.init_coverage('covid', ['dsid', 'dsid2'])
+        raw = self.delete('/contributors/cid')
+        details = self.assert_failed_call(raw)
+        assert details == {
+            'error': 'unable to delete contributor cid because the following coverages are using one of its data sources: covid',
+            'message': 'Invalid arguments'
+        }
