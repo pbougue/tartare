@@ -49,7 +49,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException
+from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -676,6 +676,15 @@ class Contributor(DataSourceAndPreProcessContainer):
 
     @classmethod
     def delete(cls, contributor_id: str) -> int:
+        contributors_using = cls.find({
+            'preprocesses.params.links.contributor_id': contributor_id
+        })
+        if contributors_using:
+            contributors_ids = [contributor.id for contributor in contributors_using]
+            raise IntegrityException(
+                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                    contributor_id, ', '.join(contributors_ids)
+                ))
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
         return raw.deleted_count
 

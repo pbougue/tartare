@@ -38,7 +38,7 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 from tartare.core import models
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
     CheckContributorIntegrity, RemoveComputedDataSources
-from tartare.exceptions import EntityNotFound
+from tartare.exceptions import EntityNotFound, IntegrityException
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
@@ -94,10 +94,14 @@ class Contributor(flask_restful.Resource):
             raise ObjectNotFound(str(e))
 
     def delete(self, contributor_id: str) -> Response:
-        c = models.Contributor.delete(contributor_id)
-        if c == 0:
-            raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
-        return "", 204
+        try:
+            c = models.Contributor.delete(contributor_id)
+            if c == 0:
+                raise ObjectNotFound("contributor '{}' not found".format(contributor_id))
+            return "", 204
+        except IntegrityException as e:
+            raise InvalidArguments(str(e))
+
 
     @JsonDataValidate()
     @ValidateContributorPrepocessesDataSourceIds()
