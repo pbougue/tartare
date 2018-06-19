@@ -159,7 +159,8 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                         preprocess.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
 
-    def fill_data_source_passwords_from_existing_object(self, existing_object: 'DataSourceAndPreProcessContainer') -> None:
+    def fill_data_source_passwords_from_existing_object(self,
+                                                        existing_object: 'DataSourceAndPreProcessContainer') -> None:
         for data_source in self.data_sources:
             if data_source.input and isinstance(data_source.input, InputAuto):
                 input = data_source.input
@@ -176,6 +177,13 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                             and existing_data_source.input.options.authent.username == input.options.authent.username \
                             and existing_data_source.input.options.authent.password:
                         data_source.input.options.authent.password = existing_data_source.input.options.authent.password
+
+    def delete_files_linked(self) -> None:
+        data_sets_gridfs_ids = []  # type: List[str]
+        for data_source in self.data_sources:
+            data_sets_gridfs_ids += [data_set.gridfs_id for data_set in data_source.data_sets]
+        for data_sets_gridfs_id in data_sets_gridfs_ids:
+            GridFsHandler().delete_file_from_gridfs(data_sets_gridfs_id)
 
     @classmethod
     def get(cls, object_id: str) -> Union['Contributor', Optional['Coverage']]:
@@ -685,13 +693,6 @@ class Contributor(DataSourceAndPreProcessContainer):
                     self.id, ', '.join(coverages_ids)
                 ))
 
-    def __delete_files_linked(self):
-        data_sets_gridfs_ids = []
-        for data_source in self.data_sources:
-            data_sets_gridfs_ids += [data_set.gridfs_id for data_set in data_source.data_sets]
-        for data_sets_gridfs_id in data_sets_gridfs_ids:
-            GridFsHandler().delete_file_from_gridfs(data_sets_gridfs_id)
-
     @classmethod
     def delete(cls, contributor_id: str) -> int:
         contributor = cls.get(contributor_id)
@@ -699,7 +700,7 @@ class Contributor(DataSourceAndPreProcessContainer):
         contributor.__check_coverages_using_integrity()
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
         if raw.deleted_count:
-            contributor.__delete_files_linked()
+            contributor.delete_files_linked()
         return raw.deleted_count
 
     @classmethod
@@ -761,7 +762,10 @@ class Coverage(DataSourceAndPreProcessContainer):
 
     @classmethod
     def delete(cls, coverage_id: str = None) -> int:
+        coverage = Coverage.get(coverage_id)
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': coverage_id})
+        if raw.deleted_count:
+            coverage.delete_files_linked()
         return raw.deleted_count
 
     @classmethod
