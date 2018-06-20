@@ -39,7 +39,8 @@ from tartare.core.constants import DATA_TYPE_PUBLIC_TRANSPORT, DATA_FORMAT_BY_DA
     DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, INPUT_TYPE_COMPUTED, DATA_TYPE_GEOGRAPHIC
 from tartare.core.models import DataSource
 from tartare.exceptions import EntityNotFound
-from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError
+from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError, \
+    DuplicateEntry
 from tartare.processes.processes import PreProcessManager
 
 id_format_text = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -131,6 +132,24 @@ class ValidateContributorPrepocessesDataSourceIds(object):
                                         'id' in data_source]
             PreProcessManager.check_preprocess_data_source_integrity(post_data.get('preprocesses', []),
                                                                      existing_data_source_ids, 'contributor')
+            return func(*args, **kwargs)
+
+        return wrapper
+
+
+class ValidateUniqueDataSourcesInContributor(object):
+    def __call__(self, func: Callable) -> Any:
+        @wraps(func)
+        def wrapper(*args: list, **kwargs: str) -> Any:
+            post_data = request.json
+
+            data_sources_ids = []  # type: List[dict]
+            for data_source in post_data.get('data_sources', []):
+                id = data_source.get('id', None)
+                if id and id in data_sources_ids:
+                    raise DuplicateEntry('duplicate data source {}'.format(id))
+                data_sources_ids.append(id)
+
             return func(*args, **kwargs)
 
         return wrapper
