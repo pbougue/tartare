@@ -94,7 +94,6 @@ class DataType(ChoiceField):
         super().__init__(DATA_TYPE_VALUES, **metadata)
 
 
-
 class PlatformType(ChoiceField):
     def __init__(self, **metadata: Any) -> None:
         super().__init__(PLATFORM_TYPE_VALUES, **metadata)
@@ -179,11 +178,9 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                         data_source.input.options.authent.password = existing_data_source.input.options.authent.password
 
     def delete_files_linked(self) -> None:
-        data_sets_gridfs_ids = []  # type: List[str]
-        for data_source in self.data_sources:
-            data_sets_gridfs_ids += [data_set.gridfs_id for data_set in data_source.data_sets]
-        for data_sets_gridfs_id in data_sets_gridfs_ids:
-            GridFsHandler().delete_file_from_gridfs(data_sets_gridfs_id)
+        for gridfs_id in [data_set.gridfs_id for data_source in self.data_sources for data_set in
+                          data_source.data_sets]:
+            GridFsHandler().delete_file_from_gridfs(gridfs_id)
 
     @classmethod
     def get(cls, object_id: str) -> Union['Contributor', Optional['Coverage']]:
@@ -965,6 +962,7 @@ class EnabledSchema(Schema):
 
 class ValidateHour(object):
     hour_of_day = fields.Int(required=True)
+
     @validates('hour_of_day')
     def validates(self, hour_of_day: int) -> None:
         if hour_of_day < 0 or hour_of_day > 23:
