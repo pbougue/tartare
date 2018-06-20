@@ -296,6 +296,10 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
                             start_period = self.__change_day_until_weekday_reached(start_period, day_types, 1)
                             end_period = self.__change_day_until_weekday_reached(end_period, day_types, -1)
                             validity_periods.append(ValidityPeriod(start_period, end_period))
+                for calendar_day in time_table.iter('{}calendarDay'.format(namespace)):
+                    start_period = datetime.strptime(calendar_day.text, self.date_format).date()
+                    validity_periods.append(ValidityPeriod(start_period, start_period))
+
             return ValidityPeriod.union(validity_periods) if validity_periods else None
         except (ElementTree.ParseError, TypeError) as e:
             raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))
