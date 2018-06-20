@@ -1290,3 +1290,65 @@ class TestContributors(TartareFixture):
         with tartare.app.app_context():
             contributor = Contributor.get('cid')
             assert not contributor.data_sources[0].input.options.authent.password
+
+    def test_delete_contributor_with_data_source_used_by_other_contributor(self, init_http_download_server):
+        self.init_contributor('geo', 'ruspell_bano_file',
+                              self.format_url(init_http_download_server.ip_addr, 'bano-75.csv', path='ruspell'))
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.add_preprocess_to_contributor({
+            "id": "ruspell_id",
+            "type": "Ruspell",
+            "sequence": 1,
+            "data_source_ids": [
+                "dsid"
+            ],
+            "params": {
+                "links": [
+                    {
+                        "contributor_id": "geo",
+                        "data_source_id": "ruspell_bano_file"
+                    }
+                ]
+            }
+        }, 'cid')
+        raw = self.delete('/contributors/geo')
+        details = self.assert_failed_call(raw)
+        assert details == {
+            'error': 'unable to delete contributor geo because the following contributors are using one of its data sources: cid',
+            'message': 'Invalid arguments'
+        }
+
+    def test_delete_contributor_with_data_source_used_by_coverage(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.init_contributor('cid2', 'dsid2', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.init_coverage('covid', ['dsid', 'dsid2'])
+        raw = self.delete('/contributors/cid')
+        details = self.assert_failed_call(raw)
+        assert details == {
+            'error': 'unable to delete contributor cid because the following coverages are using one of its data sources: covid',
+            'message': 'Invalid arguments'
+        }
+
+    def test_delete_contributor_remove_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              export_id='export_id')
+        self.contributor_export('cid')
+        with tartare.app.app_context():
+            assert tartare.mongo.db['fs.files'].find({}).count() == 1
+            self.delete('/contributors/cid')
+            assert tartare.mongo.db['fs.files'].find({}).count() == 0
+
+    def test_delete_contributor_with_preprocess_remove_files(self, init_http_download_server):
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              export_id='export_id')
+        self.add_preprocess_to_contributor({
+            "sequence": 0,
+            "data_source_ids": ['dsid'],
+            "type": "GtfsAgencyFile",
+            "params": {}
+        }, 'cid')
+        self.contributor_export('cid')
+        with tartare.app.app_context():
+            assert tartare.mongo.db['fs.files'].find({}).count() == 2
+            self.delete('/contributors/cid')
+            assert tartare.mongo.db['fs.files'].find({}).count() == 0

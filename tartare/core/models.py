@@ -49,7 +49,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException
+from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -92,7 +92,6 @@ class DataFormat(ChoiceField):
 class DataType(ChoiceField):
     def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_TYPE_VALUES, **metadata)
-
 
 
 class PlatformType(ChoiceField):
@@ -159,7 +158,8 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                         preprocess.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
 
-    def fill_data_source_passwords_from_existing_object(self, existing_object: 'DataSourceAndPreProcessContainer') -> None:
+    def fill_data_source_passwords_from_existing_object(self,
+                                                        existing_object: 'DataSourceAndPreProcessContainer') -> None:
         for data_source in self.data_sources:
             if data_source.input and isinstance(data_source.input, InputAuto):
                 input = data_source.input
@@ -176,6 +176,11 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                             and existing_data_source.input.options.authent.username == input.options.authent.username \
                             and existing_data_source.input.options.authent.password:
                         data_source.input.options.authent.password = existing_data_source.input.options.authent.password
+
+    def delete_files_linked(self) -> None:
+        for gridfs_id in [data_set.gridfs_id for data_source in self.data_sources for data_set in
+                          data_source.data_sets]:
+            GridFsHandler().delete_file_from_gridfs(gridfs_id)
 
     @classmethod
     def get(cls, object_id: str) -> Union['Contributor', Optional['Coverage']]:
@@ -453,17 +458,6 @@ class DataSource(object):
         return MongoContributorSchema(strict=True).load(raw).data
 
     @classmethod
-    def delete(cls, contributor_id: str, data_source_id: str) -> int:
-        if data_source_id is None:
-            raise ValueError('a data_source id is required')
-        contributor = Contributor.get(contributor_id)
-        nb_delete = len([ds for ds in contributor.data_sources if ds.id == data_source_id])
-        contributor.data_sources = [ds for ds in contributor.data_sources if ds.id != data_source_id]
-        raw_contrib = MongoContributorSchema().dump(contributor).data
-        mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
-        return nb_delete
-
-    @classmethod
     def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> Optional['DataSource']:
         tmp_dataset = dataset if dataset else {}
         if data_source_id is None:
@@ -674,9 +668,36 @@ class Contributor(DataSourceAndPreProcessContainer):
             raise EntityNotFound(msg)
         return MongoContributorSchema(strict=True).load(raw).data
 
+    def __check_contributors_using_integrity(self) -> None:
+        contributors_using = self.find({
+            'preprocesses.params.links.contributor_id': self.id
+        })
+        if contributors_using:
+            contributors_ids = [contributor.id for contributor in contributors_using]
+            raise IntegrityException(
+                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                    self.id, ', '.join(contributors_ids)
+                ))
+
+    def __check_coverages_using_integrity(self) -> None:
+        coverages_using = Coverage.find({
+            'input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}
+        })
+        if coverages_using:
+            coverages_ids = [coverage.id for coverage in coverages_using]
+            raise IntegrityException(
+                'unable to delete contributor {} because the following coverages are using one of its data sources: {}'.format(
+                    self.id, ', '.join(coverages_ids)
+                ))
+
     @classmethod
     def delete(cls, contributor_id: str) -> int:
+        contributor = cls.get(contributor_id)
+        contributor.__check_contributors_using_integrity()
+        contributor.__check_coverages_using_integrity()
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': contributor_id})
+        if raw.deleted_count:
+            contributor.delete_files_linked()
         return raw.deleted_count
 
     @classmethod
@@ -738,7 +759,10 @@ class Coverage(DataSourceAndPreProcessContainer):
 
     @classmethod
     def delete(cls, coverage_id: str = None) -> int:
+        coverage = Coverage.get(coverage_id)
         raw = mongo.db[cls.mongo_collection].delete_one({'_id': coverage_id})
+        if raw.deleted_count:
+            coverage.delete_files_linked()
         return raw.deleted_count
 
     @classmethod
@@ -938,6 +962,7 @@ class EnabledSchema(Schema):
 
 class ValidateHour(object):
     hour_of_day = fields.Int(required=True)
+
     @validates('hour_of_day')
     def validates(self, hour_of_day: int) -> None:
         if hour_of_day < 0 or hour_of_day > 23:

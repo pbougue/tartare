@@ -89,7 +89,7 @@ class TestHistorical(TartareFixture):
         for i in range(1, exports_number + 1):
             contributor['data_sources'][0]['input']["url"] = url_gtfs.format(number=i)
             contributor['data_sources'][1]['input']["url"] = url_config.format(number=i)
-            raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
+            self.put('/contributors/id_test', self.dict_to_json(contributor))
             self.full_export('id_test', 'jdr')
             raw = self.get('/contributors/id_test')
             contributor = self.assert_sucessful_call(raw)['contributors'][0]
@@ -119,7 +119,7 @@ class TestHistorical(TartareFixture):
 
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
-        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 5)
+        assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 3)
 
     # HISTORICAL value is 2 in tests/testing_settings.py
     def test_data_sets_histo_and_cleaning(self, init_http_download_server):
@@ -143,8 +143,9 @@ class TestHistorical(TartareFixture):
         with app.app_context():
             data_sets = DataSource.get_one(cid, dsid).data_sets
             assert len(data_sets) == 2
+            # contributor has no preprocesses so both data sets reference the same file
             raw = mongo.db['fs.files'].find({})
-            assert raw.count() == 4
+            assert raw.count() == 1
 
     def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
