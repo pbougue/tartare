@@ -64,7 +64,7 @@ class TestDataSourceFetchAction(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })
@@ -121,7 +121,7 @@ class TestDataSourceFetchAction(TartareFixture):
         json_response = self.json_to_dict(response)
 
         assert response.status_code == 400, print(self.json_to_dict(response))
-        assert json_response['error'] == 'data source type should be auto'
+        assert json_response['error'] == 'data source type should be auto and should have an url'
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         url = self.format_url(init_http_download_server.ip_addr, 'unknown.zip', path='')
@@ -133,7 +133,7 @@ class TestDataSourceFetchAction(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })

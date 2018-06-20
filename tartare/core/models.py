@@ -332,34 +332,39 @@ class FrequencyContinuously(Enabled):
 
 
 class FrequencyDaily(Enabled):
-    def __init__(self, hour: int, enabled: bool = True) -> None:
+    def __init__(self, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
-        self.hour = hour
+        self.hour_of_day = hour_of_day
 
 
 class FrequencyWeekly(Enabled):
-    def __init__(self, day_of_week: int, hour: int, enabled: bool = True) -> None:
+    def __init__(self, day_of_week: int, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
         self.day_of_week = day_of_week
-        self.hour = hour
+        self.hour_of_day = hour_of_day
 
 
 class FrequencyMonthly(Enabled):
-    def __init__(self, day_of_month: int, hour: int, enabled: bool = True) -> None:
+    def __init__(self, day_of_month: int, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
         self.day_of_month = day_of_month
-        self.hour = hour
+        self.hour_of_day = hour_of_day
 
 
 FrequenceType = Union[FrequencyContinuously, FrequencyDaily, FrequencyWeekly, FrequencyMonthly]
 InputType = Any  # Union[InputAuto, InputManual, InputComputed] will be better mypy does not manage unions well
 
 
-class InputAuto(object):
+class AbstractInput(metaclass=ABCMeta):
+    def __init__(self, expected_file_name: str = None) -> None:
+        self.expected_file_name = expected_file_name
+
+
+class InputAuto(AbstractInput):
     def __init__(self, url: str, frequency: FrequenceType,
                  expected_file_name: str = None, options: PlatformOptions = None) -> None:
+        super().__init__(expected_file_name)
         self.url = url
-        self.expected_file_name = expected_file_name
         self.options = options
         self.frequency = frequency
 
@@ -367,17 +372,17 @@ class InputAuto(object):
         return str(vars(self))
 
 
-class InputManual(object):
+class InputManual(AbstractInput):
     def __init__(self, expected_file_name: str = None) -> None:
-        self.expected_file_name = expected_file_name
+        super().__init__(expected_file_name)
 
     def __repr__(self) -> str:
         return str(vars(self))
 
 
-class InputComputed(object):
+class InputComputed(AbstractInput):
     def __init__(self, expected_file_name: str = None) -> None:
-        self.expected_file_name = expected_file_name
+        super().__init__(expected_file_name)
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -927,11 +932,19 @@ class MongoDataSourceLicenseSchema(Schema):
         return License(**data)
 
 
-class DisableSchema(Schema):
+class EnabledSchema(Schema):
     enabled = fields.Bool(required=False)
 
 
-class FrequencyContinuouslySchema(DisableSchema):
+class ValidateHour(object):
+    hour_of_day = fields.Int(required=True)
+    @validates('hour_of_day')
+    def validates(self, hour_of_day: int) -> None:
+        if hour_of_day < 0 or hour_of_day > 23:
+            raise ValidationError("hour_of_day should be between 0 and 23")
+
+
+class FrequencyContinuouslySchema(EnabledSchema):
     minutes = fields.Int(required=True)
 
     @post_load
@@ -944,22 +957,14 @@ class FrequencyContinuouslySchema(DisableSchema):
             raise ValidationError("minutes should be greater than 1")
 
 
-class FrequencyDailySchema(DisableSchema):
-    hour = fields.Int(required=True)
-
+class FrequencyDailySchema(EnabledSchema, ValidateHour):
     @post_load
     def make(self, data: dict) -> FrequencyDaily:
         return FrequencyDaily(**data)
 
-    @validates('hour')
-    def validates(self, hour: int) -> None:
-        if hour < 0 or hour > 23:
-            raise ValidationError("hour should be between 0 and 23")
 
-
-class FrequencyWeeklySchema(DisableSchema):
+class FrequencyWeeklySchema(EnabledSchema, ValidateHour):
     day_of_week = fields.Int(required=True)
-    hour = fields.Int(required=True)
 
     @post_load
     def make(self, data: dict) -> FrequencyWeekly:
@@ -970,15 +975,9 @@ class FrequencyWeeklySchema(DisableSchema):
         if day_of_week < 0 or day_of_week > 6:
             raise ValidationError("day_of_week should be between 0 and 6")
 
-    @validates('hour')
-    def validates_hour(self, hour: int) -> None:
-        if hour < 0 or hour > 23:
-            raise ValidationError("hour should be between 0 and 23")
 
-
-class FrequencyMonthlySchema(DisableSchema):
+class FrequencyMonthlySchema(EnabledSchema, ValidateHour):
     day_of_month = fields.Int(required=True)
-    hour = fields.Int(required=True)
 
     @post_load
     def make(self, data: dict) -> FrequencyMonthly:
@@ -988,11 +987,6 @@ class FrequencyMonthlySchema(DisableSchema):
     def validates_day_of_month(self, day_of_month: int) -> None:
         if day_of_month < 1 or day_of_month > 28:
             raise ValidationError("day_of_month should be between 1 and 28")
-
-    @validates('hour')
-    def validates_hour(self, hour: int) -> None:
-        if hour < 0 or hour > 23:
-            raise ValidationError("hour should be between 0 and 23")
 
 
 class FrequencySchema(OneOfSchema):

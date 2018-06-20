@@ -217,7 +217,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 },
@@ -288,7 +288,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -328,7 +328,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 14,
+                            "hour_of_day": 14,
                             "enabled": False
                         }
                     },
@@ -341,7 +341,7 @@ class TestContributors(TartareFixture):
                         "frequency": {
                             "type": "weekly",
                             "day_of_week": 5,
-                            "hour": 6,
+                            "hour_of_day": 6,
                             "enabled": True
                         }
                     },
@@ -355,7 +355,7 @@ class TestContributors(TartareFixture):
                         "frequency": {
                             "type": "monthly",
                             "day_of_month": 10,
-                            "hour": 6,
+                            "hour_of_day": 6,
                             "enabled": True
                         }
                     },
@@ -376,19 +376,19 @@ class TestContributors(TartareFixture):
 
         frequency = r["contributors"][0]["data_sources"][1]['input']['frequency']
         assert frequency['type'] == 'daily'
-        assert frequency['hour'] == 14
+        assert frequency['hour_of_day'] == 14
         assert frequency['enabled'] is False
 
         frequency = r["contributors"][0]["data_sources"][2]['input']['frequency']
         assert frequency['type'] == 'weekly'
         assert frequency['day_of_week'] == 5
-        assert frequency['hour'] == 6
+        assert frequency['hour_of_day'] == 6
         assert frequency['enabled'] is True
 
         frequency = r["contributors"][0]["data_sources"][3]['input']['frequency']
         assert frequency['type'] == 'monthly'
         assert frequency['day_of_month'] == 10
-        assert frequency['hour'] == 6
+        assert frequency['hour_of_day'] == 6
         assert frequency['enabled'] is True
 
     @pytest.mark.parametrize("minutes", [-50, -1, 0])
@@ -418,8 +418,8 @@ class TestContributors(TartareFixture):
             'message': 'Invalid arguments'
         }
 
-    @pytest.mark.parametrize("hour", [-5, -1, 24, 50])
-    def test_post_contrib_one_data_source_with_daily_frequency_and_invalid_hour(self, hour):
+    @pytest.mark.parametrize("hour_of_day", [-5, -1, 24, 50])
+    def test_post_contrib_one_data_source_with_daily_frequency_and_invalid_hour(self, hour_of_day):
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -432,7 +432,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": hour
+                            "hour_of_day": hour_of_day
                         }
                     },
                 }
@@ -442,14 +442,14 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert r == {
             'error': {
-                'data_sources': {'0': {'input': {'frequency': {'hour': ['hour should be between 0 and 23']}}}}},
+                'data_sources': {'0': {'input': {'frequency': {'hour_of_day': ['hour_of_day should be between 0 and 23']}}}}},
             'message': 'Invalid arguments'
         }
 
-    @pytest.mark.parametrize("day_of_week,hour", [
+    @pytest.mark.parametrize("day_of_week,hour_of_day", [
         (-5, -10), (-1, -1), (7, 24), (10, 36)
     ])
-    def test_post_contrib_one_data_source_with_weekly_frequency_and_invalid_params(self, day_of_week, hour):
+    def test_post_contrib_one_data_source_with_weekly_frequency_and_invalid_params(self, day_of_week, hour_of_day):
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -463,7 +463,7 @@ class TestContributors(TartareFixture):
                         "frequency": {
                             "type": "weekly",
                             "day_of_week": day_of_week,
-                            "hour": hour
+                            "hour_of_day": hour_of_day
                         }
                     },
                 }
@@ -474,14 +474,14 @@ class TestContributors(TartareFixture):
         assert r == {'error': {
             'data_sources': {'0': {'input': {'frequency': {
                 'day_of_week': ['day_of_week should be between 0 and 6'],
-                'hour': ['hour should be between 0 and 23']
+                'hour_of_day': ['hour_of_day should be between 0 and 23']
             }}}}}, 'message': 'Invalid arguments'
         }
 
-    @pytest.mark.parametrize("day_of_month,hour", [
+    @pytest.mark.parametrize("day_of_month,hour_of_day", [
         (-5, -10), (-1, -1), (29, 24), (34, 36)
     ])
-    def test_post_contrib_one_data_source_with_monthly_frequency_and_invalid_params(self, day_of_month, hour):
+    def test_post_contrib_one_data_source_with_monthly_frequency_and_invalid_params(self, day_of_month, hour_of_day):
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -495,7 +495,7 @@ class TestContributors(TartareFixture):
                         "frequency": {
                             "type": "monthly",
                             "day_of_month": day_of_month,
-                            "hour": hour
+                            "hour_of_day": hour_of_day
                         }
                     },
                 }
@@ -506,7 +506,7 @@ class TestContributors(TartareFixture):
         assert r == {'error': {
             'data_sources': {'0': {'input': {'frequency': {
                 'day_of_month': ['day_of_month should be between 1 and 28'],
-                'hour': ['hour should be between 0 and 23']
+                'hour_of_day': ['hour_of_day should be between 0 and 23']
             }}}}}, 'message': 'Invalid arguments'
         }
 
@@ -527,7 +527,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -558,7 +558,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -638,7 +638,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 },
@@ -649,7 +649,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -676,7 +676,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -704,7 +704,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -722,6 +722,45 @@ class TestContributors(TartareFixture):
         patched_data_source = r["contributors"][0]["data_sources"][0]
         assert patched_data_source["name"] == "name_modified"
         assert patched_data_source["input"]["type"] == "manual"
+
+    def test_put_contrib_with_different_frequency(self):
+        post_data = {
+            "id": "id_test",
+            "name": "name_test",
+            "data_prefix": "AAA",
+            "data_sources": [
+                {
+                    "name": "data_source_name",
+                    "input": {
+                        "type": "auto",
+                        "url": "http://stif.com/od.zip",
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
+                    }
+                }
+            ]
+        }
+        raw = self.post('/contributors', self.dict_to_json(post_data))
+        self.assert_sucessful_create(raw)
+        post_data["data_sources"][0]["name"] = "name_modified"
+        post_data["data_sources"][0]["input"] = {
+            "type": "auto",
+            "url": "http://stif.com/od.zip",
+            "frequency": {
+                "type": "continuously",
+                "minutes": 30
+            }
+        }
+        raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
+        r = self.assert_sucessful_call(raw)
+        assert len(r["contributors"][0]["data_sources"]) == 1
+        patched_data_source = r["contributors"][0]["data_sources"][0]
+        assert patched_data_source["name"] == "name_modified"
+        assert patched_data_source["input"]["type"] == "auto"
+        assert patched_data_source["input"]["frequency"]["type"] == "continuously"
+        assert patched_data_source["input"]["frequency"]["minutes"] == 30
 
     def test_put_contrib_preprocesses_without_id(self, contributor):
         preprocesses = [
@@ -863,7 +902,7 @@ class TestContributors(TartareFixture):
                     "url": "http://stif.com/ods.zip",
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     }
                 }
             })
@@ -904,7 +943,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }

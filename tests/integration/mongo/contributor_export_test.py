@@ -126,7 +126,7 @@ class TestContributorExport(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }}
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
@@ -152,7 +152,7 @@ class TestContributorExport(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }}
         })
         contributor['preprocesses'].append({
@@ -181,7 +181,7 @@ class TestContributorExport(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })
@@ -204,7 +204,7 @@ class TestContributorExport(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })
@@ -237,7 +237,7 @@ class TestContributorExport(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })

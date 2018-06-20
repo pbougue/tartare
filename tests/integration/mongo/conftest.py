@@ -136,7 +136,7 @@ def data_source(app, contributor):
                 "url": "http://stif.com/od.zip",
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         }

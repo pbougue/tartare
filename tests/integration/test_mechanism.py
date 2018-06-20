@@ -134,7 +134,7 @@ class TartareFixture(object):
             "url": url,
             "frequency": {
                 "type": "daily",
-                "hour": 20
+                "hour_of_day": 20
             }
         }
         if options:
@@ -215,7 +215,7 @@ class TartareFixture(object):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         })

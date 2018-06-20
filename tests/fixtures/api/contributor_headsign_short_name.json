@@ -9,7 +9,7 @@
         "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name.zip",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "export_data_source_id": "export_id",

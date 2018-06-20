@@ -1101,7 +1101,7 @@ components:
         type:
           type: string
           example: daily
-        hour:
+        hour_of_day:
           type: integer
           description: The data source will be fetch every days at X hour
           example: 15
@@ -1119,7 +1119,7 @@ components:
           type: integer
           description: The data source will be fetch every weeks the day X at Y hour
           example: 1
-        hour:
+        hour_of_day:
           type: integer
           example: 15
         enabled:
@@ -1136,7 +1136,7 @@ components:
         day_of_month:
           type: integer
           example: 10
-        hour:
+        hour_of_day:
           type: integer
           example: 15
         enabled:

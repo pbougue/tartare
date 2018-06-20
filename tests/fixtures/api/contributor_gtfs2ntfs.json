@@ -9,7 +9,7 @@
         "url": "http://{HTTP_SERVER_IP}/gtfs/gtfs_valid.zip",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "export_data_source_id": "export_id",

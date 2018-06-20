@@ -56,7 +56,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                 "url": url,
                 "frequency": {
                     "type": "daily",
-                    "hour": 20
+                    "hour_of_day": 20
                 }
             }
         }

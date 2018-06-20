@@ -109,7 +109,7 @@ The data source will fetched every day at X hours
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | daily
-frequency.hour | Required | hour between 0 and 23
+frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
 #### Weekly
@@ -118,7 +118,7 @@ Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | weekly
 frequency.day_of_week | Required | day of the week between 0 and 6 (0: Sunday)
-frequency.hour | Required | hour between 0 and 23
+frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
 #### Monthly
@@ -127,7 +127,7 @@ Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | continuously
 frequency.day_of_week | Required | day of the month between 1 and 28
-frequency.hour | Required | hour between 0 and 23
+frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
 ### Contributor's Process properties

@@ -9,7 +9,7 @@
         "url": "http://{HTTP_SERVER_IP}/ruspell/gtfs.zip",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "export_data_source_id": "export_id",
@@ -23,7 +23,7 @@
         "url": "http://{HTTP_SERVER_IP}/ruspell/config-fr_idf.yml",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "name": "Configuration Ruspell"

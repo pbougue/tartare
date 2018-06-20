@@ -62,7 +62,7 @@ class TestCoverageStatus(TartareFixture):
                         "url": self.format_url(ip, file),
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -228,7 +228,7 @@ class TestCoverageStatus(TartareFixture):
             "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip'),
             "frequency": {
                 "type": "daily",
-                "hour": 20
+                "hour_of_day": 20
             }
         }
         
@@ -250,7 +250,7 @@ class TestCoverageStatus(TartareFixture):
             "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url'),
             "frequency": {
                 "type": "daily",
-                "hour": 20
+                "hour_of_day": 20
             }
         }
         self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))

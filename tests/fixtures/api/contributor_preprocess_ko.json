@@ -9,7 +9,7 @@
         "url": "http://{HTTP_SERVER_IP}/headsign_short_name/headsign_short_name_missing_routes.zip",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "name": "données gtfs"

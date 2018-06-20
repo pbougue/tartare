@@ -26,7 +26,7 @@
         "url": "http://{HTTP_SERVER_IP}/compute_directions/functional.zip",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "id": "data_source_to_process_id",

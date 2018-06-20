@@ -51,7 +51,6 @@ ftp_scheme_start = 'ftp://'
 
 
 class AbstractFetcher(metaclass=ABCMeta):
-    # @TODO: we have to change fetch api and not inject InputAuto
     @abstractmethod
     def fetch(self, input: InputAuto, destination_path: str) -> Tuple[str, str]:
         """

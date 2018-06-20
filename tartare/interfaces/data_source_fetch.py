@@ -46,7 +46,7 @@ class DataSourceFetch(flask_restful.Resource):
             raise ObjectNotFound(str(e))
 
         if not data_source.is_auto() or not data_source.input.url:
-            raise InvalidArguments('data source type should be {}'.format(INPUT_TYPE_AUTO))
+            raise InvalidArguments('data source type should be {} and should have an url'.format(INPUT_TYPE_AUTO))
 
         try:
             fetch_and_save_dataset(Contributor.get(contributor_id), data_source_id)

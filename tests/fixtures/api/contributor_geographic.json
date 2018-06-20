@@ -10,7 +10,7 @@
         "url": "http://{HTTP_SERVER_IP}/ruspell/bano-75.csv",
         "frequency": {
           "type": "daily",
-          "hour": 20
+          "hour_of_day": 20
         }
       },
       "name": "Bano Ruspell"

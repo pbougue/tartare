@@ -58,7 +58,7 @@ class TestAutomaticUpdate(TartareFixture):
                         "url": self.format_url(ip, 'some_archive.zip'),
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }

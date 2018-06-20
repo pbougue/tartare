@@ -60,7 +60,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                         "url": data_set_url,
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     },
                     "id": data_source_id,
@@ -244,7 +244,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                         "url": url,
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 })
@@ -353,7 +353,7 @@ class TestComputeExternalSettings(TartareFixture):
                     "url": url,
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     }
                 }
             }
@@ -461,7 +461,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
                         "url": data_set_url,
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     },
                     "id": data_source_id,
@@ -552,7 +552,7 @@ class TestRuspellProcess(TartareFixture):
                         "url": url_bano,
                         "frequency": {
                             "type": "daily",
-                            "hour": 20
+                            "hour_of_day": 20
                         }
                     }
                 }
@@ -594,7 +594,7 @@ class TestRuspellProcess(TartareFixture):
                     "url": url_gtfs,
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     }
                 }
             },
@@ -607,7 +607,7 @@ class TestRuspellProcess(TartareFixture):
                     "url": url_ruspell_config,
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     }
                 }
             }

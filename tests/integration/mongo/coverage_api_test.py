@@ -823,7 +823,7 @@ class TestCoverageApi(TartareFixture):
                     'url': 'whatever',
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     },
                     'options': {
                         'authent': {
@@ -849,7 +849,7 @@ class TestCoverageApi(TartareFixture):
                     'url': 'whatever',
                     "frequency": {
                         "type": "daily",
-                        "hour": 20
+                        "hour_of_day": 20
                     },
                     'options': {
                         'authent': {

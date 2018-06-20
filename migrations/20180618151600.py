@@ -22,7 +22,7 @@ class Migration(BaseMigration):
                     new_input['type'] = 'auto'
                     new_input['frequency'] = {
                         'type': 'daily',
-                        'hour': 20,
+                        'hour_of_day': 20,
                         'enabled': True
                     }
                 elif input.get('type') in ('manual', 'computed'):
