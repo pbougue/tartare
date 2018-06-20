@@ -53,7 +53,7 @@ def test_zip_file_only_feed_info():
 
 def test_zip_file_only_feed_info_invalid():
     file = _get_file_fixture_full_path('validity_period/gtfs_with_feed_info_invalid.zip')
-    validity_period= ValidityPeriodFinder.select_computer_and_find(file)
+    validity_period = ValidityPeriodFinder.select_computer_and_find(file)
     # dates from calendar_dates.txt
     assert validity_period.start_date == date(2016, 10, 4)
     assert validity_period.end_date == date(2016, 12, 24)
@@ -316,8 +316,12 @@ def test_obiti_data_set_invalid(fixture, message):
     assert str(excinfo.value) == message.format(file=file)
 
 
-def test_neptune_data_set():
-    file = _get_file_fixture_full_path('validity_period/other_data_formats/neptune.zip')
+@pytest.mark.parametrize("fixture,start_date,end_date", [
+    ('neptune.zip', date(2017, 12, 21), date(2018, 2, 27)),
+    ('neptune_with_calendar_day.zip', date(2017, 12, 21), date(2018, 4, 1)),
+])
+def test_neptune_data_set(fixture, start_date, end_date):
+    file = _get_file_fixture_full_path('validity_period/other_data_formats/{}'.format(fixture))
     validity_period = ValidityPeriodFinder.select_computer_and_find(file, DATA_FORMAT_NEPTUNE)
-    assert validity_period.start_date == date(2017, 12, 21)
-    assert validity_period.end_date == date(2018, 2, 27)
+    assert validity_period.start_date == start_date
+    assert validity_period.end_date == end_date
