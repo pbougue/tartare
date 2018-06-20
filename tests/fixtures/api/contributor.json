@@ -22,8 +22,12 @@
   "data_sources": [
     {
       "input": {
-        "type": "url",
-        "url": "http://{HTTP_SERVER_IP}/compute_directions/functional.zip"
+        "type": "auto",
+        "url": "http://{HTTP_SERVER_IP}/compute_directions/functional.zip",
+        "frequency": {
+          "type": "daily",
+          "hour_of_day": 20
+        }
       },
       "id": "data_source_to_process_id",
       "export_data_source_id": "export_id",
@@ -31,7 +35,9 @@
       "data_format": "gtfs"
     },
     {
-      "input": {},
+      "input": {
+        "type": "manual"
+      },
       "id": "compute_direction_config_id",
       "name": "compute direction file for qa stif",
       "data_format": "direction_config"

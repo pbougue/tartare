@@ -26,10 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import json
 import os
-from time import sleep
-
 import pytest
 
 from tests.functional.abstract_request_client import AbstractRequestClient

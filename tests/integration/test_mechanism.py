@@ -130,8 +130,12 @@ class TartareFixture(object):
                          data_type=DATA_TYPE_DEFAULT, manual=False, service_id=None, data_prefix=None, export_id=None,
                          options=None):
         input = {'type': 'manual'} if manual else {
-            "type": "url",
-            "url": url
+            "type": "auto",
+            "url": url,
+            "frequency": {
+                "type": "daily",
+                "hour_of_day": 20
+            }
         }
         if options:
             input['options'] = options
@@ -207,8 +211,12 @@ class TartareFixture(object):
             "name": data_source_id,
             "data_format": data_format,
             "input": {
-                "type": "url",
-                "url": url
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
             }
         })
         self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))

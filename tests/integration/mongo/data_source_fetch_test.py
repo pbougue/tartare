@@ -59,7 +59,14 @@ class TestDataSourceFetchAction(TartareFixture):
         contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
+            }
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 
@@ -114,14 +121,21 @@ class TestDataSourceFetchAction(TartareFixture):
         json_response = self.json_to_dict(response)
 
         assert response.status_code == 400, print(self.json_to_dict(response))
-        assert json_response['error'] == 'data source type should be url'
+        assert json_response['error'] == 'data source type should be auto and should have an url'
 
     def test_fetch_invalid_url(self, init_http_download_server, contributor):
         url = self.format_url(init_http_download_server.ip_addr, 'unknown.zip', path='')
         contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
+            }
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
 

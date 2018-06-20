@@ -59,8 +59,12 @@ class TestDataPublisher(TartareFixture):
                     "name": 'ds' + data_format,
                     "data_format": data_format,
                     "input": {
-                        "type": "url",
-                        "url": url
+                        "type": "auto",
+                        "url": url,
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
                     }
                 }
             ]

@@ -56,8 +56,12 @@ class TestGtfsAgencyProcess(TartareFixture):
             "data_sources": [
                 {
                     "input": {
-                        "type": "url",
-                        "url": data_set_url
+                        "type": "auto",
+                        "url": data_set_url,
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
                     },
                     "id": data_source_id,
                     "export_data_source_id": "export_id",
@@ -235,7 +239,14 @@ class TestComputeDirectionsProcess(TartareFixture):
                     "name": "ds-to-process",
                     "data_format": "gtfs",
                     "export_data_source_id": "export_id",
-                    "input": {"type": "url", "url": url}
+                    "input": {
+                        "type": "auto",
+                        "url": url,
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
+                    }
                 })
         if add_data_source_config:
             data_sources.append({
@@ -337,7 +348,14 @@ class TestComputeExternalSettings(TartareFixture):
                 "id": "ds-to-process",
                 "name": "ds-to-process",
                 "data_format": "gtfs",
-                "input": {"type": "url", "url": url}
+                "input": {
+                    "type": "auto",
+                    "url": url,
+                    "frequency": {
+                        "type": "daily",
+                        "hour_of_day": 20
+                    }
+                }
             }
         ]
 
@@ -439,8 +457,12 @@ class TestHeadsignShortNameProcess(TartareFixture):
             "data_sources": [
                 {
                     "input": {
-                        "type": "url",
-                        "url": data_set_url
+                        "type": "auto",
+                        "url": data_set_url,
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
                     },
                     "id": data_source_id,
                     "export_data_source_id": "export_id",
@@ -512,7 +534,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
 
 class TestRuspellProcess(TartareFixture):
     def __setup_contributor_export_environment(self, init_http_download_server, params,
-                                               export_contrib_geo=True, do_export=True, exclude_transport_data_source=False):
+                                               export_contrib_geo=True, do_export=True):
         # Create contributor geographic
         url_bano = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
         contrib_geographic = {
@@ -525,7 +547,14 @@ class TestRuspellProcess(TartareFixture):
                     "id": "bano_75",
                     "name": "bano_75",
                     "data_format": DATA_FORMAT_BANO_FILE,
-                    "input": {"type": "url", "url": url_bano}
+                    "input": {
+                        "type": "auto",
+                        "url": url_bano,
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
+                    }
                 }
             ]
         }
@@ -560,13 +589,27 @@ class TestRuspellProcess(TartareFixture):
                 "id": "ds_to_process",
                 "name": "ds_to_process",
                 "data_format": "gtfs",
-                "input": {"type": "url", "url": url_gtfs}
+                "input": {
+                    "type": "auto",
+                    "url": url_gtfs,
+                    "frequency": {
+                        "type": "daily",
+                        "hour_of_day": 20
+                    }
+                }
             },
             {
                 "id": "ds_config_ruspell",
                 "name": "ds_config_ruspell",
                 "data_format": DATA_FORMAT_RUSPELL_CONFIG,
-                "input": {"type": "url", "url": url_ruspell_config}
+                "input": {
+                    "type": "auto",
+                    "url": url_ruspell_config,
+                    "frequency": {
+                        "type": "daily",
+                        "hour_of_day": 20
+                    }
+                }
             }
         ]
 

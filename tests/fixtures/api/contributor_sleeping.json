@@ -4,8 +4,12 @@
   "data_sources": [
     {
       "input": {
-        "type": "url",
-        "url": "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs.zip"
+        "type": "auto",
+        "url": "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs.zip",
+        "frequency": {
+          "type": "daily",
+          "hour_of_day": 20
+        }
       },
       "id": "data_source_to_process_id_sleeping",
       "name": "data_source_to_process_name_sleeping",

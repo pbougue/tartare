@@ -1,11 +1,11 @@
 # Tartare
 
 ## Summary
-[Overview](#overview)  
-[Contributors](#contributors)  
-[Coverages](#coverages)  
-[Workflow](#workflow)  
-[Miscellaneous](#miscellaneous)  
+[Overview](#overview)
+[Contributors](#contributors)
+[Coverages](#coverages)
+[Workflow](#workflow)
+[Miscellaneous](#miscellaneous)
 
 ## Overview
 Tartare is an API ([link to swagger doc](./ressources/open_api.yaml)) for referencing datasources and manipulating them with as much automatic processes as possible.
@@ -16,7 +16,7 @@ The purpose of Tartare is to:
 * merge a subset of available data in a consistant package (with specific quality checks)
 * publish the data packages to external plateform or tools (for exemple a FTP server, Navitia, Bragi, etc.)
 
-This tool is mainly focused around 2 concepts: `Contributor` and `Coverage`. They are described below. 
+This tool is mainly focused around 2 concepts: `Contributor` and `Coverage`. They are described below.
 
 
 ## Contributors
@@ -32,9 +32,9 @@ In the Constraint column, the `unique` value is indicated when required (no need
 Property | Constraint | Description |
 --- | --- | --- |
 name | Required | The name of the `Contributor`
-data_prefix | Required, unique | A prefix that will be applied to all the `Contributor`'s data to ensure uniqueness of the objects ids when merged with other `Contributor`s's data in one coverage. 
+data_prefix | Required, unique | A prefix that will be applied to all the `Contributor`'s data to ensure uniqueness of the objects ids when merged with other `Contributor`s's data in one coverage.
 id | Optionnal, unique | If not provided, Tartare will generate one.
-data_type | required | The type of data provided, either *public_transport* or *geographic*. Default is *public_transport*. 
+data_type | required | The type of data provided, either *public_transport* or *geographic*. Default is *public_transport*.
 
 Details about **data_type**:
 1. *public_transport* refers to transit data (like GTFS or Netex), or data used to improve transit data (like fare rules)
@@ -43,19 +43,17 @@ Details about **data_type**:
 ### Contributor's Data Source properties
 Property | Constraint | Description |
 --- | --- | --- |
-id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source` 
+id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source`
 name | Required | The name of the `Data Source`
 data_format | Required | Specify the content of each `Data Set`. See (1) for details.
-input.type | Optionnal | The source type of the `Data Source`. Can be `manual` (default), `url` or `computed`.
-input.url | Optionnal | If `input.type` is `url`, provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
-input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
-input.options | Optinonal | contains additional properties for Internet ressources (2)
+input | Optionnal | Defines how to fetch the data source (2)
+
 license.name | Optionnal | Short name of the license of the `Data Source`. For exemple `ODbL`
 license.url | Optionnal | URL providing details about the license
 validity_period | self computed | Validity period of the last `Data Set` fetched or sent to Tartare. This object is computed by Tartare and contains a `start_date` and `end_date` properties
 
 
-(1) Available data_format : 
+(1) Available data_format :
 - for `Contributor` of `public_transport` type:
   - `gtfs`, `ntfs`, `google_transit` for transit data
   - `direction_config` for `ComputeDirections` process config
@@ -64,13 +62,73 @@ validity_period | self computed | Validity period of the last `Data Set` fetched
   - `pt_external_settings` as `ComputeExternalSettings` output format
 - for `Contributor` of `geographic` type, can be `bano_file`, `poly_file` or `osm_file`
 
-When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md). 
+When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md).
 
-(2) input.options provides the following properties: 
+(2) There are 3 ways to manage data sources
+#### Automatically
+The data source is automatically fetched according to a frequency.
+Property | Constraint | Description |
+--- | --- | --- |
+input.type | Required | auto
+input.url | Required | provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
+input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
+input.options | Optional | contains additional properties for Internet ressources (3)
+input.frequency | Optional | contains download frequency settings (4)
+
+#### Manually
+The data source is manually fetched.
+Property | Constraint | Description |
+--- | --- | --- |
+input.type | Required | manual
+input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
+
+#### Computed
+The data source is automatically created in a process.
+Property | Constraint | Description |
+--- | --- | --- |
+input.type | Required | computed
+input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
+
+(3) input.options provides the following properties:
 - `directory` : provide a sub-directory, usefull when connecting to a FTP ressource
 - `authent.username` : for a secured ressource (FTP or HTTP), contains the login
 - `authent.password` : for a secured ressource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
 If the `authent.username` is modified, the `authent.password` should also be provided.
+
+(4) There are 4 kinds of frequency
+#### Continuously
+The data source will fetched every X minutes
+Property | Constraint | Description |
+--- | --- | --- |
+frequency.type | Required | continuously
+frequency.minutes | Required | number of minutes
+frequency.enabled | Optional | Enable/disable fetching data
+
+#### Daily
+The data source will fetched every day at X hours
+Property | Constraint | Description |
+--- | --- | --- |
+frequency.type | Required | daily
+frequency.hour_of_day | Required | hour between 0 and 23
+frequency.enabled | Optional | Enable/disable fetching data
+
+#### Weekly
+The data source will fetched every week the day X and hour Y
+Property | Constraint | Description |
+--- | --- | --- |
+frequency.type | Required | weekly
+frequency.day_of_week | Required | day of the week between 0 and 6 (0: Sunday)
+frequency.hour_of_day | Required | hour between 0 and 23
+frequency.enabled | Optional | Enable/disable fetching data
+
+#### Monthly
+The data source will fetched every month the day X and hour Y
+Property | Constraint | Description |
+--- | --- | --- |
+frequency.type | Required | continuously
+frequency.day_of_week | Required | day of the month between 1 and 28
+frequency.hour_of_day | Required | hour between 0 and 23
+frequency.enabled | Optional | Enable/disable fetching data
 
 ### Contributor's Process properties
 The `Contributor` processes are described [in this page](./preprocesses.md).
@@ -78,27 +136,27 @@ The `Contributor` processes are described [in this page](./preprocesses.md).
 ### Contributor's Update workflow
 
 ### Actions on Contributors
-Contributors can be created, read, updated or deleted. The `Data Source`s and `Process`es are created, read, updated or deleted by accessing or modifying the `Contributor`.  
+Contributors can be created, read, updated or deleted. The `Data Source`s and `Process`es are created, read, updated or deleted by accessing or modifying the `Contributor`.
 Deleting a contributor deletes its `Data Source`s (with its `Data Set`s and corresponding files) or `Process`es.
 
-**ContributorExport**  
+**ContributorExport**
 A contributor export will do the following tasks, in the following order:
-1. Retrieve data from each of its `Data Source`.  
+1. Retrieve data from each of its `Data Source`.
 2. Check if an update has been made on the `Data Source`.
 3. The Contributor `Process`es are executed
 4. The result of the `ContributorExport` is saved in the output `Data Source`.
 
 The export progress can be supervised through the /jobs resource or /contributors/{contrib_id}/jobs sub-resource.
-If this is a manual contributor export, no other action will follow.  
-If this is an automatic update, a coverage export will follow if at least one of the contributor's data source has been updated. 
+If this is a manual contributor export, no other action will follow.
+If this is an automatic update, a coverage export will follow if at least one of the contributor's data source has been updated.
 
 ## Coverages
-A `Coverage` is a grouping of data from several contributors to be published altogether. 
+A `Coverage` is a grouping of data from several contributors to be published altogether.
 It is composed of several attributes and:
 * a list of `Input Data Source`s (usually from a `Contributor`)
 * a list of `Process`es that will be applied upon on `Input Data Source`s or accordingly to the `Process` behaviour
 * a list of `Data Source`s. They are the `Data Source`s managed by the `Coverage`, and can be either an input `Data Source` or a `Process`es output `Data Source`
-* a list of `Environment`s containing a list of `Publication Plateform`s 
+* a list of `Environment`s containing a list of `Publication Plateform`s
 
 ### Coverage properties
 Property | Constraint | Description |
@@ -106,10 +164,10 @@ Property | Constraint | Description |
 name | Required | The name of the `Coverage`
 id | Not required, unique | If not provided, Tartare will generate one.
 type | Not required | Possible values are `regional`, `keolis`, `navitia.io`, `other` (default is `other`)
-short_description | Not required | Short description of the `Coverage`. It is used by the **ODS Publication** `Process` 
+short_description | Not required | Short description of the `Coverage`. It is used by the **ODS Publication** `Process`
 comment | Not required | This comment is for users to add notes or reminder to the `Coverage`
-license.name | Not required | Name of the license associated to the data (for exemple **ODbL**)  
-license.url | Not required | URL of a web page describing the license's details  
+license.name | Not required | Name of the license associated to the data (for exemple **ODbL**)
+license.url | Not required | URL of a web page describing the license's details
 input_data_source_ids | Not required | List of `Data Source`'s id to be used for this coverage
 
 ### Coverage's Process properties
@@ -123,7 +181,7 @@ See **Contributor's Data Source properties** for more details.
 
 ### Coverage's Environments and Publication Plateforms
 #### Environments
-There are three environments available : `integration`, `preproduction` and `production`.  
+There are three environments available : `integration`, `preproduction` and `production`.
 
 Property | Constraint | Description |
 --- | --- | --- |
@@ -136,7 +194,7 @@ current_ntfs_id | Not required | Id of the last file used by the environement.
 Property | Constraint | Description |
 --- | --- | --- |
 sequence | Required | Order of the `Publication Plateform` to be processed in the containing `Environement`.
-type | Required | Type of the publication. Can be `navitia`, `ods` or `stop_area` 
+type | Required | Type of the publication. Can be `navitia`, `ods` or `stop_area`
 input_data_source_ids | Required | The list of the `Data Source`s to be published
 protocol | Required | Protocol to be used to send data. It can be `http` or `ftp`
 url | Required | URL of the plateform the data will be sent to
@@ -153,13 +211,13 @@ An `ods` publication is a ZIP file containing :
 
 Content of the CSV file :
 Property | Description
---- | --- 
+--- | ---
 ID | "<coverage_id>_GTFS" or "<coverage_id>_NTFS" depending on the `Data Source` type.
 Description | Content of the `short_description` property of the `Coverage`
 Format | "GTFS" or "NTFS", depending on the `Data Source` type.
 Download | File name to be downloaded. "<coverage_id>_GTFS.zip" or "<coverage_id>_NTFS.zip"
-Validity start date | Validity start date of the current `Data Set` 
-Validity end date | Validity end date of the current `Data Set` 
+Validity start date | Validity start date of the current `Data Set`
+Validity end date | Validity end date of the current `Data Set`
 Licence | License name as specified in the `Coverage` properties
 Licence Link | License link as specified in the `Coverage` properties
 Size | Size of the file in octets
@@ -167,14 +225,14 @@ Update date | Current date of the publication process
 
 
 ### Actions on Coverages
-Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by accessing or modifying the `Coverage`.  
+Coverages can be created, read, updated or deleted. The `Data Source`s, `Process`es and `Environment`s are created, read, updated or deleted by accessing or modifying the `Coverage`.
 Deleting a coverage deletes its `Data Source`s (with its `Data Set`s and corresponding files), `Process`es, `Environment`s and `Publication Plateform`s.
 
-**CoverageExport**  
-Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` beforehand. 
+**CoverageExport**
+Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` beforehand.
 
 A coverage export will do the following tasks, in the following order:
-1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file). 
+1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file).
 2. Applying the `Process`es of the coverage
 3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` ressource
 4. Data are published accordingly to configured `Publication Plateform`s
@@ -183,30 +241,30 @@ The export progress can be supervised through the `/jobs` resource or `/coverage
 
 
 ## Workflow
-### Automatic update  
-1. At 20h UTC every day from monday to thursday 
+### Automatic update
+1. At 20h UTC every day from monday to thursday
 2. A contributor export is launched on all contributors.
 3. The contributors ids of whose data have changed are recorded
 4. Then for all coverages, if at least one of its contributors is in the previous list, a coverage export is executed
 
 
 ### Failures during workflow
-If there is a fail due to network issues, only one retry will be tempted again, 180 secs after.  
-If this retry also fail, Tartare stops there and send an email.  
-There is no retry if the failure happened during the publishing step.  
+If there is a fail due to network issues, only one retry will be tempted again, 180 secs after.
+If this retry also fail, Tartare stops there and send an email.
+There is no retry if the failure happened during the publishing step.
 
-An email is sent to the Tartare team containing the following infos :  
-   * Plateform  
-   * Start & end date of execution.  
-   * Action type (Contributor_export, coverage_export) 
-   * Job ID  
-   * Step  
-   * Contributor  
-   * Error message  
-   
+An email is sent to the Tartare team containing the following infos :
+   * Plateform
+   * Start & end date of execution.
+   * Action type (Contributor_export, coverage_export)
+   * Job ID
+   * Step
+   * Contributor
+   * Error message
+
 ## Miscellaneous
 ### Data sets backup
 In all the `Data Source`s, the last 3 `Data Set`s are available.
 
-   
+
 

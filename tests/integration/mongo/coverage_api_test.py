@@ -819,8 +819,12 @@ class TestCoverageApi(TartareFixture):
                 'id': 'dsid',
                 'name': 'dsid',
                 'input': {
-                    'type': 'url',
+                    'type': 'auto',
                     'url': 'whatever',
+                    "frequency": {
+                        "type": "daily",
+                        "hour_of_day": 20
+                    },
                     'options': {
                         'authent': {
                             'username': username,
@@ -841,8 +845,12 @@ class TestCoverageApi(TartareFixture):
                 'id': 'dsid',
                 'name': 'dsid',
                 'input': {
-                    'type': 'url',
+                    'type': 'auto',
                     'url': 'whatever',
+                    "frequency": {
+                        "type": "daily",
+                        "hour_of_day": 20
+                    },
                     'options': {
                         'authent': {
                             'username': username,

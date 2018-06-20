@@ -40,7 +40,7 @@ from urllib.parse import urlparse, urlunparse, ParseResult
 
 from requests import HTTPError
 
-from tartare.core.models import Input
+from tartare.core.models import InputAuto
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ ftp_scheme_start = 'ftp://'
 
 class AbstractFetcher(metaclass=ABCMeta):
     @abstractmethod
-    def fetch(self, input: Input, destination_path: str) -> Tuple[str, str]:
+    def fetch(self, input: InputAuto, destination_path: str) -> Tuple[str, str]:
         """
         :param input: input to fetch from (contains url, options, expected_file_name)
         :param destination_path: the existing directory to use as destination path
@@ -63,7 +63,7 @@ class AbstractFetcher(metaclass=ABCMeta):
         pass
 
     @classmethod
-    def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
+    def check_authent_and_fetch_to_target(cls, input: InputAuto, dest_full_file_name: str) -> None:
         pass
 
     @classmethod
@@ -71,7 +71,7 @@ class AbstractFetcher(metaclass=ABCMeta):
         return urlunparse(tuple([parsed[0], parsed.hostname]) + parsed[2:6])
 
     @classmethod
-    def get_url_and_credentials(cls, input: Input) \
+    def get_url_and_credentials(cls, input: InputAuto) \
             -> Tuple[str, Optional[str], Optional[str], Optional[ParseResult]]:
         parsed = urlparse(input.url)
         if not ((input.options and input.options.authent) or parsed.username):
@@ -136,14 +136,14 @@ class FetcherManager:
 
 
 class FtpFetcher(AbstractFetcher):
-    def fetch(self, input: Input, destination_path: str) -> Tuple[str, str]:
+    def fetch(self, input: InputAuto, destination_path: str) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(input.url)
         dest_full_file_name = os.path.join(destination_path, expected_file_name)
         self.check_authent_and_fetch_to_target(input, dest_full_file_name)
         return dest_full_file_name, expected_file_name
 
     @classmethod
-    def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
+    def check_authent_and_fetch_to_target(cls, input: InputAuto, dest_full_file_name: str) -> None:
         url, username, password, parsed = cls.get_url_and_credentials(input)
         if username and password and parsed:
             try:
@@ -159,7 +159,7 @@ class FtpFetcher(AbstractFetcher):
 
 class HttpFetcher(AbstractFetcher):
     @classmethod
-    def check_authent_and_fetch_to_target(cls, input: Input, dest_full_file_name: str) -> None:
+    def check_authent_and_fetch_to_target(cls, input: InputAuto, dest_full_file_name: str) -> None:
         url, username, password, parsed = cls.get_url_and_credentials(input)
         if username and password:
             try:
@@ -174,7 +174,7 @@ class HttpFetcher(AbstractFetcher):
         else:
             cls.fetch_to_target(url, dest_full_file_name)
 
-    def fetch(self, input: Input, destination_path: str) -> Tuple[str, str]:
+    def fetch(self, input: InputAuto, destination_path: str) -> Tuple[str, str]:
         expected_file_name = self.guess_file_name_from_url(input.url) if not input.expected_file_name else \
             input.expected_file_name
         dest_full_file_name = os.path.join(destination_path, expected_file_name)

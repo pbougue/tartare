@@ -31,10 +31,9 @@ import tempfile
 
 import requests
 
-from tartare.core.constants import INPUT_TYPE_URL
 from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
-from tartare.core.models import MongoPlatformSchema, Input
+from tartare.core.models import MongoPlatformSchema, InputAuto, FrequencyDaily
 from tartare.core.publisher import ProtocolManager, AbstractProtocol
 from tartare.processes.abstract_preprocess import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
@@ -49,8 +48,10 @@ class FusioExportContributor(AbstractFusioProcess):
 
     def publish(self, protocol_uploader: AbstractProtocol, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
+            frequency = FrequencyDaily(20)
             dest_full_file_name, expected_file_name = HttpFetcher().fetch(
-                Input(type=INPUT_TYPE_URL, url=url, expected_file_name=self.params.get('expected_file_name')), tmp_dir_name
+                InputAuto(url=url, frequency=frequency, expected_file_name=self.params.get('expected_file_name')),
+                tmp_dir_name
             )
             with open(dest_full_file_name, 'rb') as file:
                 protocol_uploader.publish(file, expected_file_name)

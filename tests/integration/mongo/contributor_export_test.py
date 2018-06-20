@@ -121,7 +121,13 @@ class TestContributorExport(TartareFixture):
         contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }}
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)
@@ -141,7 +147,13 @@ class TestContributorExport(TartareFixture):
             "name": "bobette",
             "data_format": "gtfs",
             "export_data_source_id": "export_id",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }}
         })
         contributor['preprocesses'].append({
             "type": "GtfsAgencyFile",
@@ -164,7 +176,14 @@ class TestContributorExport(TartareFixture):
         contributor['data_sources'].append({
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
+            }
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)
@@ -180,7 +199,14 @@ class TestContributorExport(TartareFixture):
             "id": "bobette",
             "name": "bobette",
             "data_format": "gtfs",
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
+            }
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
         raw = self.post('/coverages',
@@ -206,7 +232,14 @@ class TestContributorExport(TartareFixture):
         contributor['data_sources'].append({
             "name": "bobette",
             "data_format": data_format,
-            "input": {"type": "url", "url": url}
+            "input": {
+                "type": "auto",
+                "url": url,
+                "frequency": {
+                    "type": "daily",
+                    "hour_of_day": 20
+                }
+            }
         })
         self.put('/contributors/'+cid, params=self.dict_to_json(contributor))
 

@@ -27,15 +27,9 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-INPUT_TYPE_URL = 'url'
+INPUT_TYPE_AUTO = 'auto'
 INPUT_TYPE_MANUAL = 'manual'
 INPUT_TYPE_COMPUTED = 'computed'
-INPUT_TYPE_DEFAULT = INPUT_TYPE_MANUAL
-INPUT_TYPE_VALUES = [
-    INPUT_TYPE_URL,
-    INPUT_TYPE_MANUAL,
-    INPUT_TYPE_COMPUTED,
-]
 
 DATA_FORMAT_GTFS = 'gtfs'
 DATA_FORMAT_NTFS = 'ntfs'

@@ -54,8 +54,12 @@ class TestAutomaticUpdate(TartareFixture):
                     "id": "ds_" + id,
                     "name": "ds_" + id,
                     "input": {
-                        "type": "url",
-                        "url": self.format_url(ip, 'some_archive.zip')
+                        "type": "auto",
+                        "url": self.format_url(ip, 'some_archive.zip'),
+                        "frequency": {
+                            "type": "daily",
+                            "hour_of_day": 20
+                        }
                     }
                 }
             ]

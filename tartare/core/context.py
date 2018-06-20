@@ -157,7 +157,7 @@ class ContributorExportContext(Context):
     def fill_context(self, contributor: Contributor) -> None:
         self.add_contributor_context(contributor)
         for data_source in contributor.data_sources:
-            if data_source.input.type != 'computed':
+            if not data_source.is_computed():
                 data_set = data_source.get_last_data_set()
                 if not data_set:
                     raise ParameterException(
