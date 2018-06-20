@@ -54,14 +54,14 @@ Be carefull, there could be only one method used in a data source.
 ## Computing validity period of a Neptune data set
 A Neptune data set is a Zip file containing an XML file for each transport line. 
 For each XML File,for each `Timetable` node:
-* if there is a `period` node :
+* for each `period` node :
   * get the `startOfPeriod` as a start date
-  * get the `endOfPeriod` as a and date  
-* search the smallest and the greatest `calendarDay` as the start date and and date  
+  * get the `endOfPeriod` as an end date  
+* search the smallest and the greatest `calendarDay` as the start date and end date  
 
 Then :
-* validity start date: Get the smallest start date
-* validity end date: Get the greatest end date
+* validity start date: Get the smallest start date among all periods
+* validity end date: Get the greatest end date among all periods
 
 
 ## Multiple data sources with different validity periods for a data set.
