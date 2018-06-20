@@ -31,7 +31,7 @@ import logging
 import tempfile
 from abc import ABCMeta, abstractmethod
 from datetime import date, timedelta, datetime
-from typing import List, Optional
+from typing import List, Optional, Union, BinaryIO
 from xml.etree import ElementTree
 from zipfile import is_zipfile, ZipFile
 
@@ -49,11 +49,11 @@ class AbstractValidityPeriodComputer(metaclass=ABCMeta):
         self.date_format = date_format
 
     @abstractmethod
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         pass
 
     @classmethod
-    def check_zip_file(cls, file_name: str) -> None:
+    def check_zip_file(cls, file_name: Union[str, BinaryIO]) -> None:
         if not is_zipfile(file_name):
             msg = '{} is not a zip file or not exist'.format(file_name)
             logging.getLogger(__name__).error(msg)
@@ -61,7 +61,7 @@ class AbstractValidityPeriodComputer(metaclass=ABCMeta):
 
 
 class ValidityPeriodFromCsvComputer(AbstractValidityPeriodComputer):
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         pass
 
     def __init__(self, date_format: str = '%Y%m%d') -> None:
@@ -80,7 +80,7 @@ class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
         self.start_date = date.max
         self.end_date = date.min
 
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         self.check_zip_file(file_name)
 
         if not self.reader.file_in_zip_files(file_name, self.calendar_file_name) and \
@@ -112,7 +112,7 @@ class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     def is_end_date_valid(self) -> bool:
         return self.end_date != date.min
 
-    def _parse_calendar(self, files_zip: str) -> None:
+    def _parse_calendar(self, files_zip: Union[str, BinaryIO]) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_file_name,
                                                 usecols=['start_date', 'end_date'],
                                                 parse_dates=['start_date', 'end_date'],
@@ -158,7 +158,7 @@ class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
             else:
                 break
 
-    def _parse_calendar_dates(self, files_zip: str) -> None:
+    def _parse_calendar_dates(self, files_zip: Union[str, BinaryIO]) -> None:
         self.reader.load_csv_data_from_zip_file(files_zip, self.calendar_dates_file_name,
                                                 usecols=['date', 'exception_type'],
                                                 parse_dates=['date'],
@@ -169,7 +169,7 @@ class GtfsValidityPeriodComputer(ValidityPeriodFromCsvComputer):
         dates = self.reader.data[(self.reader.data.exception_type == 2)].date.tolist()
         self.remove_dates(dates)
 
-    def _parse_feed_info(self, files_zip: str) -> None:
+    def _parse_feed_info(self, files_zip: Union[str, BinaryIO]) -> None:
         try:
             self.reader.load_csv_data_from_zip_file(files_zip, self.feed_info_filename,
                                                     usecols=['feed_start_date', 'feed_end_date'],
@@ -197,7 +197,7 @@ class TitanValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     def __init__(self) -> None:
         super().__init__()
 
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         self.check_zip_file(file_name)
         if not self.reader.file_in_zip_files(file_name, self.calendar_file_name):
             msg = 'file zip {} without {}'.format(file_name, self.calendar_file_name)
@@ -220,7 +220,7 @@ class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
     def __init__(self) -> None:
         super().__init__('%d/%m/%Y')
 
-    def __check_file_exists_and_return_right_case(self, zip_file: str, file_to_check: str) -> str:
+    def __check_file_exists_and_return_right_case(self, zip_file: Union[str, BinaryIO], file_to_check: str) -> str:
         if not self.reader.file_in_zip_files(zip_file, file_to_check):
             if not self.reader.file_in_zip_files(zip_file, file_to_check.upper()):
                 msg = 'file zip {} without {}'.format(zip_file, file_to_check)
@@ -230,7 +230,7 @@ class ObitiValidityPeriodComputer(ValidityPeriodFromCsvComputer):
                 file_to_check = file_to_check.upper()
         return file_to_check
 
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         self.check_zip_file(file_name)
         vehicule_journey_file = self.__check_file_exists_and_return_right_case(file_name, self.vehicule_journey_file)
 
@@ -300,7 +300,7 @@ class NeptuneValidityPeriodComputer(AbstractValidityPeriodComputer):
         except (ElementTree.ParseError, TypeError) as e:
             raise InvalidFile("invalid xml {}, error: {}".format(xml_file_name, str(e)))
 
-    def compute(self, file_name: str) -> ValidityPeriod:
+    def compute(self, file_name: Union[str, BinaryIO]) -> ValidityPeriod:
         self.check_zip_file(file_name)
         validity_periods = []
         with ZipFile(file_name, 'r') as files_zip, tempfile.TemporaryDirectory() as tmp_path:
