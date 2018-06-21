@@ -27,16 +27,14 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-import logging
-from datetime import timedelta, date
-from typing import List
+from typing import List, Union, BinaryIO
 
 from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE, \
     DATA_FORMAT_NTFS
 from tartare.core.models import ValidityPeriod
 from tartare.core.validity_period_computers import AbstractValidityPeriodComputer, GtfsValidityPeriodComputer, \
     TitanValidityPeriodComputer, ObitiValidityPeriodComputer, NeptuneValidityPeriodComputer
-from tartare.exceptions import ValidityPeriodException, IntegrityException
+from tartare.exceptions import IntegrityException
 
 
 class ValidityPeriodFinder:
@@ -63,9 +61,10 @@ class ValidityPeriodFinder:
         return computers_mapping[data_format]
 
     @classmethod
-    def select_computer_and_find(cls, file_name: str, data_format: str = DATA_FORMAT_GTFS) -> ValidityPeriod:
+    def select_computer_and_find(cls, file_or_file_name: Union[str, BinaryIO],
+                                 data_format: str = DATA_FORMAT_GTFS) -> ValidityPeriod:
         try:
             computer = cls.select_computer_from_data_format(data_format)
-            return computer.compute(file_name)
+            return computer.compute(file_or_file_name)
         except IntegrityException:
             return None

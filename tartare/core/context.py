@@ -68,10 +68,11 @@ class Context:
 
 
 class DataSourceExport:
-    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str) -> None:
+    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str, service_id: str=None) -> None:
         self.gridfs_id = gridfs_id
         self.data_source_id = data_source_id
         self.data_format = data_format
+        self.service_id = service_id
 
     def update_data_set_state(self, gridfs_id: str, export_type: Optional[str] = None) -> None:
         self.gridfs_id = gridfs_id
@@ -91,7 +92,8 @@ class ContributorExportContext(Context):
         self.data_source_exports[data_source.export_data_source_id].append(DataSourceExport(
             data_set.gridfs_id,
             data_source.id,
-            data_source.data_format
+            data_source.data_format,
+            data_source.service_id,
         ))
 
     def get_data_source_export_from_data_source(self, data_source_id: str) -> DataSourceExport:

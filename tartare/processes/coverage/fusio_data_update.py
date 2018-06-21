@@ -44,10 +44,9 @@ class FusioDataUpdate(AbstractFusioProcess):
     def __get_data(self, contributor: Contributor, data_source: DataSource, data_set: DataSet) -> dict:
         validity_period = data_set.validity_period.to_valid(self.context.current_date)
 
-        # TODO data_source_context should be the entire data source model
         if data_source.service_id is None:
             raise ParameterException('service_id of data source {} of contributor {} should not be null'.format(
-                contributor.id, data_source.id))
+                data_source.id, contributor.id))
 
         return {
             'action': 'dataupdate',
