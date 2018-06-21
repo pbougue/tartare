@@ -73,7 +73,7 @@ input.type | Required | auto
 input.url | Required | provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
 input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
 input.options | Optional | contains additional properties for Internet ressources (3)
-input.frequency | Optional | contains download frequency settings (4)
+input.frequency | Required | contains download frequency settings (4)
 
 #### Manually
 The data source is manually fetched.
