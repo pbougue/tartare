@@ -32,7 +32,7 @@ import logging
 import os
 import tempfile
 from abc import ABCMeta
-from typing import List, Any, Optional, Callable, Generator
+from typing import List, Any, Optional, Callable, Generator, Union, BinaryIO
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
@@ -91,7 +91,7 @@ class JsonReader(AbstractPandaReader):
 
 class CsvReader(AbstractPandaReader):
     @classmethod
-    def file_in_zip_files(cls, zip_file: str, filename: str) -> bool:
+    def file_in_zip_files(cls, zip_file: Union[str, BinaryIO], filename: str) -> bool:
         with ZipFile(zip_file, 'r') as files_zip:
             return filename in files_zip.namelist()
 

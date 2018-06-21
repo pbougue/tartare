@@ -43,6 +43,15 @@ from tests.utils import get_response, assert_text_files_equals, _get_file_fixtur
 
 
 class TestFusioDataUpdatePreprocess(TartareFixture):
+    data_update_preprocess = {
+        "id": "fusio_dataupdate",
+        "type": "FusioDataUpdate",
+        "params": {
+            "url": "http://fusio_host/cgi-bin/fusio.dll/"
+        },
+        "sequence": 0
+    }
+
     def __create_data_source(self, data_source_id, url, service_id='Google-1', name=None):
         if not name:
             name = data_source_id
@@ -99,13 +108,13 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     # Then  I can see that Fusio has been called 1 time(s) in total
     # => because one time for the first coverage export (normal) and second export does not need any data update
     def test_data_update_called_for_each_data_source(self, fusio_call, wait_for_action_terminated,
-                                                           init_http_download_server):
+                                                     init_http_download_server):
         filename = 'gtfs-{number}.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url)])
-        self.__init_coverage("jdr", ["my_gtfs"])
+        self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id', service_id='Google-1')
+        self.init_coverage('jdr', ['export_id'], preprocesses=[self.data_update_preprocess])
 
         content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
@@ -124,8 +133,8 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [self.__create_data_source("my_gtfs", url, service_id=None)])
-        self.__init_coverage("jdr", ["my_gtfs"])
+        self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id')
+        self.init_coverage('jdr', ['export_id'], preprocesses=[self.data_update_preprocess])
 
         response = self.full_export('id_test', 'jdr', '2017-08-10')
         self.assert_sucessful_call(response, 201)
@@ -134,7 +143,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
 
         assert job_details['state'] == 'failed'
         assert job_details[
-                   'error_message'] == 'service_id of data source id_test of contributor my_gtfs should not be null'
+                   'error_message'] == 'service_id of data source export_id of contributor id_test should not be null'
 
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
@@ -149,11 +158,9 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
-        self.__init_contributor("id_test", [
-            self.__create_data_source("my_gtfs_1", url, service_id='Google-1'),
-            self.__create_data_source("my_gtfs_2", url, service_id='Google-2', name="my_gtfs_2"),
-        ])
-        self.__init_coverage("jdr", ["my_gtfs_1", "my_gtfs_2"])
+        self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id_1', service_id='Google-1')
+        self.add_data_source_to_contributor('id_test', 'my_gtfs_2', url, export_id='export_id_2', service_id='Google-2')
+        self.init_coverage('jdr', ['export_id_1', 'export_id_2'], preprocesses=[self.data_update_preprocess])
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -178,7 +185,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=file_name,
                               path='validity_period/other_data_formats')
         self.init_contributor('cid', 'dsid', url, data_format=data_format, service_id=sid)
-        self.__init_coverage("jdr", ["dsid"])
+        self.init_coverage("jdr", ["dsid"], preprocesses=[self.data_update_preprocess])
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -202,7 +209,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         url = self.format_url(ip=init_http_download_server.ip_addr,
                               filename='gtfs_with_feed_info_more_than_one_year.zip')
         self.init_contributor('cid', 'dsid', url, service_id='1')
-        self.__init_coverage("jdr", ["dsid"])
+        self.init_coverage("jdr", ["dsid"])
         # end date is 31/12/2018
         resp = self.full_export('cid', 'jdr', '2019-03-10')
         job = self.get_job_from_export_response(resp)
@@ -566,7 +573,7 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
                 fusio_settings_zip_file.extractall(tmp_dir_name)
                 assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
                                          _get_file_fixture_full_path(
-                                        'prepare_external_settings/expected_fusio_object_codes.txt'))
+                                             'prepare_external_settings/expected_fusio_object_codes.txt'))
                 assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
                                          _get_file_fixture_full_path(
-                                        'prepare_external_settings/expected_fusio_object_properties.txt'))
+                                             'prepare_external_settings/expected_fusio_object_properties.txt'))
