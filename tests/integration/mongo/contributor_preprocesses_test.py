@@ -651,4 +651,4 @@ class TestRuspellProcess(TartareFixture):
 
         job = self.__setup_contributor_export_environment(init_http_download_server, params, export_contrib_geo=False)
         assert job['state'] == 'failed'
-        assert job['error_message'] == '[process "ruspell_id"] contributor "bano" has not been exported'
+        assert job['error_message'] == "data source 'bano_75' has no data sets"

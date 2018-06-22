@@ -74,21 +74,6 @@ class EnvironmentListSchema(MongoEnvironmentListSchema, NoUnknownFieldMixin):
 
 
 class DataSourceSchema(MongoDataSourceSchema):
-    id = fields.String()
-
-    @post_dump()
-    def add_calculated_fields_for_data_source(self, data: dict) -> dict:
-        data_source_status = DataSourceStatus(data['id'], data['data_sets'])
-        data_source_status_dict = {
-            'status': data_source_status.status,
-            'fetch_started_at': data_source_status.fetch_started_at,
-            'updated_at': data_source_status.updated_at,
-            'validity_period': data_source_status.validity_period,
-        }
-        data.update(data_source_status_dict)
-
-        return data
-
     @post_dump()
     def remove_password(self, data: dict) -> dict:
         try:

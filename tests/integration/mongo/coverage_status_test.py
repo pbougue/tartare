@@ -122,7 +122,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['action_type'] == 'coverage_export'
         assert last_active_job['state'] == 'failed', print(last_active_job)
         assert last_active_job['step'] == 'merge', print(last_active_job)
-        assert last_active_job['error_message'] == 'coverage coverage_export does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source'
+        assert last_active_job['error_message'] == "data source 'ds_contributor_export' has no data sets"
 
     def test_status_after_success_coverage_export_with_one_contributor(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_export')

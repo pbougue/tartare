@@ -111,6 +111,9 @@ class TartareFixture(object):
             return job
         return resp
 
+    def get_all_jobs(self):
+        return self.json_to_dict(self.get('/jobs'))['jobs']
+
     def get_job_from_export_response(self, response):
         self.assert_sucessful_call(response, 201)
         resp = self.get("/jobs/{}".format(self.json_to_dict(response)['job']['id']))

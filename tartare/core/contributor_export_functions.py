@@ -33,12 +33,11 @@ import zipfile
 from typing import Optional
 
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, \
-    DATA_FORMAT_GTFS, ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_DONE, JOB_STATUS_FAILED, JOB_STATUS_RUNNING
+    DATA_FORMAT_GTFS
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, Job, \
-    DataSet
+from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile, \
     RuntimeException
@@ -103,48 +102,41 @@ def save_export(contributor: Contributor, context: ContributorExportContext) -> 
     return None
 
 
-def fetch_datasets_and_return_updated_number(contributor: Contributor, parent_job_id: str) -> int:
+def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
         if data_source.is_auto() and data_source.input.url:
-            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id, parent_job_id) else 0
+            nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id) else 0
     return nb_updated_datasets
 
 
-def fetch_and_save_dataset(contributor: Contributor, data_source_id: str,
-                           parent_job_id: Optional[str] = None) -> bool:
-    data_source = next(data_source for data_source in contributor.data_sources if data_source.id == data_source_id)
+def fetch_and_save_dataset(contributor: Contributor, data_source_id: str) -> bool:
+    data_source = contributor.get_data_source(data_source_id)
     url = data_source.input.url
     logger.info("fetching data from url {}".format(url))
+    data_source.starts_fetch(contributor)
     with tempfile.TemporaryDirectory() as tmp_dir_name:
-        data_source_fetch_job = Job(ACTION_TYPE_DATA_SOURCE_FETCH, contributor.id, parent_id=parent_job_id,
-                                    state=JOB_STATUS_RUNNING, step='prepare', data_source_id=data_source.id)
-        data_source_fetch_job.save()
-        last_data_set = data_source.get_last_data_set()
+        last_data_set = data_source.get_last_data_set_if_exists()
         try:
-            data_source_fetch_job.update(step='fetch')
             fetcher = FetcherManager.select_from_url(url)
             dest_full_file_name, expected_file_name = fetcher.fetch(data_source.input, tmp_dir_name)
             if data_source.data_format == DATA_FORMAT_GTFS and not zipfile.is_zipfile(dest_full_file_name):
                 raise InvalidFile('downloaded file from url {} is not a zip file'.format(url))
         except (FetcherException, GuessFileNameFromUrlException, ParameterException, InvalidFile) as e:
-            data_source_fetch_job.update(state=JOB_STATUS_FAILED, error_message=str(e))
+            data_source.fetch_fails(contributor)
             raise e
 
         if data_source.data_format in DATA_FORMAT_GENERATE_EXPORT:
             if last_data_set and last_data_set.is_identical_to(dest_full_file_name):
                 logger.debug('fetched file {} for contributor {} has not changed since last fetch, skipping'
                              .format(expected_file_name, contributor.id))
-                data_source_fetch_job.update(step='compare', state=JOB_STATUS_DONE)
+                data_source.fetch_unchanged(contributor)
                 return False
         logger.debug('Add DataSet object for contributor: {}, data_source: {}'.format(
             contributor.id, data_source.id
         ))
-        data_source_fetch_job.update(step='compute_validity')
         validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
-        data_source_fetch_job.update(step='save')
         data_set = DataSet(validity_period=validity_period)
         data_set.add_file_from_path(dest_full_file_name, expected_file_name)
         data_source.add_data_set_and_update_model(data_set, contributor)
-        data_source_fetch_job.update(state=JOB_STATUS_DONE)
         return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT

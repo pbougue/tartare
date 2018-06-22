@@ -31,10 +31,9 @@ from datetime import date
 from typing import Dict
 from typing import List, Optional
 
-from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import ValidityPeriod, Contributor, Coverage, DataSource, \
     ValidityPeriodContainer, Job, DataSet
-from tartare.exceptions import IntegrityException, ParameterException, EntityNotFound
+from tartare.exceptions import IntegrityException, EntityNotFound
 
 
 class DataSourceContext:
@@ -160,9 +159,6 @@ class ContributorExportContext(Context):
         for data_source in contributor.data_sources:
             if not data_source.is_computed():
                 data_set = data_source.get_last_data_set()
-                if not data_set:
-                    raise ParameterException(
-                        'data source {data_source_id} has no data set'.format(data_source_id=data_source.id))
                 if data_source.export_data_source_id:
                     self.append_data_source_export(data_source, data_set)
                 self.add_contributor_data_source_context(contributor.id, data_source.id, data_set.validity_period,
@@ -182,8 +178,6 @@ class ContributorExportContext(Context):
                     except EntityNotFound:
                         continue
                     data_set = DataSource.get_one(contributor_id, data_source_id).get_last_data_set()
-                    if not data_set:
-                        continue
                     self.add_contributor_context(tmp_contributor)
                     self.add_contributor_data_source_context(contributor_id, data_source_id, None,
                                                              data_set.gridfs_id)

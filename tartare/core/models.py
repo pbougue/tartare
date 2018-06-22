@@ -47,9 +47,10 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
-    INPUT_TYPE_MANUAL
+    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException
+from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
+    RuntimeException
 from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
 
 
@@ -402,6 +403,10 @@ class DataSource(object):
                  export_data_source_id: str = None,
                  service_id: str = None,
                  data_sets: List[DataSet] = None,
+                 fetch_started_at: datetime = None,
+                 updated_at: datetime = None,
+                 status: str = DATA_SOURCE_STATUS_NEVER_FETCHED,
+                 validity_period: ValidityPeriod = None
                  ) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.name = name
@@ -411,6 +416,10 @@ class DataSource(object):
         self.service_id = service_id
         self.export_data_source_id = export_data_source_id
         self.data_sets = data_sets if data_sets else []
+        self.fetch_started_at = fetch_started_at
+        self.updated_at = updated_at
+        self.status = status
+        self.validity_period = validity_period
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -486,6 +495,9 @@ class DataSource(object):
                 if data_set_to_be_removed.gridfs_id:
                     GridFsHandler().delete_file_from_gridfs(data_set_to_be_removed.gridfs_id)
             self.data_sets = sorted_data_set[0:data_sets_number]
+        self.validity_period = data_set.validity_period
+        self.updated_at = data_set.created_at
+        self.status = DATA_SOURCE_STATUS_UPDATED
         model.update()
 
     def is_of_data_format(self, data_format: str) -> bool:
@@ -500,8 +512,27 @@ class DataSource(object):
     def is_computed(self) -> bool:
         return isinstance(self.input, InputComputed)
 
-    def get_last_data_set(self) -> Optional[DataSet]:
-        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)  # type: ignore
+    def get_last_data_set_if_exists(self) -> Optional[DataSet]:
+        return max(self.data_sets, key=lambda ds: ds.created_at, default=None)
+
+    def get_last_data_set(self) -> DataSet:
+        last_data_set = self.get_last_data_set_if_exists()
+        if not last_data_set:
+            raise RuntimeException("data source '{}' has no data sets".format(self.id))
+        return last_data_set
+
+    def starts_fetch(self, model: Union['Contributor', 'Coverage']) -> None:
+        self.fetch_started_at = datetime.now()
+        self.status = DATA_SOURCE_STATUS_FETCHING
+        model.update()
+
+    def fetch_fails(self, model: Union['Contributor', 'Coverage']) -> None:
+        self.status = DATA_SOURCE_STATUS_FAILED
+        model.update()
+
+    def fetch_unchanged(self, model: Union['Contributor', 'Coverage']) -> None:
+        self.status = DATA_SOURCE_STATUS_UNCHANGED
+        model.update()
 
 
 class GenericPreProcess(SequenceContainer):
@@ -1089,6 +1120,10 @@ class MongoDataSourceSchema(Schema):
     service_id = fields.String(required=False, allow_none=True)
     export_data_source_id = fields.String(required=False, allow_none=True)
     data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
+    fetch_started_at = fields.Time(required=False, allow_none=True)
+    updated_at = fields.Time(required=False, allow_none=True)
+    status = fields.String(required=False, allow_none=True)
+    validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
     @post_load
     def build_data_source(self, data: dict) -> DataSource:

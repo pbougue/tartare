@@ -113,7 +113,7 @@ def contributor_export(self: Task, context: ContributorExportContext, contributo
             'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
-            contributor, context.job.id)
+            contributor)
         logger.info('number of data_sources updated for contributor {cid}: {number}'.
                     format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification
@@ -287,7 +287,8 @@ def automatic_update_launch_coverage_exports(self: Task,
         logger.info("fetching {} coverages".format(len(coverages)))
         actions = []
         for coverage in coverages:
-            contributors = {DataSource.get_contributor_of_data_source(data_source_id) for data_source_id in coverage.input_data_source_ids}
+            contributors = {DataSource.get_contributor_of_data_source(data_source_id) for data_source_id in
+                            coverage.input_data_source_ids}
             if any(contributor.id in updated_contributors for contributor in contributors):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
