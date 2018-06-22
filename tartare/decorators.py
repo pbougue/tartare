@@ -102,8 +102,9 @@ class ValidateInputDataSourceIds(object):
             if "input_data_source_ids" in post_data:
                 input_data_source_ids = set(post_data.get("input_data_source_ids"))
                 for data_source_id in input_data_source_ids:
-                    contributor_model = models.DataSource.get_contributor_of_data_source(data_source_id)
-                    if not contributor_model:
+                    try:
+                        contributor_model = models.DataSource.get_contributor_of_data_source(data_source_id)
+                    except EntityNotFound:
                         msg = "data source {} not found".format(data_source_id)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)
@@ -196,7 +197,7 @@ def validate_post_data_set(func: Callable) -> Any:
 
         try:
             data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
-        except (EntityNotFound, ValueError) as e:
+        except EntityNotFound as e:
             raise ObjectNotFound(str(e))
 
         if data_source is None:

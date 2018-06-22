@@ -72,7 +72,7 @@ class Ruspell(AbstractContributorProcess):
             contributor_id = contrib_ds.get('contributor_id')
             data_source_id = contrib_ds.get('data_source_id')
             try:
-                data_source = DataSource.get_one(contributor_id, data_source_id)
+                data_source = DataSource.get_one(data_source_id, contributor_id)
                 if data_source.data_format != data_format:
                     continue
                 gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)

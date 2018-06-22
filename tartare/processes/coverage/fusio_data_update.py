@@ -64,8 +64,6 @@ class FusioDataUpdate(AbstractFusioProcess):
         self.context.coverage.input_data_source_ids.sort()
         for data_source_id in self.context.coverage.input_data_source_ids:
             contributor = DataSource.get_contributor_of_data_source(data_source_id)
-            if not contributor:
-                continue
             data_source = contributor.get_data_source(data_source_id)
             if not data_source.is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                 continue

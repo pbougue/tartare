@@ -141,7 +141,7 @@ class TestHistorical(TartareFixture):
         # there should remain 2 DataSet: 2 updated, 2 unchanged happened after last update and
         # 1 failed happened after last update
         with app.app_context():
-            data_sets = DataSource.get_one(cid, dsid).data_sets
+            data_sets = DataSource.get_one(dsid, cid).data_sets
             assert len(data_sets) == 2
             # contributor has no preprocesses so both data sets reference the same file
             raw = mongo.db['fs.files'].find({})

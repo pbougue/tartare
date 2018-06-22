@@ -57,7 +57,7 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "data source unknown not found for contributor id_test"
+        assert r["error"] == "data source 'unknown' not found for contributor 'id_test'"
 
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr

@@ -40,18 +40,23 @@ from tartare.core.models import Contributor
 from tartare.core.models import DataSet as DataSetModel
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.decorators import validate_post_data_set
+from tartare.exceptions import EntityNotFound
+from tartare.http_exceptions import ObjectNotFound
 from tartare.interfaces import schema
 
 
 class DataSet(Resource):
     @validate_post_data_set
     def post(self, contributor_id: str, data_source_id: str) -> Response:
-        file = request.files['file']
-        contributor = Contributor.get(contributor_id)
-        data_source = contributor.get_data_source(data_source_id)
-        data_source.fetch_started_at = None
-        validity_period = ValidityPeriodFinder.select_computer_and_find(file, data_source.data_format)
-        data_set = DataSetModel(validity_period=validity_period)
-        data_set.add_file_from_io(file, os.path.basename(file.filename))
-        data_source.add_data_set_and_update_model(data_set, contributor)
-        return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201
+        try:
+            file = request.files['file']
+            contributor = Contributor.get(contributor_id)
+            data_source = contributor.get_data_source(data_source_id)
+            data_source.fetch_started_at = None
+            validity_period = ValidityPeriodFinder.select_computer_and_find(file, data_source.data_format)
+            data_set = DataSetModel(validity_period=validity_period)
+            data_set.add_file_from_io(file, os.path.basename(file.filename))
+            data_source.add_data_set_and_update_model(data_set, contributor)
+            return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
