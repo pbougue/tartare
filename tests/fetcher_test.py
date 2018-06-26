@@ -27,7 +27,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from http.client import HTTPResponse
-from urllib.error import ContentTooShortError, URLError
+from urllib.error import URLError
 from urllib.parse import urlparse
 
 import mock
@@ -108,37 +108,35 @@ class TestFetcher:
             HttpFetcher().guess_file_name_from_url(url)
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
 
-    @mock.patch('urllib.request.urlretrieve')
+    @mock.patch('urllib.request.OpenerDirector.open')
     def test_fetch_http_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = HTTPError('404 not found')
             HttpFetcher().fetch(InputAuto(url='http://whatever.com/config.json', frequency=frequency), '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: 404 not found'
 
-    @mock.patch('urllib.request.urlretrieve')
-    def test_fetch_content_too_short_error(self, mock_url_retrieve):
-        url = 'http://whatever.com/config.json'
-        with pytest.raises(FetcherException) as excinfo:
-            mock_url_retrieve.side_effect = ContentTooShortError('', '')
-            HttpFetcher().fetch(InputAuto(url=url, frequency=frequency), '/tmp/whatever')
-        assert str(excinfo.value) == 'downloaded file size was shorter than exepected for url {}'.format(url)
-
-    @mock.patch('urllib.request.urlretrieve')
+    @mock.patch('urllib.request.OpenerDirector.open')
     def test_fetch_url_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = URLError('details')
             HttpFetcher().fetch(InputAuto(url='http://whatever.com/config.json', frequency=frequency), '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: <urlopen error details>'
 
-    @mock.patch('urllib.request.urlretrieve')
-    def test_fetch_ok_data_format(self, mock_url_retrieve):
+    @mock.patch('urllib.request.urlopen')
+    @mock.patch("builtins.open", new_callable=mock.mock_open)
+    @mock.patch('shutil.copyfileobj')
+    def test_fetch_ok_data_format(self, mock_urlopen, mock_open, mock_copyfileobj):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = mock.Mock()
         url = 'http://whatever.com/config.json'
         dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url, frequency=frequency), '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json'), print(dest_full_file_name)
         assert expected_file_name == 'config.json'
 
-    @mock.patch('urllib.request.urlretrieve')
-    def test_fetch_ok_expected_file_name(self, mock_url_retrieve):
+    @mock.patch('urllib.request.urlopen')
+    @mock.patch("builtins.open", new_callable=mock.mock_open)
+    @mock.patch('shutil.copyfileobj')
+    def test_fetch_ok_expected_file_name(self,  mock_urlopen, mock_file, mock_copyfileobj):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = mock.Mock()
         url = 'http://whatever.com/resource'
         dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url,
                                                                                 frequency=frequency,

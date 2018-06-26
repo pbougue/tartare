@@ -90,14 +90,27 @@ class AbstractFetcher(metaclass=ABCMeta):
     @classmethod
     def fetch_to_target(cls, url: str, dest_full_file_name: str) -> None:
         try:
-            urllib.request.urlretrieve(url, dest_full_file_name)
-        except ContentTooShortError:
-            raise FetcherException('downloaded file size was shorter than exepected for url {}'.format(url))
+            # spoofing user-agent, see https://docs.python.org/3.4/library/urllib.request.html#urllib.request.Request
+            request = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+            })
+            opener = urllib.request.build_opener()
+            urllib.request.install_opener(opener)
+            with urllib.request.urlopen(request) as response, open(dest_full_file_name, 'wb') as out_file:
+                # from mypy: Argument 1 to "copyfileobj" has incompatible type "Union[HTTPResponse, BinaryIO]";
+                # expected "IO[bytes]". It should be fixed in mypy 0.620
+                shutil.copyfileobj(response, out_file)  # type: ignore
         except (HTTPError, URLError) as e:
             raise FetcherException('error during download of file: {}'.format(str(e)))
 
     @classmethod
     def guess_file_name_from_url(cls, url: str) -> str:
+        class NoRedirection(urllib.request.HTTPErrorProcessor):
+            def http_response(self, request, response):  # type: ignore
+                return response
+
+            https_response = http_response  # type: ignore
+
         if FetcherManager.http_matches_url(url) or FetcherManager.ftp_matches_url(url):
             parsed = urlparse(url)
             if parsed.path:
@@ -106,13 +119,19 @@ class AbstractFetcher(metaclass=ABCMeta):
                 if filename and file_extension and not parsed.query:
                     return last_part
             request = urllib.request.Request(method='HEAD', url=url)
-            response = urllib.request.build_opener().open(request)
-            if isinstance(response, HTTPResponse) and response.status is 200:
-                content_disposition = response.getheader('Content-Disposition')
-                if content_disposition and 'filename=' in content_disposition:
-                    match = re.search(r"attachment; filename=(.+)", content_disposition)
-                    if match and len(match.groups()) == 1:
-                        return match.groups()[0]
+            response = urllib.request.build_opener(NoRedirection).open(request)
+
+            if isinstance(response, HTTPResponse):
+                if response.status == 302:
+                    location = response.getheader('Location')
+                    if location:
+                        return cls.guess_file_name_from_url(location)
+                elif response.status == 200:
+                    content_disposition = response.getheader('Content-Disposition')
+                    if content_disposition and 'filename=' in content_disposition:
+                        match = re.search(r"attachment; filename=(.+)", content_disposition)
+                        if match and len(match.groups()) == 1:
+                            return match.groups()[0]
 
         raise GuessFileNameFromUrlException('unable to guess file name from url {}'.format(url))
 
