@@ -1,10 +1,10 @@
 # Tartare
 
 ## Summary
-[Overview](#overview)
-[Contributors](#contributors)
-[Coverages](#coverages)
-[Workflow](#workflow)
+[Overview](#overview)  
+[Contributors](#contributors)  
+[Coverages](#coverages)  
+[Workflow](#workflow)  
 [Miscellaneous](#miscellaneous)
 
 ## Overview
@@ -98,6 +98,7 @@ If the `authent.username` is modified, the `authent.password` should also be pro
 (4) There are 4 kinds of frequency
 #### Continuously
 The data source will fetched every X minutes
+
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | continuously
@@ -106,6 +107,7 @@ frequency.enabled | Optional | Enable/disable fetching data
 
 #### Daily
 The data source will fetched every day at X hours
+
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | daily
@@ -114,6 +116,7 @@ frequency.enabled | Optional | Enable/disable fetching data
 
 #### Weekly
 The data source will fetched every week the day X and hour Y
+
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | weekly
@@ -123,6 +126,7 @@ frequency.enabled | Optional | Enable/disable fetching data
 
 #### Monthly
 The data source will fetched every month the day X and hour Y
+
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | continuously
@@ -243,9 +247,10 @@ The export progress can be supervised through the `/jobs` resource or `/coverage
 ## Workflow
 ### Automatic update
 1. At 20h UTC every day from monday to thursday
-2. A contributor export is launched on all contributors.
+2. A contributor export is launched on all contributors. If any contributor fails, others contributor_export are executed, but the workflow is stopped.
 3. The contributors ids of whose data have changed are recorded
 4. Then for all coverages, if at least one of its contributors is in the previous list, a coverage export is executed
+
 
 
 ### Failures during workflow
