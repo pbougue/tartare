@@ -148,6 +148,20 @@ def date_from_string(value: str, name: str) -> date:
         raise ValueError("the {} argument value is not valid, you gave: {}".format(name, value))
 
 
+def datetime_from_string(value: str) -> datetime:
+    """
+        Convert string to datetime
+        :param value: string to convert
+        :param name: attribute name
+        :return: Date format '2014-04-31 15:37:44 UTC'
+    """
+    format = '%Y-%m-%d %H:%M:%S %Z'
+    try:
+        return datetime.strptime(value, format)
+    except:
+        raise ValueError("the datetime value is not valid, you gave '{}' for a format '{}'".format(value, format))
+
+
 def dic_to_memory_csv(list_of_dict: List[Dict[str, str]], keys: Optional[Iterable[str]] = None) -> Optional[StringIO]:
     if len(list_of_dict) == 0:
         return None

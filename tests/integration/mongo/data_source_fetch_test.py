@@ -28,12 +28,18 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import datetime
 import os
 import tempfile
 
+import pytest
+from freezegun import freeze_time
+
 from tartare import app
+from tartare.core.constants import INPUT_TYPE_MANUAL
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Job
+from tartare.core.models import DataSource
+from tartare.helper import datetime_from_string
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import _get_file_fixture_full_path, assert_text_files_equals
 
@@ -199,7 +205,8 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.fetch_data_source('cid', 'dsid', check_success=False)
         details = self.assert_failed_call(raw, 500)
         assert details == {
-            'error': "fetching {} failed: error during download of file: 550 Can't open /gtfs/some_archive_unknown.zip: No such file or directory".format(url),
+            'error': "fetching {} failed: error during download of file: 550 Can't open /gtfs/some_archive_unknown.zip: No such file or directory".format(
+                url),
             'message': 'Internal Server Error'}
 
     def test_fetch_authent_in_http_url_unauthorized(self, init_http_download_authent_server):
@@ -242,3 +249,209 @@ class TestDataSourceFetchAction(TartareFixture):
             'error': 'fetching {} failed: error during download of file: HTTP Error 404: Not Found'.format(url),
             'message': 'Internal Server Error'
         }
+
+
+class TestDataSourceShouldFetch(TartareFixture):
+    start_time = datetime_from_string('1986-01-15 10:00:00 UTC')
+
+    def __fetch(self, ):
+        self.fetch_data_source('cid', 'dsid')
+
+    def __init_data_source(self, ip, type='auto', frequency=None):
+        contributor = self.init_contributor('cid', 'dsid', self.format_url(ip, 'some_archive.zip'))
+        contributor['data_sources'][0]['input']['type'] = type
+        if frequency:
+            contributor['data_sources'][0]['input']['frequency'] = frequency
+        self.put('/contributors/cid', self.dict_to_json(contributor))
+
+    def __assert_should_fetch(self, should_fetch):
+        with app.app_context():
+            data_source = DataSource.get_one(data_source_id='dsid')
+            assert data_source.should_fetch() == should_fetch
+
+    def test_manual_should_not_fetch(self, init_http_download_server):
+        self.__init_data_source(init_http_download_server.ip_addr, type=INPUT_TYPE_MANUAL)
+        self.__assert_should_fetch(False)
+
+    def test_computed_should_not_fetch(self, init_http_download_server):
+        # computed data source is auto generated and will have id dsid from data source export_id attribute
+        self.init_contributor('cid', 'input_dsid',
+                              self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              export_id='dsid')
+
+    def test_never_fetched_should_fetch(self, init_http_download_server):
+        self.__init_data_source(init_http_download_server.ip_addr, frequency={
+            'type': 'continuously',
+            'minutes': 5
+        })
+        self.__assert_should_fetch(True)
+
+    @pytest.mark.parametrize("minutes", [
+        1, 3, 27, 123
+    ])
+    def test_continuous_fetch(self, init_http_download_server, minutes):
+        self.__init_data_source(init_http_download_server.ip_addr, frequency={
+            'type': 'continuously',
+            'minutes': minutes
+        })
+        with freeze_time(self.start_time) as frozen_datetime:
+            # never fetched, we should fetch
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            # after fetch no need to fetch
+            self.__assert_should_fetch(False)
+            # less than n minutes
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=10))
+            self.__assert_should_fetch(False)
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=minutes - 1))
+            # almost n minutes
+            self.__assert_should_fetch(False)
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=2))
+            # n +1 minutes
+            self.__assert_should_fetch(True)
+            # should fetch until fetch is done
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            # n minutes since last fetch
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=minutes))
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            # we skip schedule, it's been 2xn minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=2 * minutes))
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            # less than a minute
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=30))
+            self.__assert_should_fetch(False)
+
+    def test_daily_fetch(self, init_http_download_server):
+        self.__init_data_source(init_http_download_server.ip_addr, frequency={
+            'type': 'daily',
+            'hour_of_day': 13
+        })
+        with freeze_time(self.start_time) as frozen_datetime:
+            # never fetched, we wait till it's time
+            self.__assert_should_fetch(False)
+            # wait hour_of_day
+            frozen_datetime.move_to(datetime_from_string('1986-01-15 12:59:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-15 13:00:00 UTC'))
+            self.__assert_should_fetch(True)
+            # if no fetch, still should fetch
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            # after fetch should not fetch
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-15 13:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-16 11:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            # manual fetch
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-16 12:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # less than one day since manual fetch but it's time
+            frozen_datetime.move_to(datetime_from_string('1986-01-16 13:55:00 UTC'))
+            self.__assert_should_fetch(True)
+            # time passed (some crash), we wait until it's been one day
+            frozen_datetime.move_to(datetime_from_string('1986-01-16 17:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # more than one day since manual fetch
+            frozen_datetime.move_to(datetime_from_string('1986-01-17 12:05:00 UTC'))
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)
+
+    def test_weekly_fetch(self, init_http_download_server):
+        self.__init_data_source(init_http_download_server.ip_addr, frequency={
+            'type': 'weekly',
+            'day_of_week': 2,  # tuesday
+            'hour_of_day': 10
+        })
+        # start time is wednesday
+        with freeze_time(self.start_time) as frozen_datetime:
+            # never fetched, we wait till it's time
+            self.__assert_should_fetch(False)
+            # wait day_of_week
+            frozen_datetime.move_to(datetime_from_string('1986-01-18 11:59:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-20 16:00:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-21 09:35:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-21 10:00:00 UTC'))
+            self.__assert_should_fetch(True)
+            # if no fetch, still should fetch
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            # after fetch should not fetch
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-21 13:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-24 11:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            # manual fetch
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-27 12:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # less than one week since manual fetch but it's time
+            frozen_datetime.move_to(datetime_from_string('1986-01-28 10:55:00 UTC'))
+            self.__assert_should_fetch(True)
+            # time passed (some crash), we wait until it's been one day
+            frozen_datetime.move_to(datetime_from_string('1986-01-28 17:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # more than one week since manual fetch
+            frozen_datetime.move_to(datetime_from_string('1986-01-31 12:05:00 UTC'))
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)
+
+    def test_monthly_fetch(self, init_http_download_server):
+        self.__init_data_source(init_http_download_server.ip_addr, frequency={
+            'type': 'monthly',
+            'day_of_month': 12,  # tuesday
+            'hour_of_day': 16
+        })
+        # start time is wednesday
+        with freeze_time(self.start_time) as frozen_datetime:
+            # never fetched, we wait till it's time
+            self.__assert_should_fetch(False)
+            # wait day_of_month
+            frozen_datetime.move_to(datetime_from_string('1986-01-18 11:59:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-01-30 16:00:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-02-12 15:35:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-02-12 16:00:00 UTC'))
+            self.__assert_should_fetch(True)
+            # if no fetch, still should fetch
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            # after fetch should not fetch
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-02-20 13:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-02-28 11:15:00 UTC'))
+            self.__assert_should_fetch(False)
+            # manual fetch
+            self.__fetch()
+            self.__assert_should_fetch(False)
+            frozen_datetime.move_to(datetime_from_string('1986-03-11 12:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # less than one month since manual fetch but it's time
+            frozen_datetime.move_to(datetime_from_string('1986-03-12 16:55:00 UTC'))
+            self.__assert_should_fetch(True)
+            # time passed (some crash), we wait until it's been one month
+            frozen_datetime.move_to(datetime_from_string('1986-03-12 17:55:00 UTC'))
+            self.__assert_should_fetch(False)
+            # more than one month since manual fetch
+            frozen_datetime.move_to(datetime_from_string('1986-04-01 12:05:00 UTC'))
+            self.__assert_should_fetch(True)
+            self.__fetch()
+            self.__assert_should_fetch(False)

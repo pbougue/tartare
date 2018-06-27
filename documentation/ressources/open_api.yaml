@@ -1117,11 +1117,12 @@ components:
           example: weekly
         day_of_week:
           type: integer
-          description: The data source will be fetch every weeks the day X at Y hour
+          description: The data source will be fetch every weeks on day X (1 is Monday)
           example: 1
         hour_of_day:
           type: integer
           example: 15
+          description: The data source will be fetch every days at X hour
         enabled:
           type: boolean
           default: true
@@ -1131,14 +1132,15 @@ components:
       properties:
         type:
           type: string
-          description: The data source will be fetch every months the day X at Y hour
           example: monthly
         day_of_month:
           type: integer
           example: 10
+          description: The data source will be fetch every months the day X
         hour_of_day:
           type: integer
           example: 15
+          description: The data source will be fetch every month at X hour
         enabled:
           type: boolean
           default: true
