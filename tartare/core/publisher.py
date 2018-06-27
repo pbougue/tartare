@@ -165,8 +165,6 @@ class ODSPublisher(AbstractPublisher):
             data_source = coverage.get_data_source(input_data_source_id)
             data_format_formatted = data_source.data_format.upper()
             data_set = data_source.get_last_data_set()
-            if not data_set:
-                raise PublisherException('data source {} has no data set for ods publication'.format(data_source.id))
             if not data_set.validity_period:
                 raise PublisherException(
                     'data set of data source {} has no validity period for ods publication'.format(data_source.id))

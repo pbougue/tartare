@@ -50,10 +50,9 @@ def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportC
             data_source = DataSource.get_one(data_source_id=data_source_id)
             if data_source.is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                 data_set = data_source.get_last_data_set()
-                if data_set:
-                    context.global_gridfs_id = GridFsHandler().copy_file(data_set.gridfs_id)
-                    context.validity_period = data_set.validity_period
-                    return context
+                context.global_gridfs_id = GridFsHandler().copy_file(data_set.gridfs_id)
+                context.validity_period = data_set.validity_period
+                return context
         raise IntegrityException(
             ('coverage {} does not contains any Fusio export preprocess ' +
              'and fallback computation cannot find any {} data source').format(coverage.id, DATA_FORMAT_GTFS))

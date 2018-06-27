@@ -178,16 +178,12 @@ class TestContributorExport(TartareFixture):
         self.contributor_export(contrib_id)
         jobs = self.json_to_dict(self.get('/jobs'))['jobs']
         job_export = self.filter_job_of_action_type(jobs, ACTION_TYPE_CONTRIBUTOR_EXPORT)
-        job_fetch = self.filter_job_of_action_type(jobs, ACTION_TYPE_DATA_SOURCE_FETCH)
-        assert job_fetch['parent_id'] == job_export['id']
-        assert job_fetch['id'] != job_export['id']
-        assert job_fetch['contributor_id'] == contrib_id
-        assert job_fetch['data_source_id'] == ds_id
-        assert job_fetch['updated_at'] is not None
-        assert job_fetch['started_at'] is not None
-        assert job_fetch['step'] == 'save'
-        assert job_fetch['state'] == 'done'
-        assert job_fetch['coverage_id'] is None
+        assert job_export['contributor_id'] == contrib_id
+        assert job_export['updated_at'] is not None
+        assert job_export['started_at'] is not None
+        assert job_export['step'] == 'save_contributor_export'
+        assert job_export['state'] == 'done'
+        assert job_export['coverage_id'] is None
 
     def test_contributor_export_no_data_set(self):
         self.init_contributor('cid', 'dsid', manual=True)
@@ -195,4 +191,4 @@ class TestContributorExport(TartareFixture):
         job = self.get_job_from_export_response(resp)
         assert job['step'] == 'building preprocesses context'
         assert job['state'] == JOB_STATUS_FAILED
-        assert job['error_message'] == 'data source dsid has no data set'
+        assert job['error_message'] == "data source 'dsid' has no data sets"
