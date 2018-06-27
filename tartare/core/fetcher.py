@@ -35,7 +35,7 @@ import urllib.request
 from abc import ABCMeta, abstractmethod
 from http.client import HTTPResponse
 from typing import Tuple, Optional
-from urllib.error import ContentTooShortError, URLError
+from urllib.error import URLError
 from urllib.parse import urlparse, urlunparse, ParseResult
 
 from requests import HTTPError
@@ -106,7 +106,7 @@ class AbstractFetcher(metaclass=ABCMeta):
     @classmethod
     def guess_file_name_from_url(cls, url: str) -> str:
         class NoRedirection(urllib.request.HTTPErrorProcessor):
-            def http_response(self, request, response):  # type: ignore
+            def http_response(self, request: urllib.request.Request, response: HTTPResponse) -> HTTPResponse:  # type: ignore
                 return response
 
             https_response = http_response  # type: ignore

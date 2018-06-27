@@ -38,8 +38,8 @@ from tartare.core.fetcher import HttpFetcher, FetcherManager
 from tartare.core.models import InputAuto, FrequencyDaily
 from tartare.exceptions import FetcherException, GuessFileNameFromUrlException
 
-
 frequency = FrequencyDaily(20)
+
 
 class TestFetcher:
     @pytest.mark.parametrize(
@@ -135,7 +135,7 @@ class TestFetcher:
     @mock.patch('urllib.request.urlopen')
     @mock.patch("builtins.open", new_callable=mock.mock_open)
     @mock.patch('shutil.copyfileobj')
-    def test_fetch_ok_expected_file_name(self,  mock_urlopen, mock_file, mock_copyfileobj):
+    def test_fetch_ok_expected_file_name(self, mock_urlopen, mock_file, mock_copyfileobj):
         mock_urlopen.return_value.__enter__.return_value.read.return_value = mock.Mock()
         url = 'http://whatever.com/resource'
         dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url,
@@ -165,3 +165,19 @@ class TestFetcher:
         ])
     def test_fetch_recompose_url(self, url, expected):
         assert expected == HttpFetcher.recompose_url_without_authent_from_parsed_result(urlparse(url))
+
+    @mock.patch('urllib.request.OpenerDirector.open')
+    def test_guess_file_name_from_url_redirect(self, mock_response):
+        response = mock.Mock(spec=HTTPResponse)
+        # called for getheader('Location') no check for parameter
+        attrs = {'getheader.return_value': 'http://redirected_url'}
+        response.configure_mock(**attrs)
+        response.status = 302
+        redirect_response = mock.Mock(spec=HTTPResponse)
+        # called for getheader('Content-Disposition') no check for parameter
+        redirect_attrs = {'getheader.return_value': 'attachment; filename=ACCM.GTFS.zip'}
+        redirect_response.configure_mock(**redirect_attrs)
+        redirect_response.status = 200
+        mock_response.side_effect = [response, redirect_response]
+        file_name = HttpFetcher().guess_file_name_from_url('http://whatever')
+        assert 'ACCM.GTFS.zip' == file_name, print(file_name)

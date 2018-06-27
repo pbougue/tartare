@@ -30,7 +30,6 @@
 # www.navitia.io
 import json
 import os
-
 import tempfile
 from zipfile import ZipFile
 
@@ -116,7 +115,7 @@ def assert_text_files_equals(result_file_name, expected_file_name):
 
 def assert_zip_file_equals_ref_zip_file(zip_file, tmp_dir, ref_zip_file, ref_tmp_dir):
     with ZipFile(zip_file, 'r') as zip_file_handle, ZipFile(_get_file_fixture_full_path(ref_zip_file),
-                                                          'r') as ref_zip_file_handle:
+                                                            'r') as ref_zip_file_handle:
         except_files_list = ref_zip_file_handle.namelist()
         response_files_list = zip_file_handle.namelist()
 
