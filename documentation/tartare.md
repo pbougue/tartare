@@ -214,6 +214,7 @@ An `ods` publication is a ZIP file containing :
 - the last `Data Set` of each `Data Source` specified in `input_data_source_ids`.
 
 Content of the CSV file :
+
 Property | Description
 --- | ---
 ID | "<coverage_id>_GTFS" or "<coverage_id>_NTFS" depending on the `Data Source` type.
