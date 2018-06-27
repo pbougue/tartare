@@ -479,7 +479,7 @@ class TestContributors(TartareFixture):
         }
 
     @pytest.mark.parametrize("day_of_week,hour_of_day", [
-        (-5, -10), (-1, -1), (7, 24), (10, 36)
+        (-5, -10), (0, -1), (8, 24), (10, 36)
     ])
     def test_post_contrib_one_data_source_with_weekly_frequency_and_invalid_params(self, day_of_week, hour_of_day):
         post_data = {
@@ -505,7 +505,7 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert r == {'error': {
             'data_sources': {'0': {'input': {'frequency': {
-                'day_of_week': ['day_of_week should be between 0 and 6'],
+                'day_of_week': ['day_of_week should be between 1 and 7'],
                 'hour_of_day': ['hour_of_day should be between 0 and 23']
             }}}}}, 'message': 'Invalid arguments'
         }

@@ -289,7 +289,7 @@ class License(object):
 
 
 class DataSetStatus(object):
-    def __init__(self, status: str, updated_at: datetime = datetime.now()) -> None:
+    def __init__(self, status: str, updated_at: datetime = datetime.now(pytz.utc)) -> None:
         self.status = status
         self.updated_at = updated_at
 
@@ -333,6 +333,9 @@ class FrequencyContinuously(Enabled):
         super().__init__(enabled)
         self.minutes = minutes
 
+    def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        return not last_fetched_at or (now - last_fetched_at) >= timedelta(minutes=self.minutes)
+
     def __repr__(self) -> str:
         return "type: {}, data: {}".format(type(self), str(vars(self)))
 
@@ -342,6 +345,20 @@ class FrequencyDaily(Enabled):
         super().__init__(enabled)
         self.hour_of_day = hour_of_day
 
+    def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        if not last_fetched_at:
+            return now.hour == self.hour_of_day
+        else:
+            delta = now - last_fetched_at
+            # last fetch was on schedule
+            if last_fetched_at.hour == self.hour_of_day:
+                # fetch if it's been at least one day or almost one day and it's hour of day
+                return delta.days >= 1 or (
+                    now.day != last_fetched_at.day and now.hour == self.hour_of_day
+                )
+            else:
+                return delta.days >= 1 or now.hour == self.hour_of_day
+
 
 class FrequencyWeekly(Enabled):
     def __init__(self, day_of_week: int, hour_of_day: int, enabled: bool = True) -> None:
@@ -349,12 +366,40 @@ class FrequencyWeekly(Enabled):
         self.day_of_week = day_of_week
         self.hour_of_day = hour_of_day
 
+    def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        if not last_fetched_at:
+            return now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+        else:
+            delta = now - last_fetched_at
+            # last fetch was on schedule
+            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == self.day_of_week:
+                # fetch if it's been at least one week or almost one week and it's day of week and hour of day
+                return delta.days >= 7 or (
+                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+                )
+            else:
+                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week)
+
 
 class FrequencyMonthly(Enabled):
     def __init__(self, day_of_month: int, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
         self.day_of_month = day_of_month
         self.hour_of_day = hour_of_day
+
+    def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        if not last_fetched_at:
+            return now.day == self.day_of_month and now.hour == self.hour_of_day
+        else:
+            delta = now - last_fetched_at
+            # last fetch was on schedule
+            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.day == self.day_of_month:
+                # fetch if it's been at least one month or almost one month and it's day of month and hour of day
+                return delta.days >= 31 or (
+                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.day == self.day_of_month
+                )
+            else:
+                return delta.days >= 31 or (now.hour == self.hour_of_day and now.day == self.day_of_month)
 
 
 FrequenceType = Union[FrequencyContinuously, FrequencyDaily, FrequencyWeekly, FrequencyMonthly]
@@ -522,7 +567,7 @@ class DataSource(object):
         return last_data_set
 
     def starts_fetch(self, model: Union['Contributor', 'Coverage']) -> None:
-        self.fetch_started_at = datetime.now()
+        self.fetch_started_at = datetime.now(pytz.utc)
         self.status = DATA_SOURCE_STATUS_FETCHING
         model.update()
 
@@ -533,6 +578,11 @@ class DataSource(object):
     def fetch_unchanged(self, model: Union['Contributor', 'Coverage']) -> None:
         self.status = DATA_SOURCE_STATUS_UNCHANGED
         model.update()
+
+    def should_fetch(self) -> bool:
+        if not self.is_auto():
+            return False
+        return self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
 
 
 class GenericPreProcess(SequenceContainer):
@@ -1028,8 +1078,8 @@ class FrequencyWeeklySchema(EnabledSchema, ValidateHour):
 
     @validates('day_of_week')
     def validates_day_of_week(self, day_of_week: int) -> None:
-        if day_of_week < 0 or day_of_week > 6:
-            raise ValidationError("day_of_week should be between 0 and 6")
+        if day_of_week < 1 or day_of_week > 7:
+            raise ValidationError("day_of_week should be between 1 and 7")
 
 
 class FrequencyMonthlySchema(EnabledSchema, ValidateHour):
@@ -1120,8 +1170,8 @@ class MongoDataSourceSchema(Schema):
     service_id = fields.String(required=False, allow_none=True)
     export_data_source_id = fields.String(required=False, allow_none=True)
     data_sets = fields.Nested(MongoDataSetSchema, many=True, required=False, allow_none=True)
-    fetch_started_at = fields.Time(required=False, allow_none=True)
-    updated_at = fields.Time(required=False, allow_none=True)
+    fetch_started_at = fields.DateTime(required=False, allow_none=True)
+    updated_at = fields.DateTime(required=False, allow_none=True)
     status = fields.String(required=False, allow_none=True)
     validity_period = fields.Nested(MongoValidityPeriodSchema, required=False, allow_none=True)
 
@@ -1192,7 +1242,7 @@ class Job(object):
         self.step = step
         self.state = state
         self.error_message = error_message
-        self.started_at = started_at if started_at else datetime.utcnow()
+        self.started_at = started_at if started_at else  datetime.now(pytz.utc)
         self.updated_at = updated_at if updated_at else self.started_at
 
     def save(self) -> None:
@@ -1249,7 +1299,7 @@ class Job(object):
         if error_message is not None:
             self.error_message = error_message
 
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(pytz.utc)
         raw = mongo.db[Job.mongo_collection].update_one({'_id': self.id}, {'$set': MongoJobSchema().dump(self).data})
         if raw.matched_count == 0:
             return None
@@ -1300,7 +1350,7 @@ class ContributorExport(Historisable):
                  created_at: datetime = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
-        self.created_at = created_at if created_at else datetime.utcnow()
+        self.created_at = created_at if created_at else  datetime.now(pytz.utc)
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
@@ -1368,7 +1418,7 @@ class CoverageExport(Historisable):
         self.coverage_id = coverage_id
         self.gridfs_id = gridfs_id
         self.validity_period = validity_period
-        self.created_at = created_at if created_at else datetime.utcnow()
+        self.created_at = created_at if created_at else  datetime.now(pytz.utc)
 
     def save(self) -> None:
         raw = MongoCoverageExportSchema().dump(self).data

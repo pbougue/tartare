@@ -120,7 +120,7 @@ The data source will fetched every week the day X and hour Y
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | weekly
-frequency.day_of_week | Required | day of the week between 0 and 6 (0: Sunday)
+frequency.day_of_week | Required | day of the week between 1 and 7 (1: Monday)
 frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
@@ -130,7 +130,7 @@ The data source will fetched every month the day X and hour Y
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | continuously
-frequency.day_of_week | Required | day of the month between 1 and 28
+frequency.day_of_month | Required | day of the month between 1 and 28
 frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
