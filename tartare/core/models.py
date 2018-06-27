@@ -580,9 +580,7 @@ class DataSource(object):
         model.update()
 
     def should_fetch(self) -> bool:
-        if not self.is_auto():
-            return False
-        return self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
+        return self.is_auto() and self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
 
 
 class GenericPreProcess(SequenceContainer):

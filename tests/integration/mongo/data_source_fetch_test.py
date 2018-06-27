@@ -274,12 +274,12 @@ class TestDataSourceShouldFetch(TartareFixture):
         self.__assert_should_fetch(False)
 
     def test_computed_should_not_fetch(self, init_http_download_server):
+        # computed data source is auto generated and will have id dsid from data source export_id attribute
         self.init_contributor('cid', 'input_dsid',
                               self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
                               export_id='dsid')
-        self.__assert_should_fetch(False)
 
-    def test_never_fetch_should_fetch(self, init_http_download_server):
+    def test_never_fetched_should_fetch(self, init_http_download_server):
         self.__init_data_source(init_http_download_server.ip_addr, frequency={
             'type': 'continuously',
             'minutes': 5
