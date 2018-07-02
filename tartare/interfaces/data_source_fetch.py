@@ -41,7 +41,7 @@ from tartare.http_exceptions import InvalidArguments, InternalServerError, Objec
 class DataSourceFetch(flask_restful.Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         try:
-            data_source = models.DataSource.get_one(contributor_id=contributor_id, data_source_id=data_source_id)
+            data_source = models.DataSource.get_one(data_source_id)
         except EntityNotFound as e:
             raise ObjectNotFound(str(e))
 

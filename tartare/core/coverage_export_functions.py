@@ -47,7 +47,7 @@ def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportC
     # merge necessary for multi-contributors is not handled here and should be done by Fusio
     if not context.global_gridfs_id:
         for data_source_id in coverage.input_data_source_ids:
-            data_source = DataSource.get_one(data_source_id=data_source_id)
+            data_source = DataSource.get_one(data_source_id)
             if data_source.is_of_one_of_data_format(ValidityPeriodFinder.get_data_format_with_validity()):
                 data_set = data_source.get_last_data_set()
                 context.global_gridfs_id = GridFsHandler().copy_file(data_set.gridfs_id)

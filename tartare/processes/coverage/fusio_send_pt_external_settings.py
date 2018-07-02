@@ -40,7 +40,7 @@ from tartare.processes.utils import preprocess_registry
 class FusioSendPtExternalSettings(AbstractFusioProcess):
     def do(self) -> Context:
         for data_source_id in self.params.get('input_data_source_ids', []):
-            data_source = DataSource.get_one(data_source_id=data_source_id)
+            data_source = DataSource.get_one(data_source_id)
             data_set = data_source.get_last_data_set()
             if data_source.is_of_data_format(DATA_FORMAT_PT_EXTERNAL_SETTINGS):
                 resp = self.fusio.call(requests.post, api='api',

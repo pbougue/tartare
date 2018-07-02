@@ -159,9 +159,8 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
                                                                                           data_format_required)
             if not data_source_config_context:
                 raise ParameterException(
-                    'link {data_source} is not a data_source id present in contributor {contributor}'.format(
-                        data_source=data_source_id, contributor=contributor_id))
-            data_source = DataSource.get_one(data_source_id, contributor_id)
+                    'link {} is not a data_source id present'.format(data_source_id))
+            data_source = DataSource.get_one(data_source_id)
             data_format_exists.add(data_source.data_format)
         diff = set(data_format_required) - data_format_exists
 

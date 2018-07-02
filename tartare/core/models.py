@@ -487,18 +487,15 @@ class DataSource(object):
             return data_sources
 
     @classmethod
-    def get_one(cls, data_source_id: str, contributor_id: str = None) -> 'DataSource':
-        if contributor_id:
-            return Contributor.get(contributor_id).get_data_source(data_source_id)
-        else:
-            return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
+    def get_one(cls, data_source_id: str) -> 'DataSource':
+        return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
 
     @classmethod
     def get_contributor_of_data_source(cls, data_source_id: str) -> 'Contributor':
         raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
 
         if not raw:
-            raise EntityNotFound("contributor of data source '{}' not found")
+            raise EntityNotFound("contributor of data source '{}' not found".format(data_source_id))
 
         return MongoContributorSchema(strict=True).load(raw).data
 

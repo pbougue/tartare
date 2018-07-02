@@ -270,7 +270,7 @@ class TestComputeDirectionsProcess(TartareFixture):
             ({}, "links missing in preprocess"),
             ({"links": []}, "empty links in preprocess"),
             ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
-             "link bob is not a data_source id present in contributor something")
+             "link bob is not a data_source id present")
         ])
     def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server):
         job = self.__setup_contributor_export_environment(init_http_download_server, params)
@@ -285,8 +285,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                                                           add_data_source_config=False)
         assert job['state'] == 'failed', print(job)
         assert job['step'] == 'preprocess', print(job)
-        assert job['error_message'] == \
-               'link ds-config is not a data_source id present in contributor id_test', print(job)
+        assert job['error_message'] == 'link ds-config is not a data_source id present', print(job)
 
     #
     # Test that:
@@ -388,7 +387,7 @@ class TestComputeExternalSettings(TartareFixture):
             (
                     {'target_data_source_id': 'ds-target',
                      'links': [{'contributor_id': 'id_test', 'data_source_id': 'whatever'}]},
-                    'link whatever is not a data_source id present in contributor id_test'),
+                    'link whatever is not a data_source id present'),
         ])
     def test_prepare_external_settings_missing_config(self, init_http_download_server, params,
                                                       expected_message):
@@ -399,11 +398,11 @@ class TestComputeExternalSettings(TartareFixture):
 
     @pytest.mark.parametrize(
         "links, expected_message", [
-            ({}, 'link tr_perimeter_id is not a data_source id present in contributor id_test'),
+            ({}, 'link tr_perimeter_id is not a data_source id present'),
             ({'tr_perimeter': 'tr_perimeter_id'},
-             'link lines_referential_id is not a data_source id present in contributor id_test'),
+             'link lines_referential_id is not a data_source id present'),
             ({'lines_referential': 'lines_referential_id'},
-             'link tr_perimeter_id is not a data_source id present in contributor id_test'),
+             'link tr_perimeter_id is not a data_source id present'),
         ])
     def test_prepare_external_settings_invalid_links(self, init_http_download_server, links,
                                                      expected_message):
@@ -621,15 +620,10 @@ class TestRuspellProcess(TartareFixture):
             resp = self.contributor_export('id_test', check_done=False)
             return self.get_job_from_export_response(resp)
 
-    @pytest.mark.parametrize(
-        "contributor_id, data_source_id", [
-            ('unknown', 'ds_config_ruspell'),  # unknown contributor
-            ('id_test', 'unknown'),  # unknown data source
-        ])
-    def test_ruspell_error_message_misconfigured_links(self, init_http_download_server, contributor_id, data_source_id):
+    def test_ruspell_error_message_misconfigured_links(self, init_http_download_server):
         params = {
             'links': [
-                {'contributor_id': contributor_id, 'data_source_id': data_source_id},
+                {'contributor_id': 'whatever', 'data_source_id': 'unknown'},
                 {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
             ]
         }
@@ -638,8 +632,7 @@ class TestRuspellProcess(TartareFixture):
                                                           params)
         assert job['state'] == 'failed'
         assert job[
-                   'error_message'] == '[process "ruspell_id"] data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
-            data_source_id, contributor_id)
+                   'error_message'] == "contributor of data source 'unknown' not found"
 
     def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
         params = {

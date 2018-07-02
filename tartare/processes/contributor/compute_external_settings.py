@@ -207,7 +207,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
         self.__check_target_data_source()
         self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
         for data_source_id_to_process in self.data_source_ids:
-            input_data_set = DataSource.get_one(data_source_id=data_source_id_to_process).get_last_data_set()
+            input_data_set = DataSource.get_one(data_source_id_to_process).get_last_data_set()
             target_data_set_gridfs_id = self.__process_file_from_gridfs_id(input_data_set.gridfs_id)
             self.save_result_into_target_data_source(Contributor.get(self.contributor_id), target_data_set_gridfs_id)
 

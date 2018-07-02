@@ -71,20 +71,14 @@ class Ruspell(AbstractContributorProcess):
         for contrib_ds in links:
             contributor_id = contrib_ds.get('contributor_id')
             data_source_id = contrib_ds.get('data_source_id')
-            try:
-                data_source = DataSource.get_one(data_source_id, contributor_id)
-                if data_source.data_format != data_format:
-                    continue
-                gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
-                gridout = self.gfs.get_file_from_gridfs(gridfs_id)
-                file_path = os.path.join(path, gridout.filename)
-                with open(file_path, 'wb+') as f:
-                    f.write(gridout.read())
-            except (ValueError, EntityNotFound):
-                msg = 'data_source_id "{}" and/or contributor "{}" unknown or not correctly linked'.format(
-                    data_source_id, contributor_id
-                )
-                raise ParameterException(self.format_error_message(msg))
+            data_source = DataSource.get_one(data_source_id)
+            if data_source.data_format != data_format:
+                continue
+            gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
+            gridout = self.gfs.get_file_from_gridfs(gridfs_id)
+            file_path = os.path.join(path, gridout.filename)
+            with open(file_path, 'wb+') as f:
+                f.write(gridout.read())
         return file_path
 
     def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
