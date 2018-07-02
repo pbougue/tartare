@@ -201,7 +201,7 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
     return context
 
 
-def launch(processes: List[PreProcess], context: Context) -> bool:
+def launch(processes: List[PreProcess], context: Context) -> List[str]:
     enabled_processes = [process for process in processes if process.enabled]
     sorted_preprocesses = SequenceContainer.sort_by_sequence(enabled_processes)
     actions = []
@@ -273,7 +273,7 @@ def automatic_update_launch_coverage_exports(self: Task,
     logger.debug("{}".format(contributor_export_results))
     contributor_export_results = contributor_export_results if isinstance(contributor_export_results, list) \
         else [contributor_export_results]
-    updated_data_source_ids = []
+    updated_data_source_ids = []  # type: List[str]
     for contributor_export_result in contributor_export_results:
         if isinstance(contributor_export_result, AsyncResult):
             logger.debug('subtask launched {} with info {} is ready ? {}'.format(contributor_export_result,

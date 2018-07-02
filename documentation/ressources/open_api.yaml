@@ -1117,8 +1117,8 @@ components:
           example: weekly
         day_of_week:
           type: integer
-          description: The data source will be fetch every weeks on day X (1 is Monday)
-          example: 1
+          description: The data source will be fetch every weeks on day X
+          example: Monday
         hour_of_day:
           type: integer
           example: 15

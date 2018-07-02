@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import calendar
 import copy
 import logging
 import uuid
@@ -361,24 +362,25 @@ class FrequencyDaily(Enabled):
 
 
 class FrequencyWeekly(Enabled):
-    def __init__(self, day_of_week: int, hour_of_day: int, enabled: bool = True) -> None:
+    def __init__(self, day_of_week: str, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
         self.day_of_week = day_of_week
         self.hour_of_day = hour_of_day
 
     def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        frequency_day_of_week = list(calendar.day_name).index(self.day_of_week) + 1
         if not last_fetched_at:
-            return now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+            return now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
         else:
             delta = now - last_fetched_at
             # last fetch was on schedule
-            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == self.day_of_week:
+            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == frequency_day_of_week:
                 # fetch if it's been at least one week or almost one week and it's day of week and hour of day
                 return delta.days >= 7 or (
-                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
                 )
             else:
-                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week)
+                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week)
 
 
 class FrequencyMonthly(Enabled):
@@ -1032,16 +1034,16 @@ class FrequencyDailySchema(EnabledSchema, ValidateHour):
 
 
 class FrequencyWeeklySchema(EnabledSchema, ValidateHour):
-    day_of_week = fields.Int(required=True)
+    day_of_week = fields.String(required=True)
 
     @post_load
     def make(self, data: dict) -> FrequencyWeekly:
         return FrequencyWeekly(**data)
 
     @validates('day_of_week')
-    def validates_day_of_week(self, day_of_week: int) -> None:
-        if day_of_week < 1 or day_of_week > 7:
-            raise ValidationError("day_of_week should be between 1 and 7")
+    def validates_day_of_week(self, day_of_week: str) -> None:
+        if day_of_week not in calendar.day_name:
+            raise ValidationError("day_of_week should be one of {}".format(', '.join(calendar.day_name)))
 
 
 class FrequencyMonthlySchema(EnabledSchema, ValidateHour):

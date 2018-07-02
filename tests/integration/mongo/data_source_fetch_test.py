@@ -369,7 +369,7 @@ class TestDataSourceShouldFetch(TartareFixture):
     def test_weekly_fetch(self, init_http_download_server):
         self.__init_data_source(init_http_download_server.ip_addr, frequency={
             'type': 'weekly',
-            'day_of_week': 2,  # tuesday
+            'day_of_week': 'Tuesday',
             'hour_of_day': 10
         })
         # start time is wednesday

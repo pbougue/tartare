@@ -372,7 +372,7 @@ class TestContributors(TartareFixture):
                         "url": "http://stif.com/od.zip",
                         "frequency": {
                             "type": "weekly",
-                            "day_of_week": 5,
+                            "day_of_week": 'Friday',
                             "hour_of_day": 6,
                             "enabled": True
                         }
@@ -413,7 +413,7 @@ class TestContributors(TartareFixture):
 
         frequency = r["contributors"][0]["data_sources"][2]['input']['frequency']
         assert frequency['type'] == 'weekly'
-        assert frequency['day_of_week'] == 5
+        assert frequency['day_of_week'] == 'Friday'
         assert frequency['hour_of_day'] == 6
         assert frequency['enabled'] is True
 
@@ -481,7 +481,7 @@ class TestContributors(TartareFixture):
         }
 
     @pytest.mark.parametrize("day_of_week,hour_of_day", [
-        (-5, -10), (0, -1), (8, 24), (10, 36)
+        ('mondaay', -10), ('lundi', -1), ('unknown', 24), ('wednesday', 36)
     ])
     def test_post_contrib_one_data_source_with_weekly_frequency_and_invalid_params(self, day_of_week, hour_of_day):
         post_data = {
@@ -507,7 +507,8 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert r == {'error': {
             'data_sources': {'0': {'input': {'frequency': {
-                'day_of_week': ['day_of_week should be between 1 and 7'],
+                'day_of_week': [
+                    'day_of_week should be one of Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday'],
                 'hour_of_day': ['hour_of_day should be between 0 and 23']
             }}}}}, 'message': 'Invalid arguments'
         }
