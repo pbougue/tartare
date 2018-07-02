@@ -478,15 +478,6 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str, data_source_id: str = None) -> List['DataSource']:
-        contributor = Contributor.get(contributor_id)
-        data_sources = contributor.data_sources
-        if data_source_id:
-            return [data_source for data_source in data_sources if data_source_id == data_source.id]
-        else:
-            return data_sources
-
-    @classmethod
     def get_one(cls, data_source_id: str) -> 'DataSource':
         return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
 
