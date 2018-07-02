@@ -8,8 +8,8 @@
                 "type" : "auto",
                 "url" : "http://{HTTP_SERVER_IP}/compute_directions/functional.zip",
                 "frequency": {
-                  "type": "daily",
-                  "hour_of_day": 20
+                  "type": "continuously",
+                  "minutes": 5
                 }
             },
             "id" : "data_source_to_process_id",

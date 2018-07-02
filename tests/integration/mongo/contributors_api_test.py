@@ -1041,7 +1041,7 @@ class TestContributors(TartareFixture):
             contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             contributor = self.init_contributor(contributor_id, data_source_id=contributor_id + '-ds',
                                                 data_type=data_type,
-                                                data_format=DATA_FORMAT_BY_DATA_TYPE[data_type][0])
+                                                data_format=DATA_FORMAT_BY_DATA_TYPE[data_type][0], type='manual')
             for other_data_format in set(DATA_FORMAT_VALUES) - set(DATA_FORMAT_BY_DATA_TYPE[data_type]):
                 contributor['data_sources'][0]['data_format'] = other_data_format
                 raw = self.put('/contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
@@ -1056,7 +1056,7 @@ class TestContributors(TartareFixture):
         for data_type in DATA_TYPE_VALUES:
             contributor_id = 'id-{}-{}'.format(data_type, DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             contributor = self.init_contributor(contributor_id, data_source_id=contributor_id + '-ds',
-                                                data_type=data_type,
+                                                data_type=data_type, type='manual',
                                                 data_format=DATA_FORMAT_BY_DATA_TYPE[data_type][0])
             for other_data_format in DATA_FORMAT_BY_DATA_TYPE[data_type]:
                 contributor['data_sources'][0]['data_format'] = other_data_format
@@ -1067,7 +1067,7 @@ class TestContributors(TartareFixture):
         contributor_id = 'id-{}-{}'.format(DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_OSM_FILE)
         contributor = self.init_contributor(contributor_id, data_source_id=contributor_id + '-ds',
                                             data_type=DATA_TYPE_GEOGRAPHIC,
-                                            data_format=DATA_FORMAT_OSM_FILE)
+                                            data_format=DATA_FORMAT_OSM_FILE, type='manual')
         contributor['data_type'] = DATA_TYPE_PUBLIC_TRANSPORT
         raw = self.put('/contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
         resp = self.assert_failed_call(raw)

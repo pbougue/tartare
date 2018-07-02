@@ -186,7 +186,7 @@ class TestContributorExport(TartareFixture):
         assert job_export['coverage_id'] is None
 
     def test_contributor_export_no_data_set(self):
-        self.init_contributor('cid', 'dsid', manual=True)
+        self.init_contributor('cid', 'dsid', type='manual')
         resp = self.contributor_export('cid', check_done=False)
         job = self.get_job_from_export_response(resp)
         assert job['step'] == 'building preprocesses context'

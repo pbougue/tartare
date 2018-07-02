@@ -28,6 +28,9 @@
 # www.navitia.io
 import json
 
+from freezegun import freeze_time
+
+from tartare.helper import datetime_from_string
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -49,29 +52,10 @@ class TestCoverageStatus(TartareFixture):
         return self.json_to_dict(raw)['coverages']
 
     def __create_contributor(self, ip, id="auto_update_contrib", file='some_archive.zip'):
-        contributor = {
-            "id": id,
-            "name": id,
-            "data_prefix": id + "_prefix",
-            "data_sources": [
-                {
-                    "id": "ds_" + id,
-                    "name": "ds_" + id,
-                    "input": {
-                        "type": "auto",
-                        "url": self.format_url(ip, file),
-                        "frequency": {
-                            "type": "daily",
-                            "hour_of_day": 20
-                        }
-                    }
-                }
-            ]
-        }
-        raw = self.post('/contributors', json.dumps(contributor))
-        return self.assert_sucessful_create(raw)['contributors'][0]
+        return self.init_contributor(id, "ds_" + id, self.format_url(ip, file), export_id=id + '_export')
 
-    def __create_coverage(self, input_data_source_ids=[], coverage_id='auto_update_coverage', publication_platform=None):
+    def __create_coverage(self, input_data_source_ids=[], coverage_id='auto_update_coverage',
+                          publication_platform=None):
         coverage = {
             'id': coverage_id,
             'name': coverage_id,
@@ -143,7 +127,8 @@ class TestCoverageStatus(TartareFixture):
     def test_status_after_success_automatic_update(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2')
-        self.__create_coverage(['ds_contributor_automatic_update_1', 'ds_contributor_automatic_update_2'], 'coverage_export')
+        self.__create_coverage(['contributor_automatic_update_1_export', 'contributor_automatic_update_2_export'],
+                               'coverage_export')
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
@@ -175,7 +160,8 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['state'] == 'failed'
         assert last_active_job['step'] == 'fetching data'
 
-    def test_status_after_failed_automatic_update_on_publication(self, init_http_download_server, init_ftp_upload_server):
+    def test_status_after_failed_automatic_update_on_publication(self, init_http_download_server,
+                                                                 init_ftp_upload_server):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update')
         publication_platform = {
             "sequence": 0,
@@ -189,7 +175,7 @@ class TestCoverageStatus(TartareFixture):
                 }
             }
         }
-        self.__create_coverage(['ds_contributor_automatic_update'], 'coverage_export', publication_platform)
+        self.__create_coverage(['contributor_automatic_update_export'], 'coverage_export', publication_platform)
         coverages = self.__run_automatic_update()
 
         assert len(coverages) == 1
@@ -203,64 +189,55 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['step'].startswith('publish_data production ods on ')
 
     def test_status_successive_automatic_update(self, init_http_download_server):
-        # Automatic update that fails in a contributor export
-        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
-        contributor2 = self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_2', 'unknown_file')
-        self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3')
-        self.__create_coverage(['ds_contributor_automatic_update_2',
-                                'ds_contributor_automatic_update_2',
-                                'ds_contributor_automatic_update_3'], 'coverage_export')
-        coverages = self.__run_automatic_update()
+        with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
+            # Automatic update that fails in a contributor export
+            self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_1')
+            contributor2 = self.__create_contributor(init_http_download_server.ip_addr,
+                                                     'contributor_automatic_update_2',
+                                                     'unknown_file')
+            self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update_3')
+            self.__create_coverage(['contributor_automatic_update_1_export',
+                                    'contributor_automatic_update_2_export',
+                                    'contributor_automatic_update_3_export'], 'coverage_export')
+            jobs = self.__run_automatic_update()
 
-        assert len(coverages) == 1
-        assert 'last_active_job' in coverages[0]
-        last_active_job = coverages[0]['last_active_job']
-        assert last_active_job['coverage_id'] is None
-        assert last_active_job['contributor_id'] == 'contributor_automatic_update_2'
-        assert last_active_job['action_type'] == 'automatic_update_contributor_export'
-        assert last_active_job['error_message'] != ''
-        assert last_active_job['state'] == 'failed'
-        assert last_active_job['step'] == 'fetching data'
+            assert len(jobs) == 1
+            assert 'last_active_job' in jobs[0]
+            last_active_job = jobs[0]['last_active_job']
+            assert last_active_job['coverage_id'] is None
+            assert last_active_job['contributor_id'] == 'contributor_automatic_update_2'
+            assert last_active_job['action_type'] == 'automatic_update_contributor_export'
+            assert last_active_job['error_message'] != ''
+            assert last_active_job['state'] == 'failed'
+            assert last_active_job['step'] == 'fetching data'
 
-        # Let's make the automatic update a success
-        contributor2['data_sources'][0]['input'] = {
-            "type": "auto",
-            "url": self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip'),
-            "frequency": {
-                "type": "daily",
-                "hour_of_day": 20
-            }
-        }
-        
-        self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
-        coverages = self.__run_automatic_update()
-        assert len(coverages) == 1
-        assert 'last_active_job' in coverages[0]
-        last_active_job = coverages[0]['last_active_job']
-        assert last_active_job['coverage_id'] == 'coverage_export'
-        assert last_active_job['contributor_id'] is None
-        assert last_active_job['action_type'] == 'automatic_update_coverage_export'
-        assert last_active_job['error_message'] == ''
-        assert last_active_job['state'] == 'done'
-        assert last_active_job['step'] == 'save_coverage_export'
+            # Let's make the automatic update a success
+            contributor2['data_sources'][0]['input']['url'] = self.format_url(init_http_download_server.ip_addr, 'gtfs_valid.zip')
 
-        # We make the automatic update failing in the contributor export again
-        contributor2['data_sources'][0]['input'] = {
-            "type": "auto",
-            "url": self.format_url(init_http_download_server.ip_addr, 'invalid_url'),
-            "frequency": {
-                "type": "daily",
-                "hour_of_day": 20
-            }
-        }
-        self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
-        coverages = self.__run_automatic_update()
-        assert len(coverages) == 1
-        assert 'last_active_job' in coverages[0]
-        last_active_job = coverages[0]['last_active_job']
-        assert last_active_job['coverage_id'] is None
-        assert last_active_job['contributor_id'] == 'contributor_automatic_update_2'
-        assert last_active_job['action_type'] == 'automatic_update_contributor_export'
-        assert last_active_job['error_message'] != ''
-        assert last_active_job['state'] == 'failed'
-        assert last_active_job['step'] == 'fetching data'
+            self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:08:00 UTC'))
+            coverages = self.__run_automatic_update()
+            assert len(coverages) == 1
+            assert 'last_active_job' in coverages[0]
+            last_active_job = coverages[0]['last_active_job']
+            assert last_active_job['coverage_id'] == 'coverage_export'
+            assert last_active_job['contributor_id'] is None
+            assert last_active_job['action_type'] == 'automatic_update_coverage_export'
+            assert last_active_job['error_message'] == ''
+            assert last_active_job['state'] == 'done'
+            assert last_active_job['step'] == 'save_coverage_export'
+
+            # We make the automatic update failing in the contributor export again
+            contributor2['data_sources'][0]['input']['url'] = self.format_url(init_http_download_server.ip_addr, 'invalid_url')
+            self.put('/contributors/contributor_automatic_update_2', self.dict_to_json(contributor2))
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:20:00 UTC'))
+            coverages = self.__run_automatic_update()
+            assert len(coverages) == 1
+            assert 'last_active_job' in coverages[0]
+            last_active_job = coverages[0]['last_active_job']
+            assert last_active_job['coverage_id'] is None
+            assert last_active_job['contributor_id'] == 'contributor_automatic_update_2'
+            assert last_active_job['action_type'] == 'automatic_update_contributor_export'
+            assert last_active_job['error_message'] != ''
+            assert last_active_job['state'] == 'failed'
+            assert last_active_job['step'] == 'fetching data'

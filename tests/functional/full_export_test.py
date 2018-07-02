@@ -104,6 +104,8 @@ class TestFullExport(AbstractRequestClient):
         self.post('/actions/automatic_update?current_date=2017-08-15')
         self.wait_for_jobs_to_exist('automatic_update_coverage_export', 1)
 
+        # the following update forces a data source fetch because we remove the last_fetch date and we change url
+        # so that it generates an export
         contributor['data_sources'][0]['input']['url'] = "http://{HTTP_SERVER_IP}/gtfs/minimal_gtfs_modified.zip".format(
                 HTTP_SERVER_IP=os.getenv('HTTP_SERVER_IP'))
         self.put('/contributors/contributor_id_sleeping', contributor)

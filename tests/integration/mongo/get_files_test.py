@@ -53,6 +53,7 @@ class TestGetFiles(TartareFixture):
             "id": "to_process",
             "name": "bobette",
             "data_format": "gtfs",
+            "export_data_source_id": "export",
             "input": {
                 "type": "auto",
                 "url": url,
@@ -97,14 +98,9 @@ class TestGetFiles(TartareFixture):
         assert len(json_coverage['coverages']) == 1
 
         self.contributor_export(contributor['id'])
+        gridfs_id = self.get_gridfs_id_from_data_source('id_test', 'export')
 
-        # Get file for contributor export
-        raw = self.get('contributors/{contrib_id}/exports'.format(contrib_id=contributor['id']))
-        assert raw.status_code == 200
-        exports = self.json_to_dict(raw).get('exports')
-        assert len(exports) == 1
-
-        resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=exports[0]['data_sources'][0]['gridfs_id']), follow_redirects=True)
+        resp = self.get('/files/{gridfs_id}/download'.format(gridfs_id=gridfs_id), follow_redirects=True)
         assert resp.status_code == 200
         assert_text_files_equals(resp.data, fixtures_file)
 
