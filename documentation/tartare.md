@@ -22,7 +22,7 @@ This tool is mainly focused around 2 concepts: `Contributor` and `Coverage`. The
 ## Contributors
 A `Contributor` is a data provider that could provide several pieces of consistant data.
 It is composed of several attributes and:
-* a list of `Data Source`s. A `Data Source` is the definition of where the data can be downloaded (an HTTPS link for example), and how often this ressource should be called to get an update. When an update is available, a new `Data Set` is downloaded
+* a list of `Data Source`s. A `Data Source` is the definition of where the data can be downloaded (an HTTPS link for example), and how often this resource should be called to get an update. When an update is available, a new `Data Set` is downloaded
 * a list of `Process`es that will be applied on the `Data Source`s with a specific order
 When a new `Data Set` is downloaded, an update workflow is executed automaticaly.
 
@@ -47,10 +47,10 @@ id | Required, unique | Id of the `Data Source`. Must be unique accross all `Con
 name | Required | The name of the `Data Source`
 data_format | Required | Specify the content of each `Data Set`. See (1) for details.
 input.type | Required | Defines how the `Data Source` is updated. Possibe values are `manual`, `computed` or `auto`. `computed` is a Tartare managed Data Source as an output container for `Process` results `Data Set`s. `auto` is automatically fetched according to a specified frequency. 
-input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
-input.url | Required | Use only if input.type is `auto`. Provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
-input.options | Optional | Use only if input.type is `auto`. Contains additional properties for Internet ressources (2)
-input.frequency | Required | Use only if input.type is `auto`. Contains download frequency settings. See (3) for details.
+input.expected_file_name | Optionnal | Override the name of the file, especially when fetching the resource over an Internet resouce without a file name.
+input.url | Required | Used only if input.type is `auto`. Provide the source URL of the resource (whether it is FTP, HTTP or HTTPS)
+input.options | Optional | Used only if input.type is `auto`. Contains additional properties for Internet resources (2)
+input.frequency | Required | Used only if input.type is `auto`. Contains download frequency settings. See (3) for details.
 license.name | Optionnal | Short name of the license of the `Data Source`. For exemple `ODbL`
 license.url | Optionnal | URL providing details about the license
 validity_period | self computed | Validity period of the last `Data Set` fetched or sent to Tartare. This object is computed by Tartare and contains a `start_date` and `end_date` properties
@@ -68,11 +68,11 @@ Here is a list of the available data_formats  :
 
 When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md).
 
-#### (2) Additional properties for Internet ressources 
+#### (2) Additional properties for Internet resources 
 `input.options` provides the following properties:
-- `directory` : provide a sub-directory, usefull when connecting to a FTP ressource
-- `authent.username` : for a secured ressource (FTP or HTTP), contains the login
-- `authent.password` : for a secured ressource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
+- `directory` : provide a sub-directory, usefull when connecting to a FTP resource
+- `authent.username` : for a secured resource (FTP or HTTP), contains the login
+- `authent.password` : for a secured resource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
 If the `authent.username` is modified, the `authent.password` should also be provided.
 
 #### (3) Frequencies 
@@ -157,7 +157,7 @@ The `Coverage` processes are described [in this page](./preprocesses.md).
 
 
 ### Coverage's Data Source properties
-A `Covarage` may need to store `Data Set`s for config or processed files. To store them, `Data Source`s ressources are also available for a Coverage.
+A `Covarage` may need to store `Data Set`s for config or processed files. To store them, `Data Source`s resources are also available for a Coverage.
 The properties are the same than the `Contributor`'s `Data Source`.
 See **Contributor's Data Source properties** for more details.
 
@@ -217,7 +217,7 @@ Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` b
 A coverage export will do the following tasks, in the following order:
 1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file).
 2. Applying the `Process`es of the coverage
-3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` ressource
+3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` resource
 4. Data are published accordingly to configured `Publication Plateform`s
 
 The export progress can be supervised through the `/jobs` resource or `/coverages/{coverage_id}/jobs` sub-resource.
@@ -227,7 +227,7 @@ The export progress can be supervised through the `/jobs` resource or `/coverage
 ### Automatic update for Contributor Data Sources
 Every minutes, a check is done on every `Data Source` with an automatic fetch config (`input.type`=`auto`). 
 - if the `Data Source` has never been fetched, a fetch will be launched (see below)
-- if the `Data Source` has not been fetch since the last schedule, it will be launched (see below)
+- if the `Data Source` has not been fetched since the last schedule, it will be launched (see below)
 If a fetch needs to be done, the corresponding `contributor_export` action is added to the pending list of Tartare's actions (unless a contributor_export for this contributor is already pending). 
 
 ### Automatic update for Coverages
