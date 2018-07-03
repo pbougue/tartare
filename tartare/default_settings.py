@@ -42,7 +42,7 @@ CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 CELERYBEAT_SCHEDULE = {
     'automatic-update': {
         'task': 'tartare.tasks.automatic_update',
-        'schedule': crontab(minute=0, hour=20, day_of_week='1-4'),
+        'schedule': timedelta(minutes=1),
         'options': {'expires': 25}
     },
     'jobs-purge': {

@@ -35,7 +35,7 @@ from freezegun import freeze_time
 
 from tartare import app, mongo
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
-    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_FORMAT_RUSPELL_CONFIG, \
+    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_RUSPELL_CONFIG, \
     DATA_FORMAT_DEFAULT, DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE
 from tartare.helper import datetime_from_string
 from tests.integration.test_mechanism import TartareFixture
@@ -103,10 +103,8 @@ class TestAutomaticUpdate(TartareFixture):
         for job in jobs:
             if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 self.__assert_job_is_automatic_update_contributor_export(job)
-            elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
-                self.__assert_job_is_automatic_update_coverage_export(job)
             else:
-                assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
+                self.__assert_job_is_automatic_update_coverage_export(job)
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
         with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
@@ -123,10 +121,8 @@ class TestAutomaticUpdate(TartareFixture):
                         self.__assert_job_is_automatic_update_contributor_export(job)
                     else:
                         self.__assert_job_is_automatic_update_contributor_export_unchanged(job)
-                elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
-                    self.__assert_job_is_automatic_update_coverage_export(job)
                 else:
-                    assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
+                    self.__assert_job_is_automatic_update_coverage_export(job)
 
     #
     # associations contributors ---> coverages:
@@ -194,7 +190,7 @@ class TestAutomaticUpdate(TartareFixture):
             jobs_first_and_second_run = self.run_automatic_update()
             assert len(jobs_first_and_second_run) == 2
             for job in jobs_first_and_second_run:
-                if job['id'] != first_job['id'] and job['action_type'] != ACTION_TYPE_DATA_SOURCE_FETCH:
+                if job['id'] != first_job['id']:
                     self.__assert_job_is_automatic_update_contributor_export(job, 'contrib_id')
 
     @pytest.mark.parametrize(

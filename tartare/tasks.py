@@ -258,7 +258,10 @@ def automatic_update() -> None:
                     action_export = contributor_export.si(ContributorExportContext(job), contributor,
                                                           data_source_to_fetch_id=data_source.id)
                     actions_header.append(action_export)
-        chord(actions_header)(automatic_update_launch_coverage_exports.s())
+        if actions_header:
+            chord(actions_header)(automatic_update_launch_coverage_exports.s())
+        else:
+            logger.info("no data sources to fetch found")
     else:
         logger.info("no contributors found")
 
