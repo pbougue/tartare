@@ -17,6 +17,7 @@ class Migration(BaseMigration):
         for coverage_or_contributor in self.db[coverages_or_contributors].find():
             for data_source in coverage_or_contributor.get('data_sources', []):
                 input = data_source.get('input')
+                new_input = None
                 if input.get('type') == 'url':
                     new_input = input
                     new_input['type'] = 'auto'
@@ -30,6 +31,6 @@ class Migration(BaseMigration):
                         'type': input.get('type'),
                         'expected_file_name': input.get('expected_file_name')
                     }
-
-                data_source['input'] = new_input
-            self.db[coverages_or_contributors].save(coverage_or_contributor)
+                if new_input:
+                    data_source['input'] = new_input
+                    self.db[coverages_or_contributors].save(coverage_or_contributor)
