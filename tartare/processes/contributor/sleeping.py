@@ -31,11 +31,11 @@ import logging
 import random
 from time import sleep
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
+from tartare.processes.abstract_process import AbstractContributorProcess
 
 class Sleeping(AbstractContributorProcess):
     def do(self) -> Context:
         wait = random.randint(2, 5)
-        logging.getLogger(__name__).debug('Sleeping preprocess is sleeping for {}s'.format(wait))
+        logging.getLogger(__name__).debug('Sleeping process is sleeping for {}s'.format(wait))
         sleep(wait)
         return self.context

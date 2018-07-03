@@ -36,11 +36,11 @@ from zipfile import ZipFile
 from tartare.core.context import Context, DataSourceExport
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import get_content_file_from_grid_out_file
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry()
+@process_registry()
 class GtfsAgencyFile(AbstractContributorProcess):
     def _is_agency_dict_valid(self, data: List[dict]) -> bool:
         if not data:

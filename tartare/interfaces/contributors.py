@@ -42,7 +42,7 @@ from tartare.exceptions import EntityNotFound, IntegrityException
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
-from tartare.processes.processes import PreProcessManager
+from tartare.processes.processes import ProcessManager
 
 
 class Contributor(flask_restful.Resource):
@@ -54,9 +54,9 @@ class Contributor(flask_restful.Resource):
         setdefault_ids([post_data])
         # then a check on the data_sources id and providing a uuid if not provided
         setdefault_ids(post_data.get('data_sources', []))
-        preprocesses = post_data.get('preprocesses', [])
-        PreProcessManager.check_preprocesses_for_instance(preprocesses, 'contributor')
-        setdefault_ids(preprocesses)
+        processes = post_data.get('processes', [])
+        ProcessManager.check_processes_for_instance(processes, 'contributor')
+        setdefault_ids(processes)
         try:
             contributor = schema.ContributorSchema(strict=True).load(post_data).data
             contributor.add_computed_data_sources()

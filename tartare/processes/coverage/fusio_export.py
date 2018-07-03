@@ -35,18 +35,18 @@ from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS, DATA_FORM
 from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess, InputAuto, FrequencyDaily
+from tartare.core.models import Process, InputAuto, FrequencyDaily
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import FusioException, ParameterException
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.abstract_process import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry('coverage')
+@process_registry('coverage')
 class FusioExport(AbstractFusioProcess):
-    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: CoverageExportContext, process: Process) -> None:
+        super().__init__(context, process)
         self.export_type = self.params.get('export_type')
 
     def get_export_type(self) -> int:
@@ -57,12 +57,12 @@ class FusioExport(AbstractFusioProcess):
         }
         if not self.params.get('export_type'):
             raise ParameterException(
-                'export_type mandatory in preprocess {} parameters (possible values: {})'.format(
+                'export_type mandatory in process {} parameters (possible values: {})'.format(
                     self.process_id, ','.join(map_export_type.keys())
                 ))
 
         if self.export_type not in map_export_type:
-            msg = 'export_type {} is not handled by preprocess FusioExport, possible values: {})'.format(
+            msg = 'export_type {} is not handled by process FusioExport, possible values: {})'.format(
                 self.export_type, ','.join(map_export_type.keys())
             )
             logging.getLogger(__name__).exception(msg)
@@ -94,7 +94,7 @@ class FusioExport(AbstractFusioProcess):
 
         export_url = self.fusio.get_export_url(action_id)
 
-        # fusio hostname is replaced by the one configured in the preprocess
+        # fusio hostname is replaced by the one configured in the process
         # avoid to access to a private ip from outside
         new_export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
 

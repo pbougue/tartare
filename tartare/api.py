@@ -43,7 +43,7 @@ from tartare.interfaces.data_sources import DataSource
 from tartare.interfaces.files_download import FileDownload
 from tartare.interfaces.index import Index
 from tartare.interfaces.jobs import Job
-from tartare.interfaces.preprocesses import PreProcesses
+from tartare.interfaces.processes import Processes
 from tartare.interfaces.status import Status
 
 api = Api(app)
@@ -101,4 +101,4 @@ api.add_resource(CoverageExportResource,
                  '/coverages/<string:coverage_id>/exports',
                  '/coverages/<string:coverage_id>/actions/export')
 
-api.add_resource(PreProcesses, '/preprocesses')
+api.add_resource(Processes, '/processes')

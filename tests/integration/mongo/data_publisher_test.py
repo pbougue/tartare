@@ -211,12 +211,12 @@ class TestDataPublisher(TartareFixture):
                               path='gtfs')
         self.init_contributor(contributor_id, "my_gtfs", url)
         fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
-        preprocesses = []
+        processes = []
         input_data_source_ids = []
         for target_data_format in [DATA_FORMAT_GTFS, DATA_FORMAT_NTFS]:
             target_id = 'my_{}_data_source'.format(target_data_format)
             input_data_source_ids.append(target_id)
-            preprocesses.append({
+            processes.append({
                 "id": "fusio_export",
                 "type": "FusioExport",
                 "params": {
@@ -250,7 +250,7 @@ class TestDataPublisher(TartareFixture):
             "name": 'my license',
             "url": 'http://license.org/mycompany'
         }
-        self.init_coverage(coverage_id, ["my_gtfs"], preprocesses, environments, license)
+        self.init_coverage(coverage_id, ["my_gtfs"], processes, environments, license)
 
         fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
         fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
@@ -562,15 +562,15 @@ class TestDataPublisher(TartareFixture):
         job = self.json_to_dict(resp)['jobs'][0]
         assert job['step'] == 'merge', print(job)
         assert job[
-                   'error_message'] == 'coverage default does not contains any Fusio export preprocess and fallback computation cannot find any gtfs data source', print(
+                   'error_message'] == 'coverage default does not contains any Fusio export process and fallback computation cannot find any gtfs data source', print(
             job)
         assert job['state'] == 'failed', print(job)
 
-    def test_publish_modified_fixture_from_contributor_preprocess(self, init_ftp_upload_server,
+    def test_publish_modified_fixture_from_contributor_process(self, init_ftp_upload_server,
                                                                   init_http_download_server):
         self.init_contributor('c1', 'ds1', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
                               export_id='export_id')
-        self.add_preprocess_to_contributor({
+        self.add_process_to_contributor({
             "sequence": 0,
             "data_source_ids": ['ds1'],
             "type": "GtfsAgencyFile",

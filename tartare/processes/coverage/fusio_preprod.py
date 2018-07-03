@@ -30,11 +30,11 @@
 import requests
 
 from tartare.core.context import Context
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.abstract_process import AbstractFusioProcess
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry('coverage')
+@process_registry('coverage')
 class FusioPreProd(AbstractFusioProcess):
     def do(self) -> Context:
         resp = self.fusio.call(requests.post, api='api', data={'action': 'settopreproduction'})

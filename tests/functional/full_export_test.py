@@ -38,14 +38,14 @@ class TestFullExport(AbstractRequestClient):
         self.init_contributor('contributor.json')
         with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
             raw = self.post(
-                '/contributors/contributor_with_preprocess_id/data_sources/compute_direction_config_id/data_sets',
+                '/contributors/contributor_with_process_id/data_sources/compute_direction_config_id/data_sets',
                 files={'file': file})
             self.assert_sucessful_create(raw)
 
-        job_id = self.contributor_export('contributor_with_preprocess_id')
+        job_id = self.contributor_export('contributor_with_process_id')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 
-        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_preprocess_id',
+        self.assert_export_file_equals_ref_file(contributor_id='contributor_with_process_id',
                                                 data_source_id='export_id',
                                                 ref_file='compute_directions/ref_functional.zip')
 
@@ -56,10 +56,10 @@ class TestFullExport(AbstractRequestClient):
         job_id = self.contributor_export('geo')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
-        # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
+        # contributor with: config ruspell, bano data, gtfs and process ruspell
         self.init_contributor('contributor_ruspell.json')
 
-        # launch ruspell preprocess
+        # launch ruspell process
         job_id = self.contributor_export('AMI')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 
@@ -83,12 +83,12 @@ class TestFullExport(AbstractRequestClient):
         self.full_export('contributor_id', 'coverage_id', current_date='2017-12-14')
         self.full_export('contributor_id', 'coverage_id_2', current_date='2017-12-14')
 
-    def test_contrib_export_preprocess_ko_before_ok(self):
-        self.init_contributor('contributor_preprocess_ko.json')
+    def test_contrib_export_process_ko_before_ok(self):
+        self.init_contributor('contributor_process_ko.json')
 
-        # launch export with a preprocess generating error => should end up being failed
-        job_id = self.contributor_export('contributor_preprocess_ko')
-        self.wait_for_job_to_be_done(job_id, 'preprocess', break_if='failed')
+        # launch export with a process generating error => should end up being failed
+        job_id = self.contributor_export('contributor_process_ko')
+        self.wait_for_job_to_be_done(job_id, 'process', break_if='failed')
 
         self.init_contributor('contributor_headsign_short_name.json')
 
@@ -118,10 +118,10 @@ class TestFullExport(AbstractRequestClient):
         assert len(exports) == 2
 
     def test_contrib_export_with_gtfs2ntfs(self):
-        # contributor with: config ruspell, bano data, gtfs and preprocess ruspell
+        # contributor with: config ruspell, bano data, gtfs and process ruspell
         self.init_contributor('contributor_gtfs2ntfs.json')
 
-        # launch gtfs2ntfs preprocess
+        # launch gtfs2ntfs process
         job_id = self.contributor_export('AMI')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export', nb_retries_max=20)
 

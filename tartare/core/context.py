@@ -167,12 +167,12 @@ class ContributorExportContext(Context):
                 self.add_contributor_data_source_context(contributor.id, data_source.id, None, None)
 
         # links data added
-        for preprocess in contributor.preprocesses:
-            for link in preprocess.params.get('links', []):
+        for process in contributor.processes:
+            for link in process.params.get('links', []):
                 contributor_id = link.get('contributor_id')
                 data_source_id = link.get('data_source_id')
                 if contributor_id and data_source_id and contributor_id != contributor.id:
-                    # @TODO: should exit instead of continue and fail in preprocess
+                    # @TODO: should exit instead of continue and fail in process
                     try:
                         tmp_contributor = Contributor.get(contributor_id)
                     except EntityNotFound:

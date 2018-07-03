@@ -830,8 +830,8 @@ class TestContributors(TartareFixture):
         assert patched_data_source["input"]["frequency"]["type"] == "continuously"
         assert patched_data_source["input"]["frequency"]["minutes"] == 30
 
-    def test_put_contrib_preprocesses_without_id(self, contributor):
-        preprocesses = [
+    def test_put_contrib_processes_without_id(self, contributor):
+        processes = [
             {
                 "type": "Ruspell",
                 "sequence": 1,
@@ -849,16 +849,16 @@ class TestContributors(TartareFixture):
                 }
             }
         ]
-        contributor["preprocesses"] = preprocesses
+        contributor["processes"] = processes
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         r = self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["preprocesses"]) == 2
-        types = [p.get("type") for p in r["contributors"][0]["preprocesses"]]
-        excepted = [p.get("type") for p in preprocesses]
+        assert len(r["contributors"][0]["processes"]) == 2
+        types = [p.get("type") for p in r["contributors"][0]["processes"]]
+        excepted = [p.get("type") for p in processes]
         assert types.sort() == excepted.sort()
 
-    def test_put_contrib_preprocesses_with_id(self, contributor):
-        preprocesses = [
+    def test_put_contrib_processes_with_id(self, contributor):
+        processes = [
             {
                 "id": "ruspell",
                 "type": "Ruspell",
@@ -870,15 +870,15 @@ class TestContributors(TartareFixture):
                 }
             }
         ]
-        contributor["preprocesses"] = preprocesses
+        contributor["processes"] = processes
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         r = self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["preprocesses"]) == 1
-        assert r["contributors"][0]["preprocesses"][0]['id'] == preprocesses[0]["id"]
-        assert r["contributors"][0]["preprocesses"][0]['type'] == preprocesses[0]["type"]
+        assert len(r["contributors"][0]["processes"]) == 1
+        assert r["contributors"][0]["processes"][0]['id'] == processes[0]["id"]
+        assert r["contributors"][0]["processes"][0]['type'] == processes[0]["type"]
 
-    def test_put_contrib_preprocesses_type_unknown(self, contributor):
-        preprocesses = [
+    def test_put_contrib_processes_type_unknown(self, contributor):
+        processes = [
             {
                 "id": "ruspell",
                 "sequence": 1,
@@ -890,16 +890,16 @@ class TestContributors(TartareFixture):
                 }
             }
         ]
-        contributor["preprocesses"] = preprocesses
+        contributor["processes"] = processes
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         r = self.assert_failed_call(raw)
         assert "error" in r
         assert r["message"] == "Invalid arguments"
         assert r[
-                   'error'] == "data_source referenced by id 'datasource_stif' in preprocess 'BOB' not found in contributor"
+                   'error'] == "data_source referenced by id 'datasource_stif' in process 'BOB' not found in contributor"
 
-    def test_put_contrib_preprocesses_gtfs_agency_file(self, contributor):
-        preprocesses = [
+    def test_put_contrib_processes_gtfs_agency_file(self, contributor):
+        processes = [
             {
                 "id": "gtfs_agency_file",
                 "sequence": 1,
@@ -914,17 +914,17 @@ class TestContributors(TartareFixture):
                 }
             }
         ]
-        contributor["preprocesses"] = preprocesses
+        contributor["processes"] = processes
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         r = self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["preprocesses"]) == 1
-        assert r["contributors"][0]["preprocesses"][0]["id"] == preprocesses[0]["id"]
-        assert r["contributors"][0]["preprocesses"][0]["sequence"] == preprocesses[0]["sequence"]
-        assert r["contributors"][0]["preprocesses"][0]["type"] == preprocesses[0]["type"]
-        assert r["contributors"][0]["preprocesses"][0]["params"]["data"]["agency_id"] == \
-               preprocesses[0]["params"]["data"]["agency_id"]
-        assert r["contributors"][0]["preprocesses"][0]["params"]["data"]["agency_name"] == \
-               preprocesses[0]["params"]["data"]["agency_name"]
+        assert len(r["contributors"][0]["processes"]) == 1
+        assert r["contributors"][0]["processes"][0]["id"] == processes[0]["id"]
+        assert r["contributors"][0]["processes"][0]["sequence"] == processes[0]["sequence"]
+        assert r["contributors"][0]["processes"][0]["type"] == processes[0]["type"]
+        assert r["contributors"][0]["processes"][0]["params"]["data"]["agency_id"] == \
+               processes[0]["params"]["data"]["agency_id"]
+        assert r["contributors"][0]["processes"][0]["params"]["data"]["agency_name"] == \
+               processes[0]["params"]["data"]["agency_name"]
 
     @pytest.mark.parametrize("data_sources,data_source_ids,missing_id", [
         ([], ['test'], 'test'),
@@ -936,7 +936,7 @@ class TestContributors(TartareFixture):
     def test_post_contrib_integrity_fail_data_source_ids(self, data_sources, data_source_ids, missing_id):
         payload = {
             "data_sources": data_sources,
-            "preprocesses": [
+            "processes": [
                 {
                     "type": "GtfsAgencyFile",
                     "data_source_ids": data_source_ids
@@ -947,18 +947,18 @@ class TestContributors(TartareFixture):
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert r[
-                   'error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' not found in contributor".format(
+                   'error'] == "data_source referenced by id '{missing_id}' in process 'GtfsAgencyFile' not found in contributor".format(
             missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
 
-    @pytest.mark.parametrize("data_source_to_build_ids,preprocess_data_source_ids,missing_id", [
+    @pytest.mark.parametrize("data_source_to_build_ids,process_data_source_ids,missing_id", [
         ([], ['test'], 'test'),
         (['one-id'], ['another-id'], 'another-id'),
         (['one-id'], ['one-id', 'another-id'], 'another-id'),
         (['one-id', 'another-id'], ['third-id'], 'third-id'),
         (['one-id', 'another-id'], ['another-id', 'third-id'], 'third-id')
     ])
-    def test_put_contrib_integrity_fail_data_source_ids(self, data_source_to_build_ids, preprocess_data_source_ids,
+    def test_put_contrib_integrity_fail_data_source_ids(self, data_source_to_build_ids, process_data_source_ids,
                                                         missing_id):
         data_sources = []
         for data_source_to_build_id in data_source_to_build_ids:
@@ -982,15 +982,15 @@ class TestContributors(TartareFixture):
         }
         raw = self.post('/contributors', json.dumps(post_data))
         self.assert_sucessful_create(raw)
-        post_data['preprocesses'] = [
+        post_data['processes'] = [
             {
                 "type": "GtfsAgencyFile",
-                "data_source_ids": preprocess_data_source_ids
+                "data_source_ids": process_data_source_ids
             }
         ]
         raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
         r = self.assert_failed_call(raw)
-        assert r['error'] == "data_source referenced by id '{missing_id}' in preprocess 'GtfsAgencyFile' " \
+        assert r['error'] == "data_source referenced by id '{missing_id}' in process 'GtfsAgencyFile' " \
                              "not found in contributor".format(missing_id=missing_id)
         assert r['message'] == "Invalid arguments"
 
@@ -1151,7 +1151,7 @@ class TestContributors(TartareFixture):
     def test_put_contributor_simple(self, contributor):
         update = {"name": "name_updated", "data_prefix": "data_prefix_updated", "data_type": DATA_TYPE_GEOGRAPHIC}
         expected = {'contributors': [{'data_sources': [], 'data_prefix': 'data_prefix_updated', 'name': 'name_updated',
-                                      'preprocesses': [],
+                                      'processes': [],
                                       'data_type': DATA_TYPE_GEOGRAPHIC, 'id': 'id_test'}]}
         raw = self.put('/contributors/id_test', self.dict_to_json(update))
         assert self.assert_sucessful_call(raw) == expected
@@ -1210,10 +1210,10 @@ class TestContributors(TartareFixture):
         assert ds_2['data_format'] == DATA_FORMAT_OSM_FILE
         assert ds_2['input']['type'] == 'manual'
 
-    def test_put_contributor_preprocesses(self, init_http_download_server):
+    def test_put_contributor_processes(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
         contributor = self.get_contributor('cid')
-        contributor['preprocesses'] = [
+        contributor['processes'] = [
             {
                 "id": 'p1',
                 "sequence": 0,
@@ -1231,24 +1231,24 @@ class TestContributors(TartareFixture):
         raw = self.put('/contributors/cid', self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)
         contrib_dict = self.get_contributor('cid')
-        preprocess_1 = contrib_dict['preprocesses'][0]
-        preprocess_2 = contrib_dict['preprocesses'][1]
-        assert preprocess_1['id'] == 'p1'
-        assert preprocess_1['sequence'] == 0
-        assert preprocess_1['type'] == 'HeadsignShortName'
-        assert preprocess_1['data_source_ids'] == ['dsid']
-        assert preprocess_2['id'] == 'p2'
-        assert preprocess_2['sequence'] == 1
-        assert preprocess_2['type'] == 'GtfsAgencyFile'
-        assert preprocess_2['data_source_ids'] == ['dsid']
-        assert preprocess_2['params'] == {'data': {'agency_name': 'my_agency'}}
+        process_1 = contrib_dict['processes'][0]
+        process_2 = contrib_dict['processes'][1]
+        assert process_1['id'] == 'p1'
+        assert process_1['sequence'] == 0
+        assert process_1['type'] == 'HeadsignShortName'
+        assert process_1['data_source_ids'] == ['dsid']
+        assert process_2['id'] == 'p2'
+        assert process_2['sequence'] == 1
+        assert process_2['type'] == 'GtfsAgencyFile'
+        assert process_2['data_source_ids'] == ['dsid']
+        assert process_2['params'] == {'data': {'agency_name': 'my_agency'}}
 
-    def test_post_and_put_contributor_preprocesses_with_target_data_source_id(self, init_http_download_server):
+    def test_post_and_put_contributor_processes_with_target_data_source_id(self, init_http_download_server):
         contrib_payload = {
             "id": "id_test",
             "name": "name_test",
             "data_prefix": "OIF",
-            "preprocesses": [
+            "processes": [
                 {
                     "sequence": 0,
                     "data_source_ids": [],
@@ -1288,7 +1288,7 @@ class TestContributors(TartareFixture):
 
         # put a contributor with a computed data source
         contributor = result['contributors'][0]
-        del contributor['preprocesses'][1]
+        del contributor['processes'][1]
 
         raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
         result = self.json_to_dict(raw)
@@ -1363,7 +1363,7 @@ class TestContributors(TartareFixture):
         self.init_contributor('geo', 'ruspell_bano_file',
                               self.format_url(init_http_download_server.ip_addr, 'bano-75.csv', path='ruspell'))
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
-        self.add_preprocess_to_contributor({
+        self.add_process_to_contributor({
             "id": "ruspell_id",
             "type": "Ruspell",
             "sequence": 1,
@@ -1406,10 +1406,10 @@ class TestContributors(TartareFixture):
             self.delete('/contributors/cid')
             assert tartare.mongo.db['fs.files'].find({}).count() == 0
 
-    def test_delete_contributor_with_preprocess_remove_files(self, init_http_download_server):
+    def test_delete_contributor_with_process_remove_files(self, init_http_download_server):
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
                               export_id='export_id')
-        self.add_preprocess_to_contributor({
+        self.add_process_to_contributor({
             "sequence": 0,
             "data_source_ids": ['dsid'],
             "type": "GtfsAgencyFile",

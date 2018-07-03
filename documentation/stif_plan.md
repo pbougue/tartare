@@ -61,7 +61,7 @@ POSSIBLE EVOS:
     {
       "id": "contributor_stif",
       "data_sources": [...],
-      "preprocess": [
+      "process": [
         {
           "type": "ruspell",
           "params": {
@@ -114,7 +114,7 @@ POSSIBLE EVOS:
 
 We will provide endpoints to retrieve info/data_exports and launch policies (`.../action/export`) for:
 * data_sources
-* contributor preprocess
+* contributor process
 * contributor merge
 * contributor postprocess
 * coverage merge

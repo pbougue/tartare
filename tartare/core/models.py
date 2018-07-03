@@ -128,12 +128,12 @@ class SequenceContainer(metaclass=ABCMeta):
         return sorted(list_to_sort, key=lambda sequence_container: sequence_container.sequence)
 
 
-class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
+class DataSourceAndProcessContainer(metaclass=ABCMeta):
     mongo_collection = ''
     label = ''
 
-    def __init__(self, preprocesses: List['PreProcess'] = None, data_sources: List['DataSource'] = None) -> None:
-        self.preprocesses = [] if preprocesses is None else preprocesses  # type: List['PreProcess']
+    def __init__(self, processes: List['Process'] = None, data_sources: List['DataSource'] = None) -> None:
+        self.processes = [] if processes is None else processes  # type: List['Process']
         self.data_sources = data_sources if data_sources else []  # type: List['DataSource']
 
     def add_computed_data_sources(self) -> None:
@@ -146,22 +146,22 @@ class DataSourceAndPreProcessContainer(metaclass=ABCMeta):
                     input=InputComputed(),
                 )
                 self.data_sources.append(data_source_computed)
-        for preprocess in self.preprocesses:
-            if "target_data_source_id" in preprocess.params and "export_type" in preprocess.params:
+        for process in self.processes:
+            if "target_data_source_id" in process.params and "export_type" in process.params:
                 if not any(data_source for data_source in self.data_sources if
-                           data_source.id == preprocess.params.get("target_data_source_id")):
+                           data_source.id == process.params.get("target_data_source_id")):
                     data_source_computed = DataSource(
-                        id=preprocess.params.get("target_data_source_id"),
-                        name=preprocess.params.get("target_data_source_id"),
-                        data_format=preprocess.params.get("export_type"),
+                        id=process.params.get("target_data_source_id"),
+                        name=process.params.get("target_data_source_id"),
+                        data_format=process.params.get("export_type"),
                         input=InputComputed(),
                     )
-                    if not preprocess.params.get("target_data_source_id"):
-                        preprocess.params['target_data_source_id'] = data_source_computed.id
+                    if not process.params.get("target_data_source_id"):
+                        process.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
 
     def fill_data_source_passwords_from_existing_object(self,
-                                                        existing_object: 'DataSourceAndPreProcessContainer') -> None:
+                                                        existing_object: 'DataSourceAndProcessContainer') -> None:
         for data_source in self.data_sources:
             if data_source.input and isinstance(data_source.input, InputAuto):
                 input = data_source.input
@@ -546,7 +546,7 @@ class DataSource(object):
                self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
 
 
-class GenericPreProcess(SequenceContainer):
+class GenericProcess(SequenceContainer):
     def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
                  sequence: int = 0, data_source_ids: Optional[List[str]] = None,
                  enabled: bool = True) -> None:
@@ -557,138 +557,138 @@ class GenericPreProcess(SequenceContainer):
         self.type = type
         self.enabled = enabled
 
-    def save_data(self, class_name: Type[DataSourceAndPreProcessContainer],
-                  mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
-                  ref_model_object: 'PreProcess') -> None:
+    def save_data(self, class_name: Type[DataSourceAndProcessContainer],
+                  mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
+                  ref_model_object: 'Process') -> None:
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('bad {} {}'.format(class_name.label, object_id))
-        if self.id in [p.id for p in data.preprocesses]:
-            raise ValueError("duplicate PreProcess id '{}'".format(self.id))
+        if self.id in [p.id for p in data.processes]:
+            raise ValueError("duplicate Process id '{}'".format(self.id))
 
-        data.preprocesses.append(ref_model_object)
+        data.processes.append(ref_model_object)
         data.add_computed_data_sources()
         raw_contrib = mongo_schema().dump(data).data
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
 
     @classmethod
-    def get_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
-                 mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
-                 preprocess_id: str) -> Optional[List['PreProcess']]:
+    def get_data(cls, class_name: Type[DataSourceAndProcessContainer],
+                 mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
+                 process_id: str) -> Optional[List['Process']]:
         if object_id is not None:
             data = class_name.get(object_id)
             if data is None:
                 raise ValueError('bad {} {}'.format(class_name.label, object_id))
-        elif preprocess_id is not None:
-            raw = mongo.db[class_name.mongo_collection].find_one({'preprocesses.id': preprocess_id})
+        elif process_id is not None:
+            raw = mongo.db[class_name.mongo_collection].find_one({'processes.id': process_id})
             if raw is None:
                 return None
             data = mongo_schema(strict=True).load(raw).data
         else:
-            raise ValueError("to get preprocess you must provide a contributor_id or a preprocess_id")
+            raise ValueError("to get process you must provide a contributor_id or a process_id")
 
-        preprocesses = data.preprocesses
+        processes = data.processes
 
-        if preprocess_id is None:
-            return preprocesses
-        p = next((p for p in preprocesses if p.id == preprocess_id), None)
+        if process_id is None:
+            return processes
+        p = next((p for p in processes if p.id == process_id), None)
         return [p] if p else []
 
     @classmethod
-    def delete_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
-                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
-                    preprocess_id: str) -> int:
+    def delete_data(cls, class_name: Type[DataSourceAndProcessContainer],
+                    mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
+                    process_id: str) -> int:
         data = class_name.get(object_id)
         if data is None:
             raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
-        nb_delete = len([p for p in data.preprocesses if p.id == preprocess_id])
-        data.preprocesses = [p for p in data.preprocesses if p.id != preprocess_id]
+        nb_delete = len([p for p in data.processes if p.id == process_id])
+        data.processes = [p for p in data.processes if p.id != process_id]
         raw_contrib = mongo_schema().dump(data).data
         mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
         return nb_delete
 
     @classmethod
-    def update_data(cls, class_name: Type[DataSourceAndPreProcessContainer],
-                    mongo_schema: Type['MongoPreProcessContainerSchema'], object_id: str,
-                    preprocess_id: str, preprocess: Optional[Dict[str, Any]] = None) -> Optional[List['PreProcess']]:
+    def update_data(cls, class_name: Type[DataSourceAndProcessContainer],
+                    mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
+                    process_id: str, process: Optional[Dict[str, Any]] = None) -> Optional[List['Process']]:
         data = class_name.get(object_id)
         if not data:
             raise ValueError('bad {} {}'.format(class_name.label, object_id))
 
-        if not [ps for ps in data.preprocesses if ps.id == preprocess_id]:
-            raise ValueError("no preprocesses id {} exists in {} with id {}"
-                             .format(object_id, class_name.label, preprocess_id))
-        if preprocess and 'id' in preprocess and preprocess['id'] != preprocess_id:
+        if not [ps for ps in data.processes if ps.id == process_id]:
+            raise ValueError("no processes id {} exists in {} with id {}"
+                             .format(object_id, class_name.label, process_id))
+        if process and 'id' in process and process['id'] != process_id:
             raise ValueError("id from request {} doesn't match id from url {}"
-                             .format(preprocess['id'], preprocess_id))
+                             .format(process['id'], process_id))
 
-        preprocess['id'] = preprocess_id
-        raw = mongo.db[class_name.mongo_collection].update_one({'preprocesses.id': preprocess_id},
-                                                               {'$set': {'preprocesses.$': preprocess}})
+        process['id'] = process_id
+        raw = mongo.db[class_name.mongo_collection].update_one({'processes.id': process_id},
+                                                               {'$set': {'processes.$': process}})
         if raw.matched_count == 0:
             return None
 
-        return cls.get_data(class_name, mongo_schema, object_id, preprocess_id)
+        return cls.get_data(class_name, mongo_schema, object_id, process_id)
 
 
-class PreProcess(GenericPreProcess):
+class Process(GenericProcess):
     def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
         if not any([coverage_id, contributor_id]):
             raise ValueError('bad arguments')
-        # self passed as 4th argument is child object from GenericPreProcess.save_data method point of vue
-        # so it's the one that will need to be saved as a PreProcess
+        # self passed as 4th argument is child object from GenericProcess.save_data method point of vue
+        # so it's the one that will need to be saved as a Process
         if contributor_id:
             self.save_data(Contributor, MongoContributorSchema, contributor_id, self)
         if coverage_id:
             self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
 
     @classmethod
-    def get(cls, preprocess_id: str, contributor_id: Optional[str] = None,
-            coverage_id: Optional[str] = None) -> Optional[List['PreProcess']]:
+    def get(cls, process_id: str, contributor_id: Optional[str] = None,
+            coverage_id: Optional[str] = None) -> Optional[List['Process']]:
         if not any([coverage_id, contributor_id]):
             raise ValueError('bad arguments')
         if contributor_id:
-            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, process_id)
         if coverage_id:
-            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, process_id)
 
     @classmethod
-    def delete(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
-        if preprocess_id is None:
-            raise ValueError('a preprocess id is required')
+    def delete(cls, process_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
+        if process_id is None:
+            raise ValueError('a process id is required')
         if not any([coverage_id, contributor_id]):
             raise ValueError('bad arguments')
         if contributor_id:
-            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id)
+            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, process_id)
         if coverage_id:
-            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id)
+            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, process_id)
 
     @classmethod
-    def update(cls, preprocess_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
-               preprocess: Optional[dict] = None) -> Optional[List['PreProcess']]:
-        if preprocess_id is None:
-            raise ValueError('a PreProcess id is required')
+    def update(cls, process_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
+               process: Optional[dict] = None) -> Optional[List['Process']]:
+        if process_id is None:
+            raise ValueError('a Process id is required')
 
         if not any([coverage_id, contributor_id]):
             raise ValueError('bad arguments')
 
         if contributor_id:
-            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, preprocess_id, preprocess)
+            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, process_id, process)
         if coverage_id:
-            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, preprocess_id, preprocess)
+            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, process_id, process)
 
     def __repr__(self) -> str:
         return str(vars(self))
 
 
-class Contributor(DataSourceAndPreProcessContainer):
+class Contributor(DataSourceAndProcessContainer):
     mongo_collection = 'contributors'
     label = 'Contributor'
 
     def __init__(self, id: str, name: str, data_prefix: str, data_sources: List[DataSource] = None,
-                 preprocesses: List[PreProcess] = None, data_type: str = DATA_TYPE_DEFAULT) -> None:
-        super(Contributor, self).__init__(preprocesses, data_sources)
+                 processes: List[Process] = None, data_type: str = DATA_TYPE_DEFAULT) -> None:
+        super(Contributor, self).__init__(processes, data_sources)
         self.id = id
         self.name = name
         self.data_prefix = data_prefix
@@ -712,7 +712,7 @@ class Contributor(DataSourceAndPreProcessContainer):
 
     def __check_contributors_using_integrity(self) -> None:
         contributors_using = self.find({
-            'preprocesses.params.links.contributor_id': self.id
+            'processes.params.links.contributor_id': self.id
         })
         if contributors_using:
             contributors_ids = [contributor.id for contributor in contributors_using]
@@ -772,15 +772,15 @@ class Contributor(DataSourceAndPreProcessContainer):
         return self.data_type == DATA_TYPE_GEOGRAPHIC
 
 
-class Coverage(DataSourceAndPreProcessContainer):
+class Coverage(DataSourceAndProcessContainer):
     mongo_collection = 'coverages'
     label = 'Coverage'
 
     def __init__(self, id: str, name: str, environments: Dict[str, Environment] = None,
                  input_data_source_ids: List[str] = None, license: License = None,
-                 preprocesses: List[PreProcess] = None, data_sources: List[DataSource] = None,
+                 processes: List[Process] = None, data_sources: List[DataSource] = None,
                  type: str = 'other', short_description: str = '', comment: str = '') -> None:
-        super(Coverage, self).__init__(preprocesses)
+        super(Coverage, self).__init__(processes)
         self.id = id
         self.name = name
         self.environments = {} if environments is None else environments
@@ -1146,7 +1146,7 @@ class MongoDataSourceSchema(Schema):
         return DataSource(**data)
 
 
-class MongoPreProcessSchema(Schema):
+class MongoProcessSchema(Schema):
     id = fields.String(required=True)
     enabled = fields.Boolean(required=False)
     sequence = fields.Integer(required=True)
@@ -1155,21 +1155,21 @@ class MongoPreProcessSchema(Schema):
     data_source_ids = fields.List(fields.String(), required=False)
 
     @post_load
-    def build_preprocess(self, data: dict) -> PreProcess:
-        return PreProcess(**data)
+    def build_process(self, data: dict) -> Process:
+        return Process(**data)
 
 
-class MongoPreProcessContainerSchema(Schema):
+class MongoProcessContainerSchema(Schema):
     pass
 
 
-class MongoCoverageSchema(MongoPreProcessContainerSchema):
+class MongoCoverageSchema(MongoProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
     input_data_source_ids = fields.List(fields.String())
     license = fields.Nested(MongoDataSourceLicenseSchema, allow_none=True)
-    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False, allow_none=False)
+    processes = fields.Nested(MongoProcessSchema, many=True, required=False, allow_none=False)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False, allow_none=True)
     type = CoverageType()
     short_description = fields.String()
@@ -1180,12 +1180,12 @@ class MongoCoverageSchema(MongoPreProcessContainerSchema):
         return Coverage(**data)
 
 
-class MongoContributorSchema(MongoPreProcessContainerSchema):
+class MongoContributorSchema(MongoProcessContainerSchema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
-    preprocesses = fields.Nested(MongoPreProcessSchema, many=True, required=False)
+    processes = fields.Nested(MongoProcessSchema, many=True, required=False)
     data_type = DataType()
 
     @post_load

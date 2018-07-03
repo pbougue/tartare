@@ -164,17 +164,17 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)['contributors'][0]
 
-    def init_coverage(self, id, input_data_source_ids=None, preprocesses=None, environments=None, license=None,
+    def init_coverage(self, id, input_data_source_ids=None, processes=None, environments=None, license=None,
                       data_sources=None):
         data_sources = data_sources if data_sources else []
-        preprocesses = preprocesses if preprocesses else []
+        processes = processes if processes else []
         environments = environments if environments else {}
         input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         coverage = {
             "id": id,
             "name": id,
             "input_data_source_ids": input_data_source_ids,
-            "preprocesses": preprocesses,
+            "processes": processes,
             "data_sources": data_sources,
             "environments": environments,
             "short_description": "description of coverage {}".format(id)
@@ -185,9 +185,9 @@ class TartareFixture(object):
         self.assert_sucessful_create(raw)
         return self.json_to_dict(raw)['coverages'][0]
 
-    def add_preprocess_to_coverage(self, preprocess, coverage_id):
+    def add_process_to_coverage(self, process, coverage_id):
         coverage = self.get_coverage(coverage_id)
-        coverage['preprocesses'].append(preprocess)
+        coverage['processes'].append(process)
         raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
 
@@ -200,9 +200,9 @@ class TartareFixture(object):
         raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
 
-    def add_preprocess_to_contributor(self, preprocess, contributor_id):
+    def add_process_to_contributor(self, process, contributor_id):
         contributor = self.get_contributor(contributor_id)
-        contributor['preprocesses'].append(preprocess)
+        contributor['processes'].append(process)
         raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)
 

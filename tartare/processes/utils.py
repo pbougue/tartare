@@ -29,14 +29,14 @@
 from abc import ABCMeta
 from typing import Callable
 
-PREPROCESSES_POSSIBLE = {}  # type: dict
+PROCESSES_POSSIBLE = {}  # type: dict
 
 
-def preprocess_registry(filter: str = 'contributor') -> Callable:
+def process_registry(filter: str = 'contributor') -> Callable:
     def deco(cls: ABCMeta) -> ABCMeta:
-        if filter not in PREPROCESSES_POSSIBLE:
-            PREPROCESSES_POSSIBLE[filter] = []
-        PREPROCESSES_POSSIBLE[filter].append(cls.__name__)
+        if filter not in PROCESSES_POSSIBLE:
+            PROCESSES_POSSIBLE[filter] = []
+        PROCESSES_POSSIBLE[filter].append(cls.__name__)
         return cls
 
     return deco

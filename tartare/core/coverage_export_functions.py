@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportContext:
     logger.info("merge for coverage_id = %s", coverage.id)
-    # following condition is matched when Fusio export preprocess is not attached to coverage
+    # following condition is matched when Fusio export process is not attached to coverage
     # it simulates its behavior for now for tests purposes
     # merge necessary for multi-contributors is not handled here and should be done by Fusio
     if not context.global_gridfs_id:
@@ -54,7 +54,7 @@ def merge(coverage: Coverage, context: CoverageExportContext) -> CoverageExportC
                 context.validity_period = data_set.validity_period
                 return context
         raise IntegrityException(
-            ('coverage {} does not contains any Fusio export preprocess ' +
+            ('coverage {} does not contains any Fusio export process ' +
              'and fallback computation cannot find any {} data source').format(coverage.id, DATA_FORMAT_GTFS))
     return context
 

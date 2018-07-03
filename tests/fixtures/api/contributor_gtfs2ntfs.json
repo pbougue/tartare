@@ -18,7 +18,7 @@
   ],
   "id": "AMI",
   "name": "AMI",
-  "preprocesses": [
+  "processes": [
     {
       "id": "gtfs2ntfs",
       "type": "Gtfs2Ntfs",

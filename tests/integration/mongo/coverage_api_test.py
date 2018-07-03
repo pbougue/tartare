@@ -356,7 +356,7 @@ class TestCoverageApi(TartareFixture):
         assert coverage["name"] == "name_test"
         assert 'environments' in coverage
         assert 'preproduction' in coverage['environments']
-        assert len(coverage['preprocesses']) == 0
+        assert len(coverage['processes']) == 0
         assert coverage['license'] == {'url': '', 'name': 'Private (unspecified)'}
         preprod_env = coverage['environments']['preproduction']
         assert preprod_env['name'] == 'preproduction'
@@ -559,7 +559,7 @@ class TestCoverageApi(TartareFixture):
             'coverages': [{
                 'environments': {}, 'data_sources': [],
                 'license': {'url': 'http://whatever.com', 'name': 'public'},
-                'preprocesses': [],
+                'processes': [],
                 'input_data_source_ids': [],
                 'name': 'new_name', 'id': 'jdr',
                 'last_active_job': None,
@@ -573,19 +573,19 @@ class TestCoverageApi(TartareFixture):
         assert self.json_to_dict(raw) == expected
         assert self.get_coverage(coverage['id']) == expected['coverages'][0]
 
-    def test_put_coverage_preprocess(self):
+    def test_put_coverage_process(self):
         cov_id = 'my-cov'
         coverage = self.init_coverage(cov_id, [], [{
-            "id": "preprocess_old_id",
+            "id": "process_old_id",
             "type": "FusioDataUpdate",
             "params": {
                 "url": "http://fusio_host.old/cgi-bin/fusio.dll/api"
             },
             "sequence": 4
         }])
-        coverage['preprocesses'] = [
+        coverage['processes'] = [
             {
-                "id": "preprocess_1",
+                "id": "process_1",
                 "type": "FusioDataUpdate",
                 "params": {
                     "url": "http://fusio_host/cgi-bin/fusio.dll/api"
@@ -593,7 +593,7 @@ class TestCoverageApi(TartareFixture):
                 "sequence": 0
             },
             {
-                "id": "preprocess_2",
+                "id": "process_2",
                 "type": "FusioImport",
                 "params": {
                     "url": "http://fusio_host/cgi-bin/fusio.dll/api",
@@ -608,11 +608,11 @@ class TestCoverageApi(TartareFixture):
                 'type': 'other',
                 'short_description': 'description of coverage my-cov',
                 'comment': '',
-                'preprocesses': [
-                    {'id': 'preprocess_1', 'type': 'FusioDataUpdate',
+                'processes': [
+                    {'id': 'process_1', 'type': 'FusioDataUpdate',
                      'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api'},
                      'data_source_ids': [], 'sequence': 0, 'enabled': True},
-                    {'id': 'preprocess_2', 'type': 'FusioImport',
+                    {'id': 'process_2', 'type': 'FusioImport',
                      'params': {'url': 'http://fusio_host/cgi-bin/fusio.dll/api',
                                 'export_type': 'gtfsv2'}, 'data_source_ids': [],
                      'sequence': 1, 'enabled': True}
@@ -702,7 +702,7 @@ class TestCoverageApi(TartareFixture):
                         ],
                         'name': 'integration'}
                 },
-                'license': {'url': '', 'name': 'Private (unspecified)'}, 'preprocesses': [], 'id': 'my-cov',
+                'license': {'url': '', 'name': 'Private (unspecified)'}, 'processes': [], 'id': 'my-cov',
                 'name': 'my-cov', 'input_data_source_ids': [],
                 'comment': '', 'type': 'other',
                 'short_description': 'description of coverage my-cov', 'data_sources': [], 'last_active_job': None
