@@ -22,7 +22,7 @@ This tool is mainly focused around 2 concepts: `Contributor` and `Coverage`. The
 ## Contributors
 A `Contributor` is a data provider that could provide several pieces of consistant data.
 It is composed of several attributes and:
-* a list of `Data Source`s. A `Data Source` is the definition of where the data can be downloaded (an HTTPS link for example), and how often this ressource should be called to get an update. When an update is available, a new `Data Set` is downloaded
+* a list of `Data Source`s. A `Data Source` is the definition of where the data can be downloaded (an HTTPS link for example), and how often this resource should be called to get an update. When an update is available, a new `Data Set` is downloaded
 * a list of `Process`es that will be applied on the `Data Source`s with a specific order
 When a new `Data Set` is downloaded, an update workflow is executed automaticaly.
 
@@ -46,14 +46,18 @@ Property | Constraint | Description |
 id | Required, unique | Id of the `Data Source`. Must be unique accross all `Contributor`s and `Coverage`s `Data Source`
 name | Required | The name of the `Data Source`
 data_format | Required | Specify the content of each `Data Set`. See (1) for details.
-input | Optionnal | Defines how to fetch the data source (2)
-
+input.type | Required | Defines how the `Data Source` is updated. Possibe values are `manual`, `computed` or `auto`. `computed` is a Tartare managed Data Source as an output container for `Process` results `Data Set`s. `auto` is automatically fetched according to a specified frequency. 
+input.expected_file_name | Optionnal | Override the name of the file, especially when fetching the resource over an Internet resouce without a file name.
+input.url | Required | Used only if input.type is `auto`. Provide the source URL of the resource (whether it is FTP, HTTP or HTTPS)
+input.options | Optional | Used only if input.type is `auto`. Contains additional properties for Internet resources (2)
+input.frequency | Required | Used only if input.type is `auto`. Contains download frequency settings. See (3) for details.
 license.name | Optionnal | Short name of the license of the `Data Source`. For exemple `ODbL`
 license.url | Optionnal | URL providing details about the license
 validity_period | self computed | Validity period of the last `Data Set` fetched or sent to Tartare. This object is computed by Tartare and contains a `start_date` and `end_date` properties
 
 
-(1) Available data_format :
+#### (1) Available data_format 
+Here is a list of the available data_formats  :
 - for `Contributor` of `public_transport` type:
   - `gtfs`, `ntfs`, `google_transit` for transit data
   - `direction_config` for `ComputeDirections` process config
@@ -64,40 +68,17 @@ validity_period | self computed | Validity period of the last `Data Set` fetched
 
 When collecting a new `Data Set` for the `Data Source` (either manually or automatically), its  Validity Period is automaticaly computed. Specs are [available here](./validity_periods.md).
 
-(2) There are 3 ways to manage data sources
-#### Automatically
-The data source is automatically fetched according to a frequency.
-Property | Constraint | Description |
---- | --- | --- |
-input.type | Required | auto
-input.url | Required | provide the source URL of the ressource (may it be FTP, HTTP or HTTPS)
-input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
-input.options | Optional | contains additional properties for Internet ressources (3)
-input.frequency | Required | contains download frequency settings (4)
-
-#### Manually
-The data source is manually fetched.
-Property | Constraint | Description |
---- | --- | --- |
-input.type | Required | manual
-input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
-
-#### Computed
-The data source is automatically created in a process.
-Property | Constraint | Description |
---- | --- | --- |
-input.type | Required | computed
-input.expected_file_name | Optionnal | Override the name of the file, espacially when fetching the ressource over an Internet ressouce without a file name.
-
-(3) input.options provides the following properties:
-- `directory` : provide a sub-directory, usefull when connecting to a FTP ressource
-- `authent.username` : for a secured ressource (FTP or HTTP), contains the login
-- `authent.password` : for a secured ressource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
+#### (2) Additional properties for Internet resources 
+`input.options` provides the following properties:
+- `directory` : provide a sub-directory, usefull when connecting to a FTP resource
+- `authent.username` : for a secured resource (FTP or HTTP), contains the login
+- `authent.password` : for a secured resource (FTP or HTTP), contains the password. Be carefull, when consulting the API, this field is hidden for security matters.
 If the `authent.username` is modified, the `authent.password` should also be provided.
 
-(4) There are 4 kinds of frequency
-#### Continuously
-The data source will fetched every X minutes
+#### (3) Frequencies 
+There are several possible frequencies. When the fetch is triggered, it will be stacked in a "yet to be done" list. There could be a delay between the scheduled time and the effective fetch.
+
+**Continuously** : The data source will fetched every X minutes
 
 Property | Constraint | Description |
 --- | --- | --- |
@@ -105,8 +86,7 @@ frequency.type | Required | continuously
 frequency.minutes | Required | number of minutes
 frequency.enabled | Optional | Enable/disable fetching data
 
-#### Daily
-The data source will fetched every day at X hours
+**Daily** : The data source will fetched every day at the specified hours
 
 Property | Constraint | Description |
 --- | --- | --- |
@@ -114,8 +94,7 @@ frequency.type | Required | daily
 frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
-#### Weekly
-The data source will fetched every week the day X and hour Y
+**Weekly** : The data source will fetched every week on the specified day at the specified hour
 
 Property | Constraint | Description |
 --- | --- | --- |
@@ -124,8 +103,7 @@ frequency.day_of_week | Required | day of the week between 1 and 7 (1: Monday)
 frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
-#### Monthly
-The data source will fetched every month the day X and hour Y
+**Monthly** : The data source will fetched every month on the specified day and the specified hour
 
 Property | Constraint | Description |
 --- | --- | --- |
@@ -179,7 +157,7 @@ The `Coverage` processes are described [in this page](./preprocesses.md).
 
 
 ### Coverage's Data Source properties
-A `Covarage` may need to store `Data Set`s for config or processed files. To store them, `Data Source`s ressources are also available for a Coverage.
+A `Covarage` may need to store `Data Set`s for config or processed files. To store them, `Data Source`s resources are also available for a Coverage.
 The properties are the same than the `Contributor`'s `Data Source`.
 See **Contributor's Data Source properties** for more details.
 
@@ -239,18 +217,22 @@ Be carefull, a `CoverageExport` action doesn't execute any `ContributorExport` b
 A coverage export will do the following tasks, in the following order:
 1. Retrieving all input `Data Source`s data associated to this coverage (from contributors) and the other `Data Source`s that are not computed ones (Coverage specific Process config file).
 2. Applying the `Process`es of the coverage
-3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` ressource
+3. The result of the `CoverageExport` is saved and is available in the `/coverages/<coverage_id>/exports` resource
 4. Data are published accordingly to configured `Publication Plateform`s
 
 The export progress can be supervised through the `/jobs` resource or `/coverages/{coverage_id}/jobs` sub-resource.
 
 
 ## Workflow
-### Automatic update
+### Automatic update for Contributor Data Sources
+Every minutes, a check is done on every `Data Source` with an automatic fetch config (`input.type`=`auto`). 
+- if the `Data Source` has never been fetched, a fetch will be launched (see below)
+- if the `Data Source` has not been fetched since the last schedule, it will be launched (see below)
+If a fetch needs to be done, the corresponding `contributor_export` action is added to the pending list of Tartare's actions (unless a contributor_export for this contributor is already pending). 
+
+### Automatic update for Coverages
 1. At 20h UTC every day from monday to thursday
-2. A contributor export is launched on all contributors. If any contributor fails, others contributor_export are executed, but the workflow is stopped.
-3. The contributors ids of whose data have changed are recorded
-4. Then for all coverages, if at least one of its contributors is in the previous list, a coverage export is executed
+2. Then for all coverages, if at least one of its contributors has been modified, a coverage export is added to the pending list.
 
 
 
