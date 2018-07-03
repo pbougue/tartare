@@ -194,11 +194,5 @@ class CoverageExportContext(Context, ValidityPeriodContainer):
         self.global_gridfs_id = ''
         self.current_date = current_date
 
-    def fill_contributor_contexts(self, coverage: Coverage) -> None:
-        if not coverage.input_data_source_ids:
-            raise IntegrityException(
-                'no data sources are attached to coverage {}'.format(
-                    coverage.id))
-
     def __repr__(self) -> str:
         return str(vars(self))

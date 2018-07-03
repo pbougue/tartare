@@ -1,5 +1,5 @@
 {
   "id": "coverage_id",
   "name": "coverage_name",
-  "input_data_source_ids": ["data_source_to_process_id"]
+  "input_data_source_ids": ["export_id"]
 }

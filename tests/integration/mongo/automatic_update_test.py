@@ -31,11 +31,13 @@
 import json
 
 import pytest
+from freezegun import freeze_time
 
 from tartare import app, mongo
 from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_TYPE_AUTO_COVERAGE_EXPORT, \
-    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_FORMAT_RUSPELL_CONFIG, \
+    DATA_FORMAT_OSM_FILE, DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_RUSPELL_CONFIG, \
     DATA_FORMAT_DEFAULT, DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_TITAN, DATA_FORMAT_OBITI, DATA_FORMAT_NEPTUNE
+from tartare.helper import datetime_from_string
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -45,27 +47,7 @@ class TestAutomaticUpdate(TartareFixture):
         assert jobs == []
 
     def __create_contributor(self, ip, id="auto_update_contrib"):
-        contributor = {
-            "id": id,
-            "name": id,
-            "data_prefix": id + "_prefix",
-            "data_sources": [
-                {
-                    "id": "ds_" + id,
-                    "name": "ds_" + id,
-                    "input": {
-                        "type": "auto",
-                        "url": self.format_url(ip, 'some_archive.zip'),
-                        "frequency": {
-                            "type": "daily",
-                            "hour_of_day": 20
-                        }
-                    }
-                }
-            ]
-        }
-        raw = self.post('/contributors', json.dumps(contributor))
-        self.assert_sucessful_create(raw)
+        self.init_contributor(id, "ds_" + id, self.format_url(ip, 'some_archive.zip'), export_id=id + '_export')
 
     def __assert_job_is_automatic_update_contributor_export(self, job, cid='auto_update_contrib'):
         assert job['state'] == 'done'
@@ -115,34 +97,32 @@ class TestAutomaticUpdate(TartareFixture):
 
     def test_automatic_update_one_contributor_and_coverage(self, init_http_download_server):
         self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['ds_auto_update_contrib'])
+        self.__create_coverage(['auto_update_contrib_export'])
         jobs = self.run_automatic_update()
         assert len(jobs) == 2
         for job in jobs:
             if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
                 self.__assert_job_is_automatic_update_contributor_export(job)
-            elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
-                self.__assert_job_is_automatic_update_coverage_export(job)
             else:
-                assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
+                self.__assert_job_is_automatic_update_coverage_export(job)
 
     def test_automatic_update_twice_one_contributor_and_coverage(self, init_http_download_server):
-        self.__create_contributor(init_http_download_server.ip_addr)
-        self.__create_coverage(['ds_auto_update_contrib'])
-        jobs_first_run = self.run_automatic_update()
-        jobs_second_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 2
-        assert len(jobs_second_run) == 3
-        for job in jobs_second_run:
-            if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
-                if job['step'] == 'save_contributor_export':
-                    self.__assert_job_is_automatic_update_contributor_export(job)
+        with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
+            self.__create_contributor(init_http_download_server.ip_addr)
+            self.__create_coverage(['auto_update_contrib_export'])
+            jobs_first_run = self.run_automatic_update()
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:08:00 UTC'))
+            jobs_second_run = self.run_automatic_update()
+            assert len(jobs_first_run) == 2
+            assert len(jobs_second_run) == 3
+            for job in jobs_second_run:
+                if job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT:
+                    if job['step'] == 'save_contributor_export':
+                        self.__assert_job_is_automatic_update_contributor_export(job)
+                    else:
+                        self.__assert_job_is_automatic_update_contributor_export_unchanged(job)
                 else:
-                    self.__assert_job_is_automatic_update_contributor_export_unchanged(job)
-            elif job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT:
-                self.__assert_job_is_automatic_update_coverage_export(job)
-            else:
-                assert job['action_type'] == ACTION_TYPE_DATA_SOURCE_FETCH
+                    self.__assert_job_is_automatic_update_coverage_export(job)
 
     #
     # associations contributors ---> coverages:
@@ -154,53 +134,64 @@ class TestAutomaticUpdate(TartareFixture):
     # c4 ----> x        (x == nothing)
     # x  ----> cC
     def test_automatic_update_twice_multi_contributor_and_multi_coverage(self, init_http_download_server):
-        contributors = ['c1', 'c2', 'c3', 'c4']
-        coverages = {'cA': ['ds_c1', 'ds_c2'], 'cB': ['ds_c3'], 'cC': []}
-        for contributor in contributors:
-            self.__create_contributor(init_http_download_server.ip_addr, contributor)
-        for cov, ds in coverages.items():
-            self.__create_coverage(ds, cov)
-        jobs_first_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 6
-        contributor_export_jobs = list(
-            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT and job['step'] == 'save_contributor_export', jobs_first_run))
-        coverage_export_jobs = list(
-            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT and job['step'] == 'save_coverage_export', jobs_first_run))
-        assert len(contributor_export_jobs) == 4  # all contributor_export are launched
-        assert len(coverage_export_jobs) == 2  # cA and cB launched (not cC because no contributors attached)
+        with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
 
-        # remove old jobs
-        with app.app_context():
-            mongo.db['jobs'].delete_many({})
+            contributors = ['c1', 'c2', 'c3', 'c4']
+            coverages = {'cA': ['c1_export', 'c2_export'], 'cB': ['c3_export'], 'cC': []}
+            for contributor in contributors:
+                self.__create_contributor(init_http_download_server.ip_addr, contributor)
+            for cov, ds in coverages.items():
+                self.__create_coverage(ds, cov)
+            jobs_first_run = self.run_automatic_update()
+            assert len(jobs_first_run) == 6
+            contributor_export_jobs = list(
+                filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT and job[
+                                                                                                     'step'] == 'save_contributor_export',
+                       jobs_first_run))
+            coverage_export_jobs = list(
+                filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT and job[
+                                                                                                  'step'] == 'save_coverage_export',
+                       jobs_first_run))
+            assert len(contributor_export_jobs) == 4  # all contributor_export are launched
+            assert len(coverage_export_jobs) == 2  # cA and cB launched (not cC because no contributors attached)
 
-        # update c1 data source
-        self.update_data_source_url('c1', 'ds_c1', self.format_url(init_http_download_server.ip_addr, 'sample_1.zip'))
-        jobs_second_run = self.run_automatic_update()
-        contributor_export_jobs = list(
-            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))
-        coverage_export_jobs = list(
-            filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT, jobs_second_run))
-        assert len(contributor_export_jobs) == 4  # all contributor_export are launched
-        assert len(coverage_export_jobs) == 1  # cA launched because c1 was updated
-        contributor_export_unchanged_jobs = list(
-            filter(lambda job: job['step'] == 'fetching data', contributor_export_jobs))
-        # when data source url does not change it will not generate a coverage export
-        assert len(contributor_export_unchanged_jobs) == 3
+            # remove old jobs
+            with app.app_context():
+                mongo.db['jobs'].delete_many({})
+
+            # update c1 data source
+            self.update_data_source_url('c1', 'ds_c1',
+                                        self.format_url(init_http_download_server.ip_addr, 'sample_1.zip'))
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:08:00 UTC'))
+            jobs_second_run = self.run_automatic_update()
+            contributor_export_jobs = list(
+                filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, jobs_second_run))
+            coverage_export_jobs = list(
+                filter(lambda job: job['action_type'] == ACTION_TYPE_AUTO_COVERAGE_EXPORT, jobs_second_run))
+            assert len(contributor_export_jobs) == 4  # all contributor_export are launched
+            assert len(coverage_export_jobs) == 1  # cA launched because c1 was updated
+            contributor_export_unchanged_jobs = list(
+                filter(lambda job: job['step'] == 'fetching data', contributor_export_jobs))
+            # when data source url does not change it will not generate a coverage export
+            assert len(contributor_export_unchanged_jobs) == 3
 
     def test_data_format_generate_export(self, init_http_download_server):
-        url = self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')
-        self.init_contributor('contrib_id', 'ds_id', url)
-        jobs_first_run = self.run_automatic_update()
-        assert len(jobs_first_run) == 1
-        first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
-        self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
+        with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
+            url = self.format_url(init_http_download_server.ip_addr, 'sample_1.zip')
+            self.init_contributor('contrib_id', 'ds_id', url)
+            jobs_first_run = self.run_automatic_update()
+            assert len(jobs_first_run) == 1
+            first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
+            self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
 
-        self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
-        jobs_first_and_second_run = self.run_automatic_update()
-        assert len(jobs_first_and_second_run) == 2
-        for job in jobs_first_and_second_run:
-            if job['id'] != first_job['id'] and job['action_type'] != ACTION_TYPE_DATA_SOURCE_FETCH:
-                self.__assert_job_is_automatic_update_contributor_export(job, 'contrib_id')
+            self.update_data_source_url('contrib_id', 'ds_id',
+                                        self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:08:00 UTC'))
+            jobs_first_and_second_run = self.run_automatic_update()
+            assert len(jobs_first_and_second_run) == 2
+            for job in jobs_first_and_second_run:
+                if job['id'] != first_job['id']:
+                    self.__assert_job_is_automatic_update_contributor_export(job, 'contrib_id')
 
     @pytest.mark.parametrize(
         "path,filename,updated_filename,data_format", [
@@ -213,25 +204,29 @@ class TestAutomaticUpdate(TartareFixture):
         ])
     def test_generate_2_exports_when_data_changes_with_different_data_formats(self, init_http_download_server, path,
                                                                               filename, updated_filename, data_format):
-        url = self.format_url(init_http_download_server.ip_addr, filename, path=path)
-        self.init_contributor('contrib_id', 'ds_id', url, data_format=data_format)
+        with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
+            url = self.format_url(init_http_download_server.ip_addr, filename, path=path)
+            self.init_contributor('contrib_id', 'ds_id', url, data_format=data_format)
 
-        jobs_first_run = self.run_automatic_update()
+            jobs_first_run = self.run_automatic_update()
 
-        first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
-        self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
+            first_job = self.filter_job_of_action_type(jobs_first_run, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
+            self.__assert_job_is_automatic_update_contributor_export(first_job, 'contrib_id')
 
-        self.update_data_source_url('contrib_id', 'ds_id', self.format_url(init_http_download_server.ip_addr, updated_filename, path=path))
-        jobs_first_and_second_run = self.run_automatic_update()
+            self.update_data_source_url('contrib_id', 'ds_id',
+                                        self.format_url(init_http_download_server.ip_addr, updated_filename, path=path))
+            frozen_datetime.move_to(datetime_from_string('2018-01-15 10:08:00 UTC'))
+            jobs_first_and_second_run = self.run_automatic_update()
 
-        automatic_contrib_export_jobs = self.filter_job_of_action_type(jobs_first_and_second_run,
-                                                                       ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT,
-                                                                       return_first=False)
-        assert all(job.get('step') == 'save_contributor_export' for job in automatic_contrib_export_jobs)
+            automatic_contrib_export_jobs = self.filter_job_of_action_type(jobs_first_and_second_run,
+                                                                           ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT,
+                                                                           return_first=False)
+            assert all(job.get('step') == 'save_contributor_export' for job in automatic_contrib_export_jobs)
 
     def test_data_format_generate_no_export(self, init_http_download_server):
         url = self.format_url(init_http_download_server.ip_addr, 'empty_pbf.funky_extension', path='geo_data')
-        self.init_contributor('contrib_id', 'ds_id', url, data_format=DATA_FORMAT_OSM_FILE, data_type=DATA_TYPE_GEOGRAPHIC)
+        self.init_contributor('contrib_id', 'ds_id', url, data_format=DATA_FORMAT_OSM_FILE,
+                              data_type=DATA_TYPE_GEOGRAPHIC)
         jobs = self.run_automatic_update()
         assert len(jobs) == 1
         job = self.filter_job_of_action_type(jobs, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)

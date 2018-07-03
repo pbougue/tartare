@@ -31,10 +31,8 @@
 
 import pytest
 
-from tartare import app
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_BANO_FILE, ACTION_TYPE_CONTRIBUTOR_EXPORT, \
-    ACTION_TYPE_DATA_SOURCE_FETCH, JOB_STATUS_FAILED
-from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT, \
+    JOB_STATUS_FAILED
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -186,7 +184,7 @@ class TestContributorExport(TartareFixture):
         assert job_export['coverage_id'] is None
 
     def test_contributor_export_no_data_set(self):
-        self.init_contributor('cid', 'dsid', manual=True)
+        self.init_contributor('cid', 'dsid', type='manual')
         resp = self.contributor_export('cid', check_done=False)
         job = self.get_job_from_export_response(resp)
         assert job['step'] == 'building preprocesses context'

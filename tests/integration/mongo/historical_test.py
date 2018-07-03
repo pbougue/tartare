@@ -97,19 +97,12 @@ class TestHistorical(TartareFixture):
         with app.app_context():
             self.assert_data_set_number('data_source_gtfs', exports_number)
             self.assert_data_set_number('data_source_config', exports_number)
-            self.assert_contributor_exports_number(exports_number)
             self.assert_coverage_exports_number(exports_number)
             self.assert_files_number(exports_number)
 
     def assert_data_set_number(self, data_source_id, exports_number):
         data_sources = DataSource.get_one(data_source_id)
         assert len(data_sources.data_sets) == min(exports_number, tartare.app.config.get('HISTORICAL'))
-
-    def assert_contributor_exports_number(self, exports_number):
-        raw = mongo.db[models.ContributorExport.mongo_collection].find({
-            'contributor_id': 'id_test'
-        })
-        assert raw.count() == min(exports_number, tartare.app.config.get('HISTORICAL'))
 
     def assert_coverage_exports_number(self, exports_number):
         raw = mongo.db[models.CoverageExport.mongo_collection].find({
@@ -120,46 +113,3 @@ class TestHistorical(TartareFixture):
     def assert_files_number(self, exports_number):
         raw = mongo.db['fs.files'].find({})
         assert raw.count() == (min(tartare.app.config.get('HISTORICAL'), exports_number) * 3)
-
-    # HISTORICAL value is 2 in tests/testing_settings.py
-    def test_data_sets_histo_and_cleaning(self, init_http_download_server):
-        cid = 'cid'
-        dsid = 'dsid'
-        url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-{number}.zip')
-        self.init_contributor(cid, dsid, url_gtfs.format(number=1))
-        self.contributor_export(cid)  # -> updated
-        self.contributor_export(cid)  # -> unchanged
-        self.update_data_source_url(cid, dsid, url_gtfs.format(number=2))
-        self.contributor_export(cid)  # -> updated and purge last unchanged
-        self.update_data_source_url(cid, dsid, 'fail-url')
-        self.contributor_export(cid, check_done=False)  # -> failed
-        self.update_data_source_url(cid, dsid, url_gtfs.format(number=3))
-        self.contributor_export(cid)  # -> updated and purge last failed and 1st updated
-        self.contributor_export(cid)  # -> unchanged
-        self.update_data_source_url(cid, dsid, 'fail-url')  # -> failed
-        self.contributor_export(cid, check_done=False)
-        # there should remain 2 DataSet: 2 updated, 2 unchanged happened after last update and
-        # 1 failed happened after last update
-        with app.app_context():
-            data_sets = DataSource.get_one(dsid).data_sets
-            assert len(data_sets) == 2
-            # contributor has no preprocesses so both data sets reference the same file
-            raw = mongo.db['fs.files'].find({})
-            assert raw.count() == 1
-
-    def test_historization_does_not_break_contributor_coverage_export_references(self, init_http_download_server):
-        url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename='historisation/gtfs-1.zip')
-        self.init_contributor('cid', 'dsid', url_gtfs)
-        self.contributor_export('cid')
-        self.init_coverage('covid', ['dsid'])
-        self.coverage_export('covid')
-        self.coverage_export('covid')
-        self.coverage_export('covid')
-        with app.app_context():
-            raw = mongo.db[models.ContributorExport.mongo_collection].find({
-                'contributor_id': 'cid'
-            })
-            cont_ex = MongoContributorExportSchema(many=True, strict=True).load(raw).data
-            gridfs_referenced = cont_ex[0].data_sources[0].gridfs_id
-            raw = mongo.db['fs.files'].find({'_id': ObjectId(gridfs_referenced)})
-            assert raw.count() == 1

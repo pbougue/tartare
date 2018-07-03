@@ -30,14 +30,15 @@
 import logging
 import tempfile
 import zipfile
-from typing import Optional
+
+from typing import List
 
 from tartare.core.constants import DATA_FORMAT_GENERATE_EXPORT, \
     DATA_FORMAT_GTFS
 from tartare.core.context import ContributorExportContext
 from tartare.core.fetcher import FetcherManager
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import ContributorExport, ContributorExportDataSource, Contributor, ValidityPeriod, DataSet
+from tartare.core.models import Contributor, DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, FetcherException, GuessFileNameFromUrlException, InvalidFile, \
     RuntimeException
@@ -55,7 +56,8 @@ def postprocess(contributor: Contributor, context: ContributorExportContext) -> 
     return context
 
 
-def save_export(contributor: Contributor, context: ContributorExportContext) -> Optional[ContributorExport]:
+def save_export(contributor: Contributor, context: ContributorExportContext) -> List[str]:
+    exports_ids = []
     for export_id, data_source_export_list in context.data_source_exports.items():
         gridfs_ids = [export.gridfs_id for export in data_source_export_list]
         data_formats = [export.data_format for export in data_source_export_list]
@@ -76,36 +78,15 @@ def save_export(contributor: Contributor, context: ContributorExportContext) -> 
         data_set.validity_period = ValidityPeriodFinder.select_computer_and_find(
             GridFsHandler().get_file_from_gridfs(gridfs_ids[0]), data_source.data_format)
         data_source.add_data_set_and_update_model(data_set, contributor)
-
-    contrib_export_data_sources = []
-    validity_periods = []
-    for data_source_context in context.get_contributor_data_source_contexts(contributor.id):
-        if not data_source_context.gridfs_id:
-            logger.info("data source {} without gridfs id.".format(data_source_context.data_source_id))
-            continue
-        contrib_export_data_sources.append(
-            ContributorExportDataSource(data_source_id=data_source_context.data_source_id,
-                                        gridfs_id=data_source_context.gridfs_id,
-                                        validity_period=data_source_context.validity_period)
-        )
-        if data_source_context.validity_period:
-            validity_periods.append(data_source_context.validity_period)
-
-    if contrib_export_data_sources:
-        contributor_export_validity_period = ValidityPeriod.union(validity_periods) if len(validity_periods) else None
-
-        export = ContributorExport(contributor_id=contributor.id,
-                                   validity_period=contributor_export_validity_period,
-                                   data_sources=contrib_export_data_sources)
-        export.save()
-        return export
-    return None
+        exports_ids.append(data_source.id)
+    return exports_ids
 
 
-def fetch_datasets_and_return_updated_number(contributor: Contributor) -> int:
+def fetch_datasets_and_return_updated_number(contributor: Contributor, data_source_to_fetch_id: str = None) -> int:
     nb_updated_datasets = 0
     for data_source in contributor.data_sources:
-        if data_source.is_auto() and data_source.input.url:
+        if (not data_source_to_fetch_id or data_source_to_fetch_id == data_source.id) and \
+                data_source.is_auto() and data_source.input.url:
             nb_updated_datasets += 1 if fetch_and_save_dataset(contributor, data_source.id) else 0
     return nb_updated_datasets
 

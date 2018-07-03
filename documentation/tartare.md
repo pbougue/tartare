@@ -99,7 +99,7 @@ frequency.enabled | Optional | Enable/disable fetching data
 Property | Constraint | Description |
 --- | --- | --- |
 frequency.type | Required | weekly
-frequency.day_of_week | Required | day of the week between 1 and 7 (1: Monday)
+frequency.day_of_week | Required | day of the week (Monday, Tuesday, ...)
 frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 

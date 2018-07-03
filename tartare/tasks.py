@@ -47,9 +47,9 @@ from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_T
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Contributor, PreProcess, SequenceContainer, \
-    ContributorExport, PublicationPlatform, DataSource
+    PublicationPlatform
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
-from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException
+from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException, IntegrityException
 from tartare.processes.processes import PreProcessManager
 
 logger = logging.getLogger(__name__)
@@ -106,14 +106,15 @@ def finish_job(context: Context) -> None:
              max_retries=tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK'),
              base=CallbackTask)
 def contributor_export(self: Task, context: ContributorExportContext, contributor: Contributor,
-                       check_for_update: bool = True) -> Optional[ContributorExport]:
+                       check_for_update: bool = True, data_source_to_fetch_id: str = None) -> \
+        Optional[List[str]]:
     try:
         context.job = context.job.update(state=JOB_STATUS_RUNNING, step="fetching data")
         logger.info(
             'contributor_export of {cid} from job {action}'.format(cid=contributor.id, action=context.job.action_type))
         # Launch fetch all dataset for contributor
         nb_updated_data_sources_fetched = contributor_export_functions.fetch_datasets_and_return_updated_number(
-            contributor)
+            contributor, data_source_to_fetch_id)
         logger.info('number of data_sources updated for contributor {cid}: {number}'.
                     format(cid=contributor.id, number=nb_updated_data_sources_fetched))
         # contributor export is always done if coming from API call, we skip updated data verification
@@ -135,7 +136,7 @@ def contributor_export(self: Task, context: ContributorExportContext, contributo
 
 
 @celery.task(base=CallbackTask)
-def contributor_export_finalization(context: ContributorExportContext) -> Optional[ContributorExport]:
+def contributor_export_finalization(context: ContributorExportContext) -> List[str]:
     contributor = context.contributor_contexts[0].contributor
     logger.info('contributor_export_finalization of {cid} from job {action}'.format(cid=contributor.id,
                                                                                     action=context.job.action_type))
@@ -147,9 +148,9 @@ def contributor_export_finalization(context: ContributorExportContext) -> Option
 
     # insert export in mongo db
     context.job.update(step="save_contributor_export")
-    export = contributor_export_functions.save_export(contributor, context)
+    exports_ids = contributor_export_functions.save_export(contributor, context)
     finish_job(context)
-    return export
+    return exports_ids
 
 
 @celery.task(base=CallbackTask)
@@ -158,7 +159,10 @@ def coverage_export(context: CoverageExportContext) -> CoverageExportContext:
     job = context.job
     logger.info('coverage_export of {cov} from job {action}'.format(cov=coverage.id, action=job.action_type))
     context.job.update(state=JOB_STATUS_RUNNING, step="fetching context")
-    context.fill_contributor_contexts(coverage)
+    if not coverage.input_data_source_ids:
+        raise IntegrityException(
+            'no data sources are attached to coverage {}'.format(
+                coverage.id))
 
     context.job.update(step="preprocess")
     launch(coverage.preprocesses, context)
@@ -197,7 +201,7 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
     return context
 
 
-def launch(processes: List[PreProcess], context: Context) -> ContributorExport:
+def launch(processes: List[PreProcess], context: Context) -> List[str]:
     enabled_processes = [process for process in processes if process.enabled]
     sorted_preprocesses = SequenceContainer.sort_by_sequence(enabled_processes)
     actions = []
@@ -245,12 +249,19 @@ def automatic_update() -> None:
         actions_header = []
         logger.info("fetching {} contributors".format(len(contributors)))
         for contributor in contributors:
-            # launch contributor export
-            job = models.Job(contributor_id=contributor.id, action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
-            job.save()
-            action_export = contributor_export.si(ContributorExportContext(job), contributor)
-            actions_header.append(action_export)
-        chord(actions_header)(automatic_update_launch_coverage_exports.s())
+            for data_source in contributor.data_sources:
+                if data_source.should_fetch():
+                    # launch contributor export for data source
+                    job = models.Job(contributor_id=contributor.id, data_source_id=data_source.id,
+                                     action_type=ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT)
+                    job.save()
+                    action_export = contributor_export.si(ContributorExportContext(job), contributor,
+                                                          data_source_to_fetch_id=data_source.id)
+                    actions_header.append(action_export)
+        if actions_header:
+            chord(actions_header)(automatic_update_launch_coverage_exports.s())
+        else:
+            logger.info("no data sources to fetch found")
     else:
         logger.info("no contributors found")
 
@@ -262,11 +273,10 @@ def automatic_update_launch_coverage_exports(self: Task,
                                                  List[Optional[AsyncResult]], Optional[AsyncResult]
                                              ]) -> None:
     logger.info('automatic_update_launch_coverage_exports')
-    logger.debug('default_retry_delay={}'.format(tartare.app.config.get('RETRY_DELAY_COVERAGE_EXPORT_TRIGGER')))
     logger.debug("{}".format(contributor_export_results))
     contributor_export_results = contributor_export_results if isinstance(contributor_export_results, list) \
         else [contributor_export_results]
-    updated_contributors = []
+    updated_data_source_ids = []  # type: List[str]
     for contributor_export_result in contributor_export_results:
         if isinstance(contributor_export_result, AsyncResult):
             logger.debug('subtask launched {} with info {} is ready ? {}'.format(contributor_export_result,
@@ -277,19 +287,17 @@ def automatic_update_launch_coverage_exports(self: Task,
                 self.retry()
             else:
                 logger.debug('subtask finished with {}'.format(contributor_export_result.info))
-                # if contributor_export action generated an export in database (new data set fetched)
-                if isinstance(contributor_export_result.info, ContributorExport):
-                    updated_contributors.append(contributor_export_result.info.contributor_id)
-    logger.debug("{}".format(updated_contributors))
-    if updated_contributors:
+                # if contributor_export action generated some exports in database (new data set fetched)
+                if isinstance(contributor_export_result.info, list):
+                    updated_data_source_ids += contributor_export_result.info
+    logger.debug("{}".format(updated_data_source_ids))
+    if updated_data_source_ids:
         coverages = models.Coverage.all()
-        logger.info("updated_contributors = " + (','.join(updated_contributors)))
+        logger.info("updated_data_source_ids = " + (','.join(updated_data_source_ids)))
         logger.info("fetching {} coverages".format(len(coverages)))
         actions = []
         for coverage in coverages:
-            contributors = {DataSource.get_contributor_of_data_source(data_source_id) for data_source_id in
-                            coverage.input_data_source_ids}
-            if any(contributor.id in updated_contributors for contributor in contributors):
+            if any(data_source_id in updated_data_source_ids for data_source_id in coverage.input_data_source_ids):
                 job = models.Job(coverage_id=coverage.id, action_type=ACTION_TYPE_AUTO_COVERAGE_EXPORT)
                 job.save()
                 actions.append(coverage_export.si(CoverageExportContext(job, coverage=coverage)))

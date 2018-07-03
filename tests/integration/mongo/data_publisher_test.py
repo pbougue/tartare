@@ -115,18 +115,6 @@ class TestDataPublisher(TartareFixture):
             resp = self.full_export(contributor_id, coverage_id)
             self.assert_sucessful_call(resp, 201)
 
-        # List contributor export
-        r = self.json_to_dict(self.get("/contributors/fr-idf/exports"))
-        exports = r["exports"]
-        assert len(exports) == 1
-        assert exports[0]["validity_period"]["start_date"] == "2015-02-16"
-        assert exports[0]["validity_period"]["end_date"] == "2017-01-15"
-
-        assert exports[0]['data_sources'][0]["gridfs_id"]
-        data_sources = exports[0]["data_sources"]
-        assert len(data_sources) == 1
-        assert data_sources[0]["validity_period"]
-
         # List coverage export
         r = self.json_to_dict(self.get("/coverages/default/exports"))
         exports = r["exports"]

@@ -26,6 +26,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import calendar
 import copy
 import logging
 import uuid
@@ -45,13 +46,13 @@ from tartare import mongo
 from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC, ACTION_TYPE_DATA_SOURCE_FETCH, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
-    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_DONE, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
-    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED
+    DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
+    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
+    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
-from tartare.helper import to_doted_notation, get_values_by_key, get_md5_content_file
+from tartare.helper import get_values_by_key, get_md5_content_file
 
 
 @app.before_first_request
@@ -361,24 +362,25 @@ class FrequencyDaily(Enabled):
 
 
 class FrequencyWeekly(Enabled):
-    def __init__(self, day_of_week: int, hour_of_day: int, enabled: bool = True) -> None:
+    def __init__(self, day_of_week: str, hour_of_day: int, enabled: bool = True) -> None:
         super().__init__(enabled)
         self.day_of_week = day_of_week
         self.hour_of_day = hour_of_day
 
     def should_fetch(self, last_fetched_at: datetime, now: datetime) -> bool:
+        frequency_day_of_week = list(calendar.day_name).index(self.day_of_week) + 1
         if not last_fetched_at:
-            return now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+            return now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
         else:
             delta = now - last_fetched_at
             # last fetch was on schedule
-            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == self.day_of_week:
+            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == frequency_day_of_week:
                 # fetch if it's been at least one week or almost one week and it's day of week and hour of day
                 return delta.days >= 7 or (
-                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week
+                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
                 )
             else:
-                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == self.day_of_week)
+                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week)
 
 
 class FrequencyMonthly(Enabled):
@@ -539,7 +541,9 @@ class DataSource(object):
         model.update()
 
     def should_fetch(self) -> bool:
-        return self.is_auto() and self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
+        return self.is_auto() and \
+               not Job.data_source_has_exports_running(self.get_contributor_of_data_source(self.id).id, self.id) and \
+               self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
 
 
 class GenericPreProcess(SequenceContainer):
@@ -1032,16 +1036,16 @@ class FrequencyDailySchema(EnabledSchema, ValidateHour):
 
 
 class FrequencyWeeklySchema(EnabledSchema, ValidateHour):
-    day_of_week = fields.Int(required=True)
+    day_of_week = fields.String(required=True)
 
     @post_load
     def make(self, data: dict) -> FrequencyWeekly:
         return FrequencyWeekly(**data)
 
     @validates('day_of_week')
-    def validates_day_of_week(self, day_of_week: int) -> None:
-        if day_of_week < 1 or day_of_week > 7:
-            raise ValidationError("day_of_week should be between 1 and 7")
+    def validates_day_of_week(self, day_of_week: str) -> None:
+        if day_of_week not in calendar.day_name:
+            raise ValidationError("day_of_week should be one of {}".format(', '.join(calendar.day_name)))
 
 
 class FrequencyMonthlySchema(EnabledSchema, ValidateHour):
@@ -1271,14 +1275,16 @@ class Job(object):
         return self.state == JOB_STATUS_FAILED
 
     @classmethod
-    def get_last_data_fetch_job(cls, data_source_id: str) -> Optional['Job']:
+    def data_source_has_exports_running(cls, contributor_id: str, data_source_id: str) -> bool:
+        filter_statuses = [{'state': status} for status in [JOB_STATUS_PENDING, JOB_STATUS_RUNNING]]
         filter = {
-            'action_type': ACTION_TYPE_DATA_SOURCE_FETCH,
+            'action_type': ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT,
+            'contributor_id': contributor_id,
             'data_source_id': data_source_id,
+            '$or': filter_statuses,
         }
-        raw = mongo.db[cls.mongo_collection].find(filter).sort("updated_at", -1).limit(1)
-        lasts = MongoJobSchema(strict=True, many=True).load(raw).data
-        return lasts[0] if lasts else None
+        raw = mongo.db[cls.mongo_collection].find(filter)
+        return raw.count() > 0
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -1415,34 +1421,3 @@ class MongoCoverageExportSchema(Schema):
     @post_load
     def make_coverage_export(self, data: dict) -> CoverageExport:
         return CoverageExport(**data)
-
-
-class DataSourceStatus(object):
-    """
-   Calculate following attributes:
-       - status: status of the last try on fetching data
-       - fetch_started_at: datetime at which the last try on fetching data started
-       - updated_at: datetime at which the last fetched data set was valid and inserted in database
-       - validity_period: validity period of the data source
-   """
-
-    def __init__(self, data_source_id: str, data_sets_dict: List[dict]) -> None:
-        last_data_fetch_job = Job.get_last_data_fetch_job(data_source_id)
-        last_data_set_dict = max(data_sets_dict, key=lambda ds: ds['created_at'], default=None) if len(data_sets_dict) \
-            else None
-        self.status = self.get_status_from_job(last_data_fetch_job)
-        self.fetch_started_at = last_data_fetch_job.started_at.isoformat() if last_data_fetch_job else None
-        self.validity_period = last_data_set_dict['validity_period'] if last_data_set_dict else None
-        self.updated_at = last_data_set_dict['created_at'] if last_data_set_dict else None
-
-    def get_status_from_job(self, job: Optional[Job]) -> str:
-        if not job:
-            status = DATA_SOURCE_STATUS_NEVER_FETCHED
-        else:
-            if job.state == JOB_STATUS_DONE:
-                status = DATA_SOURCE_STATUS_UNCHANGED if job.step == 'compare' else DATA_SOURCE_STATUS_UPDATED
-            elif job.state == JOB_STATUS_RUNNING:
-                status = 'fetching'
-            else:
-                status = JOB_STATUS_FAILED
-        return status
