@@ -134,7 +134,7 @@ class NavitiaPublisher(AbstractPublisher):
         filename = "{coverage}.zip".format(coverage=coverage.id)
         protocol_uploader.publish(file, filename)
         for data_source_id in Coverage.get(coverage_export.coverage_id).input_data_source_ids:
-            data_source_obj = DataSource.get_one(data_source_id=data_source_id)
+            data_source_obj = DataSource.get_one(data_source_id)
             # osm and poly file are published only once by coverage because of the following constraints:
             # - one geo contributor allowed by coverage
             # - one osm data source allowed by geo contributor

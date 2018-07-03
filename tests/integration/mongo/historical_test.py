@@ -102,7 +102,7 @@ class TestHistorical(TartareFixture):
             self.assert_files_number(exports_number)
 
     def assert_data_set_number(self, data_source_id, exports_number):
-        data_sources = DataSource.get_one(data_source_id=data_source_id)
+        data_sources = DataSource.get_one(data_source_id)
         assert len(data_sources.data_sets) == min(exports_number, tartare.app.config.get('HISTORICAL'))
 
     def assert_contributor_exports_number(self, exports_number):
@@ -141,7 +141,7 @@ class TestHistorical(TartareFixture):
         # there should remain 2 DataSet: 2 updated, 2 unchanged happened after last update and
         # 1 failed happened after last update
         with app.app_context():
-            data_sets = DataSource.get_one(cid, dsid).data_sets
+            data_sets = DataSource.get_one(dsid).data_sets
             assert len(data_sets) == 2
             # contributor has no preprocesses so both data sets reference the same file
             raw = mongo.db['fs.files'].find({})

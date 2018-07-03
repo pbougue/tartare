@@ -478,58 +478,17 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def get(cls, contributor_id: str = None, data_source_id: str = None) -> Optional[List['DataSource']]:
-        if contributor_id is not None:
-            contributor = Contributor.get(contributor_id)
-        elif data_source_id is not None:
-            contributor = cls.get_contributor_of_data_source(data_source_id)
-        else:
-            raise ValueError("to get data_sources you must provide a contributor_id or a data_source_id")
-
-        data_sources = contributor.data_sources
-        if data_source_id is not None:
-            data_sources = [ds for ds in data_sources if ds.id == data_source_id]
-            if not data_sources:
-                return None
-        return data_sources
+    def get_one(cls, data_source_id: str) -> 'DataSource':
+        return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
 
     @classmethod
-    def get_one(cls, contributor_id: str = None, data_source_id: str = None) -> 'DataSource':
-        data_sources = DataSource.get(contributor_id, data_source_id)
-
-        if data_sources is None:
-            raise ValueError("data source {} not found for contributor {}".format(data_source_id, contributor_id))
-
-        return data_sources[0]
-
-    @classmethod
-    def get_contributor_of_data_source(cls, data_source_id: str) -> Optional['Contributor']:
+    def get_contributor_of_data_source(cls, data_source_id: str) -> 'Contributor':
         raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
 
         if not raw:
-            return None
+            raise EntityNotFound("contributor of data source '{}' not found".format(data_source_id))
 
         return MongoContributorSchema(strict=True).load(raw).data
-
-    @classmethod
-    def update(cls, contributor_id: str, data_source_id: str = None, dataset: dict = None) -> Optional['DataSource']:
-        tmp_dataset = dataset if dataset else {}
-        if data_source_id is None:
-            raise ValueError('a data_source id is required')
-        if not [ds for ds in Contributor.get(contributor_id).data_sources if ds.id == data_source_id]:
-            raise ValueError("no data_source id {} exists in contributor with id {}"
-                             .format(contributor_id, data_source_id))
-        if 'id' in tmp_dataset and tmp_dataset['id'] != data_source_id:
-            raise ValueError("id from request {} doesn't match id from url {}"
-                             .format(tmp_dataset['id'], data_source_id))
-
-        # `$` acts as a placeholder of the first match in the list
-        contrib_dataset = {'data_sources': {'$': tmp_dataset}}
-        mongo.db[Contributor.mongo_collection].update_one({'data_sources.id': data_source_id},
-                                                          {'$set': to_doted_notation(contrib_dataset)})
-
-        data_sources = cls.get(contributor_id, data_source_id)
-        return data_sources[0] if data_sources else None
 
     def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
@@ -798,7 +757,12 @@ class Contributor(DataSourceAndPreProcessContainer):
             {'$set': MongoContributorSchema().dump(contributor_object).data})
 
     def get_data_source(self, data_source_id: str) -> Optional['DataSource']:
-        return next((data_source for data_source in self.data_sources if data_source.id == data_source_id), None)
+        try:
+            return next(data_source for data_source in self.data_sources if data_source.id == data_source_id)
+        except StopIteration:
+            msg = "data source '{}' not found for contributor '{}'".format(data_source_id, self.id)
+            logging.getLogger(__name__).error(msg)
+            raise EntityNotFound(msg)
 
     def is_geographic(self) -> bool:
         return self.data_type == DATA_TYPE_GEOGRAPHIC

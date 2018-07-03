@@ -122,7 +122,7 @@ class ContributorExportContext(Context):
                 if not data_format_list:
                     return contributor_context.data_source_contexts
                 for data_source_context in contributor_context.data_source_contexts:
-                    data_source = DataSource.get_one(contributor_id, data_source_context.data_source_id)
+                    data_source = DataSource.get_one(data_source_context.data_source_id)
                     if data_source.data_format in data_format_list:
                         contributor_data_source_context_list.append(data_source_context)
         return contributor_data_source_context_list
@@ -177,7 +177,7 @@ class ContributorExportContext(Context):
                         tmp_contributor = Contributor.get(contributor_id)
                     except EntityNotFound:
                         continue
-                    data_set = DataSource.get_one(contributor_id, data_source_id).get_last_data_set()
+                    data_set = DataSource.get_one(data_source_id).get_last_data_set()
                     self.add_contributor_context(tmp_contributor)
                     self.add_contributor_data_source_context(contributor_id, data_source_id, None,
                                                              data_set.gridfs_id)

@@ -41,7 +41,7 @@ from tartare.processes.utils import preprocess_registry
 class FusioImport(AbstractFusioProcess):
     def get_validity_period(self) -> ValidityPeriod:
         validity_periods = [
-            DataSource.get_one(data_source_id=data_source_id).get_last_data_set().validity_period
+            DataSource.get_one(data_source_id).get_last_data_set().validity_period
             for data_source_id in self.context.coverage.input_data_source_ids
         ]
         try:

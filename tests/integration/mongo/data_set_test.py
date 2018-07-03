@@ -43,13 +43,13 @@ class TestDatasetApi(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "contributor 'unknown' not found"
+        assert r["error"] == "contributor of data source 'unknown' not found"
 
     def test_post_dataset_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/data_sets')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "data source unknown not found for contributor id_test"
+        assert r["error"] == "contributor of data source 'unknown' not found"
 
     def test_post_dataset_without_file(self, data_source):
         raw = self.post('/contributors/id_test/data_sources/{}/data_sets'.format(data_source.get('id')))
@@ -70,13 +70,13 @@ class TestDatasetApi(TartareFixture):
         raw = self.post('/contributors/id_test/data_sources/toto/data_sets')
         self.assert_failed_call(raw, 404)
         resp = self.json_to_dict(raw)
-        assert resp['error'] == "contributor 'id_test' not found"
+        assert resp['error'] == "contributor of data source 'toto' not found"
 
     def test_post_dataset_on_unexisting_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/toto/data_sets')
         self.assert_failed_call(raw, 404)
         resp = self.json_to_dict(raw)
-        assert resp['error'] == 'data source toto not found for contributor id_test'
+        assert resp['error'] == "contributor of data source 'toto' not found"
 
     def test_post_dataset(self, data_source):
         raw = self.get('/contributors/id_test/data_sources/{}'.format(data_source.get('id')))

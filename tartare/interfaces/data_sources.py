@@ -30,18 +30,26 @@ from typing import Optional
 
 import flask_restful
 from flask import Response
+
 from tartare.core import models
+from tartare.core.models import Contributor
+from tartare.exceptions import EntityNotFound
+from tartare.http_exceptions import ObjectNotFound
 from tartare.interfaces import schema
-from tartare.http_exceptions import InvalidArguments, ObjectNotFound
 
 
 class DataSource(flask_restful.Resource):
     def get(self, contributor_id: str, data_source_id: Optional[str] = None) -> Response:
         try:
-            ds = models.DataSource.get(contributor_id, data_source_id)
-            if ds is None:
-                raise ObjectNotFound("data source '{}' not found".format(data_source_id))
-        except ValueError as e:
-            raise InvalidArguments(str(e))
+            contributor = Contributor.get(contributor_id)
+            if data_source_id:
+                data_sources = [contributor.get_data_source(data_source_id)]
+            else:
+                data_sources = contributor.data_sources
+            if not data_sources and data_source_id:
+                raise ObjectNotFound(
+                    "data source '{}' not found for contributor '{}'".format(data_source_id, contributor_id))
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
 
-        return {'data_sources': schema.DataSourceSchema(many=True).dump(ds).data}, 200
+        return {'data_sources': schema.DataSourceSchema(many=True).dump(data_sources).data}, 200

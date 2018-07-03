@@ -446,7 +446,8 @@ class TestContributors(TartareFixture):
         raw = self.post('/contributors', json.dumps(post_data))
         r = self.assert_failed_call(raw)
         assert r == {
-            'error': {'data_sources': {'0': {'input': {'frequency': {'minutes': ['minutes should be greater than 1']}}}}},
+            'error': {
+                'data_sources': {'0': {'input': {'frequency': {'minutes': ['minutes should be greater than 1']}}}}},
             'message': 'Invalid arguments'
         }
 
@@ -474,7 +475,8 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert r == {
             'error': {
-                'data_sources': {'0': {'input': {'frequency': {'hour_of_day': ['hour_of_day should be between 0 and 23']}}}}},
+                'data_sources': {
+                    '0': {'input': {'frequency': {'hour_of_day': ['hour_of_day should be between 0 and 23']}}}}},
             'message': 'Invalid arguments'
         }
 
@@ -1417,3 +1419,13 @@ class TestContributors(TartareFixture):
             assert tartare.mongo.db['fs.files'].find({}).count() == 2
             self.delete('/contributors/cid')
             assert tartare.mongo.db['fs.files'].find({}).count() == 0
+
+    def test_get_data_source_of_unknown_contributor(self):
+        raw = self.get('/contributors/unknown/data_sources/stillunknown')
+        details = self.assert_failed_call(raw, 404)
+        assert details['error'] == "contributor 'unknown' not found"
+
+    def test_get_data_source_unknown_in_contributor(self, contributor):
+        raw = self.get('/contributors/{}/data_sources/stillunknown'.format(contributor['id']))
+        details = self.assert_failed_call(raw, 404)
+        assert details['error'] == "data source 'stillunknown' not found for contributor '{}'".format(contributor['id'])
