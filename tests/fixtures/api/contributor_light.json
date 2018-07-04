@@ -1,6 +1,6 @@
 {
     "id" : "contributor_id",
-    "preprocesses" : [],
+    "processes" : [],
     "name" : "contributor_name",
     "data_sources" : [
         {

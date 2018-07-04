@@ -34,7 +34,7 @@ from mock import mock
 
 from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.context import CoverageExportContext
-from tartare.core.models import ValidityPeriod, PreProcess, Job, Coverage
+from tartare.core.models import ValidityPeriod, Process, Job, Coverage
 from tartare.exceptions import IntegrityException, FusioException, ValidityPeriodException
 from tartare.processes.coverage import FusioImport, FusioPreProd, FusioExport
 from tests.utils import get_response
@@ -61,7 +61,7 @@ class TestFusioProcesses:
         fusio_call.return_value = get_response(200, keep_response_content)
         fusio_get_action_id.return_value = action_id
 
-        fusio_import = FusioImport(context, PreProcess(params={"url": "whatever"}))
+        fusio_import = FusioImport(context, Process(params={"url": "whatever"}))
         fusio_import.do()
 
         fusio_call.assert_called_with(requests.post, api="api",
@@ -78,7 +78,7 @@ class TestFusioProcesses:
             get_validity_period_union.return_value = ValidityPeriod(date(2018, 1, 1), date(2018, 3, 1))
             get_validity_period_valid.side_effect = ValidityPeriodException(subcall_details)
             fusio_import = FusioImport(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT), Coverage("id_cov", "id_cov")),
-                                       PreProcess(params={"url": "whatever"}))
+                                       Process(params={"url": "whatever"}))
             fusio_import.do()
         assert str(excinfo.value) == 'bounds date for fusio import incorrect: {details}'.format(details=subcall_details)
 
@@ -91,7 +91,7 @@ class TestFusioProcesses:
                 </serverfusio>"""
         fusio_call.return_value = get_response(200, content)
         fusio_preprod = FusioPreProd(context=CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                     preprocess=PreProcess(params={'url': 'http://fusio_host'}))
+                                     process=Process(params={'url': 'http://fusio_host'}))
         fusio_preprod.do()
 
         fusio_call.assert_called_with(requests.post, api='api', data={'action': 'settopreproduction'})

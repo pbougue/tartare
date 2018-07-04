@@ -113,7 +113,7 @@ frequency.hour_of_day | Required | hour between 0 and 23
 frequency.enabled | Optional | Enable/disable fetching data
 
 ### Contributor's Process properties
-The `Contributor` processes are described [in this page](./preprocesses.md).
+The `Contributor` processes are described [in this page](./processes.md).
 
 ### Contributor's Update workflow
 
@@ -153,7 +153,7 @@ license.url | Not required | URL of a web page describing the license's details
 input_data_source_ids | Not required | List of `Data Source`'s id to be used for this coverage
 
 ### Coverage's Process properties
-The `Coverage` processes are described [in this page](./preprocesses.md).
+The `Coverage` processes are described [in this page](./processes.md).
 
 
 ### Coverage's Data Source properties

@@ -32,15 +32,15 @@ from typing import Dict
 from typing import Type
 from typing import Union, List
 
-from tartare.core.models import DataSource, PreProcess
-from tartare.interfaces.schema import PreProcessSchema, DataSourceSchema
+from tartare.core.models import DataSource, Process
+from tartare.interfaces.schema import ProcessSchema, DataSourceSchema
 
 
-def upgrade_dict(source: Union[List[DataSource], List[PreProcess]], request_data: dict, key: str) -> None:
+def upgrade_dict(source: Union[List[DataSource], List[Process]], request_data: dict, key: str) -> None:
     map_model = {
         "data_sources": DataSourceSchema,
-        "preprocesses": PreProcessSchema
-    }  # type: Dict[str, Union[Type[DataSourceSchema], Type[PreProcessSchema]]]
+        "processes": ProcessSchema
+    }  # type: Dict[str, Union[Type[DataSourceSchema], Type[ProcessSchema]]]
     existing_id = [d.id for d in source]
     logging.getLogger(__name__).debug("PATCH : list of existing {} ids {}".format(key, str(existing_id)))
     # constructing PATCH data

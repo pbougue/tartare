@@ -23,8 +23,8 @@ tags:
     description: Manage data api
   - name: jobs
     description: Display job informations
-  - name: preprocesses
-    description: Display preprocesses
+  - name: processes
+    description: Display processes
   - name: files
     description: Download files
 servers:
@@ -589,11 +589,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/job_list'
-  /preprocesses:
+  /processes:
     get:
-      summary: Display list of preprocesses
+      summary: Display list of processes
       tags:
-        - preprocesses
+        - processes
       parameters:
         - in: query
           name: owner
@@ -604,13 +604,13 @@ paths:
               - contributor
       responses:
         '200':
-          description: List of preprocesses
+          description: List of processes
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/preprocesses_list'
+                $ref: '#/components/schemas/processes_list'
         '400':
-          description: List of preprocesses
+          description: List of processes
           content:
             application/json:
               schema:
@@ -618,10 +618,10 @@ paths:
 
 components:
   schemas:
-    preprocesses_list:
+    processes_list:
       type: object
       properties:
-        preprocesses:
+        processes:
           type: object
           example:
             contributor:
@@ -724,10 +724,10 @@ components:
           $ref: '#/components/schemas/environments'
         input_data_source_ids:
           $ref: '#/components/schemas/array_of_strings'
-        preprocesses:
+        processes:
           type: array
           items:
-            $ref: '#/components/schemas/contributor_preprocess'
+            $ref: '#/components/schemas/contributor_process'
           example:
             - id: fusio
               type: FusioDataUpdate
@@ -849,11 +849,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/data_source_type'
-        preprocesses:
+        processes:
           type: array
           items:
-            $ref: '#/components/schemas/contributor_preprocess'
-    contributor_preprocess:
+            $ref: '#/components/schemas/contributor_process'
+    contributor_process:
       type: object
       required:
         - id
@@ -862,7 +862,7 @@ components:
       properties:
         id:
           type: string
-          example: preprocess_id
+          example: process_id
         type:
           type: string
           example: Ruspell
@@ -884,7 +884,7 @@ components:
         enabled:
           type: boolean
           example: false
-          description: tells if the preprocess will be executed during an export or not
+          description: tells if the process will be executed during an export or not
           default: true
         params:
           description: Process parameters object.
@@ -1032,7 +1032,7 @@ components:
           example: Tram feed for Lyon
         service_id:
           type: string
-          description: Service id used by FusioDataUpdate preprocess
+          description: Service id used by FusioDataUpdate process
           example: Google-1
         data_format:
           type: string

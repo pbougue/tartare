@@ -1,15 +1,15 @@
-# Preprocesses
+# Processes
 This page describes all the `Process`es that can be used in `Tartare`.
 
 ## Summary
-**CONTRIBUTOR PREPROCESSES**  
+**CONTRIBUTOR PROCESSES**  
 [Compute Directions](#computedirections)  
 [GtfsAgencyFile](#gtfsagencyfile)  
 [Ruspell](#ruspell)  
 [ComputeExternalSettings](#computeexternalsettings)  
 [HeadsignShortName](#headsignshortname)
 
-**COVERAGE PREPROCESSES**  
+**COVERAGE PROCESSES**  
 [FusioDataUpdate](#fusiodataupdate)  
 [FusioImport](#fusioimport)  
 [FusioPreprod](#fusiopreprod)  
@@ -28,7 +28,7 @@ This `Process` fixes trips.txt files into one or more gtfs data sources (referen
   "id": "my-compute-dir-id",
   "type": "ComputeDirections",
   "data_source_ids": [
-    "data-source-id-to-preprocess"
+    "data-source-id-to-process"
   ],
   "params": {
     "links": [
@@ -65,7 +65,7 @@ If the input `Data Source` contains an export_data_source_id property, the resul
 
 
 ### HeadsignShortName
-This preprocess allows to modify trip_short_name and trip_headsign by "route_type".
+This process allows to modify trip_short_name and trip_headsign by "route_type".
 
 ```json
 {
@@ -77,9 +77,9 @@ This preprocess allows to modify trip_short_name and trip_headsign by "route_typ
 ```
 
 ### GtfsAgencyFile
-This preprocess is used to create the required *agency.txt* file in a GTFS where there is none or to fill an empty existing one :
+This process is used to create the required *agency.txt* file in a GTFS where there is none or to fill an empty existing one :
 - If there is no *agency.txt*, the agency file will be created.  
-- If there is already an *agency.txt*, but with only the column titles, info from the preprocess' params will be added.
+- If there is already an *agency.txt*, but with only the column titles, info from the process' params will be added.
 - If there is already an *agency.txt*, and it contains a value for at least one of the required fields (agency_name, agency_url, agency_timezone) no modifications will be done on the file
 
 
@@ -100,7 +100,7 @@ This preprocess is used to create the required *agency.txt* file in a GTFS where
 ```
 
 ### Ruspell
-This preprocess performs a spell-check on a *stops.txt* file of a `gtfs` or `ntfs` `Data Source`. Provided enhancements can be adding accents (Metro > Métro), hortened words as full words (Av. > Avenue), upper case words to snake case, with exceptions.
+This process performs a spell-check on a *stops.txt* file of a `gtfs` or `ntfs` `Data Source`. Provided enhancements can be adding accents (Metro > Métro), hortened words as full words (Av. > Avenue), upper case words to snake case, with exceptions.
 See [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell) for details.
 
 #### Parameters in params field
@@ -138,8 +138,8 @@ See [https://github.com/CanalTP/ruspell](https://github.com/CanalTP/ruspell) for
 }
 ```
 ####  What does it do? How ?
-The ***Ruspell*** preprocess is associated to the contributor and will be used only on specific data sources found in **data_source_ids**.  
-This preprocess will use a **ruspell_config** format data source, containing all rules to apply to the data sources being peprocessed.  
+The ***Ruspell*** process is associated to the contributor and will be used only on specific data sources found in **data_source_ids**.  
+This process will use a **ruspell_config** format data source, containing all rules to apply to the data sources being peprocessed.  
 A *geographic* contributor will be also needed, with **bano_files** data sources. These bano files will be used to check **stop_name** from the GTFS's *stops.txt* against the street road names to fix them.  
 At the end, the exported GTFS will have a new *stops.txt* with fixed **stop_name**.  
 
@@ -158,7 +158,7 @@ Ruspell is a third party application : https://github.com/CanalTP/ruspell
 This process computes additional data for the GTFS Open Data by using others IDFM Open Data sets. 
 Those additional data are lines and stops properties to enable realtime in navitia.
 
-This preprocess uses two config `Data Source`s (*tr_perimeter* and *lines_referential*) and the IDFM GTFS `Data Source` to create a *Fusio External Settings* `Data Set` in a computed `Data Source` of `pt_external_settings`type.  
+This process uses two config `Data Source`s (*tr_perimeter* and *lines_referential*) and the IDFM GTFS `Data Source` to create a *Fusio External Settings* `Data Set` in a computed `Data Source` of `pt_external_settings`type.  
 This output `Data Source` can then be used by a `FusioSendPtExternalSetting` Coverage process.
 
 #### Parameters 
@@ -215,7 +215,7 @@ This process will:
 
 ### FusioDataUpdate
 A GTFS is sent to FUSIO to do a DataUpdate.  
-If this GTFS hasn't change since the previous coverage export, this preprocess will be skipped.  
+If this GTFS hasn't change since the previous coverage export, this process will be skipped.  
 
 
 ```json
@@ -233,7 +233,7 @@ FUSIO loads data and apply FUSIO trade rules processes on them.
 
 ```json
 {
-    "id": "my-preprocess-id",
+    "id": "my-process-id",
     "type": "FusioImport",
     "params": {
         "url": "http://fusio_host/cgi-bin/fusio.dll/"
@@ -260,7 +260,7 @@ Binaries are created and sent to Navitia 1 if FUSIO is configured for it.
 ### FusioExport
 FUSIO loads binaries and convert them as a NTFS file.  
 This file is sent back to Tartare for publishing.  
-FUSIO doesn't provide Tyr with this NTFS file when asked from this coverage preprocess.  
+FUSIO doesn't provide Tyr with this NTFS file when asked from this coverage process.  
 
 ```json
 {
@@ -309,9 +309,9 @@ The file is then sent to the publication platform provided in the parameters.
 
 
 ### FusioSendPtExternalSettings
-This preprocess will use the "computed" data source generated by the `ComputeExternalSettings` from th contributor export and send the csv files to Fusio. This new ExternalSettings will replace any existing file in Fusio, so use it carefully.
+This process will use the "computed" data source generated by the `ComputeExternalSettings` from th contributor export and send the csv files to Fusio. This new ExternalSettings will replace any existing file in Fusio, so use it carefully.
 For now the multi-contributor coverage is not supported so no merge will be done  
-The usual Fusio coverage preprocesses (`FusioImport`, `FusioPreprod`, `FusioExport`) are needed after the applying of this process for Fusio to use these txt files generated through `ComputeExternalSettings`.  
+The usual Fusio coverage processes (`FusioImport`, `FusioPreprod`, `FusioExport`) are needed after the applying of this process for Fusio to use these txt files generated through `ComputeExternalSettings`.  
 Note that `FusioDataUpdate` is not required.
 
 **TroubleShooting:**

@@ -46,11 +46,11 @@ from tartare.core.constants import ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, ACTION_T
     JOB_STATUS_FAILED, JOB_STATUS_RUNNING, JOB_STATUS_DONE
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import CoverageExport, Coverage, Job, Contributor, PreProcess, SequenceContainer, \
+from tartare.core.models import CoverageExport, Coverage, Job, Contributor, Process, SequenceContainer, \
     PublicationPlatform
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException, IntegrityException
-from tartare.processes.processes import PreProcessManager
+from tartare.processes.processes import ProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +120,10 @@ def contributor_export(self: Task, context: ContributorExportContext, contributo
         # contributor export is always done if coming from API call, we skip updated data verification
         # when in automatic update, it's only done if at least one of data sources has changed
         if not check_for_update or nb_updated_data_sources_fetched:
-            context.job = context.job.update(step="building preprocesses context")
+            context.job = context.job.update(step="building processes context")
             context.fill_context(contributor)
-            context.job = context.job.update(step="preprocess")
-            return launch(contributor.preprocesses, context)
+            context.job = context.job.update(step="process")
+            return launch(contributor.processes, context)
         else:
             finish_job(context)
     except FetcherException as exc:
@@ -164,8 +164,8 @@ def coverage_export(context: CoverageExportContext) -> CoverageExportContext:
             'no data sources are attached to coverage {}'.format(
                 coverage.id))
 
-    context.job.update(step="preprocess")
-    launch(coverage.preprocesses, context)
+    context.job.update(step="process")
+    launch(coverage.processes, context)
 
 
 @celery.task(base=CallbackTask)
@@ -201,30 +201,30 @@ def coverage_export_finalization(context: CoverageExportContext) -> CoverageExpo
     return context
 
 
-def launch(processes: List[PreProcess], context: Context) -> List[str]:
+def launch(processes: List[Process], context: Context) -> List[str]:
     enabled_processes = [process for process in processes if process.enabled]
-    sorted_preprocesses = SequenceContainer.sort_by_sequence(enabled_processes)
+    sorted_processes = SequenceContainer.sort_by_sequence(enabled_processes)
     actions = []
 
     # Do better
-    def get_queue(preprocess: PreProcess) -> str:
+    def get_queue(process: Process) -> str:
         return {
             "Ruspell": "tartare_ruspell",
             "Gtfs2Ntfs": "tartare_gtfs2ntfs",
 
-        }.get(preprocess.type, "tartare")
+        }.get(process.type, "tartare")
 
-    if not sorted_preprocesses:
+    if not sorted_processes:
         if isinstance(context, ContributorExportContext):
             return contributor_export_finalization.s(context).delay()
         else:
             return coverage_export_finalization.s(context).delay()
     else:
-        first_process = sorted_preprocesses[0]
-        actions.append(run_preprocess.s(context, first_process).set(queue=get_queue(first_process)))
+        first_process = sorted_processes[0]
+        actions.append(run_process.s(context, first_process).set(queue=get_queue(first_process)))
 
-        for p in sorted_preprocesses[1:]:
-            actions.append(run_preprocess.s(p).set(queue=get_queue(p)))
+        for p in sorted_processes[1:]:
+            actions.append(run_process.s(p).set(queue=get_queue(p)))
 
         if isinstance(context, ContributorExportContext):
             actions.append(contributor_export_finalization.s())
@@ -235,9 +235,9 @@ def launch(processes: List[PreProcess], context: Context) -> List[str]:
 
 
 @celery.task(base=CallbackTask)
-def run_preprocess(context: Context, preprocess: PreProcess) -> Context:
-    process_instance = PreProcessManager.get_preprocess(context, preprocess=preprocess)
-    logging.getLogger(__name__).info('Applying preprocess {preprocess_name}'.format(preprocess_name=preprocess.type))
+def run_process(context: Context, process: Process) -> Context:
+    process_instance = ProcessManager.get_process(context, process=process)
+    logging.getLogger(__name__).info('Applying process {process_name}'.format(process_name=process.type))
     return process_instance.do()
 
 

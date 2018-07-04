@@ -1,6 +1,6 @@
 {
-  "id": "contributor_with_preprocess_id",
-  "preprocesses": [
+  "id": "contributor_with_process_id",
+  "processes": [
     {
       "type": "ComputeDirections",
       "data_source_ids": [
@@ -10,15 +10,15 @@
       "params": {
         "links": [
           {
-            "contributor_id": "contributor_with_preprocess_id",
+            "contributor_id": "contributor_with_process_id",
             "data_source_id": "compute_direction_config_id"
           }
         ]
       },
-      "id": "preprocess_compute_direction_id"
+      "id": "process_compute_direction_id"
     }
   ],
-  "name": "contributor_with_preprocess_name",
+  "name": "contributor_with_process_name",
   "data_sources": [
     {
       "input": {
@@ -43,5 +43,5 @@
       "data_format": "direction_config"
     }
   ],
-  "data_prefix": "contributor_with_preprocess_prefix"
+  "data_prefix": "contributor_with_process_prefix"
 }

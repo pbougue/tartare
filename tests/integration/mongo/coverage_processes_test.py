@@ -42,8 +42,8 @@ from tests.utils import get_response, assert_text_files_equals, _get_file_fixtur
     assert_zip_contains_only_files_with_extensions
 
 
-class TestFusioDataUpdatePreprocess(TartareFixture):
-    data_update_preprocess = {
+class TestFusioDataUpdateProcess(TartareFixture):
+    data_update_process = {
         "id": "fusio_dataupdate",
         "type": "FusioDataUpdate",
         "params": {
@@ -85,7 +85,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
             "id": coverage_id,
             "name": "name of the coverage jdr",
             "input_data_source_ids": input_data_source_ids,
-            "preprocesses": [
+            "processes": [
                 {
                     "id": "fusio_dataupdate",
                     "type": "FusioDataUpdate",
@@ -102,7 +102,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     # Given I create a contributor with a data source
-    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
+    # And   I create a coverage containing this contributor and a process FusioDataUpdate
     # And   I do a contributor export on this contributor (and then a coverage export)
     # When  I do a contributor export on this contributor (and then a coverage export)
     # Then  I can see that Fusio has been called 1 time(s) in total
@@ -114,7 +114,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
         self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id', service_id='Google-1')
-        self.init_coverage('jdr', ['export_id'], preprocesses=[self.data_update_preprocess])
+        self.init_coverage('jdr', ['export_id'], processes=[self.data_update_process])
 
         content = self.get_fusio_response_from_action_id(42)
         fusio_call.return_value = get_response(200, content)
@@ -125,7 +125,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         assert fusio_call.call_count == 2
 
     # Given I create a contributor with a data source with service_id null
-    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
+    # And   I create a coverage containing this contributor and a process FusioDataUpdate
     # When  I do a contributor export on this contributor (and then a coverage export)
     # Then  FusioDataUpdate should fail because service_id is null
     def test_data_update_fail_if_data_source_has_service_id_null(self, init_http_download_server):
@@ -134,7 +134,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=filename.format(number=1),
                               path='gtfs/historisation')
         self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id')
-        self.init_coverage('jdr', ['export_id'], preprocesses=[self.data_update_preprocess])
+        self.init_coverage('jdr', ['export_id'], processes=[self.data_update_process])
 
         response = self.full_export('id_test', 'jdr', '2017-08-10')
         self.assert_sucessful_call(response, 201)
@@ -148,7 +148,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     # Given I create a contributor with 2 data sources
-    # And   I create a coverage containing this contributor and a preprocess FusioDataUpdate
+    # And   I create a coverage containing this contributor and a process FusioDataUpdate
     # When  I do a contributor export on this contributor (and then a coverage export)
     # Then  I can see that Fusio has been called twice
     # And   Each data source service id is used
@@ -160,7 +160,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               path='gtfs/historisation')
         self.init_contributor('id_test', 'my_gtfs', url, export_id='export_id_1', service_id='Google-1')
         self.add_data_source_to_contributor('id_test', 'my_gtfs_2', url, export_id='export_id_2', service_id='Google-2')
-        self.init_coverage('jdr', ['export_id_1', 'export_id_2'], preprocesses=[self.data_update_preprocess])
+        self.init_coverage('jdr', ['export_id_1', 'export_id_2'], processes=[self.data_update_process])
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -185,7 +185,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
                               filename=file_name,
                               path='validity_period/other_data_formats')
         self.init_contributor('cid', 'dsid', url, data_format=data_format, service_id=sid)
-        self.init_coverage("jdr", ["dsid"], preprocesses=[self.data_update_preprocess])
+        self.init_coverage("jdr", ["dsid"], processes=[self.data_update_process])
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -218,7 +218,7 @@ class TestFusioDataUpdatePreprocess(TartareFixture):
         assert job['error_message'] == ''
 
 
-class TestFusioImportPreprocess(TartareFixture):
+class TestFusioImportProcess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     def test_import_period(self, fusio_call, wait_for_action_terminated, init_http_download_server):
@@ -226,7 +226,7 @@ class TestFusioImportPreprocess(TartareFixture):
                               filename='gtfs_with_feed_info_more_than_one_year.zip')
         self.init_contributor('cid', 'dsid', url)
         self.init_coverage('jdr', ['dsid'])
-        preprocess = {
+        process = {
             "id": "fusio_import",
             "type": "FusioImport",
             "params": {
@@ -234,7 +234,7 @@ class TestFusioImportPreprocess(TartareFixture):
             },
             "sequence": 0
         }
-        self.add_preprocess_to_coverage(preprocess, 'jdr')
+        self.add_process_to_coverage(process, 'jdr')
 
         content = self.get_fusio_response_from_action_id(42)
 
@@ -249,7 +249,7 @@ class TestFusioImportPreprocess(TartareFixture):
         }
 
 
-class TestFusioExportPreprocess(TartareFixture):
+class TestFusioExportProcess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
@@ -270,7 +270,7 @@ class TestFusioExportPreprocess(TartareFixture):
             "id": "my_cov",
             "name": "my_cov",
             "input_data_source_ids": ["my_gtfs"],
-            "preprocesses":
+            "processes":
                 [
                     {
                         "id": "fusio_export",
@@ -342,7 +342,7 @@ class TestFusioExportPreprocess(TartareFixture):
         self.init_contributor("id_test", "my_gtfs", url)
         fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
         target_id = "my_export_data_source"
-        preprocess = {
+        process = {
             "id": "fusio_export",
             "type": "FusioExport",
             "params": {
@@ -353,7 +353,7 @@ class TestFusioExportPreprocess(TartareFixture):
             "sequence": 0
         }
 
-        self.init_coverage(coverage_id, ["my_gtfs"], [preprocess])
+        self.init_coverage(coverage_id, ["my_gtfs"], [process])
 
         post_content = self.get_fusio_response_from_action_id(42)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, filename=output_fixture)
@@ -378,9 +378,9 @@ class TestFusioExportPreprocess(TartareFixture):
 
     @pytest.mark.parametrize("export_type,expected_message", [
         (None,
-         'export_type mandatory in preprocess fusio_export parameters (possible values: ntfs,gtfs,google_transit)'),
+         'export_type mandatory in process fusio_export parameters (possible values: ntfs,gtfs,google_transit)'),
         ('obiti',
-         'export_type obiti is not handled by preprocess FusioExport, possible values: ntfs,gtfs,google_transit)')
+         'export_type obiti is not handled by process FusioExport, possible values: ntfs,gtfs,google_transit)')
     ])
     def test_fusio_export_missing_export_type(self, init_http_download_server, export_type, expected_message):
         url = self.format_url(ip=init_http_download_server.ip_addr,
@@ -388,7 +388,7 @@ class TestFusioExportPreprocess(TartareFixture):
                               path='gtfs/historisation')
 
         self.init_contributor("id_test", "my_gtfs", url)
-        preprocess = {
+        process = {
             "id": "fusio_export",
             "type": "FusioExport",
             "params": {
@@ -398,17 +398,17 @@ class TestFusioExportPreprocess(TartareFixture):
             "sequence": 0
         }
         if export_type:
-            preprocess['params']['export_type'] = export_type
+            process['params']['export_type'] = export_type
 
-        self.init_coverage('cov_id', ["my_gtfs"], [preprocess])
+        self.init_coverage('cov_id', ["my_gtfs"], [process])
         resp = self.coverage_export('cov_id')
         job = self.get_job_from_export_response(resp)
-        assert job['step'] == 'preprocess'
+        assert job['step'] == 'process'
         assert job['state'] == 'failed'
         assert job['error_message'] == expected_message
 
 
-class TestFusioExportContributorPreprocess(TartareFixture):
+class TestFusioExportContributorProcess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('requests.post')
@@ -450,7 +450,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
             "id": "my_cov",
             "name": "my_cov",
             "input_data_source_ids": ['my_gtfs'],
-            "preprocesses":
+            "processes":
                 [
                     {
                         "id": "fusio_export_contributor",
@@ -499,7 +499,7 @@ class TestFusioExportContributorPreprocess(TartareFixture):
         session.rmd(directory)
 
 
-class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
+class TestFusioSendPtExternalSettingsProcess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
     def test_fusio_send_pt_external_settings(self, fusio_call, wait_for_action_terminated, init_http_download_server):
@@ -510,7 +510,7 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
         self.init_contributor('cid', 'gtfs_id', url, data_prefix='OIF')
         external_settings_ds_id = "my_external_settings_data_source_id"
 
-        self.add_preprocess_to_contributor({
+        self.add_process_to_contributor({
             "data_source_ids": [
                 "gtfs_id"
             ],
@@ -546,7 +546,7 @@ class TestFusioSendPtExternalSettingsPreprocess(TartareFixture):
 
         coverage_id = 'covid'
         coverage = self.init_coverage(coverage_id, ["gtfs_id"])
-        coverage['preprocesses'].append({
+        coverage['processes'].append({
             "id": "send_ext_settings",
             "params": {
                 "url": "http://fusio.whatever.com",

@@ -35,24 +35,24 @@ from functools import partial
 from tartare.core import zip
 from tartare.core.context import ContributorExportContext, Context
 from tartare.core.models import DataSource
-from tartare.core.models import PreProcess
+from tartare.core.models import Process
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import ParameterException, RuntimeException, EntityNotFound
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.utils import process_registry
 
 logger = logging.getLogger(__name__)
 
 
-@preprocess_registry()
+@process_registry()
 class Ruspell(AbstractContributorProcess):
     stops_filename = 'stops.txt'
     stops_output_filename = 'stops_output.txt'
     rules_filename = 'rules.csv'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
 
-    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+        super().__init__(context, process)
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')
 
@@ -67,7 +67,7 @@ class Ruspell(AbstractContributorProcess):
     def __extract_data_sources_from_gridfs(self, data_format: str, path: str) -> str:
         links = self.params.get("links")
         if not links:
-            raise ParameterException('links missing in preprocess')
+            raise ParameterException('links missing in process')
         for contrib_ds in links:
             contributor_id = contrib_ds.get('contributor_id')
             data_source_id = contrib_ds.get('data_source_id')

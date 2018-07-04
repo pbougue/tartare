@@ -36,7 +36,7 @@ from tartare.core.constants import ACTION_TYPE_COVERAGE_EXPORT, ACTION_TYPE_AUTO
     ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
 from tartare.core.models import Job, MongoValidityPeriodSchema, MongoDataSetSchema, \
     MongoPublicationPlatformSchema, DataSource
-from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoPreProcessSchema, \
+from tartare.core.models import MongoContributorSchema, MongoDataSourceSchema, MongoJobSchema, MongoProcessSchema, \
     MongoContributorExportSchema, MongoCoverageExportSchema
 from tartare.core.models import MongoCoverageSchema, Coverage, MongoEnvironmentSchema, MongoEnvironmentListSchema
 
@@ -148,7 +148,7 @@ class JobSchema(MongoJobSchema, NoUnknownFieldMixin):
     id = fields.String()
 
 
-class PreProcessSchema(MongoPreProcessSchema, NoUnknownFieldMixin):
+class ProcessSchema(MongoProcessSchema, NoUnknownFieldMixin):
     id = fields.String()
 
 

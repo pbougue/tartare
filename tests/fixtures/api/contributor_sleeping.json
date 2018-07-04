@@ -17,9 +17,9 @@
       "data_format": "gtfs"
     }
   ],
-  "preprocesses": [
+  "processes": [
     {
-      "id": "preprocess_sleeping",
+      "id": "process_sleeping",
       "type": "Sleeping",
       "sequence": 0
     }

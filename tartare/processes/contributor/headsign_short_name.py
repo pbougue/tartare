@@ -39,11 +39,11 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.readers import CsvReader
 from tartare.exceptions import ColumnNotFound, RuntimeException
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry()
+@process_registry()
 class HeadsignShortName(AbstractContributorProcess):
     # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
     METRO = 1

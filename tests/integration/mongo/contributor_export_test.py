@@ -137,7 +137,7 @@ class TestContributorExport(TartareFixture):
         if error_message:
             assert job['error_message'] == error_message
 
-    def test_contributor_export_with_preprocesses_called(self, init_http_download_server, contributor):
+    def test_contributor_export_with_processes_called(self, init_http_download_server, contributor):
         url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
 
         contributor['data_sources'].append({
@@ -153,7 +153,7 @@ class TestContributorExport(TartareFixture):
                     "hour_of_day": 20
                 }}
         })
-        contributor['preprocesses'].append({
+        contributor['processes'].append({
             "type": "GtfsAgencyFile",
             "sequence": 0,
             "data_source_ids": ["to_process"],
@@ -187,6 +187,6 @@ class TestContributorExport(TartareFixture):
         self.init_contributor('cid', 'dsid', type='manual')
         resp = self.contributor_export('cid', check_done=False)
         job = self.get_job_from_export_response(resp)
-        assert job['step'] == 'building preprocesses context'
+        assert job['step'] == 'building processes context'
         assert job['state'] == JOB_STATUS_FAILED
         assert job['error_message'] == "data source 'dsid' has no data sets"

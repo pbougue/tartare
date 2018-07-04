@@ -39,17 +39,17 @@ from gridfs import GridOut
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import PreProcess, Contributor, DataSource
+from tartare.core.models import Process, Contributor, DataSource
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
-from tartare.processes.abstract_preprocess import AbstractContributorProcess
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry()
+@process_registry()
 class ComputeExternalSettings(AbstractContributorProcess):
-    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
-        super().__init__(context, preprocess)
+    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+        super().__init__(context, process)
         self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \
             self.context.contributor_contexts and self.context.contributor_contexts[0].contributor else None
 
@@ -196,7 +196,7 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
     def __check_target_data_source(self) -> None:
         if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
-            raise ParameterException('target_data_source_id missing in preprocess config')
+            raise ParameterException('target_data_source_id missing in process config')
         if not self.context.get_contributor_data_source_context(self.contributor_id,
                                                                 self.params['target_data_source_id']):
             raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(

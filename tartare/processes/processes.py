@@ -31,57 +31,57 @@ import logging
 from typing import List, Dict
 
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import PreProcess
+from tartare.core.models import Process
 from tartare.http_exceptions import InvalidArguments
 from tartare.processes import contributor
 from tartare.processes import coverage
-from tartare.processes.abstract_preprocess import AbstractProcess
+from tartare.processes.abstract_process import AbstractProcess
 
 
-class PreProcessManager(object):
+class ProcessManager(object):
     @classmethod
-    def get_preprocess_class(cls, preprocess_name: str, instance: str) -> type:
+    def get_process_class(cls, process_name: str, instance: str) -> type:
         try:
             if instance == 'contributor':
-                return getattr(contributor, preprocess_name)
+                return getattr(contributor, process_name)
             elif instance == 'coverage':
-                return getattr(coverage, preprocess_name)
+                return getattr(coverage, process_name)
             else:
                 raise InvalidArguments('unknown instance {instance}'.format(instance=instance))
         except AttributeError:
-            msg = 'impossible to build preprocess {} : modules within tartare.processes.{} have no class {}'.format(
-                preprocess_name, instance, preprocess_name)
+            msg = 'impossible to build process {} : modules within tartare.processes.{} have no class {}'.format(
+                process_name, instance, process_name)
             logging.getLogger(__name__).error(msg)
             raise InvalidArguments(msg)
 
     @classmethod
-    def get_preprocess(cls, context: Context, preprocess: PreProcess) -> AbstractProcess:
+    def get_process(cls, context: Context, process: Process) -> AbstractProcess:
         """
         :param context: current context
-        :param preprocess: preprocess model object (api)
-        :return: preprocess instance to run (worker)
+        :param process: process model object (api)
+        :return: process instance to run (worker)
         """
         instance = 'contributor' if isinstance(context, ContributorExportContext) else 'coverage'
-        attr = cls.get_preprocess_class(preprocess.type, instance)
+        attr = cls.get_process_class(process.type, instance)
 
-        return attr(context, preprocess)  # call to the constructor, with all the args
+        return attr(context, process)  # call to the constructor, with all the args
 
 
     @classmethod
-    def check_preprocesses_for_instance(cls, preprocesses: List[Dict[str, str]], instance: str) -> None:
-        for preprocess in preprocesses:
+    def check_processes_for_instance(cls, processes: List[Dict[str, str]], instance: str) -> None:
+        for process in processes:
             # will raise InvalidArguments if not valid
-            PreProcessManager.get_preprocess_class(preprocess.get('type', ''), instance)
+            ProcessManager.get_process_class(process.get('type', ''), instance)
 
     @classmethod
-    def check_preprocess_data_source_integrity(cls, preprocess_dict_list: List[Dict[str, str]],
+    def check_process_data_source_integrity(cls, process_dict_list: List[Dict[str, str]],
                                                existing_data_source_ids: List[str], instance: str) -> None:
-        for preprocess in preprocess_dict_list:
-            if 'data_source_ids' in preprocess and preprocess['data_source_ids']:
-                for data_source_id in preprocess['data_source_ids']:
+        for process in process_dict_list:
+            if 'data_source_ids' in process and process['data_source_ids']:
+                for data_source_id in process['data_source_ids']:
                     if data_source_id not in existing_data_source_ids:
-                        msg = ("data_source referenced by id '{data_source_id}' in preprocess '{preprocess}' " +
+                        msg = ("data_source referenced by id '{data_source_id}' in process '{process}' " +
                                "not found in {instance}").format(
-                            data_source_id=data_source_id, preprocess=preprocess['type'], instance=instance)
+                            data_source_id=data_source_id, process=process['type'], instance=instance)
                         logging.getLogger(__name__).error(msg)
                         raise InvalidArguments(msg)

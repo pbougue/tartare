@@ -35,12 +35,12 @@ from tartare.core.context import Context
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.models import MongoPlatformSchema, InputAuto, FrequencyDaily
 from tartare.core.publisher import ProtocolManager, AbstractProtocol
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.abstract_process import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry('coverage')
+@process_registry('coverage')
 class FusioExportContributor(AbstractFusioProcess):
     gtfs_export_type = 36
     is_adapted_value_no_strike = 0
@@ -73,7 +73,7 @@ class FusioExportContributor(AbstractFusioProcess):
 
         export_url = self.fusio.get_export_url(action_id)
 
-        # fusio hostname is replaced by the one configured in the preprocess
+        # fusio hostname is replaced by the one configured in the process
         # avoid to access to a private ip from outside
         export_url = Fusio.replace_url_hostname_from_url(export_url, self.fusio.url)
 

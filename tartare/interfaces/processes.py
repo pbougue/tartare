@@ -29,11 +29,11 @@
 
 from flask import Response
 from flask_restful import Resource, reqparse
-from tartare.processes.utils import PREPROCESSES_POSSIBLE
+from tartare.processes.utils import PROCESSES_POSSIBLE
 from tartare.http_exceptions import InvalidArguments
 
 
-class PreProcesses(Resource):
+class Processes(Resource):
 
     def __init__(self) -> None:
         self.parsers = reqparse.RequestParser()
@@ -44,8 +44,8 @@ class PreProcesses(Resource):
         owner = args.get('owner')
 
         if not owner:
-            return {'preprocesses': PREPROCESSES_POSSIBLE}, 200
-        if owner not in PREPROCESSES_POSSIBLE:
+            return {'processes': PROCESSES_POSSIBLE}, 200
+        if owner not in PROCESSES_POSSIBLE:
             raise InvalidArguments("the owner argument must be in list {}, you gave {}".format(
-                list(PREPROCESSES_POSSIBLE.keys()), owner))
-        return {'preprocesses': {owner: PREPROCESSES_POSSIBLE[owner]}}, 200
+                list(PROCESSES_POSSIBLE.keys()), owner))
+        return {'processes': {owner: PROCESSES_POSSIBLE[owner]}}, 200

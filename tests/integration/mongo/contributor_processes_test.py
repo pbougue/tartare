@@ -69,7 +69,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                     "data_format": "gtfs"
                 }
             ],
-            "preprocesses": [
+            "processes": [
                 {
                     "sequence": 0,
                     "data_source_ids": [data_source_id],
@@ -94,8 +94,8 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
-        preprocesses = r["contributors"][0]["preprocesses"]
-        assert len(preprocesses) == 1
+        processes = r["contributors"][0]["processes"]
+        assert len(processes) == 1
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
@@ -112,7 +112,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                 keys = list(data[0].keys())
                 keys.sort()
                 assert keys == self.excepted_headers
-                conf = preprocesses[0].get('params').get("data")
+                conf = processes[0].get('params').get("data")
                 for key, value in conf.items():
                     assert value == data[0][key]
 
@@ -124,8 +124,8 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
-        preprocesses = r["contributors"][0]["preprocesses"]
-        assert len(preprocesses) == 1
+        processes = r["contributors"][0]["processes"]
+        assert len(processes) == 1
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
@@ -148,8 +148,8 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
-        preprocesses = r["contributors"][0]["preprocesses"]
-        assert len(preprocesses) == 1
+        processes = r["contributors"][0]["processes"]
+        assert len(processes) == 1
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
@@ -167,7 +167,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                 keys = list(data[0].keys())
                 keys.sort()
                 assert keys == self.excepted_headers
-                conf = preprocesses[0].get('params').get("data")
+                conf = processes[0].get('params').get("data")
                 for key, value in conf.items():
                     assert value == data[0][key]
 
@@ -180,8 +180,8 @@ class TestGtfsAgencyProcess(TartareFixture):
         self.assert_sucessful_create(raw)
         r = self.json_to_dict(raw)
         assert len(r["contributors"]) == 1
-        preprocesses = r["contributors"][0]["preprocesses"]
-        assert len(preprocesses) == 1
+        processes = r["contributors"][0]["processes"]
+        assert len(processes) == 1
 
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
@@ -224,7 +224,7 @@ class TestComputeDirectionsProcess(TartareFixture):
             "id": "id_test",
             "name": "name_test",
             "data_prefix": "AAA",
-            "preprocesses": [{
+            "processes": [{
                 "sequence": 0,
                 "data_source_ids": ["ds-to-process"],
                 "type": "ComputeDirections",
@@ -267,15 +267,15 @@ class TestComputeDirectionsProcess(TartareFixture):
 
     @pytest.mark.parametrize(
         "params, expected_error_message", [
-            ({}, "links missing in preprocess"),
-            ({"links": []}, "empty links in preprocess"),
+            ({}, "links missing in process"),
+            ({"links": []}, "empty links in process"),
             ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
              "link bob is not a data_source id present")
         ])
     def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server):
         job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'preprocess', print(job)
+        assert job['step'] == 'process', print(job)
         assert job['error_message'] == expected_error_message, print(job)
 
     def test_compute_directions_missing_ds_config(self, init_http_download_server):
@@ -284,7 +284,7 @@ class TestComputeDirectionsProcess(TartareFixture):
                                                                       "data_source_id": "ds-config"}]},
                                                           add_data_source_config=False)
         assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'preprocess', print(job)
+        assert job['step'] == 'process', print(job)
         assert job['error_message'] == 'link ds-config is not a data_source id present', print(job)
 
     #
@@ -335,7 +335,7 @@ class TestComputeExternalSettings(TartareFixture):
             "id": "id_test",
             "name": "name_test",
             "data_prefix": "OIF",
-            "preprocesses": [{
+            "processes": [{
                 "sequence": 0,
                 "data_source_ids": ["ds-to-process"],
                 "type": "ComputeExternalSettings",
@@ -379,9 +379,9 @@ class TestComputeExternalSettings(TartareFixture):
 
     @pytest.mark.parametrize(
         "params, expected_message", [
-            ({}, 'target_data_source_id missing in preprocess config'),
-            ({'target_data_source_id': 'ds-target'}, 'links missing in preprocess'),
-            ({'target_data_source_id': 'ds-target', 'links': []}, 'empty links in preprocess'),
+            ({}, 'target_data_source_id missing in process config'),
+            ({'target_data_source_id': 'ds-target'}, 'links missing in process'),
+            ({'target_data_source_id': 'ds-target', 'links': []}, 'empty links in process'),
             ({'target_data_source_id': 'ds-target', 'links': [{'lines_referential': 'something'}]},
              'contributor_id missing in links'),
             (
@@ -393,7 +393,7 @@ class TestComputeExternalSettings(TartareFixture):
                                                       expected_message):
         job = self.__setup_contributor_export_environment(init_http_download_server, params)
         assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'preprocess', print(job)
+        assert job['step'] == 'process', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     @pytest.mark.parametrize(
@@ -413,7 +413,7 @@ class TestComputeExternalSettings(TartareFixture):
                   ]}
         job = self.__setup_contributor_export_environment(init_http_download_server, params, links)
         assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'preprocess', print(job)
+        assert job['step'] == 'process', print(job)
         assert job['error_message'] == expected_message, print(job)
 
     def test_prepare_external_settings(self, init_http_download_server):
@@ -469,7 +469,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
                     "data_format": "gtfs"
                 }
             ],
-            "preprocesses": [
+            "processes": [
                 {
                     "id": "headsign_short_name",
                     "sequence": 0,
@@ -488,7 +488,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
     def test_expected_files(self, init_http_download_server):
         contributor = self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
                               export_id='export_id')
-        contributor['preprocesses'].append({
+        contributor['processes'].append({
             "id": "plop",
             "sequence": 0,
             "data_source_ids": ['dsid'],
@@ -575,7 +575,7 @@ class TestRuspellProcess(TartareFixture):
             "id": "id_test",
             "name": "name_test",
             "data_prefix": "OIF",
-            "preprocesses": [{
+            "processes": [{
                 "id": "ruspell_id",
                 "sequence": 0,
                 "data_source_ids": ["ds_to_process"],

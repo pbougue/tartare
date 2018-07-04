@@ -34,12 +34,12 @@ from tartare.core.context import Context
 from tartare.core.models import Contributor, DataSource, DataSet
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import ParameterException, ValidityPeriodException
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.abstract_process import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry('coverage')
+@process_registry('coverage')
 class FusioDataUpdate(AbstractFusioProcess):
     def __get_data(self, contributor: Contributor, data_source: DataSource, data_set: DataSet) -> dict:
         validity_period = data_set.validity_period.to_valid(self.context.current_date)

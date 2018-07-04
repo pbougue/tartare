@@ -41,7 +41,7 @@ from tartare.core.models import DataSource
 from tartare.exceptions import EntityNotFound
 from tartare.http_exceptions import ObjectNotFound, UnsupportedMediaType, InvalidArguments, InternalServerError, \
     DuplicateEntry
-from tartare.processes.processes import PreProcessManager
+from tartare.processes.processes import ProcessManager
 
 id_format_text = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 id_format = re.compile(id_format_text)
@@ -131,8 +131,8 @@ class ValidateContributorPrepocessesDataSourceIds(object):
             post_data = request.json
             existing_data_source_ids = [data_source['id'] for data_source in post_data.get('data_sources', []) if
                                         'id' in data_source]
-            PreProcessManager.check_preprocess_data_source_integrity(post_data.get('preprocesses', []),
-                                                                     existing_data_source_ids, 'contributor')
+            ProcessManager.check_process_data_source_integrity(post_data.get('processes', []),
+                                                                  existing_data_source_ids, 'contributor')
             return func(*args, **kwargs)
 
         return wrapper

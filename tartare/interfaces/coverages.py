@@ -41,16 +41,16 @@ from tartare.exceptions import EntityNotFound
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
 from tartare.interfaces import schema
-from tartare.processes.processes import PreProcessManager
+from tartare.processes.processes import ProcessManager
 
 
 class Coverage(flask_restful.Resource):
     @classmethod
     def __pre_save_coverage(self, post_data: dict) -> models.Coverage:
         coverage_schema = schema.CoverageSchema(strict=True)
-        preprocesses = post_data.get('preprocesses', [])
-        PreProcessManager.check_preprocesses_for_instance(preprocesses, 'coverage')
-        setdefault_ids(preprocesses)
+        processes = post_data.get('processes', [])
+        ProcessManager.check_processes_for_instance(processes, 'coverage')
+        setdefault_ids(processes)
         try:
             coverage = coverage_schema.load(post_data).data
             coverage.add_computed_data_sources()

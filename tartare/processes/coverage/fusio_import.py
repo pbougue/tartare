@@ -32,12 +32,12 @@ import requests
 from tartare.core.context import Context
 from tartare.core.models import ValidityPeriod, DataSource
 from tartare.exceptions import IntegrityException, ValidityPeriodException
-from tartare.processes.abstract_preprocess import AbstractFusioProcess
+from tartare.processes.abstract_process import AbstractFusioProcess
 from tartare.processes.fusio import Fusio
-from tartare.processes.utils import preprocess_registry
+from tartare.processes.utils import process_registry
 
 
-@preprocess_registry('coverage')
+@process_registry('coverage')
 class FusioImport(AbstractFusioProcess):
     def get_validity_period(self) -> ValidityPeriod:
         validity_periods = [

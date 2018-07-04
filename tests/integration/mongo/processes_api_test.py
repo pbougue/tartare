@@ -30,46 +30,46 @@
 # www.navitia.io
 
 from tests.integration.test_mechanism import TartareFixture
-from tartare.processes.utils import  PREPROCESSES_POSSIBLE
+from tartare.processes.utils import  PROCESSES_POSSIBLE
 
 
-class TestPreProcesses(TartareFixture):
-    def assert_preprocesses_by_owner(self, preprocesses, owner):
-        assert owner in preprocesses
-        assert len(preprocesses[owner]) == len(PREPROCESSES_POSSIBLE[owner])
-        assert (set(preprocesses[owner]) - set(PREPROCESSES_POSSIBLE[owner])) == set()
+class TestProcesses(TartareFixture):
+    def assert_processes_by_owner(self, processes, owner):
+        assert owner in processes
+        assert len(processes[owner]) == len(PROCESSES_POSSIBLE[owner])
+        assert (set(processes[owner]) - set(PROCESSES_POSSIBLE[owner])) == set()
 
-    def test_preprocesses_owner_contributor(self):
+    def test_processes_owner_contributor(self):
         owner = 'contributor'
-        raw = self.get('/preprocesses?owner={}'.format(owner))
+        raw = self.get('/processes?owner={}'.format(owner))
         assert raw.status_code == 200
         r = self.json_to_dict(raw)
-        assert 'preprocesses' in r
-        preprocesses = r['preprocesses']
-        assert 'coverage' not in preprocesses
-        self.assert_preprocesses_by_owner(preprocesses, owner)
+        assert 'processes' in r
+        processes = r['processes']
+        assert 'coverage' not in processes
+        self.assert_processes_by_owner(processes, owner)
 
-    def test_preprocesses_owner_coverage(self):
+    def test_processes_owner_coverage(self):
         owner = 'coverage'
-        raw = self.get('/preprocesses?owner={}'.format(owner))
+        raw = self.get('/processes?owner={}'.format(owner))
         assert raw.status_code == 200
         r = self.json_to_dict(raw)
-        assert 'preprocesses' in r
-        preprocesses = r['preprocesses']
-        assert 'contributor' not in preprocesses
-        self.assert_preprocesses_by_owner(preprocesses, owner)
+        assert 'processes' in r
+        processes = r['processes']
+        assert 'contributor' not in processes
+        self.assert_processes_by_owner(processes, owner)
 
-    def test_preprocesses_without_owner(self):
-        raw = self.get('/preprocesses')
+    def test_processes_without_owner(self):
+        raw = self.get('/processes')
         assert raw.status_code == 200
         r = self.json_to_dict(raw)
-        assert 'preprocesses' in r
-        preprocesses = r['preprocesses']
-        for owner in PREPROCESSES_POSSIBLE.keys():
-                    self.assert_preprocesses_by_owner(preprocesses, owner)
+        assert 'processes' in r
+        processes = r['processes']
+        for owner in PROCESSES_POSSIBLE.keys():
+                    self.assert_processes_by_owner(processes, owner)
 
-    def test_preprocesses_owner_invalid(self):
-        raw = self.get('/preprocesses?owner=abcd')
+    def test_processes_owner_invalid(self):
+        raw = self.get('/processes?owner=abcd')
         assert raw.status_code == 400
         r = self.json_to_dict(raw)
         assert 'message' in r

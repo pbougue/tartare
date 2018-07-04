@@ -37,16 +37,16 @@ from zipfile import is_zipfile
 
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import PreProcess, DataSource, Contributor, Coverage, DataSet, ValidityPeriod
+from tartare.core.models import Process, DataSource, Contributor, Coverage, DataSet, ValidityPeriod
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
 from tartare.processes.fusio import Fusio
 
 
 class AbstractProcess(metaclass=ABCMeta):
-    def __init__(self, preprocess: PreProcess) -> None:
-        self.params = preprocess.params if preprocess else {}  # type: dict
-        self.data_source_ids = preprocess.data_source_ids
-        self.process_id = preprocess.id
+    def __init__(self, process: Process) -> None:
+        self.params = process.params if process else {}  # type: dict
+        self.data_source_ids = process.data_source_ids
+        self.process_id = process.id
 
     def save_result_into_target_data_source(self, data_source_owner: Union[Contributor, Coverage],
                                             target_data_set_gridfs_id: str,
@@ -64,17 +64,17 @@ class AbstractProcess(metaclass=ABCMeta):
 
     def get_link(self, key: str) -> Any:
         if not self.params.get('links') or key not in self.params.get('links'):
-            raise ParameterException('{} missing in preprocess links'.format(key))
+            raise ParameterException('{} missing in process links'.format(key))
 
         return self.params.get('links')[key]
 
 
 class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: CoverageExportContext, preprocess: PreProcess) -> None:
-        super().__init__(preprocess)
+    def __init__(self, context: CoverageExportContext, process: Process) -> None:
+        super().__init__(process)
         self.context = context
         if 'url' not in self.params:
-            raise ParameterException('params.url not present in fusio preprocess')
+            raise ParameterException('params.url not present in fusio process')
         self.fusio = Fusio(self.params['url'])
 
     @staticmethod
@@ -83,8 +83,8 @@ class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
 
 
 class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
-    def __init__(self, context: ContributorExportContext, preprocess: PreProcess) -> None:
-        super().__init__(preprocess)
+    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+        super().__init__(process)
         self.context = context
         if self.context.contributor_contexts:
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
@@ -137,9 +137,9 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
         data_format_exists = set()
         links = self.params.get("links")
         if links is None:
-            raise ParameterException('links missing in preprocess')
+            raise ParameterException('links missing in process')
         elif len(links) == 0:
-            raise ParameterException('empty links in preprocess')
+            raise ParameterException('empty links in process')
 
         for link in links:
             contributor_id = link.get('contributor_id')
@@ -165,4 +165,4 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
         diff = set(data_format_required) - data_format_exists
 
         if diff:
-            raise ParameterException('data type {} missing in preprocess links'.format(diff))
+            raise ParameterException('data type {} missing in process links'.format(diff))
