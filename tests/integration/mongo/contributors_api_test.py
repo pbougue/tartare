@@ -783,11 +783,9 @@ class TestContributors(TartareFixture):
                 }
             },
             {
-                "type": "ComputeDirections",
+                "type": "HeadsignShortName",
                 "sequence": 2,
-                "params": {
-                    "tc_data": {"key": "data_sources.data_format", "value": "gtfs"}
-                }
+                "data_source_ids": [],
             }
         ]
         contributor["processes"] = processes

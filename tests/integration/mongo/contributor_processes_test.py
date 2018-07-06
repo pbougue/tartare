@@ -35,7 +35,7 @@ import pytest
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
-    DATA_TYPE_GEOGRAPHIC
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_DIRECTION_CONFIG
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import get_dict_from_zip
 from tests.integration.test_mechanism import TartareFixture
@@ -243,28 +243,6 @@ class TestComputeDirectionsProcess(TartareFixture):
             resp = self.contributor_export('id_test', check_done=False)
             return self.get_job_from_export_response(resp)
 
-    @pytest.mark.parametrize(
-        "params, expected_error_message", [
-            ({}, "links missing in process"),
-            ({"links": []}, "empty links in process"),
-            ({"links": [{"contributor_id": "something", "data_source_id": "bob"}]},
-             "link bob is not a data_source id present")
-        ])
-    def test_compute_directions_invalid_params(self, params, expected_error_message, init_http_download_server):
-        job = self.__setup_contributor_export_environment(init_http_download_server, params)
-        assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'process', print(job)
-        assert job['error_message'] == expected_error_message, print(job)
-
-    def test_compute_directions_missing_ds_config(self, init_http_download_server):
-        job = self.__setup_contributor_export_environment(init_http_download_server,
-                                                          {"links": [{"contributor_id": "id_test",
-                                                                      "data_source_id": "ds-config"}]},
-                                                          add_data_source_config=False)
-        assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'process', print(job)
-        assert job['error_message'] == 'link ds-config is not a data_source id present', print(job)
-
     #
     # Test that:
     # - direction_id not filled and present in config file are filled with corresponding values
@@ -283,16 +261,22 @@ class TestComputeDirectionsProcess(TartareFixture):
         ])
     def test_compute_directions(self, init_http_download_server, data_set_filename,
                                 expected_trips_file_name):
-        job = self.__setup_contributor_export_environment(init_http_download_server,
-                                                          {"links": [{"contributor_id": "id_test",
-                                                                      "data_source_id": "ds-config"}]},
-                                                          data_set_filename=data_set_filename)
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, data_set_filename,
+                                                             path='compute_directions'), export_id='export_id')
+        self.add_data_source_to_contributor('cid', 'config_ds_id',
+                                            self.format_url(init_http_download_server.ip_addr, 'config.json',
+                                                            path='compute_directions'), DATA_FORMAT_DIRECTION_CONFIG)
+        self.add_process_to_contributor({
+            'type': 'ComputeDirections',
+            'input_data_source_ids': ['dsid'],
+            'configuration_data_sources': {
+                'compute_direction': 'config_ds_id',
+            },
+            'sequence': 0
+        }, 'cid')
+        self.contributor_export('cid')
 
-        assert job['state'] == 'done', print(job)
-        assert job['step'] == 'save_contributor_export', print(job)
-        assert job['error_message'] == '', print(job)
-
-        gridfs_id = self.get_gridfs_id_from_data_source('id_test', 'export_id')
+        gridfs_id = self.get_gridfs_id_from_data_source('cid', 'export_id')
         with app.app_context():
             new_zip_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
         with ZipFile(new_zip_file, 'r') as new_zip_file:
@@ -419,10 +403,10 @@ class TestComputeExternalSettings(TartareFixture):
                     fusio_settings_zip_file.extractall(tmp_dir_name)
                     assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_codes.txt'),
                                              _get_file_fixture_full_path(
-                                            'prepare_external_settings/expected_fusio_object_codes.txt'))
+                                                 'prepare_external_settings/expected_fusio_object_codes.txt'))
                     assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
                                              _get_file_fixture_full_path(
-                                            'prepare_external_settings/expected_fusio_object_properties.txt'))
+                                                 'prepare_external_settings/expected_fusio_object_properties.txt'))
 
 
 class TestHeadsignShortNameProcess(TartareFixture):
@@ -464,8 +448,9 @@ class TestHeadsignShortNameProcess(TartareFixture):
         return self.get_job_from_export_response(resp)
 
     def test_expected_files(self, init_http_download_server):
-        contributor = self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
-                              export_id='export_id')
+        contributor = self.init_contributor('cid', 'dsid',
+                                            self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
+                                            export_id='export_id')
         contributor['processes'].append({
             "id": "plop",
             "sequence": 0,

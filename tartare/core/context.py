@@ -32,7 +32,7 @@ from typing import Dict
 from typing import List, Optional
 
 from tartare.core.models import ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer, Job, DataSet
+    ValidityPeriodContainer, Job, DataSet, OldProcess, NewProcess
 from tartare.exceptions import IntegrityException, EntityNotFound
 
 
@@ -67,7 +67,7 @@ class Context:
 
 
 class DataSourceExport:
-    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str, service_id: str=None) -> None:
+    def __init__(self, gridfs_id: str, data_source_id: str, data_format: str, service_id: str = None) -> None:
         self.gridfs_id = gridfs_id
         self.data_source_id = data_source_id
         self.data_format = data_format
@@ -109,6 +109,16 @@ class ContributorExportContext(Context):
             contributor_id = link.get('contributor_id')
             data_source_id = link.get('data_source_id')
             data_source_context = self.get_contributor_data_source_context(contributor_id, data_source_id,
+                                                                           [data_format])
+            if data_source_context:
+                return data_source_context
+        return None
+
+    def get_data_source_context_in_configuration(self, configuration: dict,
+                                         data_format: Optional[str] = None) -> Optional[DataSourceContext]:
+        for link_type, data_source_id in configuration.items():
+            contributor = DataSource.get_contributor_of_data_source(data_source_id)
+            data_source_context = self.get_contributor_data_source_context(contributor.id, data_source_id,
                                                                            [data_format])
             if data_source_context:
                 return data_source_context
@@ -168,19 +178,27 @@ class ContributorExportContext(Context):
 
         # links data added
         for process in contributor.processes:
-            for link in process.params.get('links', []):
-                contributor_id = link.get('contributor_id')
-                data_source_id = link.get('data_source_id')
-                if contributor_id and data_source_id and contributor_id != contributor.id:
-                    # @TODO: should exit instead of continue and fail in process
-                    try:
-                        tmp_contributor = Contributor.get(contributor_id)
-                    except EntityNotFound:
-                        continue
-                    data_set = DataSource.get_one(data_source_id).get_last_data_set()
-                    self.add_contributor_context(tmp_contributor)
-                    self.add_contributor_data_source_context(contributor_id, data_source_id, None,
-                                                             data_set.gridfs_id)
+            if isinstance(process, OldProcess):
+                for link in process.params.get('links', []):
+                    contributor_id = link.get('contributor_id')
+                    data_source_id = link.get('data_source_id')
+                    if contributor_id and data_source_id and contributor_id != contributor.id:
+                        # @TODO: should exit instead of continue and fail in process
+                        try:
+                            tmp_contributor = Contributor.get(contributor_id)
+                        except EntityNotFound:
+                            continue
+                        data_set = DataSource.get_one(data_source_id).get_last_data_set()
+                        self.add_contributor_context(tmp_contributor)
+                        self.add_contributor_data_source_context(contributor_id, data_source_id, None,
+                                                                 data_set.gridfs_id)
+            elif isinstance(process, NewProcess):
+                for link_type, data_source_id in process.configuration_data_sources.items():
+                    contributor = DataSource.get_contributor_of_data_source(data_source_id)
+                    data_source = contributor.get_data_source(data_source_id)
+                    self.add_contributor_context(contributor)
+                    self.add_contributor_data_source_context(contributor.id, data_source_id, None,
+                                                             data_source.get_last_data_set().gridfs_id)
 
     def __repr__(self) -> str:
         return str(vars(self))

@@ -37,7 +37,7 @@ from zipfile import is_zipfile
 
 from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Process, DataSource, Contributor, Coverage, DataSet, ValidityPeriod
+from tartare.core.models import Process, DataSource, Contributor, Coverage, DataSet, ValidityPeriod, NewProcess
 from tartare.exceptions import ParameterException, RuntimeException, IntegrityException
 from tartare.processes.fusio import Fusio
 
@@ -67,6 +67,13 @@ class AbstractProcess(metaclass=ABCMeta):
             raise ParameterException('{} missing in process links'.format(key))
 
         return self.params.get('links')[key]
+
+
+class NewAbstractProcess(AbstractProcess, metaclass=ABCMeta):
+    def __init__(self, process: NewProcess) -> None:
+        self.process_id = process.id
+        self.data_source_ids = process.input_data_source_ids
+        self.params = {}
 
 
 class AbstractFusioProcess(AbstractProcess, metaclass=ABCMeta):
@@ -166,3 +173,13 @@ class AbstractContributorProcess(AbstractProcess, metaclass=ABCMeta):
 
         if diff:
             raise ParameterException('data type {} missing in process links'.format(diff))
+
+
+class NewAbstractContributorProcess(AbstractContributorProcess, metaclass=ABCMeta):
+    def __init__(self, context: ContributorExportContext, process: NewProcess) -> None:
+        NewAbstractProcess.__init__(self, process)
+        self.context = context
+        if self.context.contributor_contexts:
+            self.contributor_id = self.context.contributor_contexts[0].contributor.id
+        self.gfs = GridFsHandler()
+        self.configuration = process.configuration_data_sources
