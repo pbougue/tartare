@@ -269,9 +269,9 @@ class TestComputeDirectionsProcess(TartareFixture):
         self.add_process_to_contributor({
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': {
-                'compute_direction': 'config_ds_id',
-            },
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config_ds_id'}
+            ],
             'sequence': 0
         }, 'cid')
         self.contributor_export('cid')

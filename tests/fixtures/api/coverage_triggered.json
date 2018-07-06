@@ -1,5 +1,5 @@
 {
   "id": "coverage_id_triggered",
   "name": "coverage_name_triggered",
-  "input_data_source_ids": ["export_id"]
+  "input_data_source_ids": ["sleeping_export_id"]
 }

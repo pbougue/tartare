@@ -35,7 +35,7 @@ import pytest
 import tartare
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
-    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI, DATA_FORMAT_DIRECTION_CONFIG
 from tartare.core.models import Contributor
 from tests.integration.test_mechanism import TartareFixture
 
@@ -1322,6 +1322,29 @@ class TestContributors(TartareFixture):
         details = self.assert_failed_call(raw)
         assert details == {
             'error': 'unable to delete contributor geo because the following contributors are using one of its data sources: cid',
+            'message': 'Invalid arguments'
+        }
+
+    def test_delete_contributor_with_data_source_used_by_other_new_contributor(self, init_http_download_server):
+        self.init_contributor('config', 'config-file',
+                              self.format_url(init_http_download_server.ip_addr, 'config.json',
+                                              path='compute_directions'), data_format=DATA_FORMAT_DIRECTION_CONFIG)
+        self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.add_process_to_contributor({
+            "id": "compute",
+            "type": "ComputeDirections",
+            "sequence": 1,
+            "input_data_source_ids": [
+                "dsid"
+            ],
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config-file'}
+            ],
+        }, 'cid')
+        raw = self.delete('/contributors/config')
+        details = self.assert_failed_call(raw)
+        assert details == {
+            'error': 'unable to delete contributor config because the following contributors are using one of its data sources: cid',
             'message': 'Invalid arguments'
         }
 

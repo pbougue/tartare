@@ -27,9 +27,9 @@ This `Process` fixes trips.txt files into one gtfs data source (referenced in `i
 {
     'type': 'ComputeDirections',
     'input_data_source_ids': ['dsid'],
-    'configuration_data_sources': {
-        'compute_direction': 'data-source-id-config',
-    },
+    'configuration_data_sources': [
+        {'name': 'directions', 'id': 'data-source-id-config'}
+    ],
     'sequence': 0
 }
 ```

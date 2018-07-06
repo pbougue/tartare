@@ -36,12 +36,6 @@ from tests.functional.abstract_request_client import AbstractRequestClient
 class TestFullExport(AbstractRequestClient):
     def test_contrib_export_with_compute_directions(self):
         self.init_contributor('contributor.json')
-        with open(self.get_fixtures_relative_path('compute_directions/config.json'), 'rb') as file:
-            raw = self.post(
-                '/contributors/contributor_with_process_id/data_sources/compute_direction_config_id/data_sets',
-                files={'file': file})
-            self.assert_sucessful_create(raw)
-
         job_id = self.contributor_export('contributor_with_process_id')
         self.wait_for_job_to_be_done(job_id, 'save_contributor_export')
 

@@ -32,7 +32,7 @@ from typing import Dict
 from typing import List, Optional
 
 from tartare.core.models import ValidityPeriod, Contributor, Coverage, DataSource, \
-    ValidityPeriodContainer, Job, DataSet, OldProcess, NewProcess
+    ValidityPeriodContainer, Job, DataSet, OldProcess, NewProcess, ConfigurationDataSource
 from tartare.exceptions import IntegrityException, EntityNotFound
 
 
@@ -114,11 +114,11 @@ class ContributorExportContext(Context):
                 return data_source_context
         return None
 
-    def get_data_source_context_in_configuration(self, configuration: dict,
+    def get_data_source_context_in_configuration(self, configuration: List[ConfigurationDataSource],
                                          data_format: Optional[str] = None) -> Optional[DataSourceContext]:
-        for link_type, data_source_id in configuration.items():
-            contributor = DataSource.get_contributor_of_data_source(data_source_id)
-            data_source_context = self.get_contributor_data_source_context(contributor.id, data_source_id,
+        for configuration_data_source in configuration:
+            contributor = DataSource.get_contributor_of_data_source(configuration_data_source.id)
+            data_source_context = self.get_contributor_data_source_context(contributor.id, configuration_data_source.id,
                                                                            [data_format])
             if data_source_context:
                 return data_source_context
@@ -193,11 +193,11 @@ class ContributorExportContext(Context):
                         self.add_contributor_data_source_context(contributor_id, data_source_id, None,
                                                                  data_set.gridfs_id)
             elif isinstance(process, NewProcess):
-                for link_type, data_source_id in process.configuration_data_sources.items():
-                    contributor = DataSource.get_contributor_of_data_source(data_source_id)
-                    data_source = contributor.get_data_source(data_source_id)
+                for config in process.configuration_data_sources:
+                    contributor = DataSource.get_contributor_of_data_source(config.id)
+                    data_source = contributor.get_data_source(config.id)
                     self.add_contributor_context(contributor)
-                    self.add_contributor_data_source_context(contributor.id, data_source_id, None,
+                    self.add_contributor_data_source_context(contributor.id, config.id, None,
                                                              data_source.get_last_data_set().gridfs_id)
 
     def __repr__(self) -> str:

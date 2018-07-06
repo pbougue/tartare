@@ -373,3 +373,9 @@ class TartareFixture(object):
         assert '0' in details['error']['processes']
         assert key in details['error']['processes']['0']
         assert details['error']['processes']['0'][key] == [message]
+
+    def assert_process_validation_error_global(self, raw, key, message):
+        details = self.assert_failed_call(raw)
+        assert details['message'] == 'Invalid arguments'
+        assert key in details['error']
+        assert details['error'][key] == [message]

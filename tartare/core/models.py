@@ -38,8 +38,9 @@ from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple
 
 import pymongo
 import pytz
-from marshmallow import Schema, post_load, utils, fields, validates, ValidationError
+from marshmallow import Schema, post_load, utils, fields, validates, validates_schema, ValidationError
 from marshmallow_oneofschema import OneOfSchema
+from pymongo.cursor import Cursor
 
 from tartare import app
 from tartare import mongo
@@ -490,13 +491,12 @@ class DataSource(object):
         return mongo.db[model.mongo_collection].find_one({'data_sources.id': data_source_id}) is not None
 
     @classmethod
-    def has_data_format(cls, data_source_id: str, model: Union['Contributor', 'Coverage'], data_format: str) -> bool:
+    def get_data_format(cls, data_source_id: str, model: Union['Contributor', 'Coverage']) -> str:
         raw = mongo.db[model.mongo_collection].find_one({'data_sources.id': data_source_id})
         if not raw:
             return False
-        data_source = next((data_source for data_source in raw['data_sources'] if data_source['id'] == data_source_id),
-                           None)
-        return data_source and data_source['data_format'] == data_format
+        data_source = next(data_source for data_source in raw['data_sources'] if data_source['id'] == data_source_id)
+        return data_source['data_format']
 
     @classmethod
     def get_one(cls, data_source_id: str) -> 'DataSource':
@@ -588,13 +588,20 @@ class OldProcess(Process):
         return str(vars(self))
 
 
+class ConfigurationDataSource(object):
+    def __init__(self, name: str, id: str):
+        self.id = id
+        self.name = name
+
+
 class NewProcess(Process):
-    def __init__(self, id: Optional[str] = None, configuration_data_sources: Optional[dict] = None,
+    def __init__(self, id: Optional[str] = None,
+                 configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
                  sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
                  target_data_source_id: Optional[List[str]] = None,
                  enabled: bool = True) -> None:
         super().__init__(id, sequence, enabled)
-        self.configuration_data_sources = configuration_data_sources if configuration_data_sources else {}
+        self.configuration_data_sources = configuration_data_sources if configuration_data_sources else []
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         self.target_data_source_id = target_data_source_id
 
@@ -689,6 +696,19 @@ class Contributor(DataSourceAndProcessContainer):
         })
         if contributors_using:
             contributors_ids = [contributor.id for contributor in contributors_using]
+            raise IntegrityException(
+                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                    self.id, ', '.join(contributors_ids)
+                ))
+
+        new_contributors_using = self.find({
+            '$or': [
+                {'processes.input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}},
+                {'processes.configuration_data_sources.id': {'$in': [data_source.id for data_source in self.data_sources]}},
+            ]
+        })
+        if new_contributors_using:
+            contributors_ids = [contributor.id for contributor in new_contributors_using]
             raise IntegrityException(
                 'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
                     self.id, ', '.join(contributors_ids)
@@ -1124,17 +1144,25 @@ class MongoGenericProcessSchema(EnabledSchema):
     sequence = fields.Integer(required=True)
 
 
+class MongoConfigurationDataSource(Schema):
+    name = fields.String(required=True)
+    id = fields.String(required=True)
+
+    @post_load
+    def build_configuration(self, data: dict) -> ConfigurationDataSource:
+        return ConfigurationDataSource(**data)
+
+
 class MongoNewProcessSchema(MongoGenericProcessSchema):
     input_data_source_ids = fields.List(fields.String(), required=True)
     target_data_source_id = fields.String(required=False, allow_none=True)
-    configuration_data_sources = fields.Dict(required=False, allow_none=True)
+    configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=False,
+                                             allow_none=True)
 
     @validates('input_data_source_ids')
     def validate_input_data_source_ids(self, input_data_source_ids: List[str]) -> None:
         if len(input_data_source_ids) != 1:
             raise ValidationError('input_data_source_ids should contains one and only one data source id')
-        if not DataSource.exists(input_data_source_ids[0], Contributor):
-            raise ValidationError('input_data_source_ids should reference an existing data source')
 
 
 class MongoOldProcessSchema(MongoGenericProcessSchema):
@@ -1168,6 +1196,12 @@ class MongoRuspellProcessSchema(MongoOldProcessSchema):
     @post_load
     def build_process(self, data: dict) -> RuspellProcess:
         return RuspellProcess(**data)
+
+
+class MongoSleepingProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> SleepingProcess:
+        return SleepingProcess(**data)
 
 
 class MongoComputeExternalSettingsProcessSchema(MongoOldProcessSchema):
@@ -1218,14 +1252,9 @@ class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
         return ComputeDirectionsProcess(**data)
 
     @validates('configuration_data_sources')
-    def validate_configuration_data_sources(self, configuration_data_sources: Dict[str, str]) -> None:
-        if 'compute_direction' not in configuration_data_sources:
-            raise ValidationError('configuration_data_sources should contain a data source for compute directions')
-        if not DataSource.has_data_format(configuration_data_sources['compute_direction'], Contributor,
-                                          DATA_FORMAT_DIRECTION_CONFIG):
-            raise ValidationError(
-                'configuration_data_sources should contain a {} data source for compute directions'.format(
-                    DATA_FORMAT_DIRECTION_CONFIG))
+    def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
+        if not any(configuration.name == 'directions' for configuration in configuration_data_sources):
+            raise ValidationError('configuration_data_sources should contain a "directions" data source')
 
 
 class MongoProcessSchema(OneOfSchema):
@@ -1236,6 +1265,7 @@ class MongoProcessSchema(OneOfSchema):
         'Gtfs2Ntfs': MongoGtfs2NtfsProcessSchema,
         'HeadsignShortName': MongoHeadsignShortNameProcessSchema,
         'Ruspell': MongoRuspellProcessSchema,
+        'Sleeping': MongoSleepingProcessSchema,
         'FusioDataUpdate': MongoFusioDataUpdateProcessSchema,
         'FusioExport': MongoFusioExportProcessSchema,
         'FusioExportContributor': MongoFusioExportContributorProcessSchema,
@@ -1297,6 +1327,55 @@ class MongoContributorSchema(Schema):
     data_sources = fields.Nested(MongoDataSourceSchema, many=True, required=False)
     processes = fields.Nested(MongoProcessSchema, many=True, required=False)
     data_type = DataType()
+
+    @validates_schema(pass_original=True, skip_on_field_errors=True)
+    def validate_contributor_process_input_data_source_ids(self, marshalled: Union[dict, Contributor],
+                                                           contributor: Union[dict, Cursor]) -> None:
+        if isinstance(contributor, Cursor):
+            contributor = marshalled
+        for process in contributor.get('processes', []):
+            if isinstance(process, dict):
+                if 'input_data_source_ids' in process and len(process['input_data_source_ids']) == 1:
+                    data_source_id = process['input_data_source_ids'][0]
+                    if not any(data_source_id == data_source['id'] for data_source in
+                               contributor.get('data_sources', [])):
+                        if not DataSource.exists(data_source_id, Contributor):
+                            raise ValidationError(
+                                'data source referenced by "{}" in process "{}" not found'.format(
+                                    data_source_id, process['type']), ['input_data_source_ids'])
+
+    @classmethod
+    def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str, process_type: str):
+        if configuration_key == 'directions':
+            if data_format_found != DATA_FORMAT_DIRECTION_CONFIG:
+                raise ValidationError(
+                    'data source referenced by "{}" in process "{}" should be of data format "compute directions"'.format(
+                        DATA_FORMAT_DIRECTION_CONFIG, process_type), ['configuration_data_sources'])
+
+    @validates_schema(pass_original=True, skip_on_field_errors=True)
+    def validate_contributor_process_configuration(self, marshalled: Union[dict, Contributor],
+                                                   contributor: Union[dict, Cursor]) -> None:
+        if isinstance(contributor, Cursor):
+            contributor = marshalled
+        for process in contributor.get('processes', []):
+            if isinstance(process, dict):
+                for configuration_data_source in process.get('configuration_data_sources', []):
+                    data_source_id = configuration_data_source['id']
+                    contributor_data_sources = contributor.get('data_sources', [])
+                    if not any(data_source_id == data_source['id'] for data_source in contributor_data_sources):
+                        if not DataSource.exists(data_source_id, Contributor):
+                            raise ValidationError(
+                                'data source referenced by "{}" in process "{}" was not found'.format(data_source_id,
+                                                                                                      process['type']),
+                                ['configuration_data_sources'])
+                        else:
+                            data_format = DataSource.get_data_format(data_source_id, Contributor)
+                    else:
+                        data_format = next(data_source['data_format'] for data_source in contributor_data_sources if
+                                           data_source['id'] == data_source_id)
+
+                    self.validate_configuration_has_data_format(configuration_data_source['name'], data_format,
+                                                                process['type'])
 
     @post_load
     def make_contributor(self, data: dict) -> Contributor:

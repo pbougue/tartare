@@ -30,7 +30,7 @@
 # www.navitia.io
 import pytest
 
-from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_BANO_FILE
+from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEFAULT
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -40,31 +40,45 @@ class TestContributorProcessesApi(TartareFixture):
         ([], 'input_data_source_ids should contains one and only one data source id'),
         (['id1', 'id2'], 'input_data_source_ids should contains one and only one data source id'),
         (['id1', 'id2', 'id3'], 'input_data_source_ids should contains one and only one data source id'),
-        (['unknown'], 'input_data_source_ids should reference an existing data source'),
     ])
-    def test_post_contributor_preprocess_invalid_input_data_source_ids(self, input_data_source_ids, message):
+    def test_post_contributor_process_invalid_input_data_source_ids(self, input_data_source_ids, message):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
         raw = self.add_process_to_contributor({
             'type': 'ComputeDirections',
             'input_data_source_ids': input_data_source_ids,
-            'configuration_data_sources': {
-                'compute_direction': 'config-id',
-            },
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config-id'}
+            ],
             'sequence': 0
         }, 'cid', check_success=False)
         details = self.assert_failed_call(raw)
         assert details == {'error': {'processes': {'0': {'input_data_source_ids': [message]}}},
                            'message': 'Invalid arguments'}
 
+    def test_post_contributor_process_unknown_input_data_source_ids(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeDirections',
+            'input_data_source_ids': ['unknown'],
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config-id'}
+            ],
+            'sequence': 0
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'data source referenced by "unknown" in process "ComputeDirections" not found')
+
 
 class TestComputeDirectionContributorProcessesApi(TartareFixture):
     @pytest.mark.parametrize("configuration_data_sources", [
-        {},
-        {'useless': 'config-id'},
-        {'useless': 'config-id', 'other': 'toto'},
+        [],
+        [{'name': 'useless', 'id': 'config-id'}],
+        [{'name': 'useless', 'id': 'config-id'}, {'name': 'other', 'id': 'toto'}],
     ])
-    def test_post_contributor_preprocess_wrong_configuration_data_sources(self, configuration_data_sources):
+    def test_post_contributor_process_wrong_configuration_data_sources(self, configuration_data_sources):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
         raw = self.add_process_to_contributor({
@@ -75,31 +89,63 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error(
             raw, 'configuration_data_sources',
-            'configuration_data_sources should contain a data source for compute directions')
+            'configuration_data_sources should contain a "directions" data source')
 
-    def test_post_contributor_preprocess_wrong_config_format(self):
+    def test_post_contributor_process_wrong_config_format(self):
         self.init_contributor('cid', 'dsid', 'whatever')
-        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_BANO_FILE)
+        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DEFAULT)
         raw = self.add_process_to_contributor({
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': {
-                'compute_direction': 'config-id',
-            },
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config-id'}
+            ],
             'sequence': 0
         }, 'cid', check_success=False)
-        self.assert_process_validation_error(
+        self.assert_process_validation_error_global(
             raw, 'configuration_data_sources',
-            'configuration_data_sources should contain a direction_config data source for compute directions')
+            'data source referenced by "direction_config" in process "ComputeDirections" should be of data format "compute directions"')
 
-    def test_post_contributor_preprocess_ok(self):
+    def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
         self.add_process_to_contributor({
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': {
-                'compute_direction': 'config-id',
-            },
+            'configuration_data_sources': [
+                {'name': 'directions', 'id': 'config-id'}
+            ],
             'sequence': 0
         }, 'cid')
+
+    def test_post_contributor_process_ok_on_create(self):
+        raw = self.post('/contributors', self.dict_to_json({
+            'id': 'cid',
+            'name': 'cid',
+            'data_prefix': 'prefix_',
+            'data_sources': [
+                {
+                    'id': 'dsid',
+                    'name': 'dsid',
+                    'type': 'manual',
+                    'data_format': DATA_FORMAT_DEFAULT
+                },
+                {
+                    'id': 'config-id',
+                    'name': 'config-id',
+                    'type': 'manual',
+                    'data_format': DATA_FORMAT_DIRECTION_CONFIG
+                }
+            ],
+            'processes': [
+                {
+                    'type': 'ComputeDirections',
+                    'input_data_source_ids': ['dsid'],
+                    'configuration_data_sources': [
+                        {'name': 'directions', 'id': 'config-id'}
+                    ],
+                    'sequence': 0
+                }
+            ],
+        }))
+        self.assert_sucessful_create(raw)
