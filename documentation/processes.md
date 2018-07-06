@@ -22,32 +22,18 @@ This page describes all the `Process`es that can be used in `Tartare`.
 ####  Description  
 The GTFS *trips.txt* file contains a **direction_id** column specifying if the trip is going forward or backward. This information is useful to display a line timetable accorgingly to a direction specified by the user.
 
-This `Process` fixes trips.txt files into one or more gtfs data sources (referenced by `data_source_ids`) having missing direction_id based upon a provided config file as a data source (referenced by `params.config.data_source_id`).
+This `Process` fixes trips.txt files into one gtfs data source (referenced in `input_data_source_ids`) having missing direction_id based upon a provided config file as a data source (referenced by `configuration_data_sources.compute_direction`).
 ```json
 {
-  "id": "my-compute-dir-id",
-  "type": "ComputeDirections",
-  "data_source_ids": [
-    "data-source-id-to-process"
-  ],
-  "params": {
-    "links": [
-      {
-        "contributor_id": "{cid}",
-        "data_source_id": "data-source-id-config"
-      }
-    ]
-  },
-  "sequence": 0
+    'type': 'ComputeDirections',
+    'input_data_source_ids': ['dsid'],
+    'configuration_data_sources': {
+        'compute_direction': 'data-source-id-config',
+    },
+    'sequence': 0
 }
 ```
 Don't forget to provide in the data source identified by "data-source-id-config" the config file. It's a json containing routes (only the GTFS `route_id`) and their stop points ordered from origin to destination (see example [here](https://github.com/CanalTP/tartare/blob/master/tests/fixtures/compute_directions/config.json)).
-This can be done by doing:
-```bash
-curl -i -X POST \
-  -F "file=@\"./path/to/your_config_file.json\";type=application/json;filename=\"your_config_file.json\"" \
- 'http://{tartare_host}/contributors/{cid}/data_sources/data-source-id-config/data_sets'
-```
 
 ####  What does it do? How ?
 `ComputeDirections` overwrite the **direction_id** column in the *trips.txt* for all the routes mentioned in the **direction_config** data source. The following rules apply :
