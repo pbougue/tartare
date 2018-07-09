@@ -2,11 +2,6 @@ FROM navitia/ruspell as ruspell
 FROM navitia/navitia_model as navitia_model
 FROM tartare_functional_tests
 
-USER root
-RUN apt-get update \
-    && apt-get install -y -qq aspell aspell-fr \
-    && rm -rf /var/lib/apt/lists/*
-USER tartare
 COPY --from=ruspell /app/ruspell /usr/src/app/bin/ruspell
 COPY --from=navitia_model /app/gtfs2ntfs /usr/src/app/bin/gtfs2ntfs
 
