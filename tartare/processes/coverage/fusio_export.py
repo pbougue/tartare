@@ -35,7 +35,7 @@ from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS, DATA_FORM
 from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Process, InputAuto, FrequencyDaily
+from tartare.core.models import Process
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import FusioException, ParameterException
 from tartare.processes.abstract_process import AbstractFusioProcess
@@ -71,8 +71,7 @@ class FusioExport(AbstractFusioProcess):
 
     def save_export(self, url: str) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_name:
-            frequency = FrequencyDaily(20)
-            dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url, frequency=frequency), tmp_dir_name)
+            dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, tmp_dir_name)
             with open(dest_full_file_name, 'rb') as file:
                 gridfs_id = GridFsHandler().save_file_in_gridfs(file, filename=expected_file_name)
                 if self.params.get('target_data_source_id'):

@@ -35,10 +35,7 @@ import pytest
 from requests import HTTPError
 
 from tartare.core.fetcher import HttpFetcher, FetcherManager
-from tartare.core.models import InputAuto, FrequencyDaily
 from tartare.exceptions import FetcherException, GuessFileNameFromUrlException
-
-frequency = FrequencyDaily(20)
 
 
 class TestFetcher:
@@ -112,14 +109,14 @@ class TestFetcher:
     def test_fetch_http_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = HTTPError('404 not found')
-            HttpFetcher().fetch(InputAuto(url='http://whatever.com/config.json', frequency=frequency), '/tmp/whatever')
+            HttpFetcher().fetch('http://whatever.com/config.json', '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: 404 not found'
 
     @mock.patch('urllib.request.OpenerDirector.open')
     def test_fetch_url_error(self, mock_url_retrieve):
         with pytest.raises(FetcherException) as excinfo:
             mock_url_retrieve.side_effect = URLError('details')
-            HttpFetcher().fetch(InputAuto(url='http://whatever.com/config.json', frequency=frequency), '/tmp/whatever')
+            HttpFetcher().fetch('http://whatever.com/config.json', '/tmp/whatever')
         assert str(excinfo.value) == 'error during download of file: <urlopen error details>'
 
     @mock.patch('urllib.request.urlopen')
@@ -128,7 +125,7 @@ class TestFetcher:
     def test_fetch_ok_data_format(self, mock_urlopen, mock_open, mock_copyfileobj):
         mock_urlopen.return_value.__enter__.return_value.read.return_value = mock.Mock()
         url = 'http://whatever.com/config.json'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url, frequency=frequency), '/tmp/whatever')
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(url, '/tmp/whatever')
         assert dest_full_file_name.endswith('config.json'), print(dest_full_file_name)
         assert expected_file_name == 'config.json'
 
@@ -138,10 +135,9 @@ class TestFetcher:
     def test_fetch_ok_expected_file_name(self, mock_urlopen, mock_file, mock_copyfileobj):
         mock_urlopen.return_value.__enter__.return_value.read.return_value = mock.Mock()
         url = 'http://whatever.com/resource'
-        dest_full_file_name, expected_file_name = HttpFetcher().fetch(InputAuto(url=url,
-                                                                                frequency=frequency,
-                                                                                expected_file_name='config.json'),
-                                                                      '/tmp/whatever')
+        dest_full_file_name, expected_file_name = HttpFetcher().fetch(url,
+                                                                      '/tmp/whatever',
+                                                                      expected_filename='config.json')
         assert dest_full_file_name.endswith('config.json')
         assert expected_file_name == 'config.json'
 
@@ -153,7 +149,7 @@ class TestFetcher:
         mock_response.return_value = response
         url = 'http://whatever.com/resource'
         with pytest.raises(GuessFileNameFromUrlException) as excinfo:
-            HttpFetcher().fetch(InputAuto(url=url, frequency=frequency), '/tmp/whatever')
+            HttpFetcher().fetch(url, '/tmp/whatever')
         assert str(excinfo.value) == 'unable to guess file name from url {}'.format(url)
 
     @pytest.mark.parametrize(
