@@ -357,10 +357,9 @@ class TestDataSourceShouldFetch(TartareFixture):
             # less than one day since manual fetch but it's time
             frozen_datetime.move_to(datetime_from_string('1986-01-16 13:55:00 UTC'))
             self.__assert_should_fetch(True)
-            # time passed (some crash), we wait until it's been one day
+            # time passed but no fetch between last tick and now => fetch
             frozen_datetime.move_to(datetime_from_string('1986-01-16 17:55:00 UTC'))
-            self.__assert_should_fetch(False)
-            # more than one day since manual fetch
+            self.__assert_should_fetch(True)
             frozen_datetime.move_to(datetime_from_string('1986-01-17 12:05:00 UTC'))
             self.__assert_should_fetch(True)
             self.__fetch()
@@ -402,9 +401,9 @@ class TestDataSourceShouldFetch(TartareFixture):
             # less than one week since manual fetch but it's time
             frozen_datetime.move_to(datetime_from_string('1986-01-28 10:55:00 UTC'))
             self.__assert_should_fetch(True)
-            # time passed (some crash), we wait until it's been one day
+            # time passed but no fetch between last tick and now => fetch
             frozen_datetime.move_to(datetime_from_string('1986-01-28 17:55:00 UTC'))
-            self.__assert_should_fetch(False)
+            self.__assert_should_fetch(True)
             # more than one week since manual fetch
             frozen_datetime.move_to(datetime_from_string('1986-01-31 12:05:00 UTC'))
             self.__assert_should_fetch(True)
@@ -447,9 +446,9 @@ class TestDataSourceShouldFetch(TartareFixture):
             # less than one month since manual fetch but it's time
             frozen_datetime.move_to(datetime_from_string('1986-03-12 16:55:00 UTC'))
             self.__assert_should_fetch(True)
-            # time passed (some crash), we wait until it's been one month
+            # time passed but no fetch between last tick and now => fetch
             frozen_datetime.move_to(datetime_from_string('1986-03-12 17:55:00 UTC'))
-            self.__assert_should_fetch(False)
+            self.__assert_should_fetch(True)
             # more than one month since manual fetch
             frozen_datetime.move_to(datetime_from_string('1986-04-01 12:05:00 UTC'))
             self.__assert_should_fetch(True)

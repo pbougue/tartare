@@ -350,15 +350,11 @@ class FrequencyDaily(Enabled):
         if not last_fetched_at:
             return now.hour == self.hour_of_day
         else:
-            delta = now - last_fetched_at
-            # last fetch was on schedule
-            if last_fetched_at.hour == self.hour_of_day:
-                # fetch if it's been at least one day or almost one day and it's hour of day
-                return delta.days >= 1 or (
-                    now.day != last_fetched_at.day and now.hour == self.hour_of_day
-                )
-            else:
-                return delta.days >= 1 or now.hour == self.hour_of_day
+            previous_tick = now if now.hour >= self.hour_of_day else now - timedelta(days=1)
+            previous_tick = previous_tick.replace(hour=self.hour_of_day)
+            previous_tick = previous_tick.replace(minute=0)
+            previous_tick = previous_tick.replace(second=0)
+            return last_fetched_at < previous_tick
 
 
 class FrequencyWeekly(Enabled):
@@ -372,15 +368,17 @@ class FrequencyWeekly(Enabled):
         if not last_fetched_at:
             return now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
         else:
-            delta = now - last_fetched_at
-            # last fetch was on schedule
-            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.isoweekday() == frequency_day_of_week:
-                # fetch if it's been at least one week or almost one week and it's day of week and hour of day
-                return delta.days >= 7 or (
-                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week
-                )
-            else:
-                return delta.days >= 7 or (now.hour == self.hour_of_day and now.isoweekday() == frequency_day_of_week)
+            previous_tick = now
+            # if we are on scheduled day but before the mark, we need to go back in time to find previous tick
+            # next loop is forced
+            if previous_tick.hour < self.hour_of_day and previous_tick.isoweekday() == frequency_day_of_week:
+                previous_tick = previous_tick - timedelta(days=1)
+            while previous_tick.isoweekday() != frequency_day_of_week:
+                previous_tick = previous_tick - timedelta(days=1)
+            previous_tick = previous_tick.replace(hour=self.hour_of_day)
+            previous_tick = previous_tick.replace(minute=0)
+            previous_tick = previous_tick.replace(second=0)
+            return last_fetched_at < previous_tick
 
 
 class FrequencyMonthly(Enabled):
@@ -393,15 +391,17 @@ class FrequencyMonthly(Enabled):
         if not last_fetched_at:
             return now.day == self.day_of_month and now.hour == self.hour_of_day
         else:
-            delta = now - last_fetched_at
-            # last fetch was on schedule
-            if last_fetched_at.hour == self.hour_of_day and last_fetched_at.day == self.day_of_month:
-                # fetch if it's been at least one month or almost one month and it's day of month and hour of day
-                return delta.days >= 31 or (
-                    now.day != last_fetched_at.day and now.hour == self.hour_of_day and now.day == self.day_of_month
-                )
-            else:
-                return delta.days >= 31 or (now.hour == self.hour_of_day and now.day == self.day_of_month)
+            previous_tick = now
+            # if we are on scheduled day but before the mark, we need to go back in time to find previous tick
+            # next loop is forced
+            if previous_tick.hour < self.hour_of_day and previous_tick.day == self.day_of_month:
+                previous_tick = previous_tick - timedelta(days=1)
+            while previous_tick.day != self.day_of_month:
+                previous_tick = previous_tick - timedelta(days=1)
+            previous_tick = previous_tick.replace(hour=self.hour_of_day)
+            previous_tick = previous_tick.replace(minute=0)
+            previous_tick = previous_tick.replace(second=0)
+            return last_fetched_at < previous_tick
 
 
 FrequenceType = Union[FrequencyContinuously, FrequencyDaily, FrequencyWeekly, FrequencyMonthly]
