@@ -152,7 +152,7 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
                     )
                     self.data_sources.append(data_source_computed)
         for process in self.processes:
-            if not isinstance(process, NewProcess):
+            if isinstance(process, OldProcess):
                 if "target_data_source_id" in process.params and "export_type" in process.params:
                     if not any(data_source for data_source in self.data_sources if
                                data_source.id == process.params.get("target_data_source_id")):
@@ -487,14 +487,12 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
-    def exists(cls, data_source_id: str, model: Union['Contributor', 'Coverage']) -> bool:
-        return mongo.db[model.mongo_collection].find_one({'data_sources.id': data_source_id}) is not None
+    def exists(cls, data_source_id: str) -> bool:
+        return mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id}) is not None
 
     @classmethod
-    def get_data_format(cls, data_source_id: str, model: Union['Contributor', 'Coverage']) -> str:
-        raw = mongo.db[model.mongo_collection].find_one({'data_sources.id': data_source_id})
-        if not raw:
-            return False
+    def get_data_format(cls, data_source_id: str) -> str:
+        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
         data_source = next(data_source for data_source in raw['data_sources'] if data_source['id'] == data_source_id)
         return data_source['data_format']
 
@@ -589,7 +587,7 @@ class OldProcess(Process):
 
 
 class ConfigurationDataSource(object):
-    def __init__(self, name: str, id: str):
+    def __init__(self, name: str, id: str) -> None:
         self.id = id
         self.name = name
 
@@ -605,9 +603,8 @@ class NewProcess(Process):
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
         self.target_data_source_id = target_data_source_id
 
-
-def __repr__(self) -> str:
-    return str(vars(self))
+    def __repr__(self) -> str:
+        return str(vars(self))
 
 
 class ComputeDirectionsProcess(NewProcess):
@@ -704,7 +701,8 @@ class Contributor(DataSourceAndProcessContainer):
         new_contributors_using = self.find({
             '$or': [
                 {'processes.input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}},
-                {'processes.configuration_data_sources.id': {'$in': [data_source.id for data_source in self.data_sources]}},
+                {'processes.configuration_data_sources.id': {
+                    '$in': [data_source.id for data_source in self.data_sources]}},
             ]
         })
         if new_contributors_using:
@@ -1339,13 +1337,14 @@ class MongoContributorSchema(Schema):
                     data_source_id = process['input_data_source_ids'][0]
                     if not any(data_source_id == data_source['id'] for data_source in
                                contributor.get('data_sources', [])):
-                        if not DataSource.exists(data_source_id, Contributor):
+                        if not DataSource.exists(data_source_id):
                             raise ValidationError(
                                 'data source referenced by "{}" in process "{}" not found'.format(
                                     data_source_id, process['type']), ['input_data_source_ids'])
 
     @classmethod
-    def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str, process_type: str):
+    def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str,
+                                               process_type: str) -> None:
         if configuration_key == 'directions':
             if data_format_found != DATA_FORMAT_DIRECTION_CONFIG:
                 raise ValidationError(
@@ -1363,13 +1362,13 @@ class MongoContributorSchema(Schema):
                     data_source_id = configuration_data_source['id']
                     contributor_data_sources = contributor.get('data_sources', [])
                     if not any(data_source_id == data_source['id'] for data_source in contributor_data_sources):
-                        if not DataSource.exists(data_source_id, Contributor):
+                        if not DataSource.exists(data_source_id):
                             raise ValidationError(
                                 'data source referenced by "{}" in process "{}" was not found'.format(data_source_id,
                                                                                                       process['type']),
                                 ['configuration_data_sources'])
                         else:
-                            data_format = DataSource.get_data_format(data_source_id, Contributor)
+                            data_format = DataSource.get_data_format(data_source_id)
                     else:
                         data_format = next(data_source['data_format'] for data_source in contributor_data_sources if
                                            data_source['id'] == data_source_id)

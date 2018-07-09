@@ -35,7 +35,7 @@ from zipfile import ZipFile
 
 from tartare.core.constants import DATA_FORMAT_NTFS
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import Process, DataSource
+from tartare.core.models import Process, DataSource, OldProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.processes.abstract_process import AbstractContributorProcess
 from tartare.processes.utils import process_registry
@@ -49,7 +49,7 @@ class Gtfs2Ntfs(AbstractContributorProcess):
     config_filename = 'config.json'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output} -p {prefix}'
 
-    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+    def __init__(self, context: ContributorExportContext, process: OldProcess) -> None:
         super().__init__(context, process)
         # Default binary path in docker worker-gtfs2ntfs
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/gtfs2ntfs')

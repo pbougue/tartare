@@ -39,7 +39,7 @@ from gridfs import GridOut
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import Process, Contributor, DataSource
+from tartare.core.models import Process, Contributor, DataSource, OldProcess
 from tartare.core.readers import CsvReader, JsonReader
 from tartare.exceptions import ParameterException
 from tartare.processes.abstract_process import AbstractContributorProcess
@@ -48,7 +48,7 @@ from tartare.processes.utils import process_registry
 
 @process_registry()
 class ComputeExternalSettings(AbstractContributorProcess):
-    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+    def __init__(self, context: ContributorExportContext, process: OldProcess) -> None:
         super().__init__(context, process)
         self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \
             self.context.contributor_contexts and self.context.contributor_contexts[0].contributor else None
