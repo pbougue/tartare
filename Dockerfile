@@ -19,7 +19,7 @@ COPY requirements.txt /usr/src/app
 
 # those are needed for uwsgi
 RUN apt-get update \
-    && apt-get install -qq -y gcc \
+    && apt-get install -qq -y gcc aspell aspell-fr \
     && pip install uwsgi \
     && pip install --no-cache-dir -r requirements.txt \
     && find /usr/local \
