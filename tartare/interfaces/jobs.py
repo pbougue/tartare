@@ -32,11 +32,12 @@ import flask_restful
 from flask import Response
 
 from tartare.core import models
-from tartare.interfaces.schema import JobSchema
 from tartare.http_exceptions import ObjectNotFound
+from tartare.interfaces.common_argrs import Pagination
+from tartare.interfaces.schema import JobSchema
 
 
-class Job(flask_restful.Resource):
+class Job(flask_restful.Resource, Pagination):
     def get(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
             job_id: Optional[str] = None) -> Response:
         if job_id:
@@ -46,5 +47,13 @@ class Job(flask_restful.Resource):
             else:
                 raise ObjectNotFound('job not found: {}'.format(job_id))
         else:
-            matching_jobs = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id)
-            return {'jobs': JobSchema(many=True, strict=True).dump(matching_jobs).data}, 200
+            matching_jobs, total = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id,
+                                                       page=self.get_page(), per_page=self.get_per_page())
+            return {
+                       'jobs': JobSchema(many=True, strict=True).dump(matching_jobs).data,
+                       'pagination': {
+                           'page': self.get_page(),
+                           'per_page': self.get_per_page(),
+                           'total': total,
+                       }
+                   }, 200
