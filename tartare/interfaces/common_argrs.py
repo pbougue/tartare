@@ -27,9 +27,12 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from flask_restful import reqparse
 from datetime import date
+
+from flask_restful import reqparse
+
 from tartare.helper import date_from_string
+from tartare.http_exceptions import InvalidArguments
 
 
 class CommonArgs(object):
@@ -40,3 +43,17 @@ class CommonArgs(object):
     def get_current_date(self) -> date:
         args = self.parsers.parse_args()
         return args.get('current_date')
+
+
+class Pagination(object):
+    def __init__(self) -> None:
+        parsers = reqparse.RequestParser()
+        parsers.add_argument('page', type=int, default=1, location='args')
+        parsers.add_argument('per_page', type=int, default=20, location='args')
+        args = parsers.parse_args()
+        self.page = args.get('page')
+        if self.page <= 0:
+            raise InvalidArguments('page should be 1 or more')
+        self.per_page = args.get('per_page')
+        if self.per_page <= 0:
+            raise InvalidArguments('per_page should be 1 or more')

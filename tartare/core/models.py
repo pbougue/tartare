@@ -34,7 +34,7 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO
+from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO, Tuple
 
 import pymongo
 import pytz
@@ -48,7 +48,8 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
     DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
-    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT
+    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
+    ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -1193,12 +1194,15 @@ class MongoContributorSchema(MongoProcessContainerSchema):
         return Contributor(**data)
 
 
+
+
 class Job(object):
     mongo_collection = 'jobs'
 
-    def __init__(self, action_type: str, contributor_id: str = None, coverage_id: str = None, parent_id: str = None,
-                 state: str = JOB_STATUS_PENDING, step: str = None, id: str = None, started_at: datetime = None,
-                 updated_at: Optional[datetime] = None, error_message: str = "", data_source_id: str = None) -> None:
+    def __init__(self, action_type: str = ACTION_TYPE_CONTRIBUTOR_EXPORT, contributor_id: str = None,
+                 coverage_id: str = None, parent_id: str = None, state: str = JOB_STATUS_PENDING, step: str = None,
+                 id: str = None, started_at: datetime = None, updated_at: Optional[datetime] = None,
+                 error_message: str = "", data_source_id: str = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.parent_id = parent_id
         self.action_type = action_type
@@ -1208,17 +1212,12 @@ class Job(object):
         self.step = step
         self.state = state
         self.error_message = error_message
-        self.started_at = started_at if started_at else  datetime.now(pytz.utc)
+        self.started_at = started_at if started_at else datetime.now(pytz.utc)
         self.updated_at = updated_at if updated_at else self.started_at
 
     def save(self) -> None:
         raw = MongoJobSchema().dump(self).data
         mongo.db[self.mongo_collection].insert_one(raw)
-
-    @classmethod
-    def find(cls, filter: dict) -> List['Job']:
-        raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoJobSchema(many=True).load(raw).data
 
     @classmethod
     def cancel_pending_updated_before(cls, nb_hours: int, statuses: List[str],
@@ -1236,13 +1235,17 @@ class Job(object):
         return pending_jobs_before_update
 
     @classmethod
-    def get_some(cls, contributor_id: str = None, coverage_id: str = None) -> List['Job']:
+    def get_some(cls, contributor_id: str = None, coverage_id: str = None,
+                 page: int = 1, per_page: int = 20) -> Tuple[List['Job'], int]:
         find_filter = {}
         if contributor_id:
             find_filter.update({'contributor_id': contributor_id})
         if coverage_id:
             find_filter.update({'coverage_id': coverage_id})
-        return cls.find(filter=find_filter)
+        raw = mongo.db[cls.mongo_collection].find(find_filter)
+        total_number = raw.count()
+        paginated = raw.sort('updated_at', -1).skip((page - 1) * per_page).limit(per_page)
+        return MongoJobSchema(many=True).load(paginated).data, total_number
 
     @classmethod
     def get_one(cls, job_id: str) -> Optional['Job']:

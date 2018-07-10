@@ -151,9 +151,8 @@ def date_from_string(value: str, name: str) -> date:
 def datetime_from_string(value: str) -> datetime:
     """
         Convert string to datetime
-        :param value: string to convert
-        :param name: attribute name
-        :return: Date format '2014-04-31 15:37:44 UTC'
+        :param value: string to convert, example '2014-04-15 15:37:44 UTC'
+        :return: datetime corresponding to value
     """
     format = '%Y-%m-%d %H:%M:%S %Z'
     try:

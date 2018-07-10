@@ -32,6 +32,7 @@ import ftplib
 import json
 import os
 import tempfile
+from urllib.parse import urlencode
 from zipfile import ZipFile
 
 import tartare
@@ -87,9 +88,9 @@ class TartareFixture(object):
         return self.assert_sucessful_call(raw, 201)
 
     def assert_sucessful_call(self, raw, status_code_expected=200):
-        debug = self.json_to_dict(raw) if status_code_expected != 204 else 'no body'
-        assert raw.status_code == status_code_expected, print(debug)
-        return debug
+        details = self.json_to_dict(raw) if status_code_expected != 204 else 'no body'
+        assert raw.status_code == status_code_expected, print(details)
+        return details
 
     def assert_failed_call(self, raw, status_code_expected=400):
         assert raw.status_code == status_code_expected, print(self.json_to_dict(raw))
@@ -113,6 +114,28 @@ class TartareFixture(object):
 
     def get_all_jobs(self):
         return self.json_to_dict(self.get('/jobs'))['jobs']
+
+    def get_jobs(self, contributor_id=None, coverage_id=None, job_id=None, page=None, per_page=None, check_success=True):
+        route = '/jobs'
+        if contributor_id:
+            route = '/contributors/{}{}'.format(contributor_id, route)
+        elif coverage_id:
+            route = '/coverages/{}{}'.format(coverage_id, route)
+        if job_id:
+            route = '{}/{}'.format(route, job_id)
+        query_params = {}
+        if page is not None:
+            query_params['page'] = page
+        if per_page is not None:
+            query_params['per_page'] = per_page
+        if query_params:
+            route = '{}?{}'.format(route, urlencode(query_params))
+        raw = self.get(route)
+        if check_success:
+            jobs = self.assert_sucessful_call(raw)
+            return jobs['pagination'], jobs['jobs']
+        else:
+            return raw
 
     def get_job_from_export_response(self, response):
         self.assert_sucessful_call(response, 201)
