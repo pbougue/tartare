@@ -1413,7 +1413,7 @@ class TestContributors(TartareFixture):
             "sequence": 0,
             "data_source_ids": ['dsid'],
             "type": "GtfsAgencyFile",
-            "params": {}
+            "params": {"data": {"agency_id": "foo"}}
         }, 'cid')
         self.contributor_export('cid')
         with tartare.app.app_context():

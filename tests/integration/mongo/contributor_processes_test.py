@@ -48,7 +48,7 @@ class TestGtfsAgencyProcess(TartareFixture):
                         "agency_phone", "agency_fare_url", "agency_email"]
     excepted_headers.sort()
 
-    def __contributor_creator(self, data_set_url, contrib_id='contrib_id', data_source_id='id2'):
+    def __contributor_creator(self, data_set_url, agency_params={}, contrib_id='contrib_id', data_source_id='id2'):
         contrib_payload = {
             "id": contrib_id,
             "name": "name_test",
@@ -71,146 +71,148 @@ class TestGtfsAgencyProcess(TartareFixture):
             ],
             "processes": [
                 {
+                    "id": "agency_process",
                     "sequence": 0,
                     "data_source_ids": [data_source_id],
                     "type": "GtfsAgencyFile",
                     "params": {
-                        "data": {
-                            "agency_id": "112",
-                            "agency_name": "stif",
-                            "agency_url": "http://stif.com"
-                        }
+                        "data": agency_params
                     }
                 }
             ]
         }
         return contrib_payload
 
+    def test_gtfs_without_agency_file_and_no_agency_id_in_params(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
+                              filename='gtfs_without_agency_file.zip')
+        contrib_payload = self.__contributor_creator(url)
+
+        self.post('/contributors', self.dict_to_json(contrib_payload))
+        job = self.get_job_from_export_response(self.contributor_export('contrib_id', check_done=False))
+        assert job['state'] == 'failed', print(job)
+        assert job['error_message'] == '[process "agency_process"] agency_id should be provided', print(job)
+
+    def assert_agency_data_equals(self, expected_data):
+        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
+
+        with app.app_context():
+            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
+            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
+                assert_zip_contains_only_txt_files(gtfs_zip)
+                assert 'agency.txt' in gtfs_zip.namelist()
+                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
+                assert len(data) == 1
+
+                keys = list(data[0].keys())
+                keys.sort()
+
+                expected_keys = list(expected_data.keys())
+                expected_keys.sort()
+
+                assert keys == expected_keys
+
+                for key, value in expected_data.items():
+                    assert value == data[0][key]
+
+    def test_gtfs_without_agency_file_but_agency_id_in_params(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
+                              filename='gtfs_without_agency_file.zip')
+        contrib_payload = self.__contributor_creator(url, agency_params={
+            "agency_id": "112",
+        })
+
+        self.post('/contributors', json.dumps(contrib_payload))
+        job = self.contributor_export('contrib_id')
+        assert job['state'] == 'done', print(job)
+
+        self.assert_agency_data_equals({
+            "agency_id": "112",
+            "agency_name": "",
+            "agency_url": "https://www.navitia.io/",
+            "agency_timezone": "Europe/Paris",
+        })
+
     def test_gtfs_without_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='some_archive.zip')
-        contrib_payload = self.__contributor_creator(url)
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename='gtfs_without_agency_file.zip')
+        contrib_payload = self.__contributor_creator(url, agency_params={
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_timezone": "Europe/Paris",
+            "agency_email": "agency@email.com",
+            "agency_phone": "0612345678",
+            "key_not_allowed": "some_value"  # this key should be removed
+        })
 
-        raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_create(raw)
-        r = self.json_to_dict(raw)
-        assert len(r["contributors"]) == 1
-        processes = r["contributors"][0]["processes"]
-        assert len(processes) == 1
-
-        job = self.contributor_export('contrib_id')
-        assert job['state'] == 'done', print(job)
-        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
-
-        with app.app_context():
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
-            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
-                assert_zip_contains_only_txt_files(gtfs_zip)
-                assert 'agency.txt' in gtfs_zip.namelist()
-                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
-                assert len(data) == 1
-
-                keys = list(data[0].keys())
-                keys.sort()
-                assert keys == self.excepted_headers
-                conf = processes[0].get('params').get("data")
-                for key, value in conf.items():
-                    assert value == data[0][key]
-
-    def test_gtfs_with_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_valid.zip')
-        contrib_payload = self.__contributor_creator(url)
-
-        raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_create(raw)
-        r = self.json_to_dict(raw)
-        assert len(r["contributors"]) == 1
-        processes = r["contributors"][0]["processes"]
-        assert len(processes) == 1
-
+        self.post('/contributors', json.dumps(contrib_payload))
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
+        self.assert_agency_data_equals({
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_url": "https://www.navitia.io/",
+            "agency_timezone": "Europe/Paris",
+            "agency_email": "agency@email.com",
+            "agency_phone": "0612345678",
+        })
 
-        with app.app_context():
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
-            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
-                assert_zip_contains_only_txt_files(gtfs_zip)
-                assert 'agency.txt' in gtfs_zip.namelist()
-                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
-                assert len(data) == 2
-
-    def test_gtfs_with_empty_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_empty_agency_file.zip')
+    def test_gtfs_with_agency_file_and_two_agencies(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename='gtfs_with_two_agencies.zip')
         contrib_payload = self.__contributor_creator(url)
 
-        raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_create(raw)
-        r = self.json_to_dict(raw)
-        assert len(r["contributors"]) == 1
-        processes = r["contributors"][0]["processes"]
-        assert len(processes) == 1
-
-        job = self.contributor_export('contrib_id')
-        assert job['state'] == 'done', print(job)
-
-        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
-
-        with app.app_context():
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
-            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
-                assert_zip_contains_only_txt_files(gtfs_zip)
-                assert 'agency.txt' in gtfs_zip.namelist()
-                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
-                assert len(data) == 1
-
-                keys = list(data[0].keys())
-                keys.sort()
-                assert keys == self.excepted_headers
-                conf = processes[0].get('params').get("data")
-                for key, value in conf.items():
-                    assert value == data[0][key]
+        self.post('/contributors', json.dumps(contrib_payload))
+        job = self.get_job_from_export_response(self.contributor_export('contrib_id', check_done=False))
+        assert job['state'] == 'failed', print(job)
+        assert job['error_message'] == '[process "agency_process"] agency.txt should not have more than 1 agency', print(job)
 
     def test_gtfs_header_only_in_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename='gtfs_header_only_in_agency_file.zip')
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
+                              filename='gtfs_header_only_in_agency_file.zip')
 
-        contrib_payload = self.__contributor_creator(url)
+        contrib_payload = self.__contributor_creator(url, agency_params={
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_timezone": "Europe/Paris",
+            "agency_email": "agency@email.com",
+            "agency_phone": "0612345678",
+            "key_not_allowed": "some_value"  # this key should be removed
+        })
 
-        raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_create(raw)
-        r = self.json_to_dict(raw)
-        assert len(r["contributors"]) == 1
-        processes = r["contributors"][0]["processes"]
-        assert len(processes) == 1
-
+        self.post('/contributors', json.dumps(contrib_payload))
         job = self.contributor_export('contrib_id')
         assert job['state'] == 'done', print(job)
 
-        gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
+        self.assert_agency_data_equals({
+            "agency_id": "112",
+            "agency_name": "stif",
+            "agency_url": "https://www.navitia.io/",
+            "agency_timezone": "Europe/Paris",
+            "agency_email": "agency@email.com",
+            "agency_phone": "0612345678",
+        })
 
-        with app.app_context():
-            new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
-            with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
-                assert_zip_contains_only_txt_files(gtfs_zip)
-                assert 'agency.txt' in gtfs_zip.namelist()
-                data = get_dict_from_zip(gtfs_zip, 'agency.txt')
-                assert len(data) == 1
+    def test_gtfs_with_agency_file_but_no_agency_id_in_file(self, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
+                              filename='gtfs_with_no_agency_id.zip')
 
-                keys = list(data[0].keys())
-                keys.sort()
-                assert keys == self.excepted_headers
-                default_agency_data = {
-                    "agency_id": '112',
-                    "agency_name": "stif",
-                    "agency_url": "http://stif.com",
-                    "agency_timezone": "",
-                    "agency_lang": "",
-                    "agency_phone": "",
-                    "agency_fare_url": "",
-                    "agency_email": ""
-                }
-                for key, value in default_agency_data.items():
-                    assert value == data[0][key]
+        contrib_payload = self.__contributor_creator(url, agency_params={
+            "agency_id": "112",
+            "agency_url": "http://an.url.com",
+            "key_not_allowed": "some_value"
+        })
+
+        self.post('/contributors', json.dumps(contrib_payload))
+        job = self.contributor_export('contrib_id')
+        assert job['state'] == 'done', print(job)
+
+        self.assert_agency_data_equals({
+            "agency_id": "112",
+            "agency_name": "AEROCAR",
+            "agency_url": "http://an.url.com",
+            "agency_timezone": "Europe/Madrid",
+            "agency_email": "agency@email.com",
+        })
 
 
 class TestComputeDirectionsProcess(TartareFixture):
