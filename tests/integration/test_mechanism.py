@@ -188,7 +188,7 @@ class TartareFixture(object):
         return self.json_to_dict(raw)['contributors'][0]
 
     def init_coverage(self, id, input_data_source_ids=None, processes=None, environments=None, license=None,
-                      data_sources=None):
+                      data_sources=None, check_success=True):
         data_sources = data_sources if data_sources else []
         processes = processes if processes else []
         environments = environments if environments else {}
@@ -205,8 +205,11 @@ class TartareFixture(object):
         if license:
             coverage['license'] = license
         raw = self.post('/coverages', json.dumps(coverage))
-        self.assert_sucessful_create(raw)
-        return self.json_to_dict(raw)['coverages'][0]
+        if check_success:
+            self.assert_sucessful_create(raw)
+            return self.json_to_dict(raw)['coverages'][0]
+        else:
+            return raw
 
     def add_process_to_coverage(self, process, coverage_id):
         coverage = self.get_coverage(coverage_id)
@@ -230,7 +233,7 @@ class TartareFixture(object):
         self.assert_sucessful_call(raw)
 
     def add_data_source_to_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
-                                       service_id=None, export_id=None):
+                                       service_id=None, export_id=None, check_success=True):
         raw = self.get('contributors/{}'.format(contributor_id))
         contributor = self.json_to_dict(raw)['contributors'][0]
         contributor['data_sources'].append({
@@ -248,8 +251,11 @@ class TartareFixture(object):
                 }
             }
         })
-        self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw)
+        raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
+        if check_success:
+            return self.assert_sucessful_call(raw)
+        else:
+            return raw
 
     def update_data_source_url(self, contrib_id, ds_id, url):
         contributor = self.get_contributor(contrib_id)

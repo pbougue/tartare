@@ -169,9 +169,6 @@ class TestContributors(TartareFixture):
         assert len(r["contributors"][0]["data_sources"]) == 0
 
     def test_post_contrib_with_existing_id(self, contributor):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -185,9 +182,6 @@ class TestContributors(TartareFixture):
         assert r["message"] == "Duplicate entry"
 
     def test_post_contrib_with_existing_data_prefix(self, contributor):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "stif",
             "name": "stif",
@@ -201,9 +195,6 @@ class TestContributors(TartareFixture):
         assert r["message"] == "Duplicate entry"
 
     def test_post_contrib_with_existing_data_source_id(self, contributor, data_source):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "stif",
             "name": "stif",
@@ -232,9 +223,6 @@ class TestContributors(TartareFixture):
         assert r["message"] == "Duplicate entry"
 
     def test_post_contrib_with_two_data_sources_with_same_ids(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "stif",
             "name": "stif",
@@ -305,9 +293,6 @@ class TestContributors(TartareFixture):
         assert 'error' in r
 
     def test_post_contrib_one_data_source_without_id(self):
-        '''
-        using /contributors endpoint
-        '''
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -333,9 +318,6 @@ class TestContributors(TartareFixture):
         assert len(r["contributors"][0]["data_sources"]) == 1
 
     def test_post_contrib_one_data_source_with_frequency(self):
-        '''
-        using /contributors endpoint
-        '''
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -546,9 +528,6 @@ class TestContributors(TartareFixture):
         }
 
     def test_post_contrib_one_data_source_with_id(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -576,9 +555,6 @@ class TestContributors(TartareFixture):
         assert len(r["contributors"][0]["data_sources"]) == 1
 
     def test_post_contrib_one_data_source_with_service_id(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -608,9 +584,6 @@ class TestContributors(TartareFixture):
         assert r["contributors"][0]["data_sources"][0]["service_id"] == "Google-1"
 
     def test_post_contrib_one_data_source_with_invalid_input(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -633,9 +606,6 @@ class TestContributors(TartareFixture):
                      'message': 'Invalid arguments'}
 
     def test_post_contrib_one_data_source_with_invalid_data_format(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -658,9 +628,6 @@ class TestContributors(TartareFixture):
         assert r['message'] == 'Invalid arguments'
 
     def test_post_contrib_two_data_source(self):
-        """
-        using /contributors endpoint
-        """
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -727,34 +694,8 @@ class TestContributors(TartareFixture):
         assert patched_data_source["name"] == "name_modified"
 
     def test_put_contrib_add_data_source_with_existing_id(self):
-        """
-        using /contributors endpoint
-        """
-        post_data = {
-            "id": "stif",
-            "name": "stif",
-            "data_prefix": "BBB",
-            "data_sources": [
-                {
-                    "id": "ds_id_1",
-                    "name": "data_source_name_1",
-                    "input": {
-                        "type": "manual"
-                    }
-                }
-            ]
-        }
-
-        raw = self.post('/contributors', self.dict_to_json(post_data))
-        self.assert_sucessful_create(raw)
-        post_data["data_sources"].append({
-            "id": "ds_id_1",
-            "name": "data_source_name_2",
-            "input": {
-                "type": "manual"
-            }
-        })
-        raw = self.put('/contributors/id_test', self.dict_to_json(post_data))
+        self.init_contributor('stif', 'ds_id_1', type='manual')
+        raw = self.add_data_source_to_contributor('stif', 'ds_id_1', 'whatever', check_success=False)
         r = self.assert_failed_call(raw, 409)
         assert r["error"] == "duplicate data source ds_id_1"
         assert r["message"] == "Duplicate entry"

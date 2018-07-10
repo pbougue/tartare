@@ -37,7 +37,7 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
 from tartare.decorators import JsonDataValidate, ValidateContributorPrepocessesDataSourceIds, \
-    CheckContributorIntegrity, RemoveComputedDataSources, ValidateUniqueDataSourcesInContributor
+    CheckContributorIntegrity, RemoveComputedDataSources, ValidateUniqueDataSources
 from tartare.exceptions import EntityNotFound, IntegrityException
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
@@ -65,7 +65,7 @@ class Contributor(flask_restful.Resource):
             raise InvalidArguments(err.messages)
 
     @JsonDataValidate()
-    @ValidateUniqueDataSourcesInContributor()
+    @ValidateUniqueDataSources()
     @ValidateContributorPrepocessesDataSourceIds()
     @CheckContributorIntegrity()
     @RemoveComputedDataSources()
@@ -105,7 +105,7 @@ class Contributor(flask_restful.Resource):
 
 
     @JsonDataValidate()
-    @ValidateUniqueDataSourcesInContributor()
+    @ValidateUniqueDataSources()
     @ValidateContributorPrepocessesDataSourceIds()
     @CheckContributorIntegrity(True)
     @RemoveComputedDataSources()

@@ -60,6 +60,7 @@ from tartare.helper import get_values_by_key, get_md5_content_file
 def init_mongo() -> None:
     mongo.db['contributors'].create_index("data_prefix", unique=True)
     mongo.db['contributors'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
+    mongo.db['coverages'].create_index([("data_sources.id", pymongo.DESCENDING)], unique=True, sparse=True)
 
 
 class ChoiceField(fields.Field):
@@ -140,13 +141,15 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
     def add_computed_data_sources(self) -> None:
         for data_source in self.data_sources:
             if data_source.export_data_source_id:
-                data_source_computed = DataSource(
-                    id=data_source.export_data_source_id,
-                    name=data_source.export_data_source_id,
-                    data_format=data_source.data_format,
-                    input=InputComputed(),
-                )
-                self.data_sources.append(data_source_computed)
+                if not any(data_source for data_source in self.data_sources if
+                           data_source.id == data_source.export_data_source_id):
+                    data_source_computed = DataSource(
+                        id=data_source.export_data_source_id,
+                        name=data_source.export_data_source_id,
+                        data_format=data_source.data_format,
+                        input=InputComputed(),
+                    )
+                    self.data_sources.append(data_source_computed)
         for process in self.processes:
             if "target_data_source_id" in process.params and "export_type" in process.params:
                 if not any(data_source for data_source in self.data_sources if
@@ -157,6 +160,7 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
                         data_format=process.params.get("export_type"),
                         input=InputComputed(),
                     )
+                    # empty target_data_source_id generates a new id (uuid.uuid4() of DataSource.__init__())
                     if not process.params.get("target_data_source_id"):
                         process.params['target_data_source_id'] = data_source_computed.id
                     self.data_sources.append(data_source_computed)
