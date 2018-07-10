@@ -48,12 +48,12 @@ class Job(flask_restful.Resource, Pagination):
                 raise ObjectNotFound('job not found: {}'.format(job_id))
         else:
             matching_jobs, total = models.Job.get_some(contributor_id=contributor_id, coverage_id=coverage_id,
-                                                       page=self.get_page(), per_page=self.get_per_page())
+                                                       page=self.page, per_page=self.per_page)
             return {
                        'jobs': JobSchema(many=True, strict=True).dump(matching_jobs).data,
                        'pagination': {
-                           'page': self.get_page(),
-                           'per_page': self.get_per_page(),
+                           'page': self.page,
+                           'per_page': self.per_page,
                            'total': total,
                        }
                    }, 200

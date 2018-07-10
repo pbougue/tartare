@@ -47,20 +47,13 @@ class CommonArgs(object):
 
 class Pagination(object):
     def __init__(self) -> None:
-        self.parsers = reqparse.RequestParser()
-        self.parsers.add_argument('page', type=int, default=1, location='args')
-        self.parsers.add_argument('per_page', type=int, default=20, location='args')
-
-    def get_page(self) -> int:
-        args = self.parsers.parse_args()
-        page = args.get('page')
-        if page <= 0:
+        parsers = reqparse.RequestParser()
+        parsers.add_argument('page', type=int, default=1, location='args')
+        parsers.add_argument('per_page', type=int, default=20, location='args')
+        args = parsers.parse_args()
+        self.page = args.get('page')
+        if self.page <= 0:
             raise InvalidArguments('page should be 1 or more')
-        return page
-
-    def get_per_page(self) -> int:
-        args = self.parsers.parse_args()
-        per_page = args.get('per_page')
-        if per_page <= 0:
+        self.per_page = args.get('per_page')
+        if self.per_page <= 0:
             raise InvalidArguments('per_page should be 1 or more')
-        return per_page
