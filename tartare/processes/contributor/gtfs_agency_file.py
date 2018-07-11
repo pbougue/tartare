@@ -27,14 +27,13 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import csv
-import logging
 import shutil
 import tempfile
-from typing import List
 from zipfile import ZipFile
 
 from tartare.core.context import Context, DataSourceExport
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.exceptions import RuntimeException
 from tartare.helper import get_content_file_from_grid_out_file
 from tartare.processes.abstract_process import AbstractContributorProcess
 from tartare.processes.utils import process_registry
@@ -42,28 +41,26 @@ from tartare.processes.utils import process_registry
 
 @process_registry()
 class GtfsAgencyFile(AbstractContributorProcess):
-    def _is_agency_dict_valid(self, data: List[dict]) -> bool:
-        if not data:
-            return False
-        return any([(v in data[0].keys()) for v in ['agency_name', 'agency_url', 'agency_timezone']])
-
-    def _get_agency_data(self) -> dict:
+    def _get_agency_data(self, file_data: dict) -> dict:
         # for more informations, see : https://developers.google.com/transit/gtfs/reference/agency-file
-        agency_data = {
+        default_data = {
             "agency_id": '42',
             "agency_name": "",
-            "agency_url": "",
-            "agency_timezone": "",
-            "agency_lang": "",
-            "agency_phone": "",
-            "agency_fare_url": "",
-            "agency_email": ""
+            "agency_url": "https://www.navitia.io/",
+            "agency_timezone": "Europe/Paris",
         }
-        agency_data.update(self.params.get("data", {}))
-        return agency_data
+        optional_columns = ['agency_lang', 'agency_phone', 'agency_fare_url', 'agency_email']
+        params = self.params.get("data", {})
 
-    def create_new_zip(self, files_zip: ZipFile, tmp_dir_name: str, filename: str, zip_destination: str) -> str:
-        new_data = self._get_agency_data()
+        columns = [*default_data] + optional_columns
+        data = {**default_data, **file_data}
+        data = {**data, **params}
+        data = {k: data.get(k) for k in data if k in columns}
+
+        return data
+
+    def create_new_zip(self, file_data: dict, files_zip: ZipFile, tmp_dir_name: str, filename: str, zip_destination: str) -> str:
+        new_data = self._get_agency_data(file_data)
         files_zip.extractall(tmp_dir_name)
         with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'w') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
@@ -76,14 +73,21 @@ class GtfsAgencyFile(AbstractContributorProcess):
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
         filename = grid_out.filename
         data = get_content_file_from_grid_out_file(grid_out, 'agency.txt')
-        if not self._is_agency_dict_valid(data):
-            logging.getLogger(__name__).debug('data source {}  without or empty agency.txt file'.
-                                              format(data_source_export.data_source_id))
-            with ZipFile(grid_out, 'r') as files_zip:
-                with tempfile.TemporaryDirectory() as tmp_dir_name:
-                    with tempfile.TemporaryDirectory() as zip_destination:
-                        new_zip = self.create_new_zip(files_zip, tmp_dir_name, grid_out.filename, zip_destination)
-                        data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename))
+
+        if len(data) > 1:
+            raise RuntimeException(self.format_error_message('agency.txt should not have more than 1 agency'))
+        # there is no agency_id in the parameters nor in agency.txt
+        if not self.params.get('data', {}).get('agency_id') and \
+                (len(data) == 0 or len(data) == 1 and not data[0].get('agency_id')):
+            raise RuntimeException(self.format_error_message('agency_id should be provided'))
+
+        file_data = data[0] if data else {}
+
+        with ZipFile(grid_out, 'r') as files_zip:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                with tempfile.TemporaryDirectory() as zip_destination:
+                    new_zip = self.create_new_zip(file_data, files_zip, tmp_dir_name, grid_out.filename, zip_destination)
+                    data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename))
 
     def do(self) -> Context:
         for data_source_id in self.data_source_ids:

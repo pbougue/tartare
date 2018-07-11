@@ -575,6 +575,7 @@ class TestDataPublisher(TartareFixture):
             "data_source_ids": ['ds1'],
             "type": "GtfsAgencyFile",
             "params": {
+                "data": {"agency_id": "foo"}
             }
         }, 'c1')
         self.contributor_export('c1')
