@@ -123,8 +123,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         })
 
         self.post('/contributors', json.dumps(contrib_payload))
-        job = self.contributor_export('contrib_id')
-        assert job['state'] == 'done', print(job)
+        self.contributor_export('contrib_id')
 
         self.assert_agency_data_equals({
             "agency_id": "112",
@@ -133,8 +132,12 @@ class TestGtfsAgencyProcess(TartareFixture):
             "agency_timezone": "Europe/Paris",
         })
 
-    def test_gtfs_without_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename='gtfs_without_agency_file.zip')
+    @pytest.mark.parametrize("agency_file", [
+        'gtfs_without_agency_file.zip',
+        'gtfs_header_only_in_agency_file.zip',
+    ])
+    def test_gtfs_without_or_empty_agency_file(self, init_http_download_server, agency_file):
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename=agency_file)
         contrib_payload = self.__contributor_creator(url, agency_params={
             "agency_id": "112",
             "agency_name": "stif",
@@ -145,8 +148,7 @@ class TestGtfsAgencyProcess(TartareFixture):
         })
 
         self.post('/contributors', json.dumps(contrib_payload))
-        job = self.contributor_export('contrib_id')
-        assert job['state'] == 'done', print(job)
+        self.contributor_export('contrib_id')
 
         self.assert_agency_data_equals({
             "agency_id": "112",
@@ -165,32 +167,6 @@ class TestGtfsAgencyProcess(TartareFixture):
         job = self.get_job_from_export_response(self.contributor_export('contrib_id', check_done=False))
         assert job['state'] == 'failed', print(job)
         assert job['error_message'] == '[process "agency_process"] agency.txt should not have more than 1 agency', print(job)
-
-    def test_gtfs_header_only_in_agency_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
-                              filename='gtfs_header_only_in_agency_file.zip')
-
-        contrib_payload = self.__contributor_creator(url, agency_params={
-            "agency_id": "112",
-            "agency_name": "stif",
-            "agency_timezone": "Europe/Paris",
-            "agency_email": "agency@email.com",
-            "agency_phone": "0612345678",
-            "key_not_allowed": "some_value"  # this key should be removed
-        })
-
-        self.post('/contributors', json.dumps(contrib_payload))
-        job = self.contributor_export('contrib_id')
-        assert job['state'] == 'done', print(job)
-
-        self.assert_agency_data_equals({
-            "agency_id": "112",
-            "agency_name": "stif",
-            "agency_url": "https://www.navitia.io/",
-            "agency_timezone": "Europe/Paris",
-            "agency_email": "agency@email.com",
-            "agency_phone": "0612345678",
-        })
 
     def test_gtfs_with_agency_file_but_no_agency_id_in_file(self, init_http_download_server):
         url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',

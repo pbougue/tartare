@@ -49,10 +49,10 @@ class GtfsAgencyFile(AbstractContributorProcess):
             "agency_url": "https://www.navitia.io/",
             "agency_timezone": "Europe/Paris",
         }
-        opcional_colums = ['agency_lang', 'agency_phone', 'agency_fare_url', 'agency_email']
+        optional_columns = ['agency_lang', 'agency_phone', 'agency_fare_url', 'agency_email']
         params = self.params.get("data", {})
 
-        columns = [*default_data] + opcional_colums
+        columns = [*default_data] + optional_columns
         data = {**default_data, **file_data}
         data = {**data, **params}
         data = {k: data.get(k) for k in data if k in columns}
