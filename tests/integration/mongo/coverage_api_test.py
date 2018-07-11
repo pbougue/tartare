@@ -885,3 +885,78 @@ class TestCoverageApi(TartareFixture):
         with tartare.app.app_context():
             coverage = Coverage.get('cid')
             assert not coverage.data_sources[0].input.options.authent.password
+
+    def test_post_coverage_duplicate_data_source(self):
+        raw = self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            },
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        ], check_success=False)
+        r = self.assert_failed_call(raw, 409)
+        assert r["error"] == "duplicate data source dsid"
+        assert r["message"] == "Duplicate entry"
+
+    def test_put_coverage_duplicate_data_source(self):
+        coverage = self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        ])
+        coverage['data_sources'].append(
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        )
+        raw = self.put('/coverages/cid', self.dict_to_json(coverage))
+        r = self.assert_failed_call(raw, 409)
+        assert r["error"] == "duplicate data source dsid"
+        assert r["message"] == "Duplicate entry"
+
+    def test_post_coverage_existing_data_source(self):
+        self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        ])
+        raw = self.init_coverage('cid2', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        ], check_success=False)
+        r = self.assert_failed_call(raw, 409)
+        assert r["error"].startswith("duplicate entry:")
+        assert r["message"] == "Duplicate entry"
+
+    def test_put_coverage_existing_data_source(self):
+        self.init_coverage('cid', data_sources=[
+            {
+                'id': 'dsid',
+                'name': 'dsid',
+                'input': {'type': 'manual'}
+            }
+        ])
+        coverage2 = self.init_coverage('cid2')
+        coverage2['data_sources'].append({
+            'id': 'dsid',
+            'name': 'dsid',
+            'input': {'type': 'manual'}
+        })
+        raw = self.put('/coverages/cid2', self.dict_to_json(coverage2))
+        r = self.assert_failed_call(raw, 409)
+        assert r["error"].startswith("duplicate entry:")
+        assert r["message"] == "Duplicate entry"

@@ -36,7 +36,7 @@ from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from tartare.core import models
 from tartare.decorators import JsonDataValidate, RemoveLastActiveJob, \
-    ValidateInputDataSourceIds
+    ValidateInputDataSourceIds, ValidateUniqueDataSources
 from tartare.exceptions import EntityNotFound
 from tartare.helper import setdefault_ids
 from tartare.http_exceptions import InvalidArguments, DuplicateEntry, InternalServerError, ObjectNotFound
@@ -60,12 +60,13 @@ class Coverage(flask_restful.Resource):
 
     @JsonDataValidate()
     @ValidateInputDataSourceIds()
+    @ValidateUniqueDataSources()
     def post(self) -> Response:
         coverage = self.__pre_save_coverage(request.json)
         try:
             coverage.save()
-        except DuplicateKeyError:
-            raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
+        except DuplicateKeyError as e:
+            raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
             raise InternalServerError('impossible to add coverage')
 
@@ -95,6 +96,7 @@ class Coverage(flask_restful.Resource):
     @JsonDataValidate()
     @ValidateInputDataSourceIds()
     @RemoveLastActiveJob()
+    @ValidateUniqueDataSources()
     def put(self, coverage_id: str) -> Response:
         post_data = request.json
         if 'id' in post_data and coverage_id != post_data['id']:
@@ -106,8 +108,8 @@ class Coverage(flask_restful.Resource):
             existing_coverage.update_with_object(new_coverage)
         except EntityNotFound as e:
             raise ObjectNotFound(str(e))
-        except DuplicateKeyError:
-            raise DuplicateEntry("coverage {} already exists".format(request.json['id']))
+        except DuplicateKeyError as e:
+            raise DuplicateEntry('duplicate entry: {}'.format(str(e)))
         except PyMongoError:
             raise InternalServerError('impossible to add coverage')
         return self.get(coverage_id)

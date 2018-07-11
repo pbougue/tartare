@@ -138,7 +138,7 @@ class ValidateContributorPrepocessesDataSourceIds(object):
         return wrapper
 
 
-class ValidateUniqueDataSourcesInContributor(object):
+class ValidateUniqueDataSources(object):
     def __call__(self, func: Callable) -> Any:
         @wraps(func)
         def wrapper(*args: list, **kwargs: str) -> Any:
