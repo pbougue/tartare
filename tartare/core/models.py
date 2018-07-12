@@ -40,7 +40,6 @@ import pymongo
 import pytz
 from marshmallow import Schema, post_load, utils, fields, validates, validates_schema, ValidationError
 from marshmallow_oneofschema import OneOfSchema
-from pymongo.cursor import Cursor
 
 from tartare import app
 from tartare import mongo
@@ -587,8 +586,9 @@ class OldProcess(Process):
 
 
 class ConfigurationDataSource(object):
-    def __init__(self, name: str, id: str) -> None:
-        self.id = id
+    def __init__(self, name: str, ids: List[str]) -> None:
+        self.ids = ids
+        self.id = ids[0] if len(ids) == 1 else None
         self.name = name
 
 
@@ -688,29 +688,27 @@ class Contributor(DataSourceAndProcessContainer):
         return MongoContributorSchema(strict=True).load(raw).data
 
     def __check_contributors_using_integrity(self) -> None:
+        def handle_contributor_query_result(contributors_using_result: List[Contributor]) -> None:
+            if contributors_using_result:
+                contributors_ids = [contributor.id for contributor in contributors_using_result]
+                raise IntegrityException(
+                    'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                        self.id, ', '.join(contributors_ids)
+                    ))
+
         contributors_using = self.find({
             'processes.params.links.contributor_id': self.id
         })
-        if contributors_using:
-            contributors_ids = [contributor.id for contributor in contributors_using]
-            raise IntegrityException(
-                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
-                    self.id, ', '.join(contributors_ids)
-                ))
+        handle_contributor_query_result(contributors_using)
 
         new_contributors_using = self.find({
             '$or': [
                 {'processes.input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}},
-                {'processes.configuration_data_sources.id': {
+                {'processes.configuration_data_sources.ids': {
                     '$in': [data_source.id for data_source in self.data_sources]}},
             ]
         })
-        if new_contributors_using:
-            contributors_ids = [contributor.id for contributor in new_contributors_using]
-            raise IntegrityException(
-                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
-                    self.id, ', '.join(contributors_ids)
-                ))
+        handle_contributor_query_result(new_contributors_using)
 
     def __check_coverages_using_integrity(self) -> None:
         coverages_using = Coverage.find({
@@ -736,7 +734,7 @@ class Contributor(DataSourceAndProcessContainer):
     @classmethod
     def find(cls, filter: dict) -> List['Contributor']:
         raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoContributorSchema(many=True, strict=True).load(raw).data
+        return MongoContributorSchema(many=True, strict=True).load(list(raw)).data
 
     @classmethod
     def all(cls) -> List['Contributor']:
@@ -1144,7 +1142,7 @@ class MongoGenericProcessSchema(EnabledSchema):
 
 class MongoConfigurationDataSource(Schema):
     name = fields.String(required=True)
-    id = fields.String(required=True)
+    ids = fields.List(fields.String(), required=True)
 
     @post_load
     def build_configuration(self, data: dict) -> ConfigurationDataSource:
@@ -1326,21 +1324,22 @@ class MongoContributorSchema(Schema):
     processes = fields.Nested(MongoProcessSchema, many=True, required=False)
     data_type = DataType()
 
-    @validates_schema(pass_original=True, skip_on_field_errors=True)
-    def validate_contributor_process_input_data_source_ids(self, marshalled: Union[dict, Contributor],
-                                                           contributor: Union[dict, Cursor]) -> None:
-        if isinstance(contributor, Cursor):
-            contributor = marshalled
-        for process in contributor.get('processes', []):
-            if isinstance(process, dict):
-                if 'input_data_source_ids' in process and len(process['input_data_source_ids']) == 1:
-                    data_source_id = process['input_data_source_ids'][0]
-                    if not any(data_source_id == data_source['id'] for data_source in
-                               contributor.get('data_sources', [])):
-                        if not DataSource.exists(data_source_id):
-                            raise ValidationError(
-                                'data source referenced by "{}" in process "{}" not found'.format(
-                                    data_source_id, process['type']), ['input_data_source_ids'])
+    @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
+    def validate_contributor_process_input_data_source_ids(self, unmarshalled: Union[dict, Contributor],
+                                                           contributors: Union[dict, List[dict]], many: bool) -> None:
+        if not many:
+            contributors = [contributors]  # type: ignore
+        for contributor in contributors:
+            for process in contributor.get('processes', []):
+                if isinstance(process, dict):
+                    if 'input_data_source_ids' in process and len(process['input_data_source_ids']) == 1:
+                        data_source_id = process['input_data_source_ids'][0]
+                        if not any(data_source_id == data_source['id'] for data_source in
+                                   contributor.get('data_sources', [])):
+                            if not DataSource.exists(data_source_id):
+                                raise ValidationError(
+                                    'data source referenced by "{}" in process "{}" not found'.format(
+                                        data_source_id, process['type']), ['input_data_source_ids'])
 
     @classmethod
     def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str,
@@ -1351,36 +1350,37 @@ class MongoContributorSchema(Schema):
                     'data source referenced by "{}" in process "{}" should be of data format "compute directions"'.format(
                         DATA_FORMAT_DIRECTION_CONFIG, process_type), ['configuration_data_sources'])
 
-    @validates_schema(pass_original=True, skip_on_field_errors=True)
-    def validate_contributor_process_configuration(self, marshalled: Union[dict, Contributor],
-                                                   contributor: Union[dict, Cursor]) -> None:
-        if isinstance(contributor, Cursor):
-            contributor = marshalled
-        for process in contributor.get('processes', []):
-            if isinstance(process, dict):
-                for configuration_data_source in process.get('configuration_data_sources', []):
-                    data_source_id = configuration_data_source['id']
-                    contributor_data_sources = contributor.get('data_sources', [])
-                    if not any(data_source_id == data_source['id'] for data_source in contributor_data_sources):
-                        if not DataSource.exists(data_source_id):
-                            raise ValidationError(
-                                'data source referenced by "{}" in process "{}" was not found'.format(data_source_id,
-                                                                                                      process['type']),
-                                ['configuration_data_sources'])
-                        else:
-                            data_format = DataSource.get_data_format(data_source_id)
-                    else:
-                        data_format = next(data_source['data_format'] for data_source in contributor_data_sources if
-                                           data_source['id'] == data_source_id)
+    @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
+    def validate_contributor_process_configuration(self, unmarshalled: Union[dict, Contributor],
+                                                   contributors: Union[dict, List[dict]], many: bool) -> None:
+        if not many:
+            contributors = [contributors]  # type: ignore
+        for contributor in contributors:
+            for process in contributor.get('processes', []):
+                if isinstance(process, dict):
+                    for configuration_data_source in process.get('configuration_data_sources', []):
+                        for data_source_id in configuration_data_source.get('ids', []):
+                            contributor_data_sources = contributor.get('data_sources', [])
+                            if not any(data_source_id == data_source['id'] for data_source in contributor_data_sources):
+                                if not DataSource.exists(data_source_id):
+                                    raise ValidationError(
+                                        'data source referenced by "{}" in process "{}" was not found'.format(
+                                            data_source_id,
+                                            process['type']),
+                                        ['configuration_data_sources'])
+                                else:
+                                    data_format = DataSource.get_data_format(data_source_id)
+                            else:
+                                data_format = next(
+                                    data_source['data_format'] for data_source in contributor_data_sources if
+                                    data_source['id'] == data_source_id)
 
-                    self.validate_configuration_has_data_format(configuration_data_source['name'], data_format,
-                                                                process['type'])
+                            self.validate_configuration_has_data_format(configuration_data_source['name'], data_format,
+                                                                        process['type'])
 
     @post_load
     def make_contributor(self, data: dict) -> Contributor:
         return Contributor(**data)
-
-
 
 
 class Job(object):

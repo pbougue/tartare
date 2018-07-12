@@ -8,7 +8,7 @@
       ],
       "sequence": 0,
       "configuration_data_sources": [
-        {"name": "directions", "id": "compute_direction_config_id"}
+        {"name": "directions", "ids": ["compute_direction_config_id"]}
       ],
       "id": "process_compute_direction_id"
     }

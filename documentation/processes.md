@@ -25,12 +25,12 @@ The GTFS *trips.txt* file contains a **direction_id** column specifying if the t
 This `Process` fixes trips.txt files into one gtfs data source (referenced in `input_data_source_ids`) having missing direction_id based upon a provided config file as a data source (referenced by `configuration_data_sources.compute_direction`).
 ```json
 {
-    'type': 'ComputeDirections',
-    'input_data_source_ids': ['dsid'],
-    'configuration_data_sources': [
-        {'name': 'directions', 'id': 'data-source-id-config'}
+    "type": "ComputeDirections",
+    "input_data_source_ids": ["dsid"],
+    "configuration_data_sources": [
+        {"name": "directions", "ids": ["data-source-id-config"]}
     ],
-    'sequence': 0
+    "sequence": 0
 }
 ```
 Don't forget to provide in the data source identified by "data-source-id-config" the config file. It's a json containing routes (only the GTFS `route_id`) and their stop points ordered from origin to destination (see example [here](https://github.com/CanalTP/tartare/blob/master/tests/fixtures/compute_directions/config.json)).

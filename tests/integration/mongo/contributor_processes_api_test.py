@@ -48,7 +48,7 @@ class TestContributorProcessesApi(TartareFixture):
             'type': 'ComputeDirections',
             'input_data_source_ids': input_data_source_ids,
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config-id'}
+                {'name': 'directions', 'ids': ['config-id']}
             ],
             'sequence': 0
         }, 'cid', check_success=False)
@@ -63,7 +63,7 @@ class TestContributorProcessesApi(TartareFixture):
             'type': 'ComputeDirections',
             'input_data_source_ids': ['unknown'],
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config-id'}
+                {'name': 'directions', 'ids': ['config-id']}
             ],
             'sequence': 0
         }, 'cid', check_success=False)
@@ -75,8 +75,8 @@ class TestContributorProcessesApi(TartareFixture):
 class TestComputeDirectionContributorProcessesApi(TartareFixture):
     @pytest.mark.parametrize("configuration_data_sources", [
         [],
-        [{'name': 'useless', 'id': 'config-id'}],
-        [{'name': 'useless', 'id': 'config-id'}, {'name': 'other', 'id': 'toto'}],
+        [{'name': 'useless', 'ids': ['config-id']}],
+        [{'name': 'useless', 'ids': ['config-id']}, {'name': 'other', 'ids': ['toto']}],
     ])
     def test_post_contributor_process_wrong_configuration_data_sources(self, configuration_data_sources):
         self.init_contributor('cid', 'dsid', 'whatever')
@@ -98,7 +98,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config-id'}
+                {'name': 'directions', 'ids': ['config-id']}
             ],
             'sequence': 0
         }, 'cid', check_success=False)
@@ -113,7 +113,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config-id'}
+                {'name': 'directions', 'ids': ['config-id']}
             ],
             'sequence': 0
         }, 'cid')
@@ -142,7 +142,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
                     'type': 'ComputeDirections',
                     'input_data_source_ids': ['dsid'],
                     'configuration_data_sources': [
-                        {'name': 'directions', 'id': 'config-id'}
+                        {'name': 'directions', 'ids': ['config-id']}
                     ],
                     'sequence': 0
                 }

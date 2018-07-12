@@ -270,7 +270,7 @@ class TestComputeDirectionsProcess(TartareFixture):
             'type': 'ComputeDirections',
             'input_data_source_ids': ['dsid'],
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config_ds_id'}
+                {'name': 'directions', 'ids': ['config_ds_id']}
             ],
             'sequence': 0
         }, 'cid')

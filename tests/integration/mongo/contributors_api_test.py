@@ -1338,7 +1338,7 @@ class TestContributors(TartareFixture):
                 "dsid"
             ],
             'configuration_data_sources': [
-                {'name': 'directions', 'id': 'config-file'}
+                {'name': 'directions', 'ids': ['config-file']}
             ],
         }, 'cid')
         raw = self.delete('/contributors/config')
