@@ -115,7 +115,10 @@ class AbstractDocker(metaclass=ABCMeta):
         )
 
         try:
-            self.container_id = self.docker.create_container(self.image_name, name=self.container_name,
+            # following avoids conflict between different builds
+            container_name_prefixed = '{}_{}'.format(os.path.basename(os.path.realpath('{}/../..'.format(__file__))),
+                                                     self.container_name)
+            self.container_id = self.docker.create_container(self.image_name, name=container_name_prefixed,
                                                              ports=self.ports, command=self.command,
                                                              environment=self.env_vars,
                                                              volumes=self.volumes, host_config=host_config).get('Id')
@@ -130,7 +133,8 @@ class AbstractDocker(metaclass=ABCMeta):
             self.wait_until_available()
         except APIError as e:
             pytest.exit(
-                "error during setup of docker container {}, aborting. Details:\n{}".format(self.container_name, str(e)))
+                "error during setup of docker container {}, aborting. Details:\n{}".format(container_name_prefixed,
+                                                                                           str(e)))
 
     def __exit__(self, *args, **kwargs):
         if self.volumes:
