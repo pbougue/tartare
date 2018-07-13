@@ -799,7 +799,6 @@ components:
           enum:
             - navitia
             - ods
-            - stop_area
           description: This determines which treatment will be performed on the platforms
           example: ods
         protocol:

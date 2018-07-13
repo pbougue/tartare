@@ -39,7 +39,7 @@ import requests
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
-    PLATFORM_TYPE_STOP_AREA, PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
+    PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
 from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
@@ -196,26 +196,10 @@ class ODSPublisher(AbstractPublisher):
             with open(zip_full_name, 'rb') as zip_full_file:
                 protocol_uploader.publish(zip_full_file, zip_file_name)
 
-
-class StopAreaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
-        source_filename = 'stops.txt'
-        dest_filename = "{coverage}_stops.txt".format(coverage=coverage.id)
-
-        with tempfile.TemporaryDirectory() as tmp_dirname, ZipFile(file, 'r') as gtfs_zip:
-            dest_file_path = os.path.join(tmp_dirname, source_filename)
-            logger.info('Extracting {} to {}.'.format(source_filename, dest_file_path))
-            gtfs_zip.extract(source_filename, tmp_dirname)
-            with open(dest_file_path, 'rb') as fp:
-                protocol_uploader.publish(fp, dest_filename)
-
-
 class PublisherManager:
     publishers_by_type = {
         PLATFORM_TYPE_NAVITIA: NavitiaPublisher(),
         PLATFORM_TYPE_ODS: ODSPublisher(),
-        PLATFORM_TYPE_STOP_AREA: StopAreaPublisher()
     }
 
     @classmethod
