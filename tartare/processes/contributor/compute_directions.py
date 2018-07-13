@@ -36,29 +36,28 @@ from typing import Dict, List
 from tartare.core import zip
 from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import Process
+from tartare.core.models import NewProcess
 from tartare.core.readers import CsvReader
 from tartare.exceptions import IntegrityException
-from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.abstract_process import NewAbstractContributorProcess
 from tartare.processes.utils import process_registry
 
 
 @process_registry()
-class ComputeDirections(AbstractContributorProcess):
+class ComputeDirections(NewAbstractContributorProcess):
     direction_id_normal = '0'
     direction_id_return = '1'
 
-    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+    def __init__(self, context: ContributorExportContext, process: NewProcess) -> None:
         super().__init__(context, process)
 
     def __get_config_gridfs_id_from_context(self) -> str:
-        links = self.params.get('links')
-        data_source_config_context = self.context.get_data_source_context_in_links(links, DATA_FORMAT_DIRECTION_CONFIG)
+        data_source_config_context = self.context.get_data_source_context_in_configuration(self.configuration,
+                                                                                           DATA_FORMAT_DIRECTION_CONFIG)
         return data_source_config_context.gridfs_id
 
     def do(self) -> Context:
         self.check_expected_files(['stop_times.txt', 'trips.txt'])
-        self.check_links([DATA_FORMAT_DIRECTION_CONFIG])
         config_gridfs_id = self.__get_config_gridfs_id_from_context()
         for data_source_id_to_process in self.data_source_ids:
             config = json.load(self.gfs.get_file_from_gridfs(config_gridfs_id))
@@ -138,7 +137,7 @@ class ComputeDirections(AbstractContributorProcess):
                                                                     new_tmp_dir_name,
                                                                     callback=partial(self.do_compute_directions,
                                                                                      config=(
-                                                                                     "compute-direction", config))
+                                                                                         "compute-direction", config))
                                                                     )
 
             return self.create_archive_and_replace_in_grid_fs(gridfs_id_to_process, gtfs_computed_path)

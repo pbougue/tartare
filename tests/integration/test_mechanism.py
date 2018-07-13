@@ -226,11 +226,13 @@ class TartareFixture(object):
         raw = self.put('coverages/{}'.format(coverage_id), self.dict_to_json(coverage))
         self.assert_sucessful_call(raw)
 
-    def add_process_to_contributor(self, process, contributor_id):
+    def add_process_to_contributor(self, process, contributor_id, check_success=True):
         contributor = self.get_contributor(contributor_id)
         contributor['processes'].append(process)
         raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
-        self.assert_sucessful_call(raw)
+        if check_success:
+            return self.assert_sucessful_call(raw)
+        return raw
 
     def add_data_source_to_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
                                        service_id=None, export_id=None, check_success=True):
@@ -363,3 +365,17 @@ class TartareFixture(object):
         with tartare.app.app_context():
             object = model.get(id)
             assert object.data_sources[0].input.options.authent.password == password
+
+    def assert_process_validation_error(self, raw, key, message):
+        details = self.assert_failed_call(raw)
+        assert details['message'] == 'Invalid arguments'
+        assert 'processes' in details['error']
+        assert '0' in details['error']['processes']
+        assert key in details['error']['processes']['0']
+        assert details['error']['processes']['0'][key] == [message]
+
+    def assert_process_validation_error_global(self, raw, key, message):
+        details = self.assert_failed_call(raw)
+        assert details['message'] == 'Invalid arguments'
+        assert key in details['error']
+        assert details['error'][key] == [message]

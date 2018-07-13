@@ -35,7 +35,7 @@ from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS, DATA_FORM
 from tartare.core.context import Context, CoverageExportContext
 from tartare.core.fetcher import HttpFetcher
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Process
+from tartare.core.models import OldProcess
 from tartare.core.validity_period_finder import ValidityPeriodFinder
 from tartare.exceptions import FusioException, ParameterException
 from tartare.processes.abstract_process import AbstractFusioProcess
@@ -45,7 +45,7 @@ from tartare.processes.utils import process_registry
 
 @process_registry('coverage')
 class FusioExport(AbstractFusioProcess):
-    def __init__(self, context: CoverageExportContext, process: Process) -> None:
+    def __init__(self, context: CoverageExportContext, process: OldProcess) -> None:
         super().__init__(context, process)
         self.export_type = self.params.get('export_type')
 

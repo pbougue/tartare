@@ -34,7 +34,7 @@ from functools import partial
 
 from tartare.core import zip
 from tartare.core.context import ContributorExportContext, Context
-from tartare.core.models import DataSource
+from tartare.core.models import DataSource, OldProcess
 from tartare.core.models import Process
 from tartare.core.subprocess_wrapper import SubProcessWrapper
 from tartare.exceptions import ParameterException, RuntimeException, EntityNotFound
@@ -51,7 +51,7 @@ class Ruspell(AbstractContributorProcess):
     rules_filename = 'rules.csv'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
 
-    def __init__(self, context: ContributorExportContext, process: Process) -> None:
+    def __init__(self, context: ContributorExportContext, process: OldProcess) -> None:
         super().__init__(context, process)
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')

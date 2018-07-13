@@ -915,8 +915,17 @@ components:
     ComputeDirections:
       type: object
       properties:
-        links:
-          $ref: '#/components/schemas/params_links'
+        sequence:
+          type: integer
+        input_data_source_ids:
+          type: array
+          items:
+            type: string
+        configuration_data_sources:
+          type: object
+          properties:
+            compute_direction:
+              type: string
     params_links:
       type: array
       items:

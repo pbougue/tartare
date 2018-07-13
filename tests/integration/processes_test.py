@@ -31,88 +31,72 @@ from mock import mock
 
 from tartare import app
 from tartare.core.constants import ACTION_TYPE_CONTRIBUTOR_EXPORT, ACTION_TYPE_COVERAGE_EXPORT
-from tartare.core.context import Context, ContributorExportContext, CoverageExportContext
-from tartare.core.models import Process, Job
+from tartare.core.context import ContributorExportContext, CoverageExportContext
+from tartare.core.models import Process, Job, RuspellProcess, HeadsignShortNameProcess, GtfsAgencyFileProcess, \
+    ComputeExternalSettingsProcess, ComputeDirectionsProcess, FusioDataUpdateProcess, FusioImportProcess, \
+    FusioPreProdProcess, FusioExportProcess, FusioSendPtExternalSettingsProcess
 from tartare.http_exceptions import InvalidArguments
 from tartare.processes import contributor
 from tartare.processes import coverage
-from tartare.processes.coverage import FusioPreProd
 from tartare.processes.processes import ProcessManager
 from tartare.tasks import launch
 
 
 def test_contributor_process():
     map_test = {
-        "Ruspell": contributor.Ruspell,
-        "HeadsignShortName": contributor.HeadsignShortName,
-        "GtfsAgencyFile": contributor.GtfsAgencyFile,
-        "ComputeExternalSettings": contributor.ComputeExternalSettings,
-        "ComputeDirections": contributor.ComputeDirections,
+        RuspellProcess(): contributor.Ruspell,
+        HeadsignShortNameProcess(): contributor.HeadsignShortName,
+        GtfsAgencyFileProcess(): contributor.GtfsAgencyFile,
+        ComputeExternalSettingsProcess(): contributor.ComputeExternalSettings,
+        ComputeDirectionsProcess(): contributor.ComputeDirections,
     }
 
     with app.app_context():
-        # Contributor Process
         for key, value in map_test.items():
             assert isinstance(ProcessManager.get_process(
-                ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)), Process(type=key)), value)
-    # Coverage Process
+                ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)), key), value)
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
             ProcessManager.get_process(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                          Process(type=key))
+                                       key)
         assert str(excinfo.typename) == "InvalidArguments"
 
 
 def test_coverage_process():
     map_test = {
-        "FusioDataUpdate": coverage.FusioDataUpdate,
-        "FusioImport": coverage.FusioImport,
-        "FusioPreProd": coverage.FusioPreProd,
-        "FusioExport": coverage.FusioExport,
-        "FusioSendPtExternalSettings": coverage.FusioSendPtExternalSettings,
+        FusioDataUpdateProcess(params={'url': 'http://fusio.com'}): coverage.FusioDataUpdate,
+        FusioImportProcess(params={'url': 'http://fusio.com'}): coverage.FusioImport,
+        FusioPreProdProcess(params={'url': 'http://fusio.com'}): coverage.FusioPreProd,
+        FusioExportProcess(params={'url': 'http://fusio.com'}): coverage.FusioExport,
+        FusioSendPtExternalSettingsProcess(params={'url': 'http://fusio.com'}): coverage.FusioSendPtExternalSettings,
     }
 
     # Coverage Process
     for key, value in map_test.items():
-        assert isinstance(ProcessManager.get_process(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                                        Process(type=key, params={'url': 'http://fusio.com'})),
+        assert isinstance(ProcessManager.get_process(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)), key),
                           value)
     # Contributor Process
     for key in map_test.keys():
         with pytest.raises(InvalidArguments) as excinfo:
-            ProcessManager.get_process(ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
-                                          Process(type=key))
+            ProcessManager.get_process(ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)), key)
         assert str(excinfo.typename) == "InvalidArguments"
-
-
-def test_coverage_invalid_process():
-    with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(ProcessManager.get_process(CoverageExportContext(Job(ACTION_TYPE_COVERAGE_EXPORT)),
-                                                 Process(type='AA')), FusioPreProd)
-    assert str(excinfo.typename) == "InvalidArguments"
-
-
-def test_contributor_invalid_process():
-    with pytest.raises(InvalidArguments) as excinfo:
-        isinstance(ProcessManager.get_process(ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)),
-                                                 Process(type='AA')), FusioPreProd)
-    assert str(excinfo.typename) == "InvalidArguments"
 
 
 @mock.patch('tartare.tasks.run_process.s')
 def test_launch_in_sequence(mock_run_process):
     processes = [Process(id='bob', sequence=1), Process(id='toto', sequence=0),
-                    Process(id='tata', sequence=2)]
+                 Process(id='tata', sequence=2)]
     launch(processes, ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
     calls = mock_run_process.call_args_list
     assert 'toto' == calls[0][0][1].id
     assert 'bob' == calls[1][0][0].id
     assert 'tata' == calls[2][0][0].id
 
+
 @mock.patch('tartare.tasks.run_process.s')
 def test_launch_enabled(mock_run_process):
     processes = [Process(id='bob', sequence=1, enabled=False), Process(id='toto', sequence=0, enabled=True),
-                    Process(id='tata', sequence=2, enabled=True)]
+                 Process(id='tata', sequence=2, enabled=True)]
     launch(processes, ContributorExportContext(Job(ACTION_TYPE_CONTRIBUTOR_EXPORT)))
     calls = mock_run_process.call_args_list
     assert mock_run_process.call_count == 2

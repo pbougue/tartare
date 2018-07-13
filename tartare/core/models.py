@@ -34,11 +34,11 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Type, Any, TypeVar, BinaryIO, Tuple
+from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple
 
 import pymongo
 import pytz
-from marshmallow import Schema, post_load, utils, fields, validates, ValidationError
+from marshmallow import Schema, post_load, utils, fields, validates, validates_schema, ValidationError
 from marshmallow_oneofschema import OneOfSchema
 
 from tartare import app
@@ -49,7 +49,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
-    ACTION_TYPE_CONTRIBUTOR_EXPORT
+    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -151,19 +151,20 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
                     )
                     self.data_sources.append(data_source_computed)
         for process in self.processes:
-            if "target_data_source_id" in process.params and "export_type" in process.params:
-                if not any(data_source for data_source in self.data_sources if
-                           data_source.id == process.params.get("target_data_source_id")):
-                    data_source_computed = DataSource(
-                        id=process.params.get("target_data_source_id"),
-                        name=process.params.get("target_data_source_id"),
-                        data_format=process.params.get("export_type"),
-                        input=InputComputed(),
-                    )
-                    # empty target_data_source_id generates a new id (uuid.uuid4() of DataSource.__init__())
-                    if not process.params.get("target_data_source_id"):
-                        process.params['target_data_source_id'] = data_source_computed.id
-                    self.data_sources.append(data_source_computed)
+            if isinstance(process, OldProcess):
+                if "target_data_source_id" in process.params and "export_type" in process.params:
+                    if not any(data_source for data_source in self.data_sources if
+                               data_source.id == process.params.get("target_data_source_id")):
+                        data_source_computed = DataSource(
+                            id=process.params.get("target_data_source_id"),
+                            name=process.params.get("target_data_source_id"),
+                            data_format=process.params.get("export_type"),
+                            input=InputComputed(),
+                        )
+                        # empty target_data_source_id generates a new id (uuid.uuid4() of DataSource.__init__())
+                        if not process.params.get("target_data_source_id"):
+                            process.params['target_data_source_id'] = data_source_computed.id
+                        self.data_sources.append(data_source_computed)
 
     def fill_data_source_passwords_from_existing_object(self,
                                                         existing_object: 'DataSourceAndProcessContainer') -> None:
@@ -485,6 +486,16 @@ class DataSource(object):
         mongo.db[Contributor.mongo_collection].find_one_and_replace({'_id': contributor.id}, raw_contrib)
 
     @classmethod
+    def exists(cls, data_source_id: str) -> bool:
+        return mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id}) is not None
+
+    @classmethod
+    def get_data_format(cls, data_source_id: str) -> str:
+        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
+        data_source = next(data_source for data_source in raw['data_sources'] if data_source['id'] == data_source_id)
+        return data_source['data_format']
+
+    @classmethod
     def get_one(cls, data_source_id: str) -> 'DataSource':
         return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
 
@@ -551,140 +562,101 @@ class DataSource(object):
                self.input.frequency.should_fetch(self.fetch_started_at, datetime.now(pytz.utc))
 
 
-class GenericProcess(SequenceContainer):
-    def __init__(self, id: Optional[str] = None, type: Optional[str] = None, params: Optional[dict] = None,
-                 sequence: int = 0, data_source_ids: Optional[List[str]] = None,
-                 enabled: bool = True) -> None:
+class Process(SequenceContainer):
+    def __init__(self, id: Optional[str] = None, sequence: int = 0, enabled: bool = True) -> None:
         super().__init__(sequence)
         self.id = str(uuid.uuid4()) if not id else id
-        self.data_source_ids = data_source_ids if data_source_ids else []
-        self.params = params if params else {}
-        self.type = type
         self.enabled = enabled
-
-    def save_data(self, class_name: Type[DataSourceAndProcessContainer],
-                  mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
-                  ref_model_object: 'Process') -> None:
-        data = class_name.get(object_id)
-        if data is None:
-            raise ValueError('bad {} {}'.format(class_name.label, object_id))
-        if self.id in [p.id for p in data.processes]:
-            raise ValueError("duplicate Process id '{}'".format(self.id))
-
-        data.processes.append(ref_model_object)
-        data.add_computed_data_sources()
-        raw_contrib = mongo_schema().dump(data).data
-        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
-
-    @classmethod
-    def get_data(cls, class_name: Type[DataSourceAndProcessContainer],
-                 mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
-                 process_id: str) -> Optional[List['Process']]:
-        if object_id is not None:
-            data = class_name.get(object_id)
-            if data is None:
-                raise ValueError('bad {} {}'.format(class_name.label, object_id))
-        elif process_id is not None:
-            raw = mongo.db[class_name.mongo_collection].find_one({'processes.id': process_id})
-            if raw is None:
-                return None
-            data = mongo_schema(strict=True).load(raw).data
-        else:
-            raise ValueError("to get process you must provide a contributor_id or a process_id")
-
-        processes = data.processes
-
-        if process_id is None:
-            return processes
-        p = next((p for p in processes if p.id == process_id), None)
-        return [p] if p else []
-
-    @classmethod
-    def delete_data(cls, class_name: Type[DataSourceAndProcessContainer],
-                    mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
-                    process_id: str) -> int:
-        data = class_name.get(object_id)
-        if data is None:
-            raise ValueError('bad {} {}'.format(class_name.label, object_id))
-
-        nb_delete = len([p for p in data.processes if p.id == process_id])
-        data.processes = [p for p in data.processes if p.id != process_id]
-        raw_contrib = mongo_schema().dump(data).data
-        mongo.db[class_name.mongo_collection].find_one_and_replace({'_id': data.id}, raw_contrib)
-        return nb_delete
-
-    @classmethod
-    def update_data(cls, class_name: Type[DataSourceAndProcessContainer],
-                    mongo_schema: Type['MongoProcessContainerSchema'], object_id: str,
-                    process_id: str, process: Optional[Dict[str, Any]] = None) -> Optional[List['Process']]:
-        data = class_name.get(object_id)
-        if not data:
-            raise ValueError('bad {} {}'.format(class_name.label, object_id))
-
-        if not [ps for ps in data.processes if ps.id == process_id]:
-            raise ValueError("no processes id {} exists in {} with id {}"
-                             .format(object_id, class_name.label, process_id))
-        if process and 'id' in process and process['id'] != process_id:
-            raise ValueError("id from request {} doesn't match id from url {}"
-                             .format(process['id'], process_id))
-
-        process['id'] = process_id
-        raw = mongo.db[class_name.mongo_collection].update_one({'processes.id': process_id},
-                                                               {'$set': {'processes.$': process}})
-        if raw.matched_count == 0:
-            return None
-
-        return cls.get_data(class_name, mongo_schema, object_id, process_id)
-
-
-class Process(GenericProcess):
-    def save(self, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> None:
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('bad arguments')
-        # self passed as 4th argument is child object from GenericProcess.save_data method point of vue
-        # so it's the one that will need to be saved as a Process
-        if contributor_id:
-            self.save_data(Contributor, MongoContributorSchema, contributor_id, self)
-        if coverage_id:
-            self.save_data(Coverage, MongoCoverageSchema, coverage_id, self)
-
-    @classmethod
-    def get(cls, process_id: str, contributor_id: Optional[str] = None,
-            coverage_id: Optional[str] = None) -> Optional[List['Process']]:
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('bad arguments')
-        if contributor_id:
-            return cls.get_data(Contributor, MongoContributorSchema, contributor_id, process_id)
-        if coverage_id:
-            return cls.get_data(Coverage, MongoCoverageSchema, coverage_id, process_id)
-
-    @classmethod
-    def delete(cls, process_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None) -> int:
-        if process_id is None:
-            raise ValueError('a process id is required')
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('bad arguments')
-        if contributor_id:
-            return cls.delete_data(Contributor, MongoContributorSchema, contributor_id, process_id)
-        if coverage_id:
-            return cls.delete_data(Coverage, MongoCoverageSchema, coverage_id, process_id)
-
-    @classmethod
-    def update(cls, process_id: str, contributor_id: Optional[str] = None, coverage_id: Optional[str] = None,
-               process: Optional[dict] = None) -> Optional[List['Process']]:
-        if process_id is None:
-            raise ValueError('a Process id is required')
-
-        if not any([coverage_id, contributor_id]):
-            raise ValueError('bad arguments')
-
-        if contributor_id:
-            return cls.update_data(Contributor, MongoContributorSchema, contributor_id, process_id, process)
-        if coverage_id:
-            return cls.update_data(Coverage, MongoCoverageSchema, coverage_id, process_id, process)
+        self.type = self.__class__.__name__.replace('Process', '')
 
     def __repr__(self) -> str:
         return str(vars(self))
+
+
+class OldProcess(Process):
+    def __init__(self, id: Optional[str] = None, params: Optional[dict] = None,
+                 sequence: int = 0, data_source_ids: Optional[List[str]] = None,
+                 enabled: bool = True) -> None:
+        super().__init__(id, sequence, enabled)
+        self.data_source_ids = data_source_ids if data_source_ids else []
+        self.params = params if params else {}
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class ConfigurationDataSource(object):
+    def __init__(self, name: str, ids: List[str]) -> None:
+        self.ids = ids
+        self.id = ids[0] if len(ids) == 1 else None
+        self.name = name
+
+
+class NewProcess(Process):
+    def __init__(self, id: Optional[str] = None,
+                 configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
+                 sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
+                 target_data_source_id: Optional[List[str]] = None,
+                 enabled: bool = True) -> None:
+        super().__init__(id, sequence, enabled)
+        self.configuration_data_sources = configuration_data_sources if configuration_data_sources else []
+        self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
+        self.target_data_source_id = target_data_source_id
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class ComputeDirectionsProcess(NewProcess):
+    pass
+
+
+class GtfsAgencyFileProcess(OldProcess):
+    pass
+
+
+class ComputeExternalSettingsProcess(OldProcess):
+    pass
+
+
+class Gtfs2NtfsProcess(OldProcess):
+    pass
+
+
+class HeadsignShortNameProcess(OldProcess):
+    pass
+
+
+class RuspellProcess(OldProcess):
+    pass
+
+
+class SleepingProcess(OldProcess):
+    pass
+
+
+class FusioDataUpdateProcess(OldProcess):
+    pass
+
+
+class FusioExportProcess(OldProcess):
+    pass
+
+
+class FusioExportContributorProcess(OldProcess):
+    pass
+
+
+class FusioImportProcess(OldProcess):
+    pass
+
+
+class FusioPreProdProcess(OldProcess):
+    pass
+
+
+class FusioSendPtExternalSettingsProcess(OldProcess):
+    pass
 
 
 class Contributor(DataSourceAndProcessContainer):
@@ -716,15 +688,27 @@ class Contributor(DataSourceAndProcessContainer):
         return MongoContributorSchema(strict=True).load(raw).data
 
     def __check_contributors_using_integrity(self) -> None:
+        def handle_contributor_query_result(contributors_using_result: List[Contributor]) -> None:
+            if contributors_using_result:
+                contributors_ids = [contributor.id for contributor in contributors_using_result]
+                raise IntegrityException(
+                    'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                        self.id, ', '.join(contributors_ids)
+                    ))
+
         contributors_using = self.find({
             'processes.params.links.contributor_id': self.id
         })
-        if contributors_using:
-            contributors_ids = [contributor.id for contributor in contributors_using]
-            raise IntegrityException(
-                'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
-                    self.id, ', '.join(contributors_ids)
-                ))
+        handle_contributor_query_result(contributors_using)
+
+        new_contributors_using = self.find({
+            '$or': [
+                {'processes.input_data_source_ids': {'$in': [data_source.id for data_source in self.data_sources]}},
+                {'processes.configuration_data_sources.ids': {
+                    '$in': [data_source.id for data_source in self.data_sources]}},
+            ]
+        })
+        handle_contributor_query_result(new_contributors_using)
 
     def __check_coverages_using_integrity(self) -> None:
         coverages_using = Coverage.find({
@@ -750,7 +734,7 @@ class Contributor(DataSourceAndProcessContainer):
     @classmethod
     def find(cls, filter: dict) -> List['Contributor']:
         raw = mongo.db[cls.mongo_collection].find(filter)
-        return MongoContributorSchema(many=True, strict=True).load(raw).data
+        return MongoContributorSchema(many=True, strict=True).load(list(raw)).data
 
     @classmethod
     def all(cls) -> List['Contributor']:
@@ -1151,24 +1135,171 @@ class MongoDataSourceSchema(Schema):
         return DataSource(**data)
 
 
-class MongoProcessSchema(Schema):
+class MongoGenericProcessSchema(EnabledSchema):
     id = fields.String(required=True)
-    enabled = fields.Boolean(required=False)
     sequence = fields.Integer(required=True)
-    type = fields.String(required=True)
+
+
+class MongoConfigurationDataSource(Schema):
+    name = fields.String(required=True)
+    ids = fields.List(fields.String(), required=True)
+
+    @post_load
+    def build_configuration(self, data: dict) -> ConfigurationDataSource:
+        return ConfigurationDataSource(**data)
+
+
+class MongoNewProcessSchema(MongoGenericProcessSchema):
+    input_data_source_ids = fields.List(fields.String(), required=True)
+    target_data_source_id = fields.String(required=False, allow_none=True)
+    configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=False,
+                                             allow_none=True)
+
+    @validates('input_data_source_ids')
+    def validate_input_data_source_ids(self, input_data_source_ids: List[str]) -> None:
+        if len(input_data_source_ids) != 1:
+            raise ValidationError('input_data_source_ids should contains one and only one data source id')
+
+
+class MongoOldProcessSchema(MongoGenericProcessSchema):
     params = fields.Dict(required=False)
     data_source_ids = fields.List(fields.String(), required=False)
 
     @post_load
-    def build_process(self, data: dict) -> Process:
-        return Process(**data)
+    def build_process(self, data: dict) -> OldProcess:
+        return OldProcess(**data)
 
 
-class MongoProcessContainerSchema(Schema):
-    pass
+class MongoGtfsAgencyFileProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> GtfsAgencyFileProcess:
+        return GtfsAgencyFileProcess(**data)
 
 
-class MongoCoverageSchema(MongoProcessContainerSchema):
+class MongoGtfs2NtfsProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> Gtfs2NtfsProcess:
+        return Gtfs2NtfsProcess(**data)
+
+
+class MongoHeadsignShortNameProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> HeadsignShortNameProcess:
+        return HeadsignShortNameProcess(**data)
+
+
+class MongoRuspellProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> RuspellProcess:
+        return RuspellProcess(**data)
+
+
+class MongoSleepingProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> SleepingProcess:
+        return SleepingProcess(**data)
+
+
+class MongoComputeExternalSettingsProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> ComputeExternalSettingsProcess:
+        return ComputeExternalSettingsProcess(**data)
+
+
+class MongoFusioDataUpdateProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioDataUpdateProcess:
+        return FusioDataUpdateProcess(**data)
+
+
+class MongoFusioExportProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioExportProcess:
+        return FusioExportProcess(**data)
+
+
+class MongoFusioExportContributorProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioExportContributorProcess:
+        return FusioExportContributorProcess(**data)
+
+
+class MongoFusioImportProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioImportProcess:
+        return FusioImportProcess(**data)
+
+
+class MongoFusioPreprodProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioPreProdProcess:
+        return FusioPreProdProcess(**data)
+
+
+class MongoFusioSendPtExternalSettingsProcessSchema(MongoOldProcessSchema):
+    @post_load
+    def build_process(self, data: dict) -> FusioSendPtExternalSettingsProcess:
+        return FusioSendPtExternalSettingsProcess(**data)
+
+
+class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
+    @post_load
+    def build(self, data: dict) -> ComputeDirectionsProcess:
+        return ComputeDirectionsProcess(**data)
+
+    @validates('configuration_data_sources')
+    def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
+        if not any(configuration.name == 'directions' for configuration in configuration_data_sources):
+            raise ValidationError('configuration_data_sources should contain a "directions" data source')
+
+
+class MongoProcessSchema(OneOfSchema):
+    type_schemas = {
+        'ComputeDirections': MongoComputeDirectionsProcessSchema,
+        'GtfsAgencyFile': MongoGtfsAgencyFileProcessSchema,
+        'ComputeExternalSettings': MongoComputeExternalSettingsProcessSchema,
+        'Gtfs2Ntfs': MongoGtfs2NtfsProcessSchema,
+        'HeadsignShortName': MongoHeadsignShortNameProcessSchema,
+        'Ruspell': MongoRuspellProcessSchema,
+        'Sleeping': MongoSleepingProcessSchema,
+        'FusioDataUpdate': MongoFusioDataUpdateProcessSchema,
+        'FusioExport': MongoFusioExportProcessSchema,
+        'FusioExportContributor': MongoFusioExportContributorProcessSchema,
+        'FusioImport': MongoFusioImportProcessSchema,
+        'FusioPreprod': MongoFusioPreprodProcessSchema,
+        'FusioSendPtExternalSettings': MongoFusioSendPtExternalSettingsProcessSchema,
+    }
+
+    def get_obj_type(self, obj: Process) -> str:
+        if isinstance(obj, ComputeDirectionsProcess):
+            return 'ComputeDirections'
+        elif isinstance(obj, GtfsAgencyFileProcess):
+            return 'GtfsAgencyFile'
+        elif isinstance(obj, ComputeExternalSettingsProcess):
+            return 'ComputeExternalSettings'
+        elif isinstance(obj, Gtfs2NtfsProcess):
+            return 'Gtfs2Ntfs'
+        elif isinstance(obj, HeadsignShortNameProcess):
+            return 'HeadsignShortName'
+        elif isinstance(obj, RuspellProcess):
+            return 'Ruspell'
+        elif isinstance(obj, SleepingProcess):
+            return 'Sleeping'
+        elif isinstance(obj, FusioDataUpdateProcess):
+            return 'FusioDataUpdate'
+        elif isinstance(obj, FusioExportProcess):
+            return 'FusioExport'
+        elif isinstance(obj, FusioExportContributorProcess):
+            return 'FusioExportContributor'
+        elif isinstance(obj, FusioImportProcess):
+            return 'FusioImport'
+        elif isinstance(obj, FusioPreProdProcess):
+            return 'FusioPreprod'
+        elif isinstance(obj, FusioSendPtExternalSettingsProcess):
+            return 'FusioSendPtExternalSettings'
+
+
+class MongoCoverageSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     environments = fields.Nested(MongoEnvironmentListSchema)
@@ -1185,7 +1316,7 @@ class MongoCoverageSchema(MongoProcessContainerSchema):
         return Coverage(**data)
 
 
-class MongoContributorSchema(MongoProcessContainerSchema):
+class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')
     name = fields.String(required=True)
     data_prefix = fields.String(required=True)
@@ -1193,11 +1324,63 @@ class MongoContributorSchema(MongoProcessContainerSchema):
     processes = fields.Nested(MongoProcessSchema, many=True, required=False)
     data_type = DataType()
 
+    @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
+    def validate_contributor_process_input_data_source_ids(self, unmarshalled: Union[dict, Contributor],
+                                                           contributors: Union[dict, List[dict]], many: bool) -> None:
+        if not many:
+            contributors = [contributors]  # type: ignore
+        for contributor in contributors:
+            for process in contributor.get('processes', []):
+                if isinstance(process, dict):
+                    if 'input_data_source_ids' in process and len(process['input_data_source_ids']) == 1:
+                        data_source_id = process['input_data_source_ids'][0]
+                        if not any(data_source_id == data_source['id'] for data_source in
+                                   contributor.get('data_sources', [])):
+                            if not DataSource.exists(data_source_id):
+                                raise ValidationError(
+                                    'data source referenced by "{}" in process "{}" not found'.format(
+                                        data_source_id, process['type']), ['input_data_source_ids'])
+
+    @classmethod
+    def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str,
+                                               process_type: str) -> None:
+        if configuration_key == 'directions':
+            if data_format_found != DATA_FORMAT_DIRECTION_CONFIG:
+                raise ValidationError(
+                    'data source referenced by "{}" in process "{}" should be of data format "compute directions"'.format(
+                        DATA_FORMAT_DIRECTION_CONFIG, process_type), ['configuration_data_sources'])
+
+    @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
+    def validate_contributor_process_configuration(self, unmarshalled: Union[dict, Contributor],
+                                                   contributors: Union[dict, List[dict]], many: bool) -> None:
+        if not many:
+            contributors = [contributors]  # type: ignore
+        for contributor in contributors:
+            for process in contributor.get('processes', []):
+                if isinstance(process, dict):
+                    for configuration_data_source in process.get('configuration_data_sources', []):
+                        for data_source_id in configuration_data_source.get('ids', []):
+                            contributor_data_sources = contributor.get('data_sources', [])
+                            if not any(data_source_id == data_source['id'] for data_source in contributor_data_sources):
+                                if not DataSource.exists(data_source_id):
+                                    raise ValidationError(
+                                        'data source referenced by "{}" in process "{}" was not found'.format(
+                                            data_source_id,
+                                            process['type']),
+                                        ['configuration_data_sources'])
+                                else:
+                                    data_format = DataSource.get_data_format(data_source_id)
+                            else:
+                                data_format = next(
+                                    data_source['data_format'] for data_source in contributor_data_sources if
+                                    data_source['id'] == data_source_id)
+
+                            self.validate_configuration_has_data_format(configuration_data_source['name'], data_format,
+                                                                        process['type'])
+
     @post_load
     def make_contributor(self, data: dict) -> Contributor:
         return Contributor(**data)
-
-
 
 
 class Job(object):
@@ -1325,7 +1508,7 @@ class ContributorExport(Historisable):
                  created_at: datetime = None) -> None:
         self.id = id if id else str(uuid.uuid4())
         self.contributor_id = contributor_id
-        self.created_at = created_at if created_at else  datetime.now(pytz.utc)
+        self.created_at = created_at if created_at else datetime.now(pytz.utc)
         self.validity_period = validity_period
         self.data_sources = [] if data_sources is None else data_sources
 
