@@ -594,8 +594,7 @@ class TestRuspellProcess(TartareFixture):
         job = self.__setup_contributor_export_environment(init_http_download_server,
                                                           params)
         assert job['state'] == 'failed'
-        assert job[
-                   'error_message'] == "contributor of data source 'unknown' not found"
+        assert job['error_message'] == "data source 'unknown' not found in contributors or coverages"
 
     def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
         params = {

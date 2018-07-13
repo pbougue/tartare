@@ -41,7 +41,8 @@ from tartare.http_exceptions import InvalidArguments, InternalServerError, Objec
 class DataSourceFetch(flask_restful.Resource):
     def post(self, contributor_id: str, data_source_id: str) -> Response:
         try:
-            data_source = models.DataSource.get_one(data_source_id)
+            contributor = Contributor.get(contributor_id)
+            data_source = contributor.get_data_source(data_source_id)
         except EntityNotFound as e:
             raise ObjectNotFound(str(e))
 
@@ -49,7 +50,7 @@ class DataSourceFetch(flask_restful.Resource):
             raise InvalidArguments('data source type should be {} and should have an url'.format(INPUT_TYPE_AUTO))
 
         try:
-            fetch_and_save_dataset(Contributor.get(contributor_id), data_source_id)
+            fetch_and_save_dataset(contributor, data_source_id)
         except FetcherException as e:
             raise InternalServerError('fetching {} failed: {}'.format(data_source.input.url, str(e)))
 

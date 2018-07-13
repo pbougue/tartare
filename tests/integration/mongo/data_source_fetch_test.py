@@ -51,13 +51,13 @@ class TestDataSourceFetchAction(TartareFixture):
         raw = self.post('/contributors/unknown/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "contributor of data source 'unknown' not found"
+        assert r["error"] == "contributor 'unknown' not found"
 
     def test_fetch_with_unknown_data_source(self, contributor):
         raw = self.post('/contributors/id_test/data_sources/unknown/actions/fetch')
         assert raw.status_code == 404
         r = self.json_to_dict(raw)
-        assert r["error"] == "contributor of data source 'unknown' not found"
+        assert r["error"] == "data source 'unknown' not found for contributor 'id_test'"
 
     def test_fetch_ok(self, init_http_download_server, contributor):
         ip = init_http_download_server.ip_addr

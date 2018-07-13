@@ -33,7 +33,6 @@ import ftplib
 import json
 import os
 import tempfile
-from zipfile import ZipFile
 
 import mock
 import pytest
@@ -200,9 +199,9 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('requests.post')
     @mock.patch('requests.get')
     @freeze_time("2018-05-14")
-    def test_publish_ftp_ods_with_metadata(self, fusio_get, fusio_post, wait_for_action_terminated,
-                                           replace_url_hostname_from_url, init_http_download_server,
-                                           init_ftp_upload_server):
+    def test_publish_ftp_ods_with_metadata_fusio(self, fusio_get, fusio_post, wait_for_action_terminated,
+                                                 replace_url_hostname_from_url, init_http_download_server,
+                                                 init_ftp_upload_server):
         contributor_id = 'id_test'
         coverage_id = 'my-coverage-id'
         sample_data = 'some_archive.zip'
@@ -266,6 +265,44 @@ class TestDataPublisher(TartareFixture):
             get_response(200, self.get_fusio_export_url_response_from_action_id('ntfs-action-id',
                                                                                 "http://fusio/whatever"))
         ]
+        self.full_export(contributor_id, coverage_id)
+        self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
+
+    @freeze_time("2018-05-14")
+    def test_publish_ftp_ods_with_metadata(self, init_http_download_server,
+                                           init_ftp_upload_server):
+        contributor_id = 'id_test'
+        coverage_id = 'my-coverage-id'
+        sample_data = 'some_archive.zip'
+        fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
+        fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
+        self.init_contributor(contributor_id, "my_gtfs", fetch_url_gtfs)
+        self.add_data_source_to_contributor(contributor_id, 'my_ntfs', fetch_url_ntfs, DATA_FORMAT_NTFS)
+        publication_platform = {
+            "sequence": 0,
+            "type": "ods",
+            "protocol": "ftp",
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
+                }
+            },
+            "input_data_source_ids": ['my_gtfs', 'my_ntfs']
+        }
+        environments = {
+            'production': {
+                'sequence': 0,
+                'name': 'production',
+                'publication_platforms': [publication_platform]
+            }
+        }
+        license = {
+            "name": 'my license',
+            "url": 'http://license.org/mycompany'
+        }
+        self.init_coverage(coverage_id, ["my_gtfs", "my_ntfs"], [], environments, license)
         self.full_export(contributor_id, coverage_id)
         self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
 
@@ -453,7 +490,7 @@ class TestDataPublisher(TartareFixture):
             "protocol": "http",
             "url": publish_url,
         }
-        self._create_coverage(coverage_id, ['ds_gtfs', 'ds_'+data_format], publication_platform)
+        self._create_coverage(coverage_id, ['ds_gtfs', 'ds_' + data_format], publication_platform)
 
         self.contributor_export(contributor_id)
         self.contributor_export(contributor_geo)
@@ -481,7 +518,8 @@ class TestDataPublisher(TartareFixture):
                               data_type=DATA_TYPE_GEOGRAPHIC)
         fetch_url = self.format_url(ip=init_http_download_server.ip_addr, path='geo_data',
                                     filename='ile-de-france.poly')
-        self.add_data_source_to_contributor(contributor_geo_id, 'poly_ds_id', fetch_url, data_format=DATA_FORMAT_POLY_FILE)
+        self.add_data_source_to_contributor(contributor_geo_id, 'poly_ds_id', fetch_url,
+                                            data_format=DATA_FORMAT_POLY_FILE)
 
         publication_platform = {
             "sequence": 0,
@@ -536,7 +574,7 @@ class TestDataPublisher(TartareFixture):
         assert job['state'] == 'failed', print(job)
 
     def test_publish_modified_fixture_from_contributor_process(self, init_ftp_upload_server,
-                                                                  init_http_download_server):
+                                                               init_http_download_server):
         self.init_contributor('c1', 'ds1', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
                               export_id='export_id')
         self.add_process_to_contributor({
@@ -590,4 +628,3 @@ class TestDataPublisher(TartareFixture):
             with tempfile.TemporaryDirectory() as fixture_tmp_dir:
                 assert_zip_file_equals_ref_zip_file(transfered_full_name, tmp_dirname, export_fixture, fixture_tmp_dir)
         session.quit()
-

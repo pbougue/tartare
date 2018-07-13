@@ -115,7 +115,8 @@ class TartareFixture(object):
     def get_all_jobs(self):
         return self.json_to_dict(self.get('/jobs'))['jobs']
 
-    def get_jobs(self, contributor_id=None, coverage_id=None, job_id=None, page=None, per_page=None, check_success=True):
+    def get_jobs(self, contributor_id=None, coverage_id=None, job_id=None, page=None, per_page=None,
+                 check_success=True):
         route = '/jobs'
         if contributor_id:
             route = '/contributors/{}{}'.format(contributor_id, route)
@@ -319,6 +320,8 @@ class TartareFixture(object):
                 session.delete(expected_filename)
             with ZipFile(transfered_full_name, 'r') as ods_zip:
                 ods_zip.extract(metadata_file_name, tmp_dirname)
+                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id), '{}_GTFS.zip'.format(coverage_id),
+                                              '{}_NTFS.zip'.format(coverage_id)]
                 fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
                 metadata = os.path.join(tmp_dirname, metadata_file_name)
                 assert_text_files_equals(metadata, fixture)
