@@ -269,37 +269,6 @@ class TestDataPublisher(TartareFixture):
         self.full_export(contributor_id, coverage_id)
         self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
 
-    def test_publish_stops_to_ftp(self, init_http_download_server, init_ftp_upload_server):
-        contributor_id = 'fr-idf'
-        coverage_id = 'default'
-        filename = 'some_archive.zip'
-        url = self.format_url(ip=init_http_download_server.ip_addr, filename=filename)
-        self._create_contributor(contributor_id, url)
-        publication_platform = {
-            "sequence": 0,
-            "type": "stop_area",
-            "protocol": "ftp",
-            "url": "ftp://" + init_ftp_upload_server.ip_addr,
-            "options": {
-                "authent": {
-                    "username": init_ftp_upload_server.user,
-                    "password": init_ftp_upload_server.password
-                }
-            }
-        }
-        self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
-
-        self.full_export(contributor_id, coverage_id, '2015-08-10')
-
-        # check if the file was successfully uploaded
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
-                             init_ftp_upload_server.password)
-        directory_content = session.nlst()
-        assert len(directory_content) == 1
-        assert '{coverage_id}_stops.txt'.format(coverage_id=coverage_id) in directory_content
-        session.delete('{coverage_id}_stops.txt'.format(coverage_id=coverage_id))
-        session.quit()
-
     @freeze_time("2015-08-10")
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
     def test_publish_environment_respect_sequence_order(self, mock_post, init_http_download_server):

@@ -264,7 +264,7 @@ class TestCoverageApi(TartareFixture):
                     'preproduction': {
                         'publication_platforms': {
                             '0': {
-                                'type': ['choice "invalid_type" not in possible values (navitia, ods, stop_area).']
+                                'type': ['choice "invalid_type" not in possible values (navitia, ods).']
                             }
                         }
                     }
