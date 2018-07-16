@@ -34,7 +34,7 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple
+from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple, Type
 
 import pymongo
 import pytz
@@ -497,16 +497,31 @@ class DataSource(object):
 
     @classmethod
     def get_one(cls, data_source_id: str) -> 'DataSource':
-        return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
+        try:
+            return cls.get_contributor_of_data_source(data_source_id).get_data_source(data_source_id)
+        except EntityNotFound:
+            try:
+                return cls.get_coverage_of_data_source(data_source_id).get_data_source(data_source_id)
+            except EntityNotFound:
+                raise EntityNotFound("data source '{}' not found in contributors or coverages".format(data_source_id))
+
+    @classmethod
+    def get_owner_of_data_source(cls, data_source_id: str, model: Union[Type['Contributor'], Type['Coverage']]) \
+            -> Union['Contributor', 'Coverage']:
+        raw = mongo.db[model.mongo_collection].find_one({'data_sources.id': data_source_id})
+
+        if not raw:
+            raise EntityNotFound(
+                "{} of data source '{}' not found".format(model.label.lower(), data_source_id))
+        return raw
+
+    @classmethod
+    def get_coverage_of_data_source(cls, data_source_id: str) -> 'Coverage':
+        return MongoCoverageSchema(strict=True).load(cls.get_owner_of_data_source(data_source_id, Coverage)).data
 
     @classmethod
     def get_contributor_of_data_source(cls, data_source_id: str) -> 'Contributor':
-        raw = mongo.db[Contributor.mongo_collection].find_one({'data_sources.id': data_source_id})
-
-        if not raw:
-            raise EntityNotFound("contributor of data source '{}' not found".format(data_source_id))
-
-        return MongoContributorSchema(strict=True).load(raw).data
+        return MongoContributorSchema(strict=True).load(cls.get_owner_of_data_source(data_source_id, Contributor)).data
 
     def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
