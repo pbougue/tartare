@@ -93,13 +93,14 @@ class TestGtfsAgencyProcess(TartareFixture):
         assert job['state'] == 'failed', print(job)
         assert job['error_message'] == '[process "agency_process"] agency_id should be provided', print(job)
 
-    def assert_agency_data_equals(self, expected_data):
+    def assert_agency_data_equals(self, expected_data, expected_filename):
         gridfs_id = self.get_gridfs_id_from_data_source('contrib_id', 'export_id')
 
         with app.app_context():
             new_gridfs_file = GridFsHandler().get_file_from_gridfs(gridfs_id)
             with ZipFile(new_gridfs_file, 'r') as gtfs_zip:
                 assert_zip_contains_only_txt_files(gtfs_zip)
+                assert gtfs_zip.filename == expected_filename
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 1
@@ -116,8 +117,9 @@ class TestGtfsAgencyProcess(TartareFixture):
                     assert value == data[0][key]
 
     def test_gtfs_without_agency_file_but_agency_id_in_params(self, init_http_download_server):
+        filename = 'gtfs_without_agency_file.zip'
         url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
-                              filename='gtfs_without_agency_file.zip')
+                              filename=filename)
         contrib_payload = self.__contributor_creator(url, agency_params={
             "agency_id": "112",
         })
@@ -130,7 +132,7 @@ class TestGtfsAgencyProcess(TartareFixture):
             "agency_name": "",
             "agency_url": "https://www.navitia.io/",
             "agency_timezone": "Europe/Paris",
-        })
+        }, filename)
 
     @pytest.mark.parametrize("agency_file", [
         'gtfs_without_agency_file.zip',
@@ -157,20 +159,23 @@ class TestGtfsAgencyProcess(TartareFixture):
             "agency_timezone": "Europe/Paris",
             "agency_email": "agency@email.com",
             "agency_phone": "0612345678",
-        })
+        }, agency_file)
 
     def test_gtfs_with_agency_file_and_two_agencies(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename='gtfs_with_two_agencies.zip')
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
+                              filename='gtfs_with_two_agencies.zip')
         contrib_payload = self.__contributor_creator(url)
 
         self.post('/contributors', json.dumps(contrib_payload))
         job = self.get_job_from_export_response(self.contributor_export('contrib_id', check_done=False))
         assert job['state'] == 'failed', print(job)
-        assert job['error_message'] == '[process "agency_process"] agency.txt should not have more than 1 agency', print(job)
+        assert job[
+                   'error_message'] == '[process "agency_process"] agency.txt should not have more than 1 agency', print(
+            job)
 
     def test_gtfs_with_agency_file_but_no_agency_id_in_file(self, init_http_download_server):
-        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency',
-                              filename='gtfs_with_no_agency_id.zip')
+        filename = 'gtfs_with_no_agency_id.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr, path='agency', filename=filename)
 
         contrib_payload = self.__contributor_creator(url, agency_params={
             "agency_id": "112",
@@ -188,7 +193,7 @@ class TestGtfsAgencyProcess(TartareFixture):
             "agency_url": "http://an.url.com",
             "agency_timezone": "Europe/Madrid",
             "agency_email": "agency@email.com",
-        })
+        }, filename)
 
 
 class TestComputeDirectionsProcess(TartareFixture):

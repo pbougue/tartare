@@ -87,7 +87,7 @@ class GtfsAgencyFile(AbstractContributorProcess):
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 with tempfile.TemporaryDirectory() as zip_destination:
                     new_zip = self.create_new_zip(file_data, files_zip, tmp_dir_name, grid_out.filename, zip_destination)
-                    data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename))
+                    data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename.split('.')[0]))
 
     def do(self) -> Context:
         for data_source_id in self.data_source_ids:
