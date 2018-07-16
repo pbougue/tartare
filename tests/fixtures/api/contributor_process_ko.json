@@ -22,7 +22,7 @@
       "id": "id",
       "type": "HeadsignShortName",
       "sequence": 1,
-      "data_source_ids": [
+      "input_data_source_ids": [
         "contributor_process_ko_data_source"
       ]
     }

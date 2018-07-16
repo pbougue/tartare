@@ -39,12 +39,12 @@ from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.readers import CsvReader
 from tartare.exceptions import ColumnNotFound, RuntimeException
-from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.abstract_process import NewAbstractContributorProcess
 from tartare.processes.utils import process_registry
 
 
 @process_registry()
-class HeadsignShortName(AbstractContributorProcess):
+class HeadsignShortName(NewAbstractContributorProcess):
     # For more informations, see : https://developers.google.com/transit/gtfs/reference/#routestxt => route_type
     METRO = 1
     RAIL = 2
@@ -83,19 +83,19 @@ class HeadsignShortName(AbstractContributorProcess):
 
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'trips.txt'])
-        for data_source_id in self.data_source_ids:
-            data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
+        data_source_id = self.data_source_ids[0]
+        data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
 
-            grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
-            map_route_modes = self.get_map_route_modes(grid_out)
+        grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
+        map_route_modes = self.get_map_route_modes(grid_out)
 
-            with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
-                gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(grid_out, 'trips.txt', extract_zip_path,
-                                                                        new_zip_path,
-                                                                        callback=partial(
-                                                                            self.do_manage_headsign_short_name,
-                                                                            map_route_modes=map_route_modes)
-                                                                        )
-                data_source_export.update_data_set_state(self.create_archive_and_add_in_grid_fs(
-                    gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0]))
+        with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
+            gtfs_computed_path = zip.edit_file_in_zip_file_and_pack(grid_out, 'trips.txt', extract_zip_path,
+                                                                    new_zip_path,
+                                                                    callback=partial(
+                                                                        self.do_manage_headsign_short_name,
+                                                                        map_route_modes=map_route_modes)
+                                                                    )
+            data_source_export.update_data_set_state(self.create_archive_and_add_in_grid_fs(
+                gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0]))
         return self.context

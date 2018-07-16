@@ -58,7 +58,7 @@ This process allows to modify trip_short_name and trip_headsign by "route_type".
     "id": "headsign_short_name",
     "type": "HeadsignShortName",
     "sequence": 1,
-    "data_source_ids": ["id1", "id2"]
+    "input_data_source_ids": ["id1", "id2"]
 }
 ```
 
