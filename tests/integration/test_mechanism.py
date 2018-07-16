@@ -160,12 +160,13 @@ class TartareFixture(object):
         input = {
             'type': type
         }
-        if url:
-            input['url'] = url
-        if frequency:
-            input['frequency'] = frequency
-        if options:
-            input['options'] = options
+        if type == 'auto':
+            if url:
+                input['url'] = url
+            if frequency:
+                input['frequency'] = frequency
+            if options:
+                input['options'] = options
         data_prefix = data_prefix if data_prefix else contributor_id + '_prefix'
 
         data_source = {
