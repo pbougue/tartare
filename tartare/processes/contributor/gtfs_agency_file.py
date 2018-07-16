@@ -27,12 +27,13 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import csv
-import shutil
+import os
 import tempfile
-from zipfile import ZipFile
+from functools import partial
 
-from tartare.core.context import Context, DataSourceExport
+from tartare.core.context import Context
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.zip import edit_file_in_zip_file_and_pack
 from tartare.exceptions import RuntimeException
 from tartare.helper import get_content_file_from_grid_out_file
 from tartare.processes.abstract_process import AbstractContributorProcess
@@ -59,19 +60,18 @@ class GtfsAgencyFile(AbstractContributorProcess):
 
         return data
 
-    def create_new_zip(self, file_data: dict, files_zip: ZipFile, tmp_dir_name: str, filename: str, zip_destination: str) -> str:
+    def manage_agency_file(self, filename: str, file_data: dict) -> None:
         new_data = self._get_agency_data(file_data)
-        files_zip.extractall(tmp_dir_name)
-        with open('{}/{}'.format(tmp_dir_name, 'agency.txt'), 'w') as agency:
+        with open(filename, 'w') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
             writer.writeheader()
             writer.writerow(new_data)
-        new_zip = '{}/{}'.format(zip_destination, filename.split(".")[0])
-        return shutil.make_archive(new_zip, 'zip', tmp_dir_name)
 
-    def manage_agency_file(self, data_source_export: DataSourceExport) -> None:
+    def do(self) -> Context:
+        data_source_id = self.data_source_ids[0]
+        data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
         grid_out = GridFsHandler().get_file_from_gridfs(data_source_export.gridfs_id)
-        filename = grid_out.filename
+
         data = get_content_file_from_grid_out_file(grid_out, 'agency.txt')
 
         if len(data) > 1:
@@ -83,14 +83,13 @@ class GtfsAgencyFile(AbstractContributorProcess):
 
         file_data = data[0] if data else {}
 
-        with ZipFile(grid_out, 'r') as files_zip:
-            with tempfile.TemporaryDirectory() as tmp_dir_name:
-                with tempfile.TemporaryDirectory() as zip_destination:
-                    new_zip = self.create_new_zip(file_data, files_zip, tmp_dir_name, grid_out.filename, zip_destination)
-                    data_source_export.update_data_set_state(self.add_in_grid_fs(new_zip, filename.split('.')[0]))
-
-    def do(self) -> Context:
-        for data_source_id in self.data_source_ids:
-            data_source_export = self.context.get_data_source_export_from_data_source(data_source_id)
-            self.manage_agency_file(data_source_export)
+        with tempfile.TemporaryDirectory() as extract_zip_path, tempfile.TemporaryDirectory() as new_zip_path:
+            gtfs_computed_path = edit_file_in_zip_file_and_pack(grid_out, 'agency.txt', extract_zip_path,
+                                                                new_zip_path,
+                                                                callback=partial(
+                                                                    self.manage_agency_file,
+                                                                    file_data=file_data)
+                                                                )
+            data_source_export.update_data_set_state(self.create_archive_and_add_in_grid_fs(
+                gtfs_computed_path, computed_file_name=os.path.splitext(grid_out.filename)[0]))
         return self.context
