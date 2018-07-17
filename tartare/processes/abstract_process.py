@@ -54,7 +54,7 @@ class AbstractProcess(metaclass=ABCMeta):
                                             validity_period: Optional[ValidityPeriod] = None) -> None:
         data_source = data_source_owner.get_data_source(self.params['target_data_source_id'])
         data_set = DataSet(gridfs_id=target_data_set_gridfs_id, validity_period=validity_period)
-        data_source.add_data_set_and_update_model(data_set, data_source_owner)
+        data_source.add_data_set_and_update_owner(data_set, data_source_owner)
 
     @abstractmethod
     def do(self) -> Context:
@@ -184,3 +184,11 @@ class NewAbstractContributorProcess(AbstractContributorProcess, metaclass=ABCMet
             self.contributor_id = self.context.contributor_contexts[0].contributor.id
         self.gfs = GridFsHandler()
         self.configuration = process.configuration_data_sources
+        self.target_data_source_id = process.target_data_source_id
+
+    def save_result_into_target_data_source(self, data_source_owner: Union[Contributor, Coverage],
+                                            target_data_set_gridfs_id: str,
+                                            validity_period: Optional[ValidityPeriod] = None) -> None:
+        data_source = data_source_owner.get_data_source(self.target_data_source_id)
+        data_set = DataSet(gridfs_id=target_data_set_gridfs_id, validity_period=validity_period)
+        data_source.add_data_set_and_update_owner(data_set, data_source_owner)

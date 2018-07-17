@@ -34,8 +34,8 @@ from zipfile import ZipFile
 import pytest
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
-    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_DIRECTION_CONFIG
+from tartare.core.constants import DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
+    DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.helper import get_dict_from_zip
 from tests.integration.test_mechanism import TartareFixture
@@ -293,113 +293,30 @@ class TestComputeDirectionsProcess(TartareFixture):
 
 
 class TestComputeExternalSettings(TartareFixture):
-    def __setup_contributor_export_environment(self, init_http_download_server, params, links={}):
-        url = self.format_url(ip=init_http_download_server.ip_addr,
-                              filename='fr-idf-custo-post-fusio-sample.zip',
-                              path='prepare_external_settings')
-        params["export_type"] = DATA_FORMAT_PT_EXTERNAL_SETTINGS
-        contrib_payload = {
-            "id": "id_test",
-            "name": "name_test",
-            "data_prefix": "OIF",
-            "processes": [{
-                "sequence": 0,
-                "data_source_ids": ["ds-to-process"],
-                "type": "ComputeExternalSettings",
-                "params": params
-            }]
-        }
-        data_sources = [
-            {
-                "id": "ds-to-process",
-                "name": "ds-to-process",
-                "data_format": "gtfs",
-                "input": {
-                    "type": "auto",
-                    "url": url,
-                    "frequency": {
-                        "type": "daily",
-                        "hour_of_day": 20
-                    }
-                }
-            }
-        ]
-
-        for name, value in links.items():
-            data_sources.append(
-                {
-                    "id": value,
-                    "name": value,
-                    "data_format": name,
-                    "input": {"type": "manual"}
-                })
-
-        contrib_payload['data_sources'] = data_sources
-        raw = self.post('/contributors', json.dumps(contrib_payload))
-        self.assert_sucessful_create(raw)
-
-        for name, value in links.items():
-            self.post_manual_data_set('id_test', value, 'prepare_external_settings/{id}.json'.format(id=value))
-
-        resp = self.contributor_export('id_test', check_done=False)
-        return self.get_job_from_export_response(resp)
-
-    @pytest.mark.parametrize(
-        "params, expected_message", [
-            ({}, 'target_data_source_id missing in process config'),
-            ({'target_data_source_id': 'ds-target'}, 'links missing in process'),
-            ({'target_data_source_id': 'ds-target', 'links': []}, 'empty links in process'),
-            ({'target_data_source_id': 'ds-target', 'links': [{'lines_referential': 'something'}]},
-             'contributor_id missing in links'),
-            (
-                    {'target_data_source_id': 'ds-target',
-                     'links': [{'contributor_id': 'id_test', 'data_source_id': 'whatever'}]},
-                    'link whatever is not a data_source id present'),
-        ])
-    def test_prepare_external_settings_missing_config(self, init_http_download_server, params,
-                                                      expected_message):
-        job = self.__setup_contributor_export_environment(init_http_download_server, params)
-        assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'process', print(job)
-        assert job['error_message'] == expected_message, print(job)
-
-    @pytest.mark.parametrize(
-        "links, expected_message", [
-            ({}, 'link tr_perimeter_id is not a data_source id present'),
-            ({'tr_perimeter': 'tr_perimeter_id'},
-             'link lines_referential_id is not a data_source id present'),
-            ({'lines_referential': 'lines_referential_id'},
-             'link tr_perimeter_id is not a data_source id present'),
-        ])
-    def test_prepare_external_settings_invalid_links(self, init_http_download_server, links,
-                                                     expected_message):
-        params = {'target_data_source_id': 'ds-target',
-                  'links': [
-                      {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
-                      {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
-                  ]}
-        job = self.__setup_contributor_export_environment(init_http_download_server, params, links)
-        assert job['state'] == 'failed', print(job)
-        assert job['step'] == 'process', print(job)
-        assert job['error_message'] == expected_message, print(job)
-
     def test_prepare_external_settings(self, init_http_download_server):
-        params = {'target_data_source_id': 'ds-target',
-                  'links': [
-                      {'contributor_id': 'id_test', 'data_source_id': 'tr_perimeter_id'},
-                      {'contributor_id': 'id_test', 'data_source_id': 'lines_referential_id'}
-                  ]}
-        links = {'lines_referential': 'lines_referential_id', 'tr_perimeter': 'tr_perimeter_id'}
-        job = self.__setup_contributor_export_environment(init_http_download_server,
-                                                          params, links)
-        assert job['state'] == 'done', print(job)
-        assert job['step'] == 'save_contributor_export', print(job)
-        assert job['error_message'] == '', print(job)
-
-        data_set = self.json_to_dict(
-            self.get('/contributors/{}/data_sources/{}'.format('id_test', 'ds-target'))
-        )['data_sources'][0]['data_sets'][0]
-        target_grid_fs_id = data_set['gridfs_id']
+        valid_process = {
+            'type': 'ComputeExternalSettings',
+            'input_data_source_ids': ['dsid'],
+            'target_data_source_id': 'target_id',
+            'sequence': 0,
+            'configuration_data_sources': [
+                {'name': 'perimeter', 'ids': ['perimeter_id']},
+                {'name': 'lines_referential', 'ids': ['lines_referential_id']},
+            ]
+        }
+        self.init_contributor('cid', 'dsid',
+                              self.format_url(init_http_download_server.ip_addr, 'fr-idf-custo-post-fusio-sample.zip',
+                                              'prepare_external_settings'), data_prefix='OIF')
+        self.add_data_source_to_contributor('cid', 'perimeter_id',
+                                            self.format_url(init_http_download_server.ip_addr, 'tr_perimeter_id.json',
+                                                            'prepare_external_settings'), DATA_FORMAT_TR_PERIMETER)
+        self.add_data_source_to_contributor('cid', 'lines_referential_id',
+                                            self.format_url(init_http_download_server.ip_addr,
+                                                            'lines_referential_id.json', 'prepare_external_settings'),
+                                            DATA_FORMAT_LINES_REFERENTIAL)
+        self.add_process_to_contributor(valid_process, 'cid')
+        self.contributor_export('cid')
+        target_grid_fs_id = self.get_gridfs_id_from_data_source('cid', 'target_id')
         with app.app_context():
             fusio_settings_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
             with ZipFile(fusio_settings_zip_file, 'r') as fusio_settings_zip_file:

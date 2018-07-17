@@ -35,7 +35,8 @@ import pytest
 import tartare
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
-    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI, DATA_FORMAT_DIRECTION_CONFIG
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI, DATA_FORMAT_DIRECTION_CONFIG, \
+    DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
 from tartare.core.models import Contributor
 from tests.integration.test_mechanism import TartareFixture
 
@@ -1183,56 +1184,44 @@ class TestContributors(TartareFixture):
         assert process_2['data_source_ids'] == ['dsid']
         assert process_2['params'] == {'data': {'agency_name': 'my_agency'}}
 
-    def test_post_and_put_contributor_processes_with_target_data_source_id(self, init_http_download_server):
-        contrib_payload = {
-            "id": "id_test",
-            "name": "name_test",
-            "data_prefix": "OIF",
-            "processes": [
-                {
-                    "sequence": 0,
-                    "data_source_ids": [],
-                    "type": "ComputeExternalSettings",
-                    "params": {
-                        "target_data_source_id": "target_1",
-                        "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                    }
-                },
-                {
-                    "sequence": 1,
-                    "data_source_ids": [],
-                    "type": "ComputeExternalSettings",
-                    "params": {
-                        "target_data_source_id": "target_2",
-                        "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                    }
-                }
-            ]
-        }
+    def test_post_and_put_contributor_processes_with_target_data_source_id(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        for target_id in ['target_1', 'target_2']:
+            valid_process = {
+                'type': 'ComputeExternalSettings',
+                'input_data_source_ids': ['dsid'],
+                'target_data_source_id': target_id,
+                'sequence': 0,
+                'configuration_data_sources': [
+                    {'name': 'perimeter', 'ids': ['perimeter_id']},
+                    {'name': 'lines_referential', 'ids': ['lines_referential_id']},
+                ]
+            }
+            self.add_process_to_contributor(valid_process, 'cid')
 
-        raw = self.post('/contributors', self.dict_to_json(contrib_payload))
-        result = self.json_to_dict(raw)
-        self.assert_sucessful_create(raw)
+        contributor = self.get_contributor('cid')
+        data_sources = contributor['data_sources']
+        data_source_target_1 = next(data_source for data_source in data_sources if data_source['id'] == 'target_1')
+        data_source_target_2 = next(data_source for data_source in data_sources if data_source['id'] == 'target_2')
 
-        data_sources = result['contributors'][0]['data_sources']
+        assert data_source_target_1['id'] == 'target_1'
+        assert data_source_target_1['name'] == 'target_1'
+        assert data_source_target_1['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert data_source_target_1['input']['type'] == INPUT_TYPE_COMPUTED
 
-        assert data_sources[0]['id'] == 'target_1'
-        assert data_sources[0]['name'] == 'target_1'
-        assert data_sources[0]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
-        assert data_sources[0]['input']['type'] == INPUT_TYPE_COMPUTED
-
-        assert data_sources[1]['id'] == 'target_2'
-        assert data_sources[1]['name'] == 'target_2'
-        assert data_sources[1]['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
-        assert data_sources[1]['input']['type'] == INPUT_TYPE_COMPUTED
+        assert data_source_target_2['id'] == 'target_2'
+        assert data_source_target_2['name'] == 'target_2'
+        assert data_source_target_2['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert data_source_target_2['input']['type'] == INPUT_TYPE_COMPUTED
 
         # put a contributor with a computed data source
-        contributor = result['contributors'][0]
         del contributor['processes'][1]
 
-        raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
-        result = self.json_to_dict(raw)
-        assert (len(result['contributors'][0]['data_sources']) == 1)
+        raw = self.put('/contributors/cid', self.dict_to_json(contributor))
+        result = self.assert_sucessful_call(raw)
+        assert (len(result['contributors'][0]['data_sources']) == 4)
 
     def __assert_export_id_generated_computed_data_source(self, contributor):
         assert len(contributor['data_sources']) == 2

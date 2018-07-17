@@ -150,7 +150,7 @@ This output `Data Source` can then be used by a `FusioSendPtExternalSetting` Cov
 #### Parameters 
 Field | Description | 
 --- | --- 
-data_source_ids | Array containing only the IDFM GTFS `Data Source` id
+input_data_source_ids | Array containing only the IDFM GTFS `Data Source` id
 params.target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
 params.export_type | The output `Data Source`'s type should be `pt_external_settings`
 params.links | This array contains 2 items referencing the 2 complementary `Data Source`s of IDFM. (1) 
@@ -160,23 +160,14 @@ params.links | This array contains 2 items referencing the 2 complementary `Data
 
 ```json
 {
-  "data_source_ids": [
+  "input_data_source_ids": [
     "your-gtfs-id"
   ],
   "id": "compute_ext_settings",
-  "params": {
-    "target_data_source_id": "my_external_settings_data_source_id",
-    "export_type": "pt_external_settings",
-    "links": [
-      {
-        "contributor_id": "{cid}",
-        "data_source_id": "my-data-source-of-perimeter-json-id"
-      },
-      {
-        "contributor_id": "{cid_2}",
-        "data_source_id": "my-data-source-of-lines-json-id"
-      }
-   ],
+  "configuration_data_sources": [
+        {"name": "perimeter", "ids": ["my-data-source-of-perimeter-json-id"]},
+        {"name": "lines_referential", "ids": ["my-data-source-of-lines-json-id"]},
+    ],
    "type":"ComputeExternalSettings",
    "sequence":0
 }

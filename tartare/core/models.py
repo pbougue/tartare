@@ -49,7 +49,8 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
-    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS
+    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS, DATA_FORMAT_PT_EXTERNAL_SETTINGS, \
+    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -165,6 +166,15 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
                         if not process.params.get("target_data_source_id"):
                             process.params['target_data_source_id'] = data_source_computed.id
                         self.data_sources.append(data_source_computed)
+            elif isinstance(process, NewProcess) and process.target_data_format and process.target_data_source_id:
+                data_source_computed = DataSource(
+                    id=process.target_data_source_id,
+                    name=process.target_data_source_id,
+                    data_format=process.target_data_format,
+                    input=InputComputed(),
+                )
+                self.data_sources.append(data_source_computed)
+
 
     def fill_data_source_passwords_from_existing_object(self,
                                                         existing_object: 'DataSourceAndProcessContainer') -> None:
@@ -523,7 +533,7 @@ class DataSource(object):
     def get_contributor_of_data_source(cls, data_source_id: str) -> 'Contributor':
         return MongoContributorSchema(strict=True).load(cls.get_owner_of_data_source(data_source_id, Contributor)).data
 
-    def add_data_set_and_update_model(self, data_set: DataSet, model: Union['Contributor', 'Coverage']) -> None:
+    def add_data_set_and_update_owner(self, data_set: DataSet, owner: Union['Contributor', 'Coverage']) -> None:
         self.data_sets.append(data_set)
         data_sets_number = app.config.get('HISTORICAL', 3)
         if len(self.data_sets) > data_sets_number:
@@ -535,7 +545,7 @@ class DataSource(object):
         self.validity_period = data_set.validity_period
         self.updated_at = data_set.created_at
         self.status = DATA_SOURCE_STATUS_UPDATED
-        model.update()
+        owner.update()
 
     def is_of_data_format(self, data_format: str) -> bool:
         return self.data_format == data_format
@@ -611,12 +621,13 @@ class NewProcess(Process):
     def __init__(self, id: Optional[str] = None,
                  configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
                  sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
-                 target_data_source_id: Optional[List[str]] = None,
+                 target_data_source_id: Optional[str] = None,
                  enabled: bool = True) -> None:
         super().__init__(id, sequence, enabled)
         self.configuration_data_sources = configuration_data_sources if configuration_data_sources else []
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
-        self.target_data_source_id = target_data_source_id
+        self.target_data_source_id = target_data_source_id if target_data_source_id else str(uuid.uuid4())
+        self.target_data_format = DATA_FORMAT_DEFAULT
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -630,8 +641,14 @@ class GtfsAgencyFileProcess(OldProcess):
     pass
 
 
-class ComputeExternalSettingsProcess(OldProcess):
-    pass
+class ComputeExternalSettingsProcess(NewProcess):
+    def __init__(self, id: Optional[str] = None,
+                 configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
+                 sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
+                 target_data_source_id: Optional[str] = None,
+                 enabled: bool = True) -> None:
+        super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id, enabled)
+        self.target_data_format = DATA_FORMAT_PT_EXTERNAL_SETTINGS
 
 
 class Gtfs2NtfsProcess(OldProcess):
@@ -1215,10 +1232,17 @@ class MongoSleepingProcessSchema(MongoOldProcessSchema):
         return SleepingProcess(**data)
 
 
-class MongoComputeExternalSettingsProcessSchema(MongoOldProcessSchema):
+class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
     @post_load
     def build_process(self, data: dict) -> ComputeExternalSettingsProcess:
         return ComputeExternalSettingsProcess(**data)
+
+    @validates('configuration_data_sources')
+    def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
+        for configuration_name in ['perimeter', 'lines_referential']:
+            if not any(configuration.name == configuration_name for configuration in configuration_data_sources):
+                raise ValidationError(
+                    'configuration_data_sources should contain a "{}" data source'.format(configuration_name))
 
 
 class MongoFusioDataUpdateProcessSchema(MongoOldProcessSchema):
@@ -1366,17 +1390,22 @@ class MongoContributorSchema(Schema):
     def validate_input_data_source_id_has_data_format(cls, data_format_found: str, process_type: str) -> None:
         if data_format_found != DATA_FORMAT_GTFS:
             raise ValidationError(
-                'input data source in process "{}" should be of data format "{}"'.format(
-                    process_type, DATA_FORMAT_GTFS), ['input_data_source_ids'])
+                'input data source in process "{}" should be of data format "{}", found "{}"'.format(
+                    process_type, DATA_FORMAT_GTFS, data_format_found), ['input_data_source_ids'])
 
     @classmethod
     def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str,
                                                process_type: str) -> None:
-        if configuration_key == 'directions':
-            if data_format_found != DATA_FORMAT_DIRECTION_CONFIG:
-                raise ValidationError(
-                    'data source referenced by "{}" in process "{}" should be of data format "compute directions"'.format(
-                        DATA_FORMAT_DIRECTION_CONFIG, process_type), ['configuration_data_sources'])
+        config_mapping_format = {
+            'directions': DATA_FORMAT_DIRECTION_CONFIG,
+            'perimeter': DATA_FORMAT_TR_PERIMETER,
+            'lines_referential': DATA_FORMAT_LINES_REFERENTIAL,
+        }
+        if configuration_key in config_mapping_format and data_format_found != config_mapping_format[configuration_key]:
+            raise ValidationError(
+                'data source referenced by "{}" in process "{}" should be of data format "{}", found "{}"'.format(
+                    configuration_key, process_type, config_mapping_format[configuration_key], data_format_found),
+                ['configuration_data_sources'])
 
     @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
     def validate_contributor_process_configuration(self, unmarshalled: Union[dict, Contributor],

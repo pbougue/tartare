@@ -77,7 +77,7 @@ def save_export(contributor: Contributor, context: ContributorExportContext) -> 
         data_source.service_id = service_ids[0]
         data_set.validity_period = ValidityPeriodFinder.select_computer_and_find(
             GridFsHandler().get_file_from_gridfs(gridfs_ids[0]), data_source.data_format)
-        data_source.add_data_set_and_update_model(data_set, contributor)
+        data_source.add_data_set_and_update_owner(data_set, contributor)
         exports_ids.append(data_source.id)
     return exports_ids
 
@@ -120,5 +120,5 @@ def fetch_and_save_dataset(contributor: Contributor, data_source_id: str) -> boo
         validity_period = ValidityPeriodFinder.select_computer_and_find(dest_full_file_name, data_source.data_format)
         data_set = DataSet(validity_period=validity_period)
         data_set.add_file_from_path(dest_full_file_name, expected_file_name)
-        data_source.add_data_set_and_update_model(data_set, contributor)
+        data_source.add_data_set_and_update_owner(data_set, contributor)
         return data_source.data_format in DATA_FORMAT_GENERATE_EXPORT
