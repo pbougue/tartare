@@ -28,11 +28,13 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+import datetime
+import json
 from typing import Any
 
 from celery import Task, Celery
 from celery.signals import setup_logging
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, request
 from flask_pymongo import PyMongo
 from flask_script import Manager
 from werkzeug.exceptions import NotFound
@@ -47,6 +49,36 @@ manager = Manager(app)
 configure_logger(app.config)
 
 mongo = PyMongo(app)
+
+
+@app.after_request
+def after(response: Response) -> Response:
+    if request.endpoint != 'requestlogs':
+        req_data = {
+            'url': request.url,
+            'method': request.method,
+            'headers': dict(request.headers),
+        }
+        if request.data:
+            req_data['body'] = json.loads(request.data)
+
+        resp_data = {
+            'status_code': response.status_code,
+            'headers': dict(response.headers),
+        }
+
+        if response.mimetype == 'application/json':
+            resp_data['body'] = json.loads(response.get_data())
+
+        log_data = {
+            'date': datetime.datetime.utcnow(),
+            'request': req_data,
+            'response': resp_data,
+        }
+
+        mongo.db.logs.insert_one(log_data)
+
+    return response
 
 
 @app.errorhandler(404)

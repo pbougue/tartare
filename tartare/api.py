@@ -45,6 +45,7 @@ from tartare.interfaces.index import Index
 from tartare.interfaces.jobs import Job
 from tartare.interfaces.processes import Processes
 from tartare.interfaces.status import Status
+from tartare.interfaces.logs import RequestLogs
 
 api = Api(app)
 
@@ -102,3 +103,5 @@ api.add_resource(CoverageExportResource,
                  '/coverages/<string:coverage_id>/actions/export')
 
 api.add_resource(Processes, '/processes')
+
+api.add_resource(RequestLogs, '/logs')
