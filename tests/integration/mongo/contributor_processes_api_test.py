@@ -106,6 +106,21 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
             raw, 'configuration_data_sources',
             'data source referenced by "direction_config" in process "ComputeDirections" should be of data format "compute directions"')
 
+    def test_post_contributor_process_wrong_input(self):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeDirections',
+            'input_data_source_ids': ['dsid'],
+            'configuration_data_sources': [
+                {'name': 'directions', 'ids': ['config-id']}
+            ],
+            'sequence': 0
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'input data source in process "ComputeDirections" should be of data format "gtfs"')
+
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
@@ -149,3 +164,24 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
             ],
         }))
         self.assert_sucessful_create(raw)
+
+
+class TestHeadSignShortNameContributorProcessesApi(TartareFixture):
+    def test_post_contributor_process_wrong_input(self):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor({
+            'type': 'HeadsignShortName',
+            'input_data_source_ids': ['dsid'],
+            'sequence': 0
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'input data source in process "HeadsignShortName" should be of data format "gtfs"')
+
+    def test_post_contributor_process_ok(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_process_to_contributor({
+            'type': 'HeadsignShortName',
+            'input_data_source_ids': ['dsid'],
+            'sequence': 0
+        }, 'cid')

@@ -49,7 +49,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
-    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT
+    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -638,7 +638,7 @@ class Gtfs2NtfsProcess(OldProcess):
     pass
 
 
-class HeadsignShortNameProcess(OldProcess):
+class HeadsignShortNameProcess(NewProcess):
     pass
 
 
@@ -1197,7 +1197,7 @@ class MongoGtfs2NtfsProcessSchema(MongoOldProcessSchema):
         return Gtfs2NtfsProcess(**data)
 
 
-class MongoHeadsignShortNameProcessSchema(MongoOldProcessSchema):
+class MongoHeadsignShortNameProcessSchema(MongoNewProcessSchema):
     @post_load
     def build_process(self, data: dict) -> HeadsignShortNameProcess:
         return HeadsignShortNameProcess(**data)
@@ -1349,12 +1349,25 @@ class MongoContributorSchema(Schema):
                 if isinstance(process, dict):
                     if 'input_data_source_ids' in process and len(process['input_data_source_ids']) == 1:
                         data_source_id = process['input_data_source_ids'][0]
-                        if not any(data_source_id == data_source['id'] for data_source in
-                                   contributor.get('data_sources', [])):
+                        data_source = next((data_source for data_source in contributor.get('data_sources', []) if
+                                            data_source_id == data_source['id']), None)
+                        if not data_source:
                             if not DataSource.exists(data_source_id):
                                 raise ValidationError(
                                     'data source referenced by "{}" in process "{}" not found'.format(
                                         data_source_id, process['type']), ['input_data_source_ids'])
+                            else:
+                                data_format = DataSource.get_data_format(data_source_id)
+                        else:
+                            data_format = data_source.get('data_format', DATA_FORMAT_DEFAULT)
+                        self.validate_input_data_source_id_has_data_format(data_format, process['type'])
+
+    @classmethod
+    def validate_input_data_source_id_has_data_format(cls, data_format_found: str, process_type: str) -> None:
+        if data_format_found != DATA_FORMAT_GTFS:
+            raise ValidationError(
+                'input data source in process "{}" should be of data format "{}"'.format(
+                    process_type, DATA_FORMAT_GTFS), ['input_data_source_ids'])
 
     @classmethod
     def validate_configuration_has_data_format(cls, configuration_key: str, data_format_found: str,

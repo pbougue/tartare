@@ -771,7 +771,8 @@ class TestContributors(TartareFixture):
         assert patched_data_source["input"]["frequency"]["type"] == "continuously"
         assert patched_data_source["input"]["frequency"]["minutes"] == 30
 
-    def test_put_contrib_processes_without_id(self, contributor):
+    def test_put_contrib_processes_without_id(self):
+        contributor = self.init_contributor('cid', 'dsid', 'whatever')
         processes = [
             {
                 "type": "Ruspell",
@@ -785,11 +786,11 @@ class TestContributors(TartareFixture):
             {
                 "type": "HeadsignShortName",
                 "sequence": 2,
-                "data_source_ids": [],
+                "input_data_source_ids": ['dsid'],
             }
         ]
         contributor["processes"] = processes
-        raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
+        raw = self.put('/contributors/cid', self.dict_to_json(contributor))
         r = self.assert_sucessful_call(raw)
         assert len(r["contributors"][0]["processes"]) == 2
         types = [p.get("type") for p in r["contributors"][0]["processes"]]
@@ -1157,7 +1158,7 @@ class TestContributors(TartareFixture):
                 "id": 'p1',
                 "sequence": 0,
                 "type": 'HeadsignShortName',
-                "data_source_ids": ['dsid']
+                "input_data_source_ids": ['dsid']
             },
             {
                 "id": 'p2',
@@ -1175,7 +1176,7 @@ class TestContributors(TartareFixture):
         assert process_1['id'] == 'p1'
         assert process_1['sequence'] == 0
         assert process_1['type'] == 'HeadsignShortName'
-        assert process_1['data_source_ids'] == ['dsid']
+        assert process_1['input_data_source_ids'] == ['dsid']
         assert process_2['id'] == 'p2'
         assert process_2['sequence'] == 1
         assert process_2['type'] == 'GtfsAgencyFile'

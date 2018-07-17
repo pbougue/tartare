@@ -440,7 +440,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
                 {
                     "id": "headsign_short_name",
                     "sequence": 0,
-                    "data_source_ids": [data_source_id],
+                    "input_data_source_ids": [data_source_id],
                     "type": "HeadsignShortName"
                 }
             ]
@@ -459,7 +459,7 @@ class TestHeadsignShortNameProcess(TartareFixture):
         contributor['processes'].append({
             "id": "plop",
             "sequence": 0,
-            "data_source_ids": ['dsid'],
+            "input_data_source_ids": ['dsid'],
             "type": "HeadsignShortName",
         })
         self.put('/contributors/cid', self.dict_to_json(contributor))
