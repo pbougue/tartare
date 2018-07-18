@@ -1269,7 +1269,7 @@ class MongoFusioImportProcessSchema(MongoOldProcessSchema):
         return FusioImportProcess(**data)
 
 
-class MongoFusioPreprodProcessSchema(MongoOldProcessSchema):
+class MongoFusioPreProdProcessSchema(MongoOldProcessSchema):
     @post_load
     def build_process(self, data: dict) -> FusioPreProdProcess:
         return FusioPreProdProcess(**data)
@@ -1305,7 +1305,7 @@ class MongoProcessSchema(OneOfSchema):
         'FusioExport': MongoFusioExportProcessSchema,
         'FusioExportContributor': MongoFusioExportContributorProcessSchema,
         'FusioImport': MongoFusioImportProcessSchema,
-        'FusioPreprod': MongoFusioPreprodProcessSchema,
+        'FusioPreProd': MongoFusioPreProdProcessSchema,
         'FusioSendPtExternalSettings': MongoFusioSendPtExternalSettingsProcessSchema,
     }
 
@@ -1333,7 +1333,7 @@ class MongoProcessSchema(OneOfSchema):
         elif isinstance(obj, FusioImportProcess):
             return 'FusioImport'
         elif isinstance(obj, FusioPreProdProcess):
-            return 'FusioPreprod'
+            return 'FusioPreProd'
         elif isinstance(obj, FusioSendPtExternalSettingsProcess):
             return 'FusioSendPtExternalSettings'
 
