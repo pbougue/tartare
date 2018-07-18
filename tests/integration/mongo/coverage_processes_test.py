@@ -510,29 +510,6 @@ class TestFusioSendPtExternalSettingsProcess(TartareFixture):
         self.init_contributor('cid', 'gtfs_id', url, data_prefix='OIF')
         external_settings_ds_id = "my_external_settings_data_source_id"
 
-        self.add_process_to_contributor({
-            "data_source_ids": [
-                "gtfs_id"
-            ],
-            "id": "compute_ext_settings",
-            "type": "ComputeExternalSettings",
-            "sequence": 0,
-            "params": {
-                "target_data_source_id": external_settings_ds_id,
-                "export_type": DATA_FORMAT_PT_EXTERNAL_SETTINGS,
-                "links": [
-                    {
-                        "contributor_id": contributor_id,
-                        "data_source_id": "my-data-source-of-perimeter-json-id"
-                    },
-                    {
-                        "contributor_id": contributor_id,
-                        "data_source_id": "my-data-source-of-lines-json-id"
-                    }
-                ],
-            }
-        }, contributor_id)
-
         self.add_data_source_to_contributor(
             contributor_id, 'my-data-source-of-perimeter-json-id', self.format_url(
                 init_http_download_server.ip_addr, 'tr_perimeter_id.json', 'prepare_external_settings'),
@@ -543,6 +520,20 @@ class TestFusioSendPtExternalSettingsProcess(TartareFixture):
                 init_http_download_server.ip_addr, 'lines_referential_id.json', 'prepare_external_settings'),
             DATA_FORMAT_LINES_REFERENTIAL
         )
+
+        self.add_process_to_contributor({
+            "input_data_source_ids": [
+                "gtfs_id"
+            ],
+            "id": "compute_ext_settings",
+            "type": "ComputeExternalSettings",
+            "sequence": 0,
+            "target_data_source_id": external_settings_ds_id,
+            'configuration_data_sources': [
+                {'name': 'perimeter', 'ids': ['my-data-source-of-perimeter-json-id']},
+                {'name': 'lines_referential', 'ids': ['my-data-source-of-lines-json-id']},
+            ]
+        }, contributor_id)
 
         coverage_id = 'covid'
         coverage = self.init_coverage(coverage_id, ["gtfs_id"])

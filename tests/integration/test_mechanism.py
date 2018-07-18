@@ -236,17 +236,12 @@ class TartareFixture(object):
             return self.assert_sucessful_call(raw)
         return raw
 
-    def add_data_source_to_contributor(self, contributor_id, data_source_id, url, data_format=DATA_FORMAT_DEFAULT,
-                                       service_id=None, export_id=None, check_success=True):
+    def add_data_source_to_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
+                                       service_id=None, export_id=None, type='auto', check_success=True):
         raw = self.get('contributors/{}'.format(contributor_id))
         contributor = self.json_to_dict(raw)['contributors'][0]
-        contributor['data_sources'].append({
-            "id": data_source_id,
-            "name": data_source_id,
-            "service_id": service_id,
-            "data_format": data_format,
-            "export_data_source_id": export_id,
-            "input": {
+        if type == 'auto':
+            input = {
                 "type": "auto",
                 "url": url,
                 "frequency": {
@@ -254,6 +249,15 @@ class TartareFixture(object):
                     "hour_of_day": 20
                 }
             }
+        else:
+            input = {'type': type}
+        contributor['data_sources'].append({
+            "id": data_source_id,
+            "name": data_source_id,
+            "service_id": service_id,
+            "data_format": data_format,
+            "export_data_source_id": export_id,
+            "input": input
         })
         raw = self.put('contributors/{}'.format(contributor_id), self.dict_to_json(contributor))
         if check_success:

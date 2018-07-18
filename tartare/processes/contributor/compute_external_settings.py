@@ -39,16 +39,15 @@ from gridfs import GridOut
 from tartare.core.constants import DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_LINES_REFERENTIAL, \
     DATA_FORMAT_TR_PERIMETER
 from tartare.core.context import Context, ContributorExportContext
-from tartare.core.models import Process, Contributor, DataSource, OldProcess
+from tartare.core.models import Contributor, DataSource, NewProcess
 from tartare.core.readers import CsvReader, JsonReader
-from tartare.exceptions import ParameterException
-from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.abstract_process import NewAbstractContributorProcess
 from tartare.processes.utils import process_registry
 
 
 @process_registry()
-class ComputeExternalSettings(AbstractContributorProcess):
-    def __init__(self, context: ContributorExportContext, process: OldProcess) -> None:
+class ComputeExternalSettings(NewAbstractContributorProcess):
+    def __init__(self, context: ContributorExportContext, process: NewProcess) -> None:
         super().__init__(context, process)
         self.contributor_trigram = self.context.contributor_contexts[0].contributor.data_prefix if \
             self.context.contributor_contexts and self.context.contributor_contexts[0].contributor else None
@@ -122,9 +121,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
                                        'STIF:StopPoint:Q:{}:'.format(row[self.stop_extensions_object_code_column]))
 
     def __create_rules_from_codif_ligne(self, writer_codes: csv.DictWriter) -> None:
-        links = self.params.get('links')
-        lines_referential_data_source_context = self.context.get_data_source_context_in_links(
-            links, DATA_FORMAT_LINES_REFERENTIAL
+        lines_referential_data_source_context = self.context.get_data_source_context_in_configuration(
+            self.configuration, DATA_FORMAT_LINES_REFERENTIAL
         )
         reader = JsonReader()
         reader.load_json_data_from_io(
@@ -143,9 +141,8 @@ class ComputeExternalSettings(AbstractContributorProcess):
                 '{nb} lines in Codifligne are not in the GTFS'.format(nb=nb_lines_not_in_gtfs))
 
     def __create_rules_from_tr_perimeter(self, writer_codes: csv.DictWriter, writer_properties: csv.DictWriter) -> None:
-        links = self.params.get('links')
-        tr_perimeter_data_source_context = self.context.get_data_source_context_in_links(
-            links, DATA_FORMAT_TR_PERIMETER
+        tr_perimeter_data_source_context = self.context.get_data_source_context_in_configuration(
+            self.configuration, DATA_FORMAT_TR_PERIMETER
         )
         reader = JsonReader()
         reader.load_json_data_from_io(self.gfs.get_file_from_gridfs(tr_perimeter_data_source_context.gridfs_id),
@@ -194,21 +191,11 @@ class ComputeExternalSettings(AbstractContributorProcess):
 
             return self.__save_csv_files_as_data_set(tmp_csv_workspace)
 
-    def __check_target_data_source(self) -> None:
-        if 'target_data_source_id' not in self.params or not self.params['target_data_source_id']:
-            raise ParameterException('target_data_source_id missing in process config')
-        if not self.context.get_contributor_data_source_context(self.contributor_id,
-                                                                self.params['target_data_source_id']):
-            raise ParameterException('target_data_source_id "{}" is not a data_source id present in contributor'.format(
-                self.params['target_data_source_id']))
-
     def do(self) -> Context:
         self.check_expected_files(['routes.txt', 'stop_extensions.txt'])
-        self.__check_target_data_source()
-        self.check_links([DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL])
-        for data_source_id_to_process in self.data_source_ids:
-            input_data_set = DataSource.get_one(data_source_id_to_process).get_last_data_set()
-            target_data_set_gridfs_id = self.__process_file_from_gridfs_id(input_data_set.gridfs_id)
-            self.save_result_into_target_data_source(Contributor.get(self.contributor_id), target_data_set_gridfs_id)
+        data_source_id_to_process = self.data_source_ids[0]
+        input_data_set = DataSource.get_one(data_source_id_to_process).get_last_data_set()
+        target_data_set_gridfs_id = self.__process_file_from_gridfs_id(input_data_set.gridfs_id)
+        self.save_result_into_target_data_source(Contributor.get(self.contributor_id), target_data_set_gridfs_id)
 
         return self.context

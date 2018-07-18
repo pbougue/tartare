@@ -56,7 +56,7 @@ class DataSet(Resource):
             validity_period = ValidityPeriodFinder.select_computer_and_find(file, data_source.data_format)
             data_set = DataSetModel(validity_period=validity_period)
             data_set.add_file_from_io(file, os.path.basename(file.filename))
-            data_source.add_data_set_and_update_model(data_set, contributor)
+            data_source.add_data_set_and_update_owner(data_set, contributor)
             return {'data_sets': [schema.DataSetSchema().dump(data_set).data]}, 201
         except EntityNotFound as e:
             raise ObjectNotFound(str(e))

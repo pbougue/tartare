@@ -28,9 +28,12 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from copy import copy
+
 import pytest
 
-from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEFAULT
+from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEFAULT, DATA_FORMAT_TR_PERIMETER, \
+    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_GTFS, INPUT_TYPE_COMPUTED
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -104,7 +107,8 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'configuration_data_sources',
-            'data source referenced by "direction_config" in process "ComputeDirections" should be of data format "compute directions"')
+            'data source referenced by "directions" in process "ComputeDirections" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEFAULT))
 
     def test_post_contributor_process_wrong_input(self):
         self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
@@ -119,7 +123,8 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'input_data_source_ids',
-            'input data source in process "ComputeDirections" should be of data format "gtfs"')
+            'input data source in process "ComputeDirections" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_GTFS, DATA_FORMAT_DIRECTION_CONFIG))
 
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
@@ -176,7 +181,8 @@ class TestHeadSignShortNameContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'input_data_source_ids',
-            'input data source in process "HeadsignShortName" should be of data format "gtfs"')
+            'input data source in process "HeadsignShortName" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_GTFS, DATA_FORMAT_DIRECTION_CONFIG))
 
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
@@ -185,3 +191,102 @@ class TestHeadSignShortNameContributorProcessesApi(TartareFixture):
             'input_data_source_ids': ['dsid'],
             'sequence': 0
         }, 'cid')
+
+
+class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
+    valid_process = {
+        'type': 'ComputeExternalSettings',
+        'input_data_source_ids': ['dsid'],
+        'target_data_source_id': 'target_id',
+        'sequence': 0,
+        'configuration_data_sources': [
+            {'name': 'perimeter', 'ids': ['perimeter_id']},
+            {'name': 'lines_referential', 'ids': ['lines_referential_id']},
+        ]
+    }
+
+    def test_post_contributor_process_wrong_input(self):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        self.add_data_source_to_contributor('cid', 'target_id', 'url', DATA_FORMAT_PT_EXTERNAL_SETTINGS)
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'input data source in process "ComputeExternalSettings" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_GTFS, DATA_FORMAT_DIRECTION_CONFIG))
+
+    def test_post_contributor_process_missing_tr_perimeter(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeExternalSettings',
+            'input_data_source_ids': ['dsid'],
+            'target_data_source_id': 'target_id',
+            'sequence': 0,
+            'configuration_data_sources': [
+                {'name': 'lines_referential', 'ids': ['lines_referential_id']},
+            ]
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error(
+            raw, 'configuration_data_sources',
+            'configuration_data_sources should contain a "perimeter" data source')
+
+    def test_post_contributor_process_wrong_tr_perimeter(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_DEFAULT)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'configuration_data_sources',
+            'data source referenced by "perimeter" in process "ComputeExternalSettings" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_DEFAULT))
+
+    def test_post_contributor_process_missing_lines_referential(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeExternalSettings',
+            'input_data_source_ids': ['dsid'],
+            'target_data_source_id': 'target_id',
+            'sequence': 0,
+            'configuration_data_sources': [
+                {'name': 'perimeter', 'ids': ['perimeter_id']},
+            ]
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error(
+            raw, 'configuration_data_sources',
+            'configuration_data_sources should contain a "lines_referential" data source')
+
+    def test_post_contributor_process_wrong_lines_referential(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_DEFAULT)
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'configuration_data_sources',
+            'data source referenced by "lines_referential" in process "ComputeExternalSettings" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_DEFAULT))
+
+    def test_post_contributor_process_missing_target(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        process = copy(self.valid_process)
+        del (process['target_data_source_id'])
+        self.add_process_to_contributor(process, 'cid')
+        contributor = self.get_contributor('cid')
+        # target_data_source_id is generated
+        assert contributor['processes'][0]['target_data_source_id']
+        target_id = contributor['processes'][0]['target_data_source_id']
+        assert len(contributor['data_sources']) == 4
+        data_source_computed = next(
+            data_source for data_source in contributor['data_sources'] if data_source['id'] == target_id)
+        assert data_source_computed['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
+        assert data_source_computed['input']['type'] == INPUT_TYPE_COMPUTED
+
+    def test_post_contributor_process_ok(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
+        self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
+        self.add_process_to_contributor(self.valid_process, 'cid')
