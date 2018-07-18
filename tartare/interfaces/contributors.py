@@ -91,6 +91,8 @@ class Contributor(flask_restful.Resource):
                 return {'contributors': [result.data]}, 200
             contributors = models.Contributor.all()
             return {'contributors': schema.ContributorSchema(many=True).dump(contributors).data}, 200
+        except ValidationError as err:
+            raise InvalidArguments(err.messages)
         except EntityNotFound as e:
             raise ObjectNotFound(str(e))
 

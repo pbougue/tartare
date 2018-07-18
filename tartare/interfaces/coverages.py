@@ -74,18 +74,15 @@ class Coverage(flask_restful.Resource):
         return response, 201
 
     def get(self, coverage_id: Optional[str] = None) -> Response:
-        if coverage_id:
-            try:
-                coverage = models.Coverage.get(coverage_id)
-            except EntityNotFound as e:
-                raise ObjectNotFound(str(e))
-
-            result = schema.CoverageSchema().dump(coverage)
-            return {'coverages': [result.data]}, 200
-
-        coverages = models.Coverage.all()
-
-        return {'coverages': schema.CoverageSchema(many=True).dump(coverages).data}, 200
+        try:
+            if coverage_id:
+                result = schema.CoverageSchema().dump(models.Coverage.get(coverage_id))
+                return {'coverages': [result.data]}, 200
+            return {'coverages': schema.CoverageSchema(many=True).dump(models.Coverage.all()).data}, 200
+        except ValidationError as err:
+            raise InvalidArguments(err.messages)
+        except EntityNotFound as e:
+            raise ObjectNotFound(str(e))
 
     def delete(self, coverage_id: str) -> Response:
         c = models.Coverage.delete(coverage_id)
