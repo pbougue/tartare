@@ -276,14 +276,9 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         del (process['target_data_source_id'])
         self.add_process_to_contributor(process, 'cid')
         contributor = self.get_contributor('cid')
-        # target_data_source_id is generated
-        assert contributor['processes'][0]['target_data_source_id']
-        target_id = contributor['processes'][0]['target_data_source_id']
-        assert len(contributor['data_sources']) == 4
-        data_source_computed = next(
-            data_source for data_source in contributor['data_sources'] if data_source['id'] == target_id)
-        assert data_source_computed['data_format'] == DATA_FORMAT_PT_EXTERNAL_SETTINGS
-        assert data_source_computed['input']['type'] == INPUT_TYPE_COMPUTED
+        # target_data_source_id is not generated
+        assert contributor['processes'][0]['target_data_source_id'] is None
+        assert len(contributor['data_sources']) == 3
 
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
