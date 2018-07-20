@@ -21,3 +21,6 @@ check: clean
 
 functional_test: clean build_tester
 	./run_functional_tests.sh
+
+regression_test: clean build_tester
+	./run_functional_tests.sh regression

@@ -19,7 +19,7 @@ fi
 
 echo -e "\e[32mNo duplicate tests found, continuing.\e[0m"
 
-TEST_COMMAND="py.test -m \"not functional\" tests"
+TEST_COMMAND="py.test -m \"not (functional or regression)\" tests"
 if [ $NOCOV == 0 ] ; then
     TEST_COMMAND="$TEST_COMMAND --cov=tartare --cov-report term-missing --cov-report xml"
 fi
