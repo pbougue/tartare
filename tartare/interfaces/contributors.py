@@ -105,7 +105,6 @@ class Contributor(flask_restful.Resource):
         except IntegrityException as e:
             raise InvalidArguments(str(e))
 
-
     @JsonDataValidate()
     @ValidateUniqueDataSources()
     @ValidateContributorPrepocessesDataSourceIds()

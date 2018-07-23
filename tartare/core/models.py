@@ -626,7 +626,7 @@ class NewProcess(Process):
         super().__init__(id, sequence, enabled)
         self.configuration_data_sources = configuration_data_sources if configuration_data_sources else []
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
-        self.target_data_source_id = target_data_source_id if target_data_source_id else str(uuid.uuid4())
+        self.target_data_source_id = target_data_source_id
         self.target_data_format = DATA_FORMAT_DEFAULT
 
     def __repr__(self) -> str:
@@ -1233,6 +1233,8 @@ class MongoSleepingProcessSchema(MongoOldProcessSchema):
 
 
 class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
+    target_data_source_id = fields.String(required=True)
+
     @post_load
     def build_process(self, data: dict) -> ComputeExternalSettingsProcess:
         return ComputeExternalSettingsProcess(**data)
