@@ -1,0 +1,72 @@
+{
+  "data_prefix": "OIF",
+  "data_type": "public_transport",
+  "data_sources": [
+    {
+      "input": {
+        "url": "http://mut-dev-tartare2.canaltp.local:8000/regression_tests/gtfs-test-directions.zip",
+        "frequency": {
+          "enabled": true,
+          "hour_of_day": 20,
+          "type": "daily"
+        },
+        "type": "auto"
+      },
+      "data_format": "gtfs",
+      "license": {
+        "url": "",
+        "name": "ODbL"
+      },
+      "service_id": "1",
+      "export_data_source_id": "test-directions-gtfs-processed",
+      "data_sets": [],
+      "name": "test-directions-gtfs",
+      "id": "test-directions-gtfs"
+    },
+    {
+      "input": {
+        "url": "http://mut-dev-tartare2.canaltp.local:8000/regression_tests/config_directions.json",
+        "frequency": {
+          "enabled": true,
+          "hour_of_day": 20,
+          "type": "daily"
+        },
+        "type": "auto"
+      },
+      "data_format": "direction_config",
+      "service_id": "1",
+      "name": "test-directions-config-file",
+      "id": "test-directions-config-file"
+    },
+    {
+      "input": {
+        "type": "computed"
+      },
+      "data_format": "gtfs",
+      "service_id": "1",
+      "name": "test-directions-gtfs-processed",
+      "id": "test-directions-gtfs-processed"
+    }
+  ],
+  "processes": [
+    {
+      "sequence": 0,
+      "enabled": true,
+      "configuration_data_sources": [
+        {
+          "ids": [
+            "test-directions-config-file"
+          ],
+          "name": "directions"
+        }
+      ],
+      "input_data_source_ids": [
+        "test-directions-gtfs"
+      ],
+      "id": "directions_process",
+      "type": "ComputeDirections"
+    }
+  ],
+  "name": "Test compute directions on stif data set",
+  "id": "test-directions-stif"
+}

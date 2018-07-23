@@ -120,7 +120,7 @@ class AbstractRequestClient:
                 break
         assert retry < nb_retries_max, print('job {} reached max waiting time ({})'.format(action_type, nb_retries_max))
 
-    def wait_for_job_to_be_done(self, job_id, step=None, nb_retries_max=15, break_if='done'):
+    def wait_for_job_to_be_done(self, job_id, step=None, nb_retries_max=15, break_if='done', sleep_time=1):
         retry = 0
         while retry < nb_retries_max:
             raw = self.get('jobs/' + job_id)
@@ -129,7 +129,7 @@ class AbstractRequestClient:
             if status == break_if:
                 break
             else:
-                sleep(1)
+                sleep(sleep_time)
                 retry += 1
 
         raw = self.get('jobs/' + job_id)
