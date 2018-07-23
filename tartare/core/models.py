@@ -1233,6 +1233,8 @@ class MongoSleepingProcessSchema(MongoOldProcessSchema):
 
 
 class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
+    target_data_source_id = fields.String(required=True)
+
     @post_load
     def build_process(self, data: dict) -> ComputeExternalSettingsProcess:
         return ComputeExternalSettingsProcess(**data)

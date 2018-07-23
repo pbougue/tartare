@@ -33,7 +33,7 @@ from copy import copy
 import pytest
 
 from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEFAULT, DATA_FORMAT_TR_PERIMETER, \
-    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_GTFS, INPUT_TYPE_COMPUTED
+    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_GTFS
 from tests.integration.test_mechanism import TartareFixture
 
 
@@ -274,14 +274,15 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
         process = copy(self.valid_process)
         del (process['target_data_source_id'])
-        self.add_process_to_contributor(process, 'cid')
-        contributor = self.get_contributor('cid')
-        # target_data_source_id is not generated
-        assert contributor['processes'][0]['target_data_source_id'] is None
-        assert len(contributor['data_sources']) == 3
+        raw = self.add_process_to_contributor(process, 'cid', check_success=False)
+        self.assert_process_validation_error(raw, 'target_data_source_id', 'Missing data for required field.')
 
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
         self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
         self.add_process_to_contributor(self.valid_process, 'cid')
+        contributor = self.get_contributor('cid')
+        assert len(contributor['data_sources']) == 4
+        assert next((data_source for data_source in contributor['data_sources'] if
+                     data_source['id'] == contributor['processes'][0]['target_data_source_id']), None)
