@@ -44,10 +44,6 @@ from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, a
 
 
 class TestGtfsAgencyProcess(TartareFixture):
-    excepted_headers = ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang",
-                        "agency_phone", "agency_fare_url", "agency_email"]
-    excepted_headers.sort()
-
     def __contributor_creator(self, data_set_url, agency_params={}, contrib_id='contrib_id', data_source_id='id2'):
         contrib_payload = {
             "id": contrib_id,
@@ -73,11 +69,9 @@ class TestGtfsAgencyProcess(TartareFixture):
                 {
                     "id": "agency_process",
                     "sequence": 0,
-                    "data_source_ids": [data_source_id],
+                    "input_data_source_ids": [data_source_id],
                     "type": "GtfsAgencyFile",
-                    "params": {
-                        "data": agency_params
-                    }
+                    "parameters": agency_params,
                 }
             ]
         }
@@ -104,15 +98,6 @@ class TestGtfsAgencyProcess(TartareFixture):
                 assert 'agency.txt' in gtfs_zip.namelist()
                 data = get_dict_from_zip(gtfs_zip, 'agency.txt')
                 assert len(data) == 1
-
-                keys = list(data[0].keys())
-                keys.sort()
-
-                expected_keys = list(expected_data.keys())
-                expected_keys.sort()
-
-                assert keys == expected_keys
-
                 for key, value in expected_data.items():
                     assert value == data[0][key]
 

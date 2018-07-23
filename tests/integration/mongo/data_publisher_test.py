@@ -579,11 +579,9 @@ class TestDataPublisher(TartareFixture):
                               export_id='export_id')
         self.add_process_to_contributor({
             "sequence": 0,
-            "data_source_ids": ['ds1'],
+            "input_data_source_ids": ['ds1'],
             "type": "GtfsAgencyFile",
-            "params": {
-                "data": {"agency_id": "foo"}
-            }
+            "parameters": {"agency_id": "foo"}
         }, 'c1')
         self.contributor_export('c1')
         self.init_coverage('cov_id', input_data_source_ids=['export_id'])

@@ -175,7 +175,6 @@ class DataSourceAndProcessContainer(metaclass=ABCMeta):
                 )
                 self.data_sources.append(data_source_computed)
 
-
     def fill_data_source_passwords_from_existing_object(self,
                                                         existing_object: 'DataSourceAndProcessContainer') -> None:
         for data_source in self.data_sources:
@@ -637,8 +636,37 @@ class ComputeDirectionsProcess(NewProcess):
     pass
 
 
-class GtfsAgencyFileProcess(OldProcess):
-    pass
+class GtfsAgencyFileProcessParameters:
+    def __init__(self, agency_id: str = None, agency_name: str = None, agency_url: str = None,
+                 agency_timezone: str = None, agency_lang: str = None, agency_phone: str = None,
+                 agency_email: str = None, agency_fare_url: str = None) -> None:
+        self.agency_id = agency_id
+        self.agency_name = agency_name
+        self.agency_url = agency_url
+        self.agency_timezone = agency_timezone
+        self.agency_lang = agency_lang
+        self.agency_phone = agency_phone
+        self.agency_email = agency_email
+        self.agency_fare_url = agency_fare_url
+
+    def apply_to_file_dict(self, file_dict: Dict[str, str]) -> Dict[str, str]:
+        default = {
+            'agency_url': "https://www.navitia.io/",
+            'agency_timezone': "Europe/Paris",
+        }
+        return dict((key, value) if value else (key, file_dict.get(key, default.get(key))) for key, value in
+                    self.__dict__.items())
+
+
+class GtfsAgencyFileProcess(NewProcess):
+    def __init__(self, id: Optional[str] = None,
+                 configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
+                 sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
+                 target_data_source_id: Optional[str] = None,
+                 enabled: bool = True, parameters: GtfsAgencyFileProcessParameters = None) -> None:
+        super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id,
+                         enabled)
+        self.parameters = parameters
 
 
 class ComputeExternalSettingsProcess(NewProcess):
@@ -647,7 +675,8 @@ class ComputeExternalSettingsProcess(NewProcess):
                  sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
                  target_data_source_id: Optional[str] = None,
                  enabled: bool = True) -> None:
-        super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id, enabled)
+        super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id,
+                         enabled)
         self.target_data_format = DATA_FORMAT_PT_EXTERNAL_SETTINGS
 
 
@@ -722,11 +751,13 @@ class Contributor(DataSourceAndProcessContainer):
     def __check_contributors_using_integrity(self) -> None:
         def handle_contributor_query_result(contributors_using_result: List[Contributor]) -> None:
             if contributors_using_result:
-                contributors_ids = [contributor.id for contributor in contributors_using_result]
-                raise IntegrityException(
-                    'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
-                        self.id, ', '.join(contributors_ids)
-                    ))
+                contributors_ids = [contributor.id for contributor in contributors_using_result if
+                                    contributor.id != self.id]
+                if contributors_ids:
+                    raise IntegrityException(
+                        'unable to delete contributor {} because the following contributors are using one of its data sources: {}'.format(
+                            self.id, ', '.join(contributors_ids)
+                        ))
 
         contributors_using = self.find({
             'processes.params.links.contributor_id': self.id
@@ -1202,7 +1233,24 @@ class MongoOldProcessSchema(MongoGenericProcessSchema):
         return OldProcess(**data)
 
 
-class MongoGtfsAgencyFileProcessSchema(MongoOldProcessSchema):
+class MongoGtfsAgencyFileProcessParametersSchema(Schema):
+    agency_id = fields.String(required=False, allow_none=True)
+    agency_name = fields.String(required=False, allow_none=True)
+    agency_url = fields.Url(required=False, allow_none=True)
+    agency_timezone = fields.String(required=False, allow_none=True)
+    agency_lang = fields.String(required=False, allow_none=True)
+    agency_phone = fields.String(required=False, allow_none=True)
+    agency_fare_url = fields.Url(required=False, allow_none=True)
+    agency_email = fields.Email(required=False, allow_none=True)
+
+    @post_load
+    def build_parameters(self, data: dict) -> GtfsAgencyFileProcessParameters:
+        return GtfsAgencyFileProcessParameters(**data)
+
+
+class MongoGtfsAgencyFileProcessSchema(MongoNewProcessSchema):
+    parameters = fields.Nested(MongoGtfsAgencyFileProcessParametersSchema, required=False, allow_none=True)
+
     @post_load
     def build_process(self, data: dict) -> GtfsAgencyFileProcess:
         return GtfsAgencyFileProcess(**data)
