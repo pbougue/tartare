@@ -1,4 +1,4 @@
-# coding: utf-8
+# coding=utf-8
 
 # Copyright (c) 2001-2016, Canal TP and/or its affiliates. All rights reserved.
 #
@@ -28,10 +28,20 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.processes.coverage.fusio_data_update import FusioDataUpdate
-from tartare.processes.coverage.fusio_export import FusioExport
-from tartare.processes.coverage.fusio_export_contributor import FusioExportContributor
-from tartare.processes.coverage.fusio_import import FusioImport
-from tartare.processes.coverage.fusio_preprod import FusioPreProd
-from tartare.processes.coverage.fusio_send_pt_external_settings import FusioSendPtExternalSettings
-from tartare.processes.coverage.compute_ods import ComputeODS
+from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
+from tests.integration.test_mechanism import TartareFixture
+
+
+class TestComputeODSCoverageProcessesApi(TartareFixture):
+    def test_post_coverage(self):
+        self.init_contributor('cid1', 'dsid1', 'whatever', data_format=DATA_FORMAT_GTFS)
+        self.init_contributor('cid2', 'dsid2', 'whatever', data_format=DATA_FORMAT_NTFS)
+        process = {
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': ['dsid1', 'dsid2'],
+            "target_data_source_id": "ods",
+            'sequence': 0
+        }
+        self.init_coverage('cov_id', processes=[process])
+

@@ -34,7 +34,7 @@ from abc import ABCMeta
 from datetime import date, timedelta
 from datetime import datetime
 from io import IOBase
-from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple, Type
+from typing import Optional, List, Union, Dict, Any, TypeVar, BinaryIO, Tuple, Type, Set
 
 import pymongo
 import pytz
@@ -50,7 +50,7 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
     DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS, DATA_FORMAT_PT_EXTERNAL_SETTINGS, \
-    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER
+    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_ODS
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -667,6 +667,16 @@ class GtfsAgencyFileProcess(NewProcess):
         super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id,
                          enabled)
         self.parameters = parameters
+
+
+class ComputeODSProcess(NewProcess):
+    def __init__(self, id: Optional[str] = None,
+                 configuration_data_sources: Optional[List[ConfigurationDataSource]] = None,
+                 sequence: int = 0, input_data_source_ids: Optional[List[str]] = None,
+                 target_data_source_id: Optional[str] = None,
+                 enabled: bool = True) -> None:
+        super().__init__(id, configuration_data_sources, sequence, input_data_source_ids, target_data_source_id, enabled)
+        self.target_data_format = DATA_FORMAT_ODS
 
 
 class ComputeExternalSettingsProcess(NewProcess):
@@ -1342,6 +1352,16 @@ class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
             raise ValidationError('configuration_data_sources should contain a "directions" data source')
 
 
+class MongoComputeODSProcessSchema(MongoNewProcessSchema):
+    @post_load
+    def build(self, data: dict) -> ComputeODSProcess:
+        return ComputeODSProcess(**data)
+
+    @validates('input_data_source_ids')
+    def validate_input_data_source_ids(self, input_data_source_ids: List[str]) -> None:
+        pass
+
+
 class MongoProcessSchema(OneOfSchema):
     type_schemas = {
         'ComputeDirections': MongoComputeDirectionsProcessSchema,
@@ -1357,6 +1377,7 @@ class MongoProcessSchema(OneOfSchema):
         'FusioImport': MongoFusioImportProcessSchema,
         'FusioPreProd': MongoFusioPreProdProcessSchema,
         'FusioSendPtExternalSettings': MongoFusioSendPtExternalSettingsProcessSchema,
+        'ComputeODS': MongoComputeODSProcessSchema,
     }
 
     def get_obj_type(self, obj: Process) -> str:
@@ -1386,6 +1407,8 @@ class MongoProcessSchema(OneOfSchema):
             return 'FusioPreProd'
         elif isinstance(obj, FusioSendPtExternalSettingsProcess):
             return 'FusioSendPtExternalSettings'
+        elif isinstance(obj, ComputeODSProcess):
+            return 'ComputeODS'
 
 
 class MongoCoverageSchema(Schema):

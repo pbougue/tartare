@@ -148,54 +148,17 @@ class NavitiaPublisher(AbstractPublisher):
 
 
 class ODSPublisher(AbstractPublisher):
-    format_date = '%Y%m%d'
-
-    @property
-    def metadata_ordered_columns(self) -> List[str]:
-        return ['ID', 'Description', 'Format', 'Download', 'Validity start date', 'Validity end date',
-                'Licence', 'License link', 'Size', 'Update date']
-
     def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
                 coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
         if not input_data_source_ids:
             raise PublisherException('input_data_source_ids should be use for ods publication')
-        meta_data_dict = []
-        data_sets_with_file_names = {}
-        for input_data_source_id in input_data_source_ids:
-            data_source = DataSource.get_one(input_data_source_id)
-            data_format_formatted = data_source.data_format.upper()
-            data_set = data_source.get_last_data_set()
-            if not data_set.validity_period:
-                raise PublisherException(
-                    'data set of data source {} has no validity period for ods publication'.format(data_source.id))
-            data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
-            data_set_file_name = '{}_{}.zip'.format(coverage.id, data_format_formatted)
-            data_sets_with_file_names[data_set_file_name] = data_set_file
-            file_size = data_set_file.length
-            meta_data_dict.append(
-                {
-                    'ID': '{}-{}'.format(coverage.id, data_format_formatted),
-                    'Description': coverage.short_description,
-                    'Format': data_format_formatted,
-                    'Download': data_set_file_name,
-                    'Validity start date': data_set.validity_period.start_date.strftime(self.format_date),
-                    'Validity end date': data_set.validity_period.end_date.strftime(self.format_date),
-                    'Licence': coverage.license.name,
-                    'License link': coverage.license.url,
-                    'Size': file_size,
-                    'Update date': datetime.now().strftime(self.format_date)
-                }
-            )
-        memory_csv = dic_to_memory_csv(meta_data_dict, self.metadata_ordered_columns)
-        with tempfile.TemporaryDirectory() as tmp_dirname:
-            zip_file_name = '{coverage}.zip'.format(coverage=coverage.id)
-            zip_full_name = os.path.join(tmp_dirname, zip_file_name)
-            with ZipFile(zip_full_name, 'a', ZIP_DEFLATED, False) as zip_out:
-                zip_out.writestr('{coverage}.txt'.format(coverage=coverage.id), memory_csv.getvalue())
-                for data_set_file_name, data_set_file in data_sets_with_file_names.items():
-                    zip_out.writestr(data_set_file_name, data_set_file.read())
-            with open(zip_full_name, 'rb') as zip_full_file:
-                protocol_uploader.publish(zip_full_file, zip_file_name)
+        input_data_source_id = input_data_source_ids[0]
+        data_source = DataSource.get_one(input_data_source_id)
+        data_set = data_source.get_last_data_set()
+        data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
+        data_set_file_name = data_set_file.filename
+        protocol_uploader.publish(data_set_file, data_set_file_name)
+
 
 class PublisherManager:
     publishers_by_type = {

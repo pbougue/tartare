@@ -16,6 +16,7 @@ This page describes all the `Process`es that can be used in `Tartare`.
 [FusioExport](#fusioexport)  
 [FusioExportContributor](#fusioexportcontributor)  
 [FusioSendPtExternalSettings](#fusiosendptexternalsettings)  
+[ComputeODS](#ComputeODS)
 
 ## Contributor processes
 ### ComputeDirections
@@ -302,6 +303,81 @@ Note that `FusioDataUpdate` is not required.
    },
    "type":"FusioSendPtExternalSettings",
    "sequence":4
+}
+```
+
+### ComputeODS
+**Specific for Ile-de-France Mobilités (IDFM).**  
+This process computes additional data for the GTFS Open Data by using others IDFM Open Data sets. 
+Those additional data are lines and stops properties to enable realtime in navitia.
+
+This process uses two config `Data Source`s (*tr_perimeter* and *lines_referential*) and the IDFM GTFS `Data Source` to create a *Fusio External Settings* `Data Set` in a computed `Data Source` of `pt_external_settings`type.  
+This output `Data Source` can then be used by a `FusioSendPtExternalSetting` Coverage process.
+
+#### Parameters 
+Field | Description | 
+--- | --- 
+input_data_source_ids | Array containing only the IDFM GTFS `Data Source` id
+target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
+configuration_data_sources | This array contains 2 items referencing the 2 complementary `Data Source`s of IDFM. (1) 
+
+(1) The 2 additional `Data Source`s MUST be respectively of `tr_perimeter` and `lines_referential` types 
+
+
+```json
+{
+  "input_data_source_ids": [
+    "your-gtfs-id"
+  ],
+  "id": "compute_ext_settings",
+  "target_data_source_id": "target_id",
+  "configuration_data_sources": [
+        {"name": "perimeter", "ids": ["my-data-source-of-perimeter-json-id"]},
+        {"name": "lines_referential", "ids": ["my-data-source-of-lines-json-id"]},
+    ],
+   "type":"ComputeExternalSettings",
+   "sequence":0
+}
+
+```
+
+### ComputeODS
+the process takes as input several data sets and generates as output a zip file containing 1 metadata TXT file and one ZIP file per data type.
+
+
+#### Parameters
+Field | Description |
+--- | ---
+input_data_source_ids | Array containing `Data Source` ids
+target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
+
+#### Metadata
+
+There is one line per data set.
+
+Field | Description | Example
+--- | --- | ---
+ID | coverage-DATA_FORMAT | it-NTFS
+Description | A short description of the data set | Transport of Venezia (on ground)
+Format | Format of the data set | NTFS
+Download | Link to the data set |
+Validity start date | Validity start date of the data set | 20180701
+Validity end date | Validity end date of the data set | 20180831
+License | License of the data set | CC
+License | License link of the data set | https://creativecommons.org/
+License | Size of the data set in octet | 2123456
+License | Date when the data set was updated | 2018-07-23
+
+```json
+{
+  "input_data_source_ids": [
+    "your-gtfs-id",
+    "your-ntfs-id",
+  ],
+  "id": "compute_ods",
+  "target_data_source_id": "target_id",
+  "type":"ComputeODS",
+  "sequence":0
 }
 ```
 
