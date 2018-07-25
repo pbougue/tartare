@@ -74,13 +74,11 @@ This process is used to create the required *agency.txt* file in a GTFS where th
     "id": "agency-id",
     "type": "GtfsAgencyFile",
     "sequence": 1,
-    "data_source_ids": ["id1", "id2"],
-    "params": {
-        "data": {
-            "agency_id": "112",
-            "agency_name": "stif",
-            "agency_url": "http://stif.com"
-        }
+    "input_data_source_ids": ["id1"],
+    "parameters": {
+        "agency_id": "112",
+        "agency_name": "stif",
+        "agency_url": "http://stif.com"
     }
 }
 ```
@@ -151,9 +149,8 @@ This output `Data Source` can then be used by a `FusioSendPtExternalSetting` Cov
 Field | Description | 
 --- | --- 
 input_data_source_ids | Array containing only the IDFM GTFS `Data Source` id
-params.target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
-params.export_type | The output `Data Source`'s type should be `pt_external_settings`
-params.links | This array contains 2 items referencing the 2 complementary `Data Source`s of IDFM. (1) 
+target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
+configuration_data_sources | This array contains 2 items referencing the 2 complementary `Data Source`s of IDFM. (1) 
 
 (1) The 2 additional `Data Source`s MUST be respectively of `tr_perimeter` and `lines_referential` types 
 
@@ -164,6 +161,7 @@ params.links | This array contains 2 items referencing the 2 complementary `Data
     "your-gtfs-id"
   ],
   "id": "compute_ext_settings",
+  "target_data_source_id": "target_id",
   "configuration_data_sources": [
         {"name": "perimeter", "ids": ["my-data-source-of-perimeter-json-id"]},
         {"name": "lines_referential", "ids": ["my-data-source-of-lines-json-id"]},

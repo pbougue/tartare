@@ -31,37 +31,24 @@ import os
 import tempfile
 from functools import partial
 
-from tartare.core.context import Context
+from tartare.core.context import Context, ContributorExportContext
 from tartare.core.gridfs_handler import GridFsHandler
+from tartare.core.models import GtfsAgencyFileProcess
 from tartare.core.zip import edit_file_in_zip_file_and_pack
 from tartare.exceptions import RuntimeException
 from tartare.helper import get_content_file_from_grid_out_file
-from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.processes.abstract_process import NewAbstractContributorProcess
 from tartare.processes.utils import process_registry
 
 
 @process_registry()
-class GtfsAgencyFile(AbstractContributorProcess):
-    def _get_agency_data(self, file_data: dict) -> dict:
-        # for more informations, see : https://developers.google.com/transit/gtfs/reference/agency-file
-        default_data = {
-            "agency_id": '42',
-            "agency_name": "",
-            "agency_url": "https://www.navitia.io/",
-            "agency_timezone": "Europe/Paris",
-        }
-        optional_columns = ['agency_lang', 'agency_phone', 'agency_fare_url', 'agency_email']
-        params = self.params.get("data", {})
-
-        columns = [*default_data] + optional_columns
-        data = {**default_data, **file_data}
-        data = {**data, **params}
-        data = {k: data.get(k) for k in data if k in columns}
-
-        return data
+class GtfsAgencyFile(NewAbstractContributorProcess):
+    def __init__(self, context: ContributorExportContext, process: GtfsAgencyFileProcess) -> None:
+        super().__init__(context, process)
+        self.parameters = process.parameters
 
     def manage_agency_file(self, filename: str, file_data: dict) -> None:
-        new_data = self._get_agency_data(file_data)
+        new_data = self.parameters.apply_to_file_dict(file_data)
         with open(filename, 'w') as agency:
             writer = csv.DictWriter(agency, fieldnames=list(new_data.keys()))
             writer.writeheader()
@@ -77,8 +64,8 @@ class GtfsAgencyFile(AbstractContributorProcess):
         if len(data) > 1:
             raise RuntimeException(self.format_error_message('agency.txt should not have more than 1 agency'))
         # there is no agency_id in the parameters nor in agency.txt
-        if not self.params.get('data', {}).get('agency_id') and \
-                (len(data) == 0 or len(data) == 1 and not data[0].get('agency_id')):
+        if not self.parameters.agency_id and (
+                len(data) == 0 or len(data) == 1 and not data[0].get('agency_id')):
             raise RuntimeException(self.format_error_message('agency_id should be provided'))
 
         file_data = data[0] if data else {}

@@ -156,12 +156,12 @@ class TestContributorExport(TartareFixture):
         contributor['processes'].append({
             "type": "GtfsAgencyFile",
             "sequence": 0,
-            "data_source_ids": ["to_process"],
-            "params": {"data": {
+            "input_data_source_ids": ["to_process"],
+            "parameters": {
                 "agency_id": "112",
                 "agency_name": "stif",
                 "agency_url": "http://stif.com"
-            }}
+            }
         })
         raw = self.put('/contributors/id_test', params=self.dict_to_json(contributor))
         self.assert_sucessful_call(raw)

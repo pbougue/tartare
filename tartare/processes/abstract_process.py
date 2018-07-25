@@ -186,6 +186,7 @@ class NewAbstractContributorProcess(AbstractContributorProcess, metaclass=ABCMet
         self.configuration = process.configuration_data_sources
         self.target_data_source_id = process.target_data_source_id
 
+
     def save_result_into_target_data_source(self, data_source_owner: Union[Contributor, Coverage],
                                             target_data_set_gridfs_id: str,
                                             validity_period: Optional[ValidityPeriod] = None) -> None:

@@ -28,7 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from copy import copy
+from copy import deepcopy
 
 import pytest
 
@@ -272,7 +272,7 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'lines_referential_id', 'url', DATA_FORMAT_LINES_REFERENTIAL)
         self.add_data_source_to_contributor('cid', 'perimeter_id', 'url', DATA_FORMAT_TR_PERIMETER)
-        process = copy(self.valid_process)
+        process = deepcopy(self.valid_process)
         del (process['target_data_source_id'])
         raw = self.add_process_to_contributor(process, 'cid', check_success=False)
         self.assert_process_validation_error(raw, 'target_data_source_id', 'Missing data for required field.')
@@ -286,3 +286,60 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         assert len(contributor['data_sources']) == 4
         assert next((data_source for data_source in contributor['data_sources'] if
                      data_source['id'] == contributor['processes'][0]['target_data_source_id']), None)
+
+
+class TestGtfsAgencyFileContributorProcessesApi(TartareFixture):
+    valid_process = {
+        'type': 'GtfsAgencyFile',
+        'input_data_source_ids': ['dsid'],
+        'sequence': 0,
+    }
+
+    def test_post_contributor_process_wrong_input(self):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'input data source in process "GtfsAgencyFile" should be of data format "{}", found "{}"'.format(
+                DATA_FORMAT_GTFS, DATA_FORMAT_DIRECTION_CONFIG))
+
+    @pytest.mark.parametrize("field,value,error_message", [
+        ('agency_id', 123, 'Not a valid string.'),
+        ('agency_name', 123, 'Not a valid string.'),
+        ('agency_url', 'plop', 'Not a valid URL.'),
+        ('agency_timezone', 123, 'Not a valid string.'),
+        ('agency_lang', 123, 'Not a valid string.'),
+        ('agency_phone', 123, 'Not a valid string.'),
+        ('agency_fare_url', 'tada', 'Not a valid URL.'),
+        ('agency_email', 'pouet', 'Not a valid email address.'),
+    ])
+    def test_post_contributor_process_invalid_parameters(self, field, value, error_message):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_GTFS)
+        process = deepcopy(self.valid_process)
+        process['parameters'] = {field: value}
+        raw = self.add_process_to_contributor(process, 'cid', check_success=False)
+        details = self.assert_failed_call(raw)
+        assert details == {'error': {'processes': {'0': {'parameters': {field: [error_message]}}}},
+                           'message': 'Invalid arguments'}
+
+    @pytest.mark.parametrize("field,value", [
+        ('agency_id', 'id_as_a_string'),
+        ('agency_name', 'agency name'),
+        ('agency_url', 'http://valid.url.com/toto'),
+        ('agency_timezone', 'Europe/Paris'),
+        ('agency_lang', 'en'),
+        ('agency_phone', '0607080910'),
+        ('agency_fare_url', 'https://valid.url.fr'),
+        ('agency_email', 'name@domain.com'),
+    ])
+    def test_post_contributor_process_valid_parameters(self, field, value):
+        self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_GTFS)
+        process = deepcopy(self.valid_process)
+        process['parameters'] = {field: value}
+        self.add_process_to_contributor(process, 'cid')
+        contributor = self.get_contributor('cid')
+        assert contributor['processes'][0]['parameters'][field] == value
+
+    def test_post_contributor_process_ok(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_process_to_contributor(self.valid_process, 'cid')
