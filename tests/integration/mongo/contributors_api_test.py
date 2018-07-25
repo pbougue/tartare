@@ -36,7 +36,7 @@ import tartare
 from tartare.core.constants import DATA_TYPE_VALUES, DATA_FORMAT_BY_DATA_TYPE, DATA_FORMAT_VALUES, DATA_FORMAT_OSM_FILE, \
     DATA_TYPE_GEOGRAPHIC, DATA_FORMAT_BANO_FILE, DATA_FORMAT_POLY_FILE, DATA_TYPE_PUBLIC_TRANSPORT, \
     DATA_FORMAT_PT_EXTERNAL_SETTINGS, INPUT_TYPE_COMPUTED, DATA_FORMAT_OBITI, DATA_FORMAT_DIRECTION_CONFIG, \
-    DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
+    DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_RUSPELL_CONFIG
 from tartare.core.models import Contributor
 from tests.integration.test_mechanism import TartareFixture
 
@@ -773,50 +773,44 @@ class TestContributors(TartareFixture):
         assert patched_data_source["input"]["frequency"]["minutes"] == 30
 
     def test_put_contrib_processes_without_id(self):
-        contributor = self.init_contributor('cid', 'dsid', 'whatever')
-        processes = [
-            {
-                "type": "Ruspell",
-                "sequence": 1,
-                "data_source_ids": [],
-                "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
-                }
-            },
-            {
-                "type": "HeadsignShortName",
-                "sequence": 2,
-                "input_data_source_ids": ['dsid'],
-            }
-        ]
-        contributor["processes"] = processes
-        raw = self.put('/contributors/cid', self.dict_to_json(contributor))
-        r = self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["processes"]) == 2
-        types = [p.get("type") for p in r["contributors"][0]["processes"]]
-        excepted = [p.get("type") for p in processes]
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'conf_yml', 'url', DATA_FORMAT_RUSPELL_CONFIG)
+        self.add_process_to_contributor({
+            "type": "Ruspell",
+            "sequence": 1,
+            "input_data_source_ids": ['dsid'],
+            "configuration_data_sources": [
+                {"name": "ruspell_config", "ids": ["conf_yml"]},
+            ]
+        }, 'cid')
+        self.add_process_to_contributor({
+            "type": "HeadsignShortName",
+            "sequence": 2,
+            "input_data_source_ids": ['dsid'],
+        }, 'cid')
+        contributor = self.get_contributor('cid')
+        assert len(contributor["processes"]) == 2
+        types = [p.get("type") for p in contributor["processes"]]
+        excepted = ['Ruspell', 'HeadsignShortName']
         assert types.sort() == excepted.sort()
 
-    def test_put_contrib_processes_with_id(self, contributor):
-        processes = [
-            {
-                "id": "ruspell",
-                "type": "Ruspell",
-                "sequence": 1,
-                "data_source_ids": [],
-                "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
-                }
-            }
-        ]
-        contributor["processes"] = processes
-        raw = self.put('/contributors/id_test', self.dict_to_json(contributor))
-        r = self.assert_sucessful_call(raw)
-        assert len(r["contributors"][0]["processes"]) == 1
-        assert r["contributors"][0]["processes"][0]['id'] == processes[0]["id"]
-        assert r["contributors"][0]["processes"][0]['type'] == processes[0]["type"]
+    def test_put_contrib_processes_with_id(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'conf_yml', 'url', DATA_FORMAT_RUSPELL_CONFIG)
+        process = {
+            "id": "ruspell_id",
+            "type": "Ruspell",
+            "sequence": 1,
+            "input_data_source_ids": ['dsid'],
+            "configuration_data_sources": [
+                {"name": "ruspell_config", "ids": ["conf_yml"]},
+            ]
+        }
+        self.add_process_to_contributor(process, 'cid')
+        contributor = self.get_contributor('cid')
+        assert len(contributor["processes"]) == 1
+        assert contributor["processes"][0]['id'] == process["id"]
+        assert contributor["processes"][0]['type'] == process["type"]
 
     def test_put_contrib_processes_type_unknown(self, contributor):
         processes = [
@@ -824,11 +818,6 @@ class TestContributors(TartareFixture):
                 "id": "ruspell",
                 "sequence": 1,
                 "type": "BOB",
-                "data_source_ids": ["datasource_stif"],
-                "params": {
-                    "bano_data_ids": ["bano_75", "bano_91"],
-                    "config_file": "conf_yml"
-                }
             }
         ]
         contributor["processes"] = processes
@@ -836,8 +825,7 @@ class TestContributors(TartareFixture):
         r = self.assert_failed_call(raw)
         assert "error" in r
         assert r["message"] == "Invalid arguments"
-        assert r[
-                   'error'] == "data_source referenced by id 'datasource_stif' in process 'BOB' not found in contributor"
+        assert r['error'] == "impossible to build process BOB : modules within tartare.processes.contributor have no class BOB"
 
     def test_put_contrib_processes_gtfs_agency_file(self):
         self.init_contributor('cid', 'tc-stif', 'whatever')
@@ -1285,23 +1273,21 @@ class TestContributors(TartareFixture):
 
     def test_delete_contributor_with_data_source_used_by_other_contributor(self, init_http_download_server):
         self.init_contributor('geo', 'ruspell_bano_file',
-                              self.format_url(init_http_download_server.ip_addr, 'bano-75.csv', path='ruspell'))
+                              self.format_url(init_http_download_server.ip_addr, 'bano-75.csv', path='ruspell'),
+                              data_format=DATA_FORMAT_BANO_FILE, data_type=DATA_TYPE_GEOGRAPHIC)
         self.init_contributor('cid', 'dsid', self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'))
+        self.add_data_source_to_contributor('cid', 'ruspell_config_ds', 'whatever', DATA_FORMAT_RUSPELL_CONFIG)
         self.add_process_to_contributor({
             "id": "ruspell_id",
             "type": "Ruspell",
             "sequence": 1,
-            "data_source_ids": [
+            "input_data_source_ids": [
                 "dsid"
             ],
-            "params": {
-                "links": [
-                    {
-                        "contributor_id": "geo",
-                        "data_source_id": "ruspell_bano_file"
-                    }
-                ]
-            }
+            'configuration_data_sources': [
+                {'name': 'ruspell_config', 'ids': ['ruspell_config_ds']},
+                {'name': 'geographic_data', 'ids': ['ruspell_bano_file']},
+            ]
         }, 'cid')
         raw = self.delete('/contributors/geo')
         details = self.assert_failed_call(raw)

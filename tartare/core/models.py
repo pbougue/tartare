@@ -50,7 +50,8 @@ from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
     JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
     INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
     DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS, DATA_FORMAT_PT_EXTERNAL_SETTINGS, \
-    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_ODS
+    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
+    DATA_FORMAT_OSM_FILE, DATA_FORMAT_ODS
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -698,7 +699,7 @@ class HeadsignShortNameProcess(NewProcess):
     pass
 
 
-class RuspellProcess(OldProcess):
+class RuspellProcess(NewProcess):
     pass
 
 
@@ -1278,7 +1279,14 @@ class MongoHeadsignShortNameProcessSchema(MongoNewProcessSchema):
         return HeadsignShortNameProcess(**data)
 
 
-class MongoRuspellProcessSchema(MongoOldProcessSchema):
+class MongoRuspellProcessSchema(MongoNewProcessSchema):
+    configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=True)
+
+    @validates('configuration_data_sources')
+    def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
+        if not any(configuration.name == 'ruspell_config' for configuration in configuration_data_sources):
+            raise ValidationError('configuration_data_sources should contain a "ruspell_config" data source')
+
     @post_load
     def build_process(self, data: dict) -> RuspellProcess:
         return RuspellProcess(**data)
@@ -1292,6 +1300,7 @@ class MongoSleepingProcessSchema(MongoOldProcessSchema):
 
 class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
     target_data_source_id = fields.String(required=True)
+    configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=True)
 
     @post_load
     def build_process(self, data: dict) -> ComputeExternalSettingsProcess:
@@ -1299,10 +1308,15 @@ class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
 
     @validates('configuration_data_sources')
     def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
+        missing = []
         for configuration_name in ['perimeter', 'lines_referential']:
             if not any(configuration.name == configuration_name for configuration in configuration_data_sources):
-                raise ValidationError(
-                    'configuration_data_sources should contain a "{}" data source'.format(configuration_name))
+                missing.append(configuration_name)
+        if len(missing) == 2:
+            raise ValidationError(
+                'configuration_data_sources should contain a "{}" data source'.format('" and a "'.join(missing)))
+        elif len(missing) == 1:
+            raise ValidationError('configuration_data_sources should contain a "{}" data source'.format(missing[0]))
 
 
 class MongoFusioDataUpdateProcessSchema(MongoOldProcessSchema):
@@ -1342,6 +1356,8 @@ class MongoFusioSendPtExternalSettingsProcessSchema(MongoOldProcessSchema):
 
 
 class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
+    configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=True)
+
     @post_load
     def build(self, data: dict) -> ComputeDirectionsProcess:
         return ComputeDirectionsProcess(**data)
@@ -1476,12 +1492,17 @@ class MongoContributorSchema(Schema):
             'directions': DATA_FORMAT_DIRECTION_CONFIG,
             'perimeter': DATA_FORMAT_TR_PERIMETER,
             'lines_referential': DATA_FORMAT_LINES_REFERENTIAL,
+            'ruspell_config': DATA_FORMAT_RUSPELL_CONFIG,
+            'geographic_data': [DATA_FORMAT_BANO_FILE, DATA_FORMAT_OSM_FILE],
         }
-        if configuration_key in config_mapping_format and data_format_found != config_mapping_format[configuration_key]:
+        config_mapping_format_choices = config_mapping_format[configuration_key]
+        config_mapping_format_choices = config_mapping_format_choices if \
+            isinstance(config_mapping_format_choices, list) else [config_mapping_format_choices]
+        if configuration_key in config_mapping_format and data_format_found not in config_mapping_format_choices:
             raise ValidationError(
                 'data source referenced by "{}" in process "{}" should be of data format "{}", found "{}"'.format(
-                    configuration_key, process_type, config_mapping_format[configuration_key], data_format_found),
-                ['configuration_data_sources'])
+                    configuration_key, process_type, ' or '.join(config_mapping_format_choices),
+                    data_format_found), ['configuration_data_sources'])
 
     @validates_schema(pass_original=True, skip_on_field_errors=True, pass_many=True)
     def validate_contributor_process_configuration(self, unmarshalled: Union[dict, Contributor],

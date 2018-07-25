@@ -402,115 +402,28 @@ class TestHeadsignShortNameProcess(TartareFixture):
 
 
 class TestRuspellProcess(TartareFixture):
-    def __setup_contributor_export_environment(self, init_http_download_server, params,
-                                               export_contrib_geo=True, do_export=True):
-        # Create contributor geographic
-        url_bano = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
-        contrib_geographic = {
-            "id": "bano",
-            "name": "bano",
-            "data_prefix": "BAN",
-            "data_type": DATA_TYPE_GEOGRAPHIC,
-            "data_sources": [
-                {
-                    "id": "bano_75",
-                    "name": "bano_75",
-                    "data_format": DATA_FORMAT_BANO_FILE,
-                    "input": {
-                        "type": "auto",
-                        "url": url_bano,
-                        "frequency": {
-                            "type": "daily",
-                            "hour_of_day": 20
-                        }
-                    }
-                }
-            ]
-        }
-
-        raw = self.post('/contributors', json.dumps(contrib_geographic))
-        self.assert_sucessful_create(raw)
-
-        if export_contrib_geo:
-            self.contributor_export('bano')
-
-        # Create contributor public_transport
+    def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
         url_gtfs = self.format_url(ip=init_http_download_server.ip_addr,
                                    filename='gtfs.zip',
                                    path='ruspell')
+
         url_ruspell_config = self.format_url(ip=init_http_download_server.ip_addr,
                                              filename='config-fr_idf.yml',
                                              path='ruspell')
-        contrib_public_transport = {
-            "id": "id_test",
-            "name": "name_test",
-            "data_prefix": "OIF",
-            "processes": [{
-                "id": "ruspell_id",
-                "sequence": 0,
-                "data_source_ids": ["ds_to_process"],
-                "type": "Ruspell",
-                "params": params
-            }]
-        }
-        data_sources = [
-            {
-                "id": "ds_to_process",
-                "name": "ds_to_process",
-                "data_format": "gtfs",
-                "input": {
-                    "type": "auto",
-                    "url": url_gtfs,
-                    "frequency": {
-                        "type": "daily",
-                        "hour_of_day": 20
-                    }
-                }
-            },
-            {
-                "id": "ds_config_ruspell",
-                "name": "ds_config_ruspell",
-                "data_format": DATA_FORMAT_RUSPELL_CONFIG,
-                "input": {
-                    "type": "auto",
-                    "url": url_ruspell_config,
-                    "frequency": {
-                        "type": "daily",
-                        "hour_of_day": 20
-                    }
-                }
-            }
-        ]
-
-        contrib_public_transport['data_sources'] = data_sources
-        raw = self.post('/contributors', json.dumps(contrib_public_transport))
-        self.assert_sucessful_create(raw)
-
-        if do_export:
-            resp = self.contributor_export('id_test', check_done=False)
-            return self.get_job_from_export_response(resp)
-
-    def test_ruspell_error_message_misconfigured_links(self, init_http_download_server):
-        params = {
-            'links': [
-                {'contributor_id': 'whatever', 'data_source_id': 'unknown'},
-                {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
+        url_bano = self.format_url(ip=init_http_download_server.ip_addr, filename='bano-75.csv', path='ruspell')
+        self.init_contributor('cid', 'dsid', url_gtfs)
+        self.add_data_source_to_contributor('cid', 'ruspell_config_ds', url_ruspell_config, DATA_FORMAT_RUSPELL_CONFIG)
+        self.init_contributor('geo', 'bano_75', url_bano, DATA_FORMAT_BANO_FILE, data_type=DATA_TYPE_GEOGRAPHIC)
+        self.add_process_to_contributor({
+            'type': 'Ruspell',
+            'input_data_source_ids': ['dsid'],
+            'sequence': 0,
+            'configuration_data_sources': [
+                {'name': 'ruspell_config', 'ids': ['ruspell_config_ds']},
+                {'name': 'geographic_data', 'ids': ['bano_75']},
             ]
-        }
-
-        job = self.__setup_contributor_export_environment(init_http_download_server,
-                                                          params)
-        assert job['state'] == 'failed'
-        assert job['error_message'] == "data source 'unknown' not found in contributors or coverages"
-
-    def test_ruspell_error_message_contributor_geographic_not_exported(self, init_http_download_server):
-        params = {
-            'links': [
-                {'contributor_id': 'id_test', 'data_source_id': 'ds_config_ruspell'},
-                {'contributor_id': 'bano', 'data_source_id': 'bano_75'}
-            ]
-        }
-
-        job = self.__setup_contributor_export_environment(init_http_download_server, params, export_contrib_geo=False)
+        }, 'cid')
+        resp = self.contributor_export('cid', check_done=False)
+        job = self.get_job_from_export_response(resp)
         assert job['state'] == 'failed'
         assert job['error_message'] == "data source 'bano_75' has no data sets"

@@ -34,24 +34,23 @@ from functools import partial
 
 from tartare.core import zip
 from tartare.core.context import ContributorExportContext, Context
-from tartare.core.models import DataSource, OldProcess
-from tartare.core.models import Process
+from tartare.core.models import DataSource, OldProcess, NewProcess
 from tartare.core.subprocess_wrapper import SubProcessWrapper
-from tartare.exceptions import ParameterException, RuntimeException, EntityNotFound
-from tartare.processes.abstract_process import AbstractContributorProcess
+from tartare.exceptions import ParameterException, RuntimeException
+from tartare.processes.abstract_process import NewAbstractContributorProcess
 from tartare.processes.utils import process_registry
 
 logger = logging.getLogger(__name__)
 
 
 @process_registry()
-class Ruspell(AbstractContributorProcess):
+class Ruspell(NewAbstractContributorProcess):
     stops_filename = 'stops.txt'
     stops_output_filename = 'stops_output.txt'
     rules_filename = 'rules.csv'
     command_pattern = '{binary_path} -c {config} -i {input} -o {output}'
 
-    def __init__(self, context: ContributorExportContext, process: OldProcess) -> None:
+    def __init__(self, context: ContributorExportContext, process: NewProcess) -> None:
         super().__init__(context, process)
         # Default binary path in docker worker-ruspell
         self._binary_path = self.params.get('_binary_path', '/usr/src/app/bin/ruspell')
@@ -64,22 +63,18 @@ class Ruspell(AbstractContributorProcess):
             raise RuntimeException(self.format_error_message(msg))
         return data_source_config_context.gridfs_id
 
-    def __extract_data_sources_from_gridfs(self, data_format: str, path: str) -> str:
-        links = self.params.get("links")
-        if not links:
-            raise ParameterException('links missing in process')
-        for contrib_ds in links:
-            contributor_id = contrib_ds.get('contributor_id')
-            data_source_id = contrib_ds.get('data_source_id')
-            data_source = DataSource.get_one(data_source_id)
-            if data_source.data_format != data_format:
-                continue
-            gridfs_id = self.__get_gridfs_id_from_data_source_context(data_source_id, contributor_id)
-            gridout = self.gfs.get_file_from_gridfs(gridfs_id)
-            file_path = os.path.join(path, gridout.filename)
-            with open(file_path, 'wb+') as f:
-                f.write(gridout.read())
-        return file_path
+    def __extract_data_sources_from_gridfs(self, path: str) -> str:
+        for config_data_source in self.configuration:
+            if config_data_source.name == 'ruspell_config' or config_data_source.name == 'geographic_data':
+                for data_source_id in config_data_source.ids:
+                    gridfs_id = DataSource.get_one(data_source_id).get_last_data_set().gridfs_id
+                    gridout = self.gfs.get_file_from_gridfs(gridfs_id)
+                    file_path = os.path.join(path, gridout.filename)
+                    with open(file_path, 'wb+') as f:
+                        f.write(gridout.read())
+                    if config_data_source.name == 'ruspell_config':
+                        config_path = file_path
+        return config_path
 
     def do_ruspell(self, file_path: str, stops_output_path: str, config_path: str) -> None:
         command = self.command_pattern.format(binary_path=self._binary_path,
@@ -95,13 +90,8 @@ class Ruspell(AbstractContributorProcess):
         self.check_expected_files(['stops.txt'])
         with tempfile.TemporaryDirectory() as extract_dir_path, tempfile.TemporaryDirectory() as ruspell_dir_path:
             stops_output_path = os.path.join(ruspell_dir_path, self.stops_output_filename)
-            from tartare.core.constants import DATA_FORMAT_BANO_FILE, DATA_FORMAT_RUSPELL_CONFIG
-            # Get config
-            config_path = self.__extract_data_sources_from_gridfs(DATA_FORMAT_RUSPELL_CONFIG, ruspell_dir_path)
-
-            # Get Banos
-            self.__extract_data_sources_from_gridfs(DATA_FORMAT_BANO_FILE, ruspell_dir_path)
-
+            # Get config and banos
+            config_path = self.__extract_data_sources_from_gridfs(ruspell_dir_path)
             for data_source_id_to_process in self.data_source_ids:
                 data_source_export = self.context.get_data_source_export_from_data_source(data_source_id_to_process)
 
