@@ -1229,6 +1229,29 @@ class MongoNewProcessSchema(MongoGenericProcessSchema):
     configuration_data_sources = fields.List(fields.Nested(MongoConfigurationDataSource), required=False,
                                              allow_none=True)
 
+    @staticmethod
+    def check_configuration_data_source_contains_only(configuration_data_sources: List[ConfigurationDataSource],
+                                                      configuration_data_source_names_mandatory_expected: List[str],
+                                                      configuration_data_source_names_optional_expected: List[
+                                                          str] = None) -> None:
+        configuration_data_source_names_optional_expected = configuration_data_source_names_optional_expected if \
+            configuration_data_source_names_optional_expected else []
+        configuration_names = [config.name for config in configuration_data_sources]
+        if not configuration_data_source_names_optional_expected:
+            if configuration_names != configuration_data_source_names_mandatory_expected:
+                raise ValidationError(
+                    'configuration_data_sources should contain a "{}" data source and only that'.format(
+                        '" and a "'.join(configuration_data_source_names_mandatory_expected)))
+        else:
+            if set(configuration_data_source_names_mandatory_expected).issubset(configuration_names):
+                optional_found = set(configuration_names) - set(configuration_data_source_names_mandatory_expected)
+                if optional_found.issubset(configuration_data_source_names_optional_expected):
+                    return
+            raise ValidationError(
+                'configuration_data_sources should contain a "{}" data source and possibly some of "{}" data source'.format(
+                    '" and a "'.join(configuration_data_source_names_mandatory_expected),
+                    ', '.join(configuration_data_source_names_optional_expected)))
+
     @validates('input_data_source_ids')
     def validate_input_data_source_ids(self, input_data_source_ids: List[str]) -> None:
         if len(input_data_source_ids) != 1:
@@ -1284,8 +1307,8 @@ class MongoRuspellProcessSchema(MongoNewProcessSchema):
 
     @validates('configuration_data_sources')
     def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
-        if not any(configuration.name == 'ruspell_config' for configuration in configuration_data_sources):
-            raise ValidationError('configuration_data_sources should contain a "ruspell_config" data source')
+        self.check_configuration_data_source_contains_only(configuration_data_sources, ['ruspell_config'],
+                                                           ['geographic_data'])
 
     @post_load
     def build_process(self, data: dict) -> RuspellProcess:
@@ -1308,15 +1331,8 @@ class MongoComputeExternalSettingsProcessSchema(MongoNewProcessSchema):
 
     @validates('configuration_data_sources')
     def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
-        missing = []
-        for configuration_name in ['perimeter', 'lines_referential']:
-            if not any(configuration.name == configuration_name for configuration in configuration_data_sources):
-                missing.append(configuration_name)
-        if len(missing) == 2:
-            raise ValidationError(
-                'configuration_data_sources should contain a "{}" data source'.format('" and a "'.join(missing)))
-        elif len(missing) == 1:
-            raise ValidationError('configuration_data_sources should contain a "{}" data source'.format(missing[0]))
+        self.check_configuration_data_source_contains_only(configuration_data_sources,
+                                                           ['perimeter', 'lines_referential'])
 
 
 class MongoFusioDataUpdateProcessSchema(MongoOldProcessSchema):
@@ -1364,8 +1380,7 @@ class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
 
     @validates('configuration_data_sources')
     def validate_configuration_data_sources(self, configuration_data_sources: List[ConfigurationDataSource]) -> None:
-        if not any(configuration.name == 'directions' for configuration in configuration_data_sources):
-            raise ValidationError('configuration_data_sources should contain a "directions" data source')
+        self.check_configuration_data_source_contains_only(configuration_data_sources, ['directions'])
 
 
 class MongoComputeODSProcessSchema(MongoNewProcessSchema):

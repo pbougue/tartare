@@ -38,98 +38,20 @@ from tartare.core.constants import DATA_FORMAT_DIRECTION_CONFIG, DATA_FORMAT_DEF
 from tests.integration.test_mechanism import TartareFixture
 
 
-class TestContributorProcessesApi(TartareFixture):
-    process_with_configuration = {
-        'ComputeDirections': ['directions'],
-        'Ruspell': ['ruspell_config'],
-        'ComputeExternalSettings': ['perimeter', 'lines_referential'],
+class TestComputeDirectionContributorProcessesApi(TartareFixture):
+    valid_process = {
+        'type': 'ComputeDirections',
+        'input_data_source_ids': ['dsid'],
+        'configuration_data_sources': [
+            {'name': 'directions', 'ids': ['config-id']}
+        ],
+        'sequence': 0
     }
 
-    @pytest.mark.parametrize("configuration_data_sources", [
-        [],
-        [{'name': 'useless', 'ids': ['config-id']}],
-        [{'name': 'useless', 'ids': ['config-id']}, {'name': 'other', 'ids': ['toto']}],
-    ])
-    def test_post_contributor_process_wrong_configuration_data_sources(self, configuration_data_sources):
-        for process_type, configuration_keys in self.process_with_configuration.items():
-            contributor_id = 'cid_' + process_type
-            data_source_id = 'dsid_' + process_type
-            self.init_contributor(contributor_id, data_source_id, 'whatever')
-            if len(configuration_keys) > 1:
-                message_part = 'a "' + '" and a "'.join(configuration_keys) + '"'
-            else:
-                message_part = 'a "{}"'.format(configuration_keys[0])
-            raw = self.add_process_to_contributor({
-                'type': process_type,
-                'input_data_source_ids': [data_source_id],
-                'configuration_data_sources': configuration_data_sources,
-                'sequence': 0
-            }, contributor_id, check_success=False)
-            self.assert_process_validation_error(
-                raw, 'configuration_data_sources',
-                'configuration_data_sources should contain {} data source'.format(message_part))
-
-    def test_post_contributor_process_no_configuration_data_sources(self):
-        for process_type, _ in self.process_with_configuration.items():
-            contributor_id = 'cid_' + process_type
-            data_source_id = 'dsid_' + process_type
-            self.init_contributor(contributor_id, data_source_id, 'whatever')
-            raw = self.add_process_to_contributor({
-                'type': process_type,
-                'input_data_source_ids': [data_source_id],
-                'sequence': 0
-            }, contributor_id, check_success=False)
-            self.assert_process_validation_error(raw, 'configuration_data_sources', 'Missing data for required field.')
-
-    @pytest.mark.parametrize("input_data_source_ids,message", [
-        ('wrong_type', 'Not a valid list.'),
-        ([], 'input_data_source_ids should contains one and only one data source id'),
-        (['id1', 'id2'], 'input_data_source_ids should contains one and only one data source id'),
-        (['id1', 'id2', 'id3'], 'input_data_source_ids should contains one and only one data source id'),
-    ])
-    def test_post_contributor_process_invalid_input_data_source_ids(self, input_data_source_ids, message):
-        self.init_contributor('cid', 'dsid', 'whatever')
-        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
-        raw = self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': input_data_source_ids,
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid', check_success=False)
-        details = self.assert_failed_call(raw)
-        assert details == {'error': {'processes': {'0': {'input_data_source_ids': [message]}}},
-                           'message': 'Invalid arguments'}
-
-    def test_post_contributor_process_unknown_input_data_source_ids(self):
-        self.init_contributor('cid', 'dsid', 'whatever')
-        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
-        raw = self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': ['unknown'],
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid', check_success=False)
-        self.assert_process_validation_error_global(
-            raw, 'input_data_source_ids',
-            'data source referenced by "unknown" in process "ComputeDirections" not found')
-
-
-class TestComputeDirectionContributorProcessesApi(TartareFixture):
     def test_post_contributor_process_wrong_config_format(self):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DEFAULT)
-        raw = self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid', check_success=False)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'configuration_data_sources',
             'data source referenced by "directions" in process "ComputeDirections" should be of data format "{}", found "{}"'.format(
@@ -137,14 +59,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
 
     def test_post_contributor_process_no_config_data_source(self):
         self.init_contributor('cid', 'dsid', 'whatever')
-        raw = self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid', check_success=False)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'configuration_data_sources',
             'data source referenced by "config-id" in process "ComputeDirections" was not found')
@@ -152,14 +67,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
     def test_post_contributor_process_wrong_input(self):
         self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
-        raw = self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid', check_success=False)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'input_data_source_ids',
             'input data source in process "ComputeDirections" should be of data format "{}", found "{}"'.format(
@@ -168,14 +76,7 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
         self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
-        self.add_process_to_contributor({
-            'type': 'ComputeDirections',
-            'input_data_source_ids': ['dsid'],
-            'configuration_data_sources': [
-                {'name': 'directions', 'ids': ['config-id']}
-            ],
-            'sequence': 0
-        }, 'cid')
+        self.add_process_to_contributor(self.valid_process, 'cid')
 
     def test_post_contributor_process_ok_on_create(self):
         raw = self.post('/contributors', self.dict_to_json({
@@ -197,27 +98,22 @@ class TestComputeDirectionContributorProcessesApi(TartareFixture):
                 }
             ],
             'processes': [
-                {
-                    'type': 'ComputeDirections',
-                    'input_data_source_ids': ['dsid'],
-                    'configuration_data_sources': [
-                        {'name': 'directions', 'ids': ['config-id']}
-                    ],
-                    'sequence': 0
-                }
+                self.valid_process
             ],
         }))
         self.assert_sucessful_create(raw)
 
 
 class TestHeadSignShortNameContributorProcessesApi(TartareFixture):
+    valid_process = {
+        'type': 'HeadsignShortName',
+        'input_data_source_ids': ['dsid'],
+        'sequence': 0
+    }
+
     def test_post_contributor_process_wrong_input(self):
         self.init_contributor('cid', 'dsid', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
-        raw = self.add_process_to_contributor({
-            'type': 'HeadsignShortName',
-            'input_data_source_ids': ['dsid'],
-            'sequence': 0
-        }, 'cid', check_success=False)
+        raw = self.add_process_to_contributor(self.valid_process, 'cid', check_success=False)
         self.assert_process_validation_error_global(
             raw, 'input_data_source_ids',
             'input data source in process "HeadsignShortName" should be of data format "{}", found "{}"'.format(
@@ -225,11 +121,7 @@ class TestHeadSignShortNameContributorProcessesApi(TartareFixture):
 
     def test_post_contributor_process_ok(self):
         self.init_contributor('cid', 'dsid', 'whatever')
-        self.add_process_to_contributor({
-            'type': 'HeadsignShortName',
-            'input_data_source_ids': ['dsid'],
-            'sequence': 0
-        }, 'cid')
+        self.add_process_to_contributor(self.valid_process, 'cid')
 
 
 class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
@@ -281,7 +173,7 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error(
             raw, 'configuration_data_sources',
-            'configuration_data_sources should contain a "perimeter" data source')
+            'configuration_data_sources should contain a "perimeter" and a "lines_referential" data source and only that')
 
     def test_post_contributor_process_wrong_tr_perimeter(self):
         self.init_contributor('cid', 'dsid', 'whatever')
@@ -307,7 +199,7 @@ class TestComputeExternalSettingsContributorProcessesApi(TartareFixture):
         }, 'cid', check_success=False)
         self.assert_process_validation_error(
             raw, 'configuration_data_sources',
-            'configuration_data_sources should contain a "lines_referential" data source')
+            'configuration_data_sources should contain a "perimeter" and a "lines_referential" data source and only that')
 
     def test_post_contributor_process_wrong_lines_referential(self):
         self.init_contributor('cid', 'dsid', 'whatever')
@@ -403,7 +295,6 @@ class TestRuspellContributorProcessesApi(TartareFixture):
         'sequence': 0,
         'configuration_data_sources': [
             {'name': 'ruspell_config', 'ids': ['ruspell_config_ds']},
-            # {'name': 'geographic_data', 'ids': ['bano1_ds', 'osm1_ds']},
         ]
     }
 
@@ -472,3 +363,98 @@ class TestRuspellContributorProcessesApi(TartareFixture):
                                   data_type=DATA_TYPE_GEOGRAPHIC, data_format=geo_data_source['data_format'])
         self.add_data_source_to_contributor('cid', 'ruspell_config_ds', 'url', DATA_FORMAT_RUSPELL_CONFIG)
         self.add_process_to_contributor(self.valid_process, 'cid')
+
+
+class TestContributorProcessesApi(TartareFixture):
+    process_with_configuration = {
+        'ComputeDirections': {'mandatory': ['directions'], 'optional': []},
+        'Ruspell': {'mandatory': ['ruspell_config'], 'optional': ['geographic_data']},
+        'ComputeExternalSettings': {'mandatory': ['perimeter', 'lines_referential'], 'optional': []},
+    }
+
+    @pytest.mark.parametrize("configuration_data_sources", [
+        [],
+        [{'name': 'useless', 'ids': ['config-id']}],
+        [{'name': 'useless', 'ids': ['config-id']}, {'name': 'other', 'ids': ['toto']}],
+    ])
+    def test_post_contributor_process_wrong_configuration_data_sources(self, configuration_data_sources):
+        for process_type, configuration_params in self.process_with_configuration.items():
+            configuration_keys = configuration_params['mandatory']
+            contributor_id = 'cid_' + process_type
+            data_source_id = 'dsid_' + process_type
+            self.init_contributor(contributor_id, data_source_id, 'whatever')
+            message_part = 'a "' + '" and a "'.join(configuration_keys) + '"'
+            raw = self.add_process_to_contributor({
+                'type': process_type,
+                'input_data_source_ids': [data_source_id],
+                'configuration_data_sources': configuration_data_sources,
+                'sequence': 0
+            }, contributor_id, check_success=False)
+            optional_part = ' and possibly some of "{}" data source'.format(
+                ','.join(configuration_params['optional'])) if configuration_params['optional'] else ' and only that'
+            self.assert_process_validation_error(
+                raw, 'configuration_data_sources',
+                'configuration_data_sources should contain {} data source{}'.format(message_part, optional_part))
+
+    def test_post_contributor_process_no_configuration_data_sources(self):
+        for process_type, _ in self.process_with_configuration.items():
+            contributor_id = 'cid_' + process_type
+            data_source_id = 'dsid_' + process_type
+            self.init_contributor(contributor_id, data_source_id, 'whatever')
+            raw = self.add_process_to_contributor({
+                'type': process_type,
+                'input_data_source_ids': [data_source_id],
+                'sequence': 0
+            }, contributor_id, check_success=False)
+            self.assert_process_validation_error(raw, 'configuration_data_sources', 'Missing data for required field.')
+
+    @pytest.mark.parametrize("input_data_source_ids,message", [
+        ('wrong_type', 'Not a valid list.'),
+        ([], 'input_data_source_ids should contains one and only one data source id'),
+        (['id1', 'id2'], 'input_data_source_ids should contains one and only one data source id'),
+        (['id1', 'id2', 'id3'], 'input_data_source_ids should contains one and only one data source id'),
+    ])
+    def test_post_contributor_process_invalid_input_data_source_ids(self, input_data_source_ids, message):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeDirections',
+            'input_data_source_ids': input_data_source_ids,
+            'configuration_data_sources': [
+                {'name': 'directions', 'ids': ['config-id']}
+            ],
+            'sequence': 0
+        }, 'cid', check_success=False)
+        details = self.assert_failed_call(raw)
+        assert details == {'error': {'processes': {'0': {'input_data_source_ids': [message]}}},
+                           'message': 'Invalid arguments'}
+
+    def test_post_contributor_process_unknown_input_data_source_ids(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'config-id', 'whatever', DATA_FORMAT_DIRECTION_CONFIG)
+        raw = self.add_process_to_contributor({
+            'type': 'ComputeDirections',
+            'input_data_source_ids': ['unknown'],
+            'configuration_data_sources': [
+                {'name': 'directions', 'ids': ['config-id']}
+            ],
+            'sequence': 0
+        }, 'cid', check_success=False)
+        self.assert_process_validation_error_global(
+            raw, 'input_data_source_ids',
+            'data source referenced by "unknown" in process "ComputeDirections" not found')
+
+    @pytest.mark.parametrize("valid_process,message", [
+        (TestComputeDirectionContributorProcessesApi.valid_process,
+         'configuration_data_sources should contain a "directions" data source and only that'),
+        (TestComputeExternalSettingsContributorProcessesApi.valid_process,
+         'configuration_data_sources should contain a "perimeter" and a "lines_referential" data source and only that'),
+        (TestRuspellContributorProcessesApi.valid_process,
+         'configuration_data_sources should contain a "ruspell_config" data source and possibly some of "geographic_data" data source'),
+    ])
+    def test_process_with_unrecognized_config_data_source(self, valid_process, message):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        process = deepcopy(valid_process)
+        process['configuration_data_sources'].append({'name': 'invalid', 'ids': ['whatever']})
+        raw = self.add_process_to_contributor(process, 'cid', check_success=False)
+        self.assert_process_validation_error(raw, 'configuration_data_sources', message)
