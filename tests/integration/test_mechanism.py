@@ -308,24 +308,6 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
-    def assert_ods_ok(self, coverage_id, target_id):
-        target_grid_fs_id = self.get_gridfs_id_from_data_source_of_coverage(coverage_id, target_id)
-
-        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
-        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
-
-        with app.app_context():
-            ods_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
-            assert ods_zip_file.filename == expected_filename
-            with ZipFile(ods_zip_file, 'r') as ods_zip, tempfile.TemporaryDirectory() as tmp_dirname:
-                ods_zip.extract(metadata_file_name, tmp_dirname)
-                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id),
-                                              '{}_GTFS.zip'.format(coverage_id),
-                                              '{}_NTFS.zip'.format(coverage_id)]
-                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
-                metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_text_files_equals(metadata, fixture)
-
     def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor_id, data_source_id))
         if check_success:

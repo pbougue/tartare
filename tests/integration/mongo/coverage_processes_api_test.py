@@ -28,20 +28,39 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from tartare.core.constants import DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
+import pytest
+
 from tests.integration.test_mechanism import TartareFixture
 
 
 class TestComputeODSCoverageProcessesApi(TartareFixture):
-    def test_post_coverage(self):
-        self.init_contributor('cid1', 'dsid1', 'whatever', data_format=DATA_FORMAT_GTFS)
-        self.init_contributor('cid2', 'dsid2', 'whatever', data_format=DATA_FORMAT_NTFS)
+    @pytest.mark.parametrize("input_data_source_ids,message", [
+        ('wrong_type', 'Not a valid list.'),
+        ([], 'input_data_source_ids should contains more than one data source id'),
+    ])
+    def test_post_coverage_with_process_invalid_input_data_source_ids(self, input_data_source_ids, message):
+        self.init_contributor('cid', 'dsid', 'whatever')
         process = {
             'id': 'compute-ods',
             'type': 'ComputeODS',
-            'input_data_source_ids': ['dsid1', 'dsid2'],
+            'input_data_source_ids': input_data_source_ids,
             "target_data_source_id": "ods",
             'sequence': 0
         }
-        self.init_coverage('cov_id', processes=[process])
+        raw = self.init_coverage('cov_id', processes=[process], check_success=False)
+        details = self.assert_failed_call(raw)
+        assert details == {'error': {'processes': {'0': {'input_data_source_ids': [message]}}},
+                           'message': 'Invalid arguments'}
 
+    def test_post_coverage_with_process_no_target_data_source_id(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        process = {
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': ['ds_1'],
+            'sequence': 0
+        }
+        raw = self.init_coverage('cov_id', processes=[process], check_success=False)
+        details = self.assert_failed_call(raw)
+        assert details == {'error': {'processes': {'0': {'target_data_source_id': ['Missing data for required field.']}}},
+                           'message': 'Invalid arguments'}

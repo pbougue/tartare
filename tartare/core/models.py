@@ -1353,13 +1353,23 @@ class MongoComputeDirectionsProcessSchema(MongoNewProcessSchema):
 
 
 class MongoComputeODSProcessSchema(MongoNewProcessSchema):
+    target_data_source_id = fields.String(required=True)
+
     @post_load
     def build(self, data: dict) -> ComputeODSProcess:
         return ComputeODSProcess(**data)
 
+    @validates('target_data_source_id')
+    def validate_target_data_source_id(self, target_data_source_id: str) -> None:
+        import logging
+        logging.getLogger('TARGET').debug(target_data_source_id)
+        # if target_data_source_id:
+        #     raise ValidationError('input_data_source_ids should contains more than one data source id')
+
     @validates('input_data_source_ids')
     def validate_input_data_source_ids(self, input_data_source_ids: List[str]) -> None:
-        pass
+        if not input_data_source_ids:
+            raise ValidationError('input_data_source_ids should contains more than one data source id')
 
 
 class MongoProcessSchema(OneOfSchema):

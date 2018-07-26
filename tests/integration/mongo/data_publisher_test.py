@@ -33,6 +33,7 @@ import ftplib
 import json
 import os
 import tempfile
+from zipfile import ZipFile
 
 import mock
 import pytest
@@ -41,7 +42,8 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file
+from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file, \
+    _get_file_fixture_full_path, assert_text_files_equals
 
 
 class TestDataPublisher(TartareFixture):
@@ -193,6 +195,109 @@ class TestDataPublisher(TartareFixture):
         assert '{coverage_id}.zip'.format(coverage_id=coverage_id) in directory_content
         session.delete('{directory}/{coverage_id}.zip'.format(directory=directory, coverage_id=coverage_id))
         session.rmd(directory)
+
+    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('requests.post')
+    @mock.patch('requests.get')
+    @freeze_time("2018-05-14")
+    def test_process_compute_ods_with_metadata_fusio(self, fusio_get, fusio_post, wait_for_action_terminated,
+                                                     replace_url_hostname_from_url, init_http_download_server, init_ftp_upload_server):
+        contributor_id = 'id_test'
+        coverage_id = 'my-coverage-id'
+        sample_data = 'some_archive.zip'
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename=sample_data,
+                              path='gtfs')
+        self.init_contributor(contributor_id, "my_gtfs", url)
+        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
+        processes = []
+        input_data_source_ids = []
+        for target_data_format in [DATA_FORMAT_GTFS, DATA_FORMAT_NTFS]:
+            target_id = 'my_{}_data_source'.format(target_data_format)
+            input_data_source_ids.append(target_id)
+            processes.append({
+                "id": "fusio_export",
+                "type": "FusioExport",
+                "params": {
+                    "url": fusio_end_point,
+                    "target_data_source_id": target_id,
+                    "export_type": target_data_format
+                },
+                "sequence": 0
+            })
+        processes.append({
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': input_data_source_ids,
+            "target_data_source_id": "ods_target_id",
+            'sequence': 2
+        })
+        publication_platform = {
+            "sequence": 0,
+            "type": "ods",
+            "protocol": "ftp",
+            "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            "options": {
+                "authent": {
+                    "username": init_ftp_upload_server.user,
+                    "password": init_ftp_upload_server.password
+                }
+            },
+            "input_data_source_ids": ["ods_target_id"]
+        }
+        environments = {
+            'production': {
+                'sequence': 0,
+                'name': 'production',
+                'publication_platforms': [publication_platform]
+            }
+        }
+        license = {
+            "name": 'my license',
+            "url": 'http://license.org/mycompany'
+        }
+        self.init_coverage(coverage_id, ["my_gtfs"], processes, environments, license)
+
+        fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
+        fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
+
+        replace_url_hostname_from_url.side_effect = [fetch_url_gtfs, fetch_url_ntfs]
+        fusio_post.side_effect = [
+            get_response(200, self.get_fusio_response_from_action_id('gtfs-action-id')),
+            get_response(200, self.get_fusio_response_from_action_id('ntfs-action-id'))
+        ]
+        fusio_get.side_effect = [
+            get_response(200, self.get_fusio_export_url_response_from_action_id('gtfs-action-id',
+                                                                                "http://fusio/whatever")),
+            get_response(200, self.get_fusio_export_url_response_from_action_id('ntfs-action-id',
+                                                                                "http://fusio/whatever"))
+        ]
+        self.full_export(contributor_id, coverage_id)
+
+        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
+        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                             init_ftp_upload_server.password)
+
+        directory_content = session.nlst()
+        assert len(directory_content) == 1
+        assert expected_filename in directory_content
+        # check that meta data from file on ftp server are correct
+        with tempfile.TemporaryDirectory() as tmp_dirname:
+            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete(expected_filename)
+            with ZipFile(transfered_full_name, 'r') as ods_zip:
+                ods_zip.extract(metadata_file_name, tmp_dirname)
+                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id), '{}_GTFS.zip'.format(coverage_id),
+                                              '{}_NTFS.zip'.format(coverage_id)]
+                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
+                metadata = os.path.join(tmp_dirname, metadata_file_name)
+                assert_text_files_equals(metadata, fixture)
+        session.quit()
 
     @freeze_time("2015-08-10")
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])

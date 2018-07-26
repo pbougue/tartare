@@ -575,8 +575,26 @@ class TestFusioSendPtExternalSettingsProcess(TartareFixture):
 
 
 class TestComputeODSProcess(TartareFixture):
+    def assert_ods_ok(self, coverage_id, target_id):
+        target_grid_fs_id = self.get_gridfs_id_from_data_source_of_coverage(coverage_id, target_id)
+
+        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
+
+        with app.app_context():
+            ods_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
+            assert ods_zip_file.filename == expected_filename
+            with ZipFile(ods_zip_file, 'r') as ods_zip, tempfile.TemporaryDirectory() as tmp_dirname:
+                ods_zip.extract(metadata_file_name, tmp_dirname)
+                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id),
+                                              '{}_GTFS.zip'.format(coverage_id),
+                                              '{}_NTFS.zip'.format(coverage_id)]
+                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
+                metadata = os.path.join(tmp_dirname, metadata_file_name)
+                assert_text_files_equals(metadata, fixture)
+
     @freeze_time("2018-05-14")
-    def test_publish_ftp_ods(self, init_http_download_server):
+    def test_process_compute_ods(self, init_http_download_server):
         cov_id = 'my-coverage-id'
         self.init_contributor('cid',
                               'ds_gtfs',
@@ -604,64 +622,3 @@ class TestComputeODSProcess(TartareFixture):
         self.full_export('cid', cov_id)
 
         self.assert_ods_ok(cov_id, "target_id")
-
-    @mock.patch('tartare.processes.fusio.Fusio.replace_url_hostname_from_url')
-    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
-    @mock.patch('requests.post')
-    @mock.patch('requests.get')
-    @freeze_time("2018-05-14")
-    def test_publish_ftp_ods_with_metadata_fusio(self, fusio_get, fusio_post, wait_for_action_terminated,
-                                                 replace_url_hostname_from_url, init_http_download_server):
-        contributor_id = 'id_test'
-        coverage_id = 'my-coverage-id'
-        sample_data = 'some_archive.zip'
-        url = self.format_url(ip=init_http_download_server.ip_addr,
-                              filename=sample_data,
-                              path='gtfs')
-        self.init_contributor(contributor_id, "my_gtfs", url)
-        fusio_end_point = 'http://fusio_host/cgi-bin/fusio.dll/'
-        processes = []
-        input_data_source_ids = []
-        for target_data_format in [DATA_FORMAT_GTFS, DATA_FORMAT_NTFS]:
-            target_id = 'my_{}_data_source'.format(target_data_format)
-            input_data_source_ids.append(target_id)
-            processes.append({
-                "id": "fusio_export",
-                "type": "FusioExport",
-                "params": {
-                    "url": fusio_end_point,
-                    "target_data_source_id": target_id,
-                    "export_type": target_data_format
-                },
-                "sequence": 0
-            })
-        processes.append({
-            'id': 'compute-ods',
-            'type': 'ComputeODS',
-            'input_data_source_ids': input_data_source_ids,
-            "target_data_source_id": "ods_target_id",
-            'sequence': 2
-        })
-        license = {
-            "name": 'my license',
-            "url": 'http://license.org/mycompany'
-        }
-        self.init_coverage(coverage_id, ["my_gtfs"], processes, license=license)
-
-        fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
-        fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
-
-        replace_url_hostname_from_url.side_effect = [fetch_url_gtfs, fetch_url_ntfs]
-        fusio_post.side_effect = [
-            get_response(200, self.get_fusio_response_from_action_id('gtfs-action-id')),
-            get_response(200, self.get_fusio_response_from_action_id('ntfs-action-id'))
-        ]
-        fusio_get.side_effect = [
-            get_response(200, self.get_fusio_export_url_response_from_action_id('gtfs-action-id',
-                                                                                "http://fusio/whatever")),
-            get_response(200, self.get_fusio_export_url_response_from_action_id('ntfs-action-id',
-                                                                                "http://fusio/whatever"))
-        ]
-        self.full_export(contributor_id, coverage_id)
-
-        self.assert_ods_ok(coverage_id, "ods_target_id")
