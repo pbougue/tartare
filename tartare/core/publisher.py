@@ -28,23 +28,16 @@
 # www.navitia.io
 import ftplib
 import logging
-import os
-import tempfile
-from abc import ABCMeta, abstractmethod
-from datetime import datetime
+from abc import ABCMeta
 from typing import List, BinaryIO, Optional
-from zipfile import ZipFile, ZIP_DEFLATED
 
 import requests
 
 from tartare import app
-from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_FORMAT_POLY_FILE, PLATFORM_TYPE_NAVITIA, \
-    PLATFORM_TYPE_ODS, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
+from tartare.core.constants import PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP
 from tartare.core.gridfs_handler import GridFsHandler
-from tartare.core.models import Coverage, CoverageExport, DataSource, Platform, PlatformOptions, PublicationPlatform
-from tartare.exceptions import ProtocolException, ProtocolManagerException, PublisherManagerException, \
-    PublisherException
-from tartare.helper import dic_to_memory_csv
+from tartare.core.models import DataSource, Platform, PlatformOptions
+from tartare.exceptions import ProtocolException, ProtocolManagerException
 
 logger = logging.getLogger(__name__)
 
@@ -85,17 +78,20 @@ class FtpProtocol(AbstractProtocol):
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
                                                                               directory=directory))
-        if self.options and self.options.authent:
-            session = ftplib.FTP(self.url, self.options.authent.username, self.options.authent.password)
-        else:
-            session = ftplib.FTP(self.url)
-        if directory:
-            try:
+        session = None
+        try:
+            if self.options and self.options.authent:
+                session = ftplib.FTP(self.url, self.options.authent.username, self.options.authent.password)
+            else:
+                session = ftplib.FTP(self.url)
+
+            if directory:
                 session.cwd(directory)
-            except ftplib.error_perm as message:
-                logger.error(str(message))
+        except ftplib.error_perm as message:
+            logger.error(str(message))
+            if session:
                 session.quit()
-                raise ProtocolException(message)
+            raise ProtocolException(message)
 
         full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)
         session.quit()
@@ -121,55 +117,15 @@ class ProtocolManager:
         return publisher_class(platform.url, platform.options)
 
 
-class AbstractPublisher(metaclass=ABCMeta):
-    @abstractmethod
-    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
-        pass
+class Publisher(metaclass=ABCMeta):
+    def __init__(self, protocol_uploader: AbstractProtocol) -> None:
+        self.protocol_uploader = protocol_uploader
 
+    def publish(self, input_data_source_ids: List[str]) -> None:
+        for input_data_source_id in input_data_source_ids:
+            data_source = DataSource.get_one(input_data_source_id)
+            data_set = data_source.get_last_data_set()
+            data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
+            data_set_file_name = data_set_file.filename
 
-class NavitiaPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
-        filename = "{coverage}.zip".format(coverage=coverage.id)
-        protocol_uploader.publish(file, filename)
-        for data_source_id in Coverage.get(coverage_export.coverage_id).input_data_source_ids:
-            data_source_obj = DataSource.get_one(data_source_id)
-            # osm and poly file are published only once by coverage because of the following constraints:
-            # - one geo contributor allowed by coverage
-            # - one osm data source allowed by geo contributor
-            # - one poly data source allowed by geo contributor
-            # see tartare.decorators.check_contributor_data_source_osm_and_poly_constraint
-            if data_source_obj.data_format == DATA_FORMAT_OSM_FILE or \
-                            data_source_obj.data_format == DATA_FORMAT_POLY_FILE:
-                data_set = data_source_obj.get_last_data_set()
-                file_to_publish = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
-                protocol_uploader.publish(file_to_publish, file_to_publish.filename)
-
-
-class ODSPublisher(AbstractPublisher):
-    def publish(self, protocol_uploader: AbstractProtocol, file: BinaryIO, coverage: Coverage,
-                coverage_export: CoverageExport, input_data_source_ids: Optional[List[str]] = None) -> None:
-        if not input_data_source_ids:
-            raise PublisherException('input_data_source_ids should be use for ods publication')
-        input_data_source_id = input_data_source_ids[0]
-        data_source = DataSource.get_one(input_data_source_id)
-        data_set = data_source.get_last_data_set()
-        data_set_file = GridFsHandler().get_file_from_gridfs(data_set.gridfs_id)
-        data_set_file_name = data_set_file.filename
-        protocol_uploader.publish(data_set_file, data_set_file_name)
-
-
-class PublisherManager:
-    publishers_by_type = {
-        PLATFORM_TYPE_NAVITIA: NavitiaPublisher(),
-        PLATFORM_TYPE_ODS: ODSPublisher(),
-    }
-
-    @classmethod
-    def select_from_publication_platform(cls, platform: PublicationPlatform) -> AbstractPublisher:
-        if platform.type not in cls.publishers_by_type:
-            error_message = 'unknown platform type "{type}"'.format(type=platform.type)
-            raise PublisherManagerException(error_message)
-
-        return cls.publishers_by_type[platform.type]
+            self.protocol_uploader.publish(data_set_file, data_set_file_name)

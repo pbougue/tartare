@@ -228,52 +228,6 @@ class TestCoverageApi(TartareFixture):
         assert coverage['environments']['integration']['name'] == 'sim'
         assert coverage['environments']['integration']['sequence'] == 0
 
-    def test_post_coverage_with_invalid_platorm_type(self):
-        post_data = {
-            "id": "id_test",
-            "name": "name_test",
-            "environments": {
-                "preproduction": {
-                    "name": "preproduction",
-                    "sequence": 0,
-                    "publication_platforms": [
-                        {
-                            "type": "invalid_type",
-                            "protocol": "http",
-                            "url": "ftp.ods.com",
-                            "sequence": 0,
-                            "options": {
-                                "authent": {
-                                    "username": "test"
-                                },
-                            },
-                            "directory": "/"
-                        }
-                    ]
-                }
-            }
-        }
-
-        raw = self.post('/coverages', self.dict_to_json(post_data))
-        assert raw.status_code == 400
-        r = self.json_to_dict(raw)
-        assert 'error' in r
-        expected_error = {
-            'error': {
-                'environments': {
-                    'preproduction': {
-                        'publication_platforms': {
-                            '0': {
-                                'type': ['choice "invalid_type" not in possible values (navitia, ods).']
-                            }
-                        }
-                    }
-                }
-            },
-            'message': 'Invalid arguments'
-        }
-        assert r == expected_error
-
     def test_post_coverage_with_invalid_platorm_protocol(self):
         post_data = {
             "id": "id_test",
@@ -284,7 +238,6 @@ class TestCoverageApi(TartareFixture):
                     "sequence": 0,
                     "publication_platforms": [
                         {
-                            "type": "navitia",
                             "protocol": "invalid_type",
                             "url": "ftp.ods.com",
                             "sequence": 0,
@@ -320,7 +273,7 @@ class TestCoverageApi(TartareFixture):
         }
         assert r == expected_error
 
-    def test_post_coverage_with_valid_platorm_protocol_and_type(self):
+    def test_post_coverage_with_valid_platorm_protocol(self):
         post_data = {
             "id": "id_test",
             "name": "name_test",
@@ -330,7 +283,6 @@ class TestCoverageApi(TartareFixture):
                     "sequence": 0,
                     "publication_platforms": [
                         {
-                            "type": "navitia",
                             "protocol": "ftp",
                             "url": "ftp.ods.com",
                             "sequence": 0,
@@ -366,7 +318,6 @@ class TestCoverageApi(TartareFixture):
         assert platform["sequence"] == 0
         assert platform["options"] == {'directory': None, 'authent': {'username': 'test', 'password': None}}
         assert platform["protocol"] == 'ftp'
-        assert platform["type"] == 'navitia'
         assert platform["url"] == 'ftp.ods.com'
 
     def test_delete_coverage_returns_success(self):
@@ -431,7 +382,6 @@ class TestCoverageApi(TartareFixture):
                     "publication_platforms": [
                         {
                             "sequence": 0,
-                            "type": "ods",
                             "protocol": "ftp",
                             "url": "whatever.com",
                             "options": {
@@ -636,13 +586,11 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 0,
                 "publication_platforms": [
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com",
                         "sequence": 0
                     },
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com.backup",
                         "sequence": 1
@@ -656,7 +604,6 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 2,
                 "publication_platforms": [
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com.new",
                         "sequence": 0
@@ -668,14 +615,12 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 1,
                 "publication_platforms": [
                     {
-                        "type": "navitia",
                         "protocol": "http",
                         "url": "http://tyr.integ/deploy",
                         "sequence": 1,
                         "input_data_source_ids": ['id-1']
                     },
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com.integration",
                         "sequence": 2
@@ -690,15 +635,15 @@ class TestCoverageApi(TartareFixture):
                         'sequence': 2, 'current_ntfs_id': None, 'publication_platforms': [
                             {'url': 'ftp.ods.com.new', 'sequence': 0, 'options': None, 'protocol': 'ftp',
                              'input_data_source_ids': [],
-                             'type': 'ods'}], 'name': 'production'
+                             }], 'name': 'production'
                     },
                     'integration': {
                         'sequence': 1, 'current_ntfs_id': None,
                         'publication_platforms': [
                             {'url': 'http://tyr.integ/deploy', 'sequence': 1, 'options': None, 'protocol': 'http',
-                             'input_data_source_ids': ['id-1'], 'type': 'navitia'},
+                             'input_data_source_ids': ['id-1']},
                             {'url': 'ftp.ods.com.integration', 'sequence': 2, 'options': None, 'protocol': 'ftp',
-                             'input_data_source_ids': [], 'type': 'ods'}
+                             'input_data_source_ids': []}
                         ],
                         'name': 'integration'}
                 },
@@ -722,7 +667,6 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 0,
                 "publication_platforms": [
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com",
                         "sequence": 0,
@@ -732,7 +676,6 @@ class TestCoverageApi(TartareFixture):
             }
         })
         ods_platform = self.get_coverage(cov_id)['environments']['production']['publication_platforms'][0]
-        assert ods_platform['type'] == 'ods'
         assert ods_platform['input_data_source_ids'] == ['my-ds-id']
 
     def test_put_coverage_with_input_data_source_ids(self, coverage, data_source):
@@ -752,7 +695,6 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 0,
                 "publication_platforms": [
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com",
                         "sequence": 0,
@@ -786,7 +728,6 @@ class TestCoverageApi(TartareFixture):
                 'sequence': 0,
                 "publication_platforms": [
                     {
-                        "type": "ods",
                         "protocol": "ftp",
                         "url": "ftp.ods.com",
                         "sequence": 0,

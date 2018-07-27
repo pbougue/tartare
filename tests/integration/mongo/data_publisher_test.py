@@ -33,7 +33,6 @@ import ftplib
 import json
 import os
 import tempfile
-from zipfile import ZipFile
 
 import mock
 import pytest
@@ -42,8 +41,7 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file, \
-    _get_file_fixture_full_path, assert_text_files_equals
+from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file
 
 
 class TestDataPublisher(TartareFixture):
@@ -59,7 +57,9 @@ class TestDataPublisher(TartareFixture):
                     "id": 'ds_' + data_format,
                     "name": 'ds' + data_format,
                     "data_format": data_format,
+
                     "input": {
+                        "expected_file_name": "default.zip",
                         "type": "auto",
                         "url": url,
                         "frequency": {
@@ -104,7 +104,6 @@ class TestDataPublisher(TartareFixture):
         coverage_id = 'default'
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
             "url": "http://bob/v0/jobs"
         }
@@ -132,10 +131,10 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, url)
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "ftp",
             # url without ftp:// works as well
             "url": init_ftp_upload_server.ip_addr,
+            "input_data_source_ids": ["ds_gtfs"],
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,
@@ -174,9 +173,9 @@ class TestDataPublisher(TartareFixture):
         # see password : tests/fixtures/authent/ftp_upload_users/pureftpd.passwd
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "ftp",
             "url": "ftp://" + init_ftp_upload_server.ip_addr,
+            "input_data_source_ids": ["ds_gtfs"],
             "options": {
                 "authent": {
                     "username": ftp_username,
@@ -235,7 +234,6 @@ class TestDataPublisher(TartareFixture):
         })
         publication_platform = {
             "sequence": 0,
-            "type": "ods",
             "protocol": "ftp",
             "url": "ftp://" + init_ftp_upload_server.ip_addr,
             "options": {
@@ -315,9 +313,9 @@ class TestDataPublisher(TartareFixture):
         }
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
-            "url": url
+            "url": url,
+            "input_data_source_ids": ['ds_gtfs']
         }
         for idx, environment in enumerate(publication_envs):
             temp_platform = copy.copy(publication_platform)
@@ -359,10 +357,12 @@ class TestDataPublisher(TartareFixture):
         for idx in sequences:
             # trick: url of platform contains sequence number
             publication_platforms.append({
-                "type": "navitia",
                 "sequence": idx,
                 "protocol": "http",
-                "url": url.format(seq=idx)
+                "url": url.format(seq=idx),
+                "input_data_source_ids": [
+                    'ds_gtfs'
+                ],
             })
         coverage = {
             "input_data_source_ids": [
@@ -406,9 +406,11 @@ class TestDataPublisher(TartareFixture):
         }
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
-            "url": url
+            "url": url,
+            "input_data_source_ids": [
+                'ds_gtfs'
+            ],
         }
         for idx, environment in enumerate(publication_envs):
             coverage['environments'][environment] = {
@@ -426,13 +428,13 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'].startswith('publish_data preproduction navitia on '), print(job)
+        assert job['step'].startswith('publish_data preproduction on '), print(job)
         assert job['error_message'] == 'error during publishing on http://whatever.fr/pub, status code => 500', print(
             job)
         assert job['state'] == 'failed'
 
     @mock.patch('requests.post', side_effect=[get_response(200)])
-    def test_publish_navitia(self, post_mock, init_http_download_server):
+    def test_publish_http(self, post_mock, init_http_download_server):
         publish_url = "http://tyr.whatever.com"
         contributor_id = 'fr-idf'
         coverage_id = 'default'
@@ -441,9 +443,11 @@ class TestDataPublisher(TartareFixture):
         self._create_contributor(contributor_id, fetch_url)
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
             "url": publish_url,
+            "input_data_source_ids": [
+                'ds_gtfs'
+            ],
         }
         self._create_coverage(coverage_id, 'ds_gtfs', publication_platform)
 
@@ -453,7 +457,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'].startswith('publish_data production navitia on '), print(job)
+        assert job['step'].startswith('publish_data production on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
@@ -475,9 +479,11 @@ class TestDataPublisher(TartareFixture):
                                  data_type=DATA_TYPE_GEOGRAPHIC)
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
             "url": publish_url,
+            "input_data_source_ids": [
+                'ds_gtfs', 'ds_'+data_format
+            ],
         }
         self._create_coverage(coverage_id, ['ds_gtfs', 'ds_' + data_format], publication_platform)
 
@@ -489,7 +495,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'].startswith('publish_data production navitia on '), print(job)
+        assert job['step'].startswith('publish_data production on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
@@ -512,9 +518,11 @@ class TestDataPublisher(TartareFixture):
 
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
             "url": publish_url,
+            "input_data_source_ids": [
+                'gtfs_ds_id', 'poly_ds_id'
+            ],
         }
         self._create_coverage(coverage_id, ['gtfs_ds_id', 'poly_ds_id'], publication_platform)
 
@@ -526,7 +534,7 @@ class TestDataPublisher(TartareFixture):
 
         resp = self.get("/jobs/{}".format(self.json_to_dict(resp)['job']['id']))
         job = self.json_to_dict(resp)['jobs'][0]
-        assert job['step'].startswith('publish_data production navitia on '), print(job)
+        assert job['step'].startswith('publish_data production on '), print(job)
         assert job['error_message'] == '', print(job)
         assert job['state'] == 'done', print(job)
 
@@ -544,9 +552,11 @@ class TestDataPublisher(TartareFixture):
                                  data_type=DATA_TYPE_GEOGRAPHIC)
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "http",
             "url": publish_url,
+            "input_data_source_ids": [
+                'ds_'+data_format
+            ],
         }
         self._create_coverage(coverage_id, 'ds_' + data_format, publication_platform)
 
@@ -565,7 +575,7 @@ class TestDataPublisher(TartareFixture):
     def test_publish_modified_fixture_from_contributor_process(self, init_ftp_upload_server,
                                                                init_http_download_server):
         self.init_contributor('c1', 'ds1', self.format_url(init_http_download_server.ip_addr, 'minimal_gtfs.zip'),
-                              export_id='export_id')
+                              export_id='export_id', expected_file_name='cov_id.zip')
         self.add_process_to_contributor({
             "sequence": 0,
             "input_data_source_ids": ['ds1'],
@@ -576,9 +586,9 @@ class TestDataPublisher(TartareFixture):
         self.init_coverage('cov_id', input_data_source_ids=['export_id'])
         publication_platform = {
             "sequence": 0,
-            "type": "navitia",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
+            "input_data_source_ids": ['export_id'],
             "options": {
                 "authent": {
                     "username": init_ftp_upload_server.user,

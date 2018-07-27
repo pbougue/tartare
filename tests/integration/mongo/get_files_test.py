@@ -74,7 +74,6 @@ class TestGetFiles(TartareFixture):
                     "publication_platforms": [
                         {
                             "sequence": 0,
-                            "type": "navitia",
                             "protocol": "ftp",
                             "url": init_ftp_upload_server.ip_addr,
                             "options": {

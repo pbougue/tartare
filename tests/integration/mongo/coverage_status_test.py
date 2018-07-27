@@ -165,9 +165,9 @@ class TestCoverageStatus(TartareFixture):
         self.__create_contributor(init_http_download_server.ip_addr, 'contributor_automatic_update')
         publication_platform = {
             "sequence": 0,
-            "type": "ods",
             "protocol": "ftp",
             "url": init_ftp_upload_server.ip_addr,
+            "input_data_source_ids": ['contributor_automatic_update_export'],
             "options": {
                 "authent": {
                     "username": "bad_username",
@@ -186,7 +186,7 @@ class TestCoverageStatus(TartareFixture):
         assert last_active_job['action_type'] == 'automatic_update_coverage_export'
         assert last_active_job['error_message'] != ''
         assert last_active_job['state'] == 'failed'
-        assert last_active_job['step'].startswith('publish_data production ods on ')
+        assert last_active_job['step'].startswith('publish_data production on ')
 
     def test_status_successive_automatic_update(self, init_http_download_server):
         with freeze_time(datetime_from_string('2018-01-15 10:00:00 UTC')) as frozen_datetime:
