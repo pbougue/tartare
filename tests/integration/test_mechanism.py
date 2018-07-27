@@ -38,6 +38,7 @@ from zipfile import ZipFile
 import tartare
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_DEFAULT, DATA_TYPE_DEFAULT
+from tartare.core.gridfs_handler import GridFsHandler
 from tests.utils import _get_file_fixture_full_path, assert_text_files_equals, assert_content_equals_ref_file
 
 
@@ -307,30 +308,19 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
-    def assert_ods_uploaded_ok(self, init_ftp_upload_server, coverage_id):
+    def assert_ods_metadata(self, coverage_id, test_ods_file_exist):
         metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
-        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
-                             init_ftp_upload_server.password)
 
-        directory_content = session.nlst()
-        assert len(directory_content) == 1
-        assert expected_filename in directory_content
-        # check that meta data from file on ftp server are correct
-        with tempfile.TemporaryDirectory() as tmp_dirname:
-            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
-            with open(transfered_full_name, 'wb') as dest_file:
-                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
-                                   dest_file.write)
-                session.delete(expected_filename)
-            with ZipFile(transfered_full_name, 'r') as ods_zip:
-                ods_zip.extract(metadata_file_name, tmp_dirname)
+        with tempfile.TemporaryDirectory() as extract_path:
+            ods_zip_file = test_ods_file_exist(extract_path)
+
+            with ZipFile(ods_zip_file, 'r') as ods_zip:
+                ods_zip.extract(metadata_file_name, extract_path)
                 assert ods_zip.namelist() == ['{}.txt'.format(coverage_id), '{}_GTFS.zip'.format(coverage_id),
                                               '{}_NTFS.zip'.format(coverage_id)]
                 fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
-                metadata = os.path.join(tmp_dirname, metadata_file_name)
+                metadata = os.path.join(extract_path, metadata_file_name)
                 assert_text_files_equals(metadata, fixture)
-        session.quit()
 
     def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor_id, data_source_id))
@@ -360,6 +350,12 @@ class TartareFixture(object):
         return next(
             data_source['data_sets'][0]['gridfs_id'] for data_source in
             self.get_contributor(contributor_id)['data_sources']
+            if data_source['id'] == data_source_id)
+
+    def get_gridfs_id_from_data_source_of_coverage(self, coverage_id, data_source_id):
+        return next(
+            data_source['data_sets'][0]['gridfs_id'] for data_source in
+            self.get_coverage(coverage_id)['data_sources']
             if data_source['id'] == data_source_id)
 
     def assert_gridfs_equals_fixture(self, gridfs_id, fixture):

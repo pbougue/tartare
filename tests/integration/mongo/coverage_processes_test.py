@@ -34,9 +34,13 @@ from zipfile import ZipFile
 
 import mock
 import pytest
+from freezegun import freeze_time
 
+from tartare import app
 from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE, \
-    DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL
+    DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_GTFS, \
+    DATA_FORMAT_NTFS
+from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import get_response, assert_text_files_equals, _get_file_fixture_full_path, \
     assert_zip_contains_only_files_with_extensions
@@ -568,3 +572,44 @@ class TestFusioSendPtExternalSettingsProcess(TartareFixture):
                 assert_text_files_equals(os.path.join(tmp_dir_name, 'fusio_object_properties.txt'),
                                          _get_file_fixture_full_path(
                                              'prepare_external_settings/expected_fusio_object_properties.txt'))
+
+
+class TestComputeODSProcess(TartareFixture):
+    @freeze_time("2018-05-14")
+    def test_process_compute_ods(self, init_http_download_server):
+        cov_id = 'my-coverage-id'
+        self.init_contributor('cid',
+                              'ds_gtfs',
+                              self.format_url(init_http_download_server.ip_addr, 'some_archive.zip'),
+                              data_format=DATA_FORMAT_GTFS)
+        self.add_data_source_to_contributor('cid', 'ds_ntfs',
+                                            self.format_url(init_http_download_server.ip_addr, 'ntfs.zip', ''),
+                                            DATA_FORMAT_NTFS)
+
+        process = {
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': ['ds_gtfs', 'ds_ntfs'],
+            "target_data_source_id": "target_id",
+            'sequence': 0
+        }
+        self.init_coverage(cov_id,
+                           input_data_source_ids=['ds_gtfs', 'ds_ntfs'],
+                           processes=[process],
+                           license={
+                                "name": 'my license',
+                                "url": 'http://license.org/mycompany'
+                            })
+
+        self.full_export('cid', cov_id)
+
+        def test_ods_file_exist(_extract_path):
+            with app.app_context():
+                expected_filename = '{coverage_id}.zip'.format(coverage_id=cov_id)
+                target_grid_fs_id = self.get_gridfs_id_from_data_source_of_coverage(cov_id, "target_id")
+                ods_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
+                assert ods_zip_file.filename == expected_filename
+
+            return ods_zip_file
+
+        self.assert_ods_metadata(cov_id, test_ods_file_exist)

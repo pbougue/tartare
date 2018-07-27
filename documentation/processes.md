@@ -16,6 +16,7 @@ This page describes all the `Process`es that can be used in `Tartare`.
 [FusioExport](#fusioexport)  
 [FusioExportContributor](#fusioexportcontributor)  
 [FusioSendPtExternalSettings](#fusiosendptexternalsettings)  
+[ComputeODS](#ComputeODS)
 
 ## Contributor processes
 ### ComputeDirections
@@ -302,6 +303,46 @@ Note that `FusioDataUpdate` is not required.
    },
    "type":"FusioSendPtExternalSettings",
    "sequence":4
+}
+```
+
+### ComputeODS
+the process takes as input several data sets and generates as output a zip file containing 1 metadata TXT file and one ZIP file per data type.
+
+
+#### Parameters
+Field | Description |
+--- | ---
+input_data_source_ids | Array containing `Data Source` ids
+target_data_source_id | The `Data Source`'s name where the resulting `Data Set` will be stored
+
+#### Metadata
+
+There is one line per data set.
+
+Field | Description | Example
+--- | --- | ---
+ID | coverage-DATA_FORMAT | it-NTFS
+Description | A short description of the data set | Transport of Venezia (on ground)
+Format | Format of the data set | NTFS
+Download | Link to the data set |
+Validity start date | Validity start date of the data set | 20180701
+Validity end date | Validity end date of the data set | 20180831
+License | License of the data set | CC
+License link | License link of the data set | https://creativecommons.org/
+Size | Size of the data set in octet | 2123456
+Update date | Date when the data set was updated | 2018-07-23
+
+```json
+{
+  "input_data_source_ids": [
+    "your-gtfs-id",
+    "your-ntfs-id",
+  ],
+  "id": "compute_ods",
+  "target_data_source_id": "target_id",
+  "type":"ComputeODS",
+  "sequence":0
 }
 ```
 

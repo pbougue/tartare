@@ -34,3 +34,4 @@ from tartare.processes.coverage.fusio_export_contributor import FusioExportContr
 from tartare.processes.coverage.fusio_import import FusioImport
 from tartare.processes.coverage.fusio_preprod import FusioPreProd
 from tartare.processes.coverage.fusio_send_pt_external_settings import FusioSendPtExternalSettings
+from tartare.processes.coverage.compute_ods import ComputeODS

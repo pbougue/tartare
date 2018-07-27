@@ -33,6 +33,7 @@ import ftplib
 import json
 import os
 import tempfile
+from zipfile import ZipFile
 
 import mock
 import pytest
@@ -41,7 +42,8 @@ from freezegun import freeze_time
 from tartare.core.constants import DATA_FORMAT_OSM_FILE, DATA_TYPE_PUBLIC_TRANSPORT, DATA_TYPE_GEOGRAPHIC, \
     DATA_FORMAT_POLY_FILE, DATA_FORMAT_GTFS, DATA_FORMAT_NTFS
 from tests.integration.test_mechanism import TartareFixture
-from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file
+from tests.utils import mock_requests_post, get_response, assert_zip_file_equals_ref_zip_file, \
+    _get_file_fixture_full_path, assert_text_files_equals
 
 
 class TestDataPublisher(TartareFixture):
@@ -199,9 +201,8 @@ class TestDataPublisher(TartareFixture):
     @mock.patch('requests.post')
     @mock.patch('requests.get')
     @freeze_time("2018-05-14")
-    def test_publish_ftp_ods_with_metadata_fusio(self, fusio_get, fusio_post, wait_for_action_terminated,
-                                                 replace_url_hostname_from_url, init_http_download_server,
-                                                 init_ftp_upload_server):
+    def test_process_compute_ods_with_metadata_fusio(self, fusio_get, fusio_post, wait_for_action_terminated,
+                                                     replace_url_hostname_from_url, init_http_download_server, init_ftp_upload_server):
         contributor_id = 'id_test'
         coverage_id = 'my-coverage-id'
         sample_data = 'some_archive.zip'
@@ -225,6 +226,13 @@ class TestDataPublisher(TartareFixture):
                 },
                 "sequence": 0
             })
+        processes.append({
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': input_data_source_ids,
+            "target_data_source_id": "ods_target_id",
+            'sequence': 2
+        })
         publication_platform = {
             "sequence": 0,
             "type": "ods",
@@ -236,7 +244,7 @@ class TestDataPublisher(TartareFixture):
                     "password": init_ftp_upload_server.password
                 }
             },
-            "input_data_source_ids": input_data_source_ids
+            "input_data_source_ids": ["ods_target_id"]
         }
         environments = {
             'production': {
@@ -266,45 +274,26 @@ class TestDataPublisher(TartareFixture):
                                                                                 "http://fusio/whatever"))
         ]
         self.full_export(contributor_id, coverage_id)
-        self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
 
-    @freeze_time("2018-05-14")
-    def test_publish_ftp_ods_with_metadata(self, init_http_download_server,
-                                           init_ftp_upload_server):
-        contributor_id = 'id_test'
-        coverage_id = 'my-coverage-id'
-        sample_data = 'some_archive.zip'
-        fetch_url_gtfs = self.format_url(ip=init_http_download_server.ip_addr, filename=sample_data)
-        fetch_url_ntfs = self.format_url(ip=init_http_download_server.ip_addr, path='', filename='ntfs.zip')
-        self.init_contributor(contributor_id, "my_gtfs", fetch_url_gtfs)
-        self.add_data_source_to_contributor(contributor_id, 'my_ntfs', fetch_url_ntfs, DATA_FORMAT_NTFS)
-        publication_platform = {
-            "sequence": 0,
-            "type": "ods",
-            "protocol": "ftp",
-            "url": "ftp://" + init_ftp_upload_server.ip_addr,
-            "options": {
-                "authent": {
-                    "username": init_ftp_upload_server.user,
-                    "password": init_ftp_upload_server.password
-                }
-            },
-            "input_data_source_ids": ['my_gtfs', 'my_ntfs']
-        }
-        environments = {
-            'production': {
-                'sequence': 0,
-                'name': 'production',
-                'publication_platforms': [publication_platform]
-            }
-        }
-        license = {
-            "name": 'my license',
-            "url": 'http://license.org/mycompany'
-        }
-        self.init_coverage(coverage_id, ["my_gtfs", "my_ntfs"], [], environments, license)
-        self.full_export(contributor_id, coverage_id)
-        self.assert_ods_uploaded_ok(init_ftp_upload_server, coverage_id)
+        def test_ods_file_exist(extract_path):
+            expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
+            session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                                 init_ftp_upload_server.password)
+
+            directory_content = session.nlst()
+            assert len(directory_content) == 1
+            assert expected_filename in directory_content
+
+            transfered_full_name = os.path.join(extract_path, 'transfered_file.zip')
+            with open(transfered_full_name, 'wb') as dest_file:
+                session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
+                                   dest_file.write)
+                session.delete(expected_filename)
+            session.quit()
+
+            return transfered_full_name
+
+        self.assert_ods_metadata(coverage_id, test_ods_file_exist)
 
     @freeze_time("2015-08-10")
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])
