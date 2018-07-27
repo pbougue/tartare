@@ -38,8 +38,8 @@ from freezegun import freeze_time
 
 from tartare import app
 from tartare.core.constants import DATA_FORMAT_OBITI, DATA_FORMAT_TITAN, DATA_FORMAT_NEPTUNE, \
-    DATA_FORMAT_PT_EXTERNAL_SETTINGS, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_GTFS, \
-    DATA_FORMAT_NTFS
+    DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_GTFS, \
+    DATA_FORMAT_NTFS, ACTION_TYPE_COVERAGE_EXPORT
 from tartare.core.gridfs_handler import GridFsHandler
 from tests.integration.test_mechanism import TartareFixture
 from tests.utils import get_response, assert_text_files_equals, _get_file_fixture_full_path, \
@@ -251,6 +251,34 @@ class TestFusioImportProcess(TartareFixture):
             'DateFin': '02/05/2017',
             'action': 'regionalimport',
         }
+
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_import_invalid_dates(self, fusio_call, wait_for_action_terminated, init_http_download_server):
+        url = self.format_url(ip=init_http_download_server.ip_addr,
+                              filename='gtfs_with_feed_info_more_than_one_year.zip')
+        self.init_contributor('cid', 'dsid', url)
+        self.init_coverage('jdr', ['dsid'])
+        process = {
+            "id": "fusio_import",
+            "type": "FusioImport",
+            "params": {
+                "url": "http://fusio_host/cgi-bin/fusio.dll/"
+            },
+            "sequence": 0
+        }
+        self.add_process_to_coverage(process, 'jdr')
+
+        content = self.get_fusio_response_from_action_id(42)
+
+        fusio_call.return_value = get_response(200, content)
+        resp = self.full_export('cid', 'jdr', '2019-05-10')
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'failed'
+        assert job['step'] == 'process'
+        assert job['action_type'] == ACTION_TYPE_COVERAGE_EXPORT
+        assert job[
+                   'error_message'] == 'bounds date for fusio import incorrect: calculating validity period union on past periods (end_date: 31/12/2018 < now: 10/05/2019)'
 
 
 class TestFusioExportProcess(TartareFixture):
@@ -503,6 +531,32 @@ class TestFusioExportContributorProcess(TartareFixture):
         session.rmd(directory)
 
 
+class TestFusioPreProdProcess(TartareFixture):
+    @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
+    @mock.patch('tartare.processes.fusio.Fusio.call')
+    def test_fusio_preprod(self, fusio_call, wait_for_action_terminated, init_http_download_server):
+        url = self.format_url(init_http_download_server.ip_addr, 'some_archive.zip')
+        self.init_contributor('cid', 'gtfs_id', url)
+        self.init_coverage('covid', ['gtfs_id'], [
+            {
+                "type": "FusioPreProd",
+                "params": {
+                    "url": "http://fusio_host/cgi-bin/fusio.dll/"
+                },
+                "sequence": 0
+            }
+        ])
+        content = self.get_fusio_response_from_action_id(42)
+        fusio_call.return_value = get_response(200, content)
+        resp = self.full_export('cid', 'covid')
+        assert fusio_call.call_count == 1
+        assert fusio_call.call_args_list[0][1]['data'] == {'action': 'settopreproduction'}
+        job = self.get_job_from_export_response(resp)
+        assert job['state'] == 'done'
+        assert job['step'] == 'save_coverage_export'
+        assert job['action_type'] == ACTION_TYPE_COVERAGE_EXPORT
+
+
 class TestFusioSendPtExternalSettingsProcess(TartareFixture):
     @mock.patch('tartare.processes.fusio.Fusio.wait_for_action_terminated')
     @mock.patch('tartare.processes.fusio.Fusio.call')
@@ -597,9 +651,9 @@ class TestComputeODSProcess(TartareFixture):
                            input_data_source_ids=['ds_gtfs', 'ds_ntfs'],
                            processes=[process],
                            license={
-                                "name": 'my license',
-                                "url": 'http://license.org/mycompany'
-                            })
+                               "name": 'my license',
+                               "url": 'http://license.org/mycompany'
+                           })
 
         self.full_export('cid', cov_id)
 
