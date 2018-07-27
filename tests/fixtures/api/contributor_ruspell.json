@@ -36,21 +36,23 @@
       "id": "ruspell_id",
       "type": "Ruspell",
       "sequence": 1,
-      "data_source_ids": [
+      "input_data_source_ids": [
         "Google-1"
       ],
-      "params": {
-        "links": [
-          {
-            "contributor_id": "AMI",
-            "data_source_id": "ruspell-config"
-          },
-          {
-            "contributor_id": "geo",
-            "data_source_id": "ruspell_bano_file"
-          }
-        ]
-      }
+      "configuration_data_sources": [
+        {
+          "name": "ruspell_config",
+          "ids": [
+            "ruspell-config"
+          ]
+        },
+        {
+          "name": "geographic_data",
+          "ids": [
+            "ruspell_bano_file"
+          ]
+        }
+      ]
     }
   ]
 }

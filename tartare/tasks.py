@@ -49,7 +49,8 @@ from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Contributor, Process, SequenceContainer, \
     PublicationPlatform
 from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
-from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException, IntegrityException
+from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException, IntegrityException, \
+    RuntimeException
 from tartare.processes.processes import ProcessManager
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,7 @@ def contributor_export(self: Task, context: ContributorExportContext, contributo
             return launch(contributor.processes, context)
         else:
             finish_job(context)
-    except FetcherException as exc:
+    except (FetcherException, RuntimeException) as exc:
         msg = 'contributor export failed{retry_or_not}, error {error}'.format(
             error=str(exc),
             retry_or_not=' (retrying)' if int(tartare.app.config.get('RETRY_NUMBER_WHEN_FAILED_TASK')) else ''

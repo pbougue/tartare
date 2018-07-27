@@ -112,7 +112,6 @@ class TestFullExport(AbstractRequestClient):
         assert len(exports) == 2
 
     def test_contrib_export_with_gtfs2ntfs(self):
-        # contributor with: config ruspell, bano data, gtfs and process ruspell
         self.init_contributor('contributor_gtfs2ntfs.json')
 
         # launch gtfs2ntfs process
