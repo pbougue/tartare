@@ -575,24 +575,6 @@ class TestFusioSendPtExternalSettingsProcess(TartareFixture):
 
 
 class TestComputeODSProcess(TartareFixture):
-    def assert_ods_ok(self, coverage_id, target_id):
-        target_grid_fs_id = self.get_gridfs_id_from_data_source_of_coverage(coverage_id, target_id)
-
-        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
-        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
-
-        with app.app_context():
-            ods_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
-            assert ods_zip_file.filename == expected_filename
-            with ZipFile(ods_zip_file, 'r') as ods_zip, tempfile.TemporaryDirectory() as tmp_dirname:
-                ods_zip.extract(metadata_file_name, tmp_dirname)
-                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id),
-                                              '{}_GTFS.zip'.format(coverage_id),
-                                              '{}_NTFS.zip'.format(coverage_id)]
-                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
-                metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_text_files_equals(metadata, fixture)
-
     @freeze_time("2018-05-14")
     def test_process_compute_ods(self, init_http_download_server):
         cov_id = 'my-coverage-id'
@@ -621,4 +603,13 @@ class TestComputeODSProcess(TartareFixture):
 
         self.full_export('cid', cov_id)
 
-        self.assert_ods_ok(cov_id, "target_id")
+        def test_ods_file_exist(_extract_path):
+            with app.app_context():
+                expected_filename = '{coverage_id}.zip'.format(coverage_id=cov_id)
+                target_grid_fs_id = self.get_gridfs_id_from_data_source_of_coverage(cov_id, "target_id")
+                ods_zip_file = GridFsHandler().get_file_from_gridfs(target_grid_fs_id)
+                assert ods_zip_file.filename == expected_filename
+
+            return ods_zip_file
+
+        self.assert_ods_metadata(cov_id, test_ods_file_exist)

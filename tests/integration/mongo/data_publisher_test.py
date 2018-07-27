@@ -275,29 +275,25 @@ class TestDataPublisher(TartareFixture):
         ]
         self.full_export(contributor_id, coverage_id)
 
-        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
-        expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
-        session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
-                             init_ftp_upload_server.password)
+        def test_ods_file_exist(extract_path):
+            expected_filename = '{coverage_id}.zip'.format(coverage_id=coverage_id)
+            session = ftplib.FTP(init_ftp_upload_server.ip_addr, init_ftp_upload_server.user,
+                                 init_ftp_upload_server.password)
 
-        directory_content = session.nlst()
-        assert len(directory_content) == 1
-        assert expected_filename in directory_content
-        # check that meta data from file on ftp server are correct
-        with tempfile.TemporaryDirectory() as tmp_dirname:
-            transfered_full_name = os.path.join(tmp_dirname, 'transfered_file.zip')
+            directory_content = session.nlst()
+            assert len(directory_content) == 1
+            assert expected_filename in directory_content
+
+            transfered_full_name = os.path.join(extract_path, 'transfered_file.zip')
             with open(transfered_full_name, 'wb') as dest_file:
                 session.retrbinary('RETR {expected_filename}'.format(expected_filename=expected_filename),
                                    dest_file.write)
                 session.delete(expected_filename)
-            with ZipFile(transfered_full_name, 'r') as ods_zip:
-                ods_zip.extract(metadata_file_name, tmp_dirname)
-                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id), '{}_GTFS.zip'.format(coverage_id),
-                                              '{}_NTFS.zip'.format(coverage_id)]
-                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
-                metadata = os.path.join(tmp_dirname, metadata_file_name)
-                assert_text_files_equals(metadata, fixture)
-        session.quit()
+            session.quit()
+
+            return transfered_full_name
+
+        self.assert_ods_metadata(coverage_id, test_ods_file_exist)
 
     @freeze_time("2015-08-10")
     @mock.patch('requests.post', side_effect=[get_response(200), get_response(200), get_response(200)])

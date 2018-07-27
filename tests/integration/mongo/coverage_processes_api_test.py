@@ -39,7 +39,6 @@ class TestComputeODSCoverageProcessesApi(TartareFixture):
         ([], 'input_data_source_ids should contains more than one data source id'),
     ])
     def test_post_coverage_with_process_invalid_input_data_source_ids(self, input_data_source_ids, message):
-        self.init_contributor('cid', 'dsid', 'whatever')
         process = {
             'id': 'compute-ods',
             'type': 'ComputeODS',
@@ -48,12 +47,9 @@ class TestComputeODSCoverageProcessesApi(TartareFixture):
             'sequence': 0
         }
         raw = self.init_coverage('cov_id', processes=[process], check_success=False)
-        details = self.assert_failed_call(raw)
-        assert details == {'error': {'processes': {'0': {'input_data_source_ids': [message]}}},
-                           'message': 'Invalid arguments'}
+        self.assert_process_validation_error(raw, 'input_data_source_ids', message)
 
     def test_post_coverage_with_process_no_target_data_source_id(self):
-        self.init_contributor('cid', 'dsid', 'whatever')
         process = {
             'id': 'compute-ods',
             'type': 'ComputeODS',
@@ -61,6 +57,5 @@ class TestComputeODSCoverageProcessesApi(TartareFixture):
             'sequence': 0
         }
         raw = self.init_coverage('cov_id', processes=[process], check_success=False)
-        details = self.assert_failed_call(raw)
-        assert details == {'error': {'processes': {'0': {'target_data_source_id': ['Missing data for required field.']}}},
-                           'message': 'Invalid arguments'}
+
+        self.assert_process_validation_error(raw, 'target_data_source_id', 'Missing data for required field.')

@@ -308,6 +308,20 @@ class TartareFixture(object):
             self.assert_sucessful_create(raw)
             return raw
 
+    def assert_ods_metadata(self, coverage_id, test_ods_file_exist):
+        metadata_file_name = '{coverage_id}.txt'.format(coverage_id=coverage_id)
+
+        with tempfile.TemporaryDirectory() as extract_path:
+            ods_zip_file = test_ods_file_exist(extract_path)
+
+            with ZipFile(ods_zip_file, 'r') as ods_zip:
+                ods_zip.extract(metadata_file_name, extract_path)
+                assert ods_zip.namelist() == ['{}.txt'.format(coverage_id), '{}_GTFS.zip'.format(coverage_id),
+                                              '{}_NTFS.zip'.format(coverage_id)]
+                fixture = _get_file_fixture_full_path('metadata/' + metadata_file_name)
+                metadata = os.path.join(extract_path, metadata_file_name)
+                assert_text_files_equals(metadata, fixture)
+
     def fetch_data_source(self, contributor_id, data_source_id, check_success=True):
         response = self.post('/contributors/{}/data_sources/{}/actions/fetch'.format(contributor_id, data_source_id))
         if check_success:
