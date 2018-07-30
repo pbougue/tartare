@@ -1444,6 +1444,23 @@ class MongoCoverageSchema(Schema):
     def make_coverage(self, data: dict) -> Coverage:
         return Coverage(**data)
 
+    @validates('processes')
+    def validate_input_data_source_ids(self, processes: List[Process]) -> None:
+        fusio_export_data_formats = {process.params.get("target_data_source_id"): process.params.get("export_type")
+                                     for process in processes if isinstance(process, FusioExportProcess)}
+        data_formats = set()  # type: Set[str]
+        for process in processes:
+            if isinstance(process, ComputeODSProcess):
+                for input_data_source_id in process.input_data_source_ids:
+                    data_format = fusio_export_data_formats.get(input_data_source_id, None)
+                    if not data_format:
+                        data_format = DataSource.get_one(input_data_source_id).data_format
+                    if data_format in data_formats:
+                        raise ValidationError(
+                            "process {}: you have several data sources in {} format".format(process.id, data_format)
+                        )
+                    data_formats.add(data_format)
+
 
 class MongoContributorSchema(Schema):
     id = fields.String(required=True, load_from='_id', dump_to='_id')

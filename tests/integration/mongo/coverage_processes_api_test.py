@@ -59,3 +59,45 @@ class TestComputeODSCoverageProcessesApi(TartareFixture):
         raw = self.init_coverage('cov_id', processes=[process], check_success=False)
 
         self.assert_process_validation_error(raw, 'target_data_source_id', 'Missing data for required field.')
+
+    def test_post_coverage_with_2_same_data_format_from_different_processes(self):
+        """
+        1 process FusioExport that exports a GTFS
+        1 process ComputeODS that takes a GTFS
+        :return:
+        """
+        self.init_contributor('cid', 'dsid', 'whatever')
+        processes = [{
+            "id": "fusio_export",
+            "type": "FusioExport",
+            "params": {
+                "url": "http://fusio_url",
+                "target_data_source_id": 'my_gtfs_data_source',
+                "export_type": 'gtfs'
+            },
+            "sequence": 0
+        },
+        {
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': ['dsid', 'my_gtfs_data_source'],
+            "target_data_source_id": "ods",
+            'sequence': 1
+        }]
+        raw = self.init_coverage('cov_id', processes=processes, check_success=False)
+        self.assert_process_validation_error_global(raw, 'processes',
+                                                    'process compute-ods: you have several data sources in gtfs format')
+
+    def test_post_coverage_with_2_same_data_format_in_process(self):
+        self.init_contributor('cid', 'dsid', 'whatever')
+        self.add_data_source_to_contributor('cid', 'dsid2', 'whatever')
+        processes = [{
+            'id': 'compute-ods',
+            'type': 'ComputeODS',
+            'input_data_source_ids': ['dsid', 'dsid2'],
+            "target_data_source_id": "ods",
+            'sequence': 1
+        }]
+        raw = self.init_coverage('cov_id', processes=processes, check_success=False)
+        self.assert_process_validation_error_global(raw, 'processes',
+                                                    'process compute-ods: you have several data sources in gtfs format')
