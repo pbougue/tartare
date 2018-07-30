@@ -78,7 +78,6 @@ class FtpProtocol(AbstractProtocol):
         logger.info(
             'publishing file {filename} on ftp://{url}/{directory}...'.format(filename=filename, url=self.url,
                                                                               directory=directory))
-        session = None
         try:
             if self.options and self.options.authent:
                 session = ftplib.FTP(self.url, self.options.authent.username, self.options.authent.password)
@@ -89,8 +88,6 @@ class FtpProtocol(AbstractProtocol):
                 session.cwd(directory)
         except ftplib.error_perm as message:
             logger.error(str(message))
-            if session:
-                session.quit()
             raise ProtocolException(message)
 
         full_code = session.storbinary('STOR {filename}'.format(filename=filename), file)

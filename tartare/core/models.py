@@ -228,7 +228,7 @@ class Environment(SequenceContainer):
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
 
-    def get_publication_platform_for_type_with_user(self, username: str) -> Optional[PublicationPlatform]:
+    def get_publication_platform_with_user(self, username: str) -> Optional[PublicationPlatform]:
         return next((existing_platform for existing_platform in self.publication_platforms
                      if existing_platform.options and
                      existing_platform.options.authent and existing_platform.options.authent.username == username),
@@ -877,7 +877,7 @@ class Coverage(DataSourceAndProcessContainer):
                         not platform.options.authent.password:
                     if env_key in existing_coverage.environments:
                         existing_platform = existing_coverage.environments[env_key] \
-                            .get_publication_platform_for_type_with_user(platform.options.authent.username)
+                            .get_publication_platform_with_user(platform.options.authent.username)
                         if existing_platform:
                             platform.options.authent.password = existing_platform.options.authent.password
 
