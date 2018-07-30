@@ -48,7 +48,7 @@ from tartare.core.context import Context, ContributorExportContext, CoverageExpo
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.core.models import CoverageExport, Coverage, Job, Contributor, Process, SequenceContainer, \
     PublicationPlatform
-from tartare.core.publisher import ProtocolException, ProtocolManager, PublisherManager
+from tartare.core.publisher import ProtocolException, ProtocolManager, Publisher
 from tartare.exceptions import FetcherException, ProtocolManagerException, PublisherManagerException, IntegrityException, \
     RuntimeException
 from tartare.processes.processes import ProcessManager
@@ -77,7 +77,7 @@ class CallbackTask(tartare.ContextTask):
 
 
 def publish_data_on_platform(platform: PublicationPlatform, coverage: Coverage, environment_id: str, job: Job) -> None:
-    step = "publish_data {env} {platform} on {url}".format(env=environment_id, platform=platform.type, url=platform.url)
+    step = "publish_data {env} on {url}".format(env=environment_id, url=platform.url)
     job.update(step=step)
     coverage_export = CoverageExport.get_last(coverage.id)
     if coverage_export:
@@ -85,16 +85,16 @@ def publish_data_on_platform(platform: PublicationPlatform, coverage: Coverage, 
         file = gridfs_handler.get_file_from_gridfs(coverage_export.gridfs_id)
 
         try:
-            publisher = PublisherManager.select_from_publication_platform(platform)
-            protocol_uploader = ProtocolManager.select_from_platform(platform)
-            publisher.publish(protocol_uploader, file, coverage, coverage_export, platform.input_data_source_ids)
+            publisher = Publisher(ProtocolManager.select_from_platform(platform))
+            publisher.publish(platform.input_data_source_ids)
+
             # Upgrade current_ntfs_id
             current_ntfs_id = coverage_export.gridfs_id
             coverage.environments[environment_id].current_ntfs_id = current_ntfs_id
             coverage.update()
         except (ProtocolException, ProtocolManagerException, PublisherManagerException) as exc:
-            msg = 'publish data on platform "{type}" with url {url} failed, {error}'.format(
-                error=str(exc), url=platform.url, type=platform.type)
+            msg = 'publish data on platform with url {url} failed, {error}'.format(
+                error=str(exc), url=platform.url)
             logger.error(msg)
             raise exc
 

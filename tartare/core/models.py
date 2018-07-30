@@ -43,15 +43,7 @@ from marshmallow_oneofschema import OneOfSchema
 
 from tartare import app
 from tartare import mongo
-from tartare.core.constants import DATA_FORMAT_VALUES, DATA_FORMAT_DEFAULT, \
-    DATA_TYPE_DEFAULT, DATA_TYPE_VALUES, DATA_SOURCE_STATUS_NEVER_FETCHED, \
-    DATA_SOURCE_STATUS_UPDATED, PLATFORM_TYPE_VALUES, PLATFORM_PROTOCOL_VALUES, \
-    DATA_TYPE_GEOGRAPHIC, DATA_SOURCE_STATUS_UNCHANGED, JOB_STATUSES, \
-    JOB_STATUS_PENDING, JOB_STATUS_FAILED, JOB_STATUS_RUNNING, INPUT_TYPE_COMPUTED, INPUT_TYPE_AUTO, \
-    INPUT_TYPE_MANUAL, DATA_SOURCE_STATUS_FETCHING, DATA_SOURCE_STATUS_FAILED, ACTION_TYPE_AUTO_CONTRIBUTOR_EXPORT, \
-    DATA_FORMAT_DIRECTION_CONFIG, ACTION_TYPE_CONTRIBUTOR_EXPORT, DATA_FORMAT_GTFS, DATA_FORMAT_PT_EXTERNAL_SETTINGS, \
-    DATA_FORMAT_LINES_REFERENTIAL, DATA_FORMAT_TR_PERIMETER, DATA_FORMAT_RUSPELL_CONFIG, DATA_FORMAT_BANO_FILE, \
-    DATA_FORMAT_OSM_FILE, DATA_FORMAT_ODS
+from tartare.core.constants import *
 from tartare.core.gridfs_handler import GridFsHandler
 from tartare.exceptions import ValidityPeriodException, EntityNotFound, ParameterException, IntegrityException, \
     RuntimeException
@@ -98,11 +90,6 @@ class DataFormat(ChoiceField):
 class DataType(ChoiceField):
     def __init__(self, **metadata: dict) -> None:
         super().__init__(DATA_TYPE_VALUES, **metadata)
-
-
-class PlatformType(ChoiceField):
-    def __init__(self, **metadata: Any) -> None:
-        super().__init__(PLATFORM_TYPE_VALUES, **metadata)
 
 
 class PlatformProtocol(ChoiceField):
@@ -225,12 +212,11 @@ class Platform(object):
 
 
 class PublicationPlatform(SequenceContainer, Platform):
-    def __init__(self, protocol: str, type: str, url: str, options: PlatformOptions = None, sequence: int = 0,
+    def __init__(self, protocol: str, url: str, options: PlatformOptions = None, sequence: int = 0,
                  input_data_source_ids: List[str] = None) -> None:
         SequenceContainer.__init__(self, sequence)
         Platform.__init__(self, protocol, url, options)
         self.input_data_source_ids = input_data_source_ids if input_data_source_ids else []
-        self.type = type
 
 
 class Environment(SequenceContainer):
@@ -242,9 +228,9 @@ class Environment(SequenceContainer):
         self.current_ntfs_id = current_ntfs_id
         self.publication_platforms = publication_platforms if publication_platforms else []
 
-    def get_publication_platform_for_type_with_user(self, type: str, username: str) -> Optional[PublicationPlatform]:
+    def get_publication_platform_with_user(self, username: str) -> Optional[PublicationPlatform]:
         return next((existing_platform for existing_platform in self.publication_platforms
-                     if existing_platform.type == type and existing_platform.options and
+                     if existing_platform.options and
                      existing_platform.options.authent and existing_platform.options.authent.username == username),
                     None)
 
@@ -891,9 +877,7 @@ class Coverage(DataSourceAndProcessContainer):
                         not platform.options.authent.password:
                     if env_key in existing_coverage.environments:
                         existing_platform = existing_coverage.environments[env_key] \
-                            .get_publication_platform_for_type_with_user(
-                            platform.type, platform.options.authent.username
-                        )
+                            .get_publication_platform_with_user(platform.options.authent.username)
                         if existing_platform:
                             platform.options.authent.password = existing_platform.options.authent.password
 
@@ -985,7 +969,6 @@ class MongoPublicationPlatformSchema(Schema):
     url = fields.String(required=True)
     options = fields.Nested(MongoPlatformOptionsSchema, required=False, allow_none=True)
     # end of duplicate
-    type = PlatformType(required=True)
     input_data_source_ids = fields.List(fields.String())
     sequence = fields.Integer(required=True)
 

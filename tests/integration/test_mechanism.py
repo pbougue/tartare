@@ -156,11 +156,13 @@ class TartareFixture(object):
 
     def init_contributor(self, contributor_id, data_source_id, url=None, data_format=DATA_FORMAT_DEFAULT,
                          data_type=DATA_TYPE_DEFAULT, service_id=None, data_prefix=None, export_id=None,
-                         options=None, type='auto', frequency=None):
+                         options=None, type='auto', frequency=None, expected_file_name=None):
         frequency = frequency if frequency else {'type': 'continuously', "minutes": 5}
         input = {
             'type': type
         }
+        if expected_file_name:
+            input['expected_file_name'] = expected_file_name
         if type == 'auto':
             if url:
                 input['url'] = url

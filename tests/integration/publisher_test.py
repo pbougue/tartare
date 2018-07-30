@@ -29,25 +29,10 @@
 
 import pytest
 
-from tartare.core.constants import PLATFORM_TYPE_NAVITIA, PLATFORM_PROTOCOL_FTP, PLATFORM_PROTOCOL_HTTP, \
-    PLATFORM_TYPE_ODS
-from tartare.core.models import Platform, PublicationPlatform
-from tartare.core.publisher import PublisherManager, AbstractPublisher, ProtocolManager, AbstractProtocol
-from tartare.exceptions import PublisherManagerException, ProtocolManagerException
-
-
-class TestPublisher:
-    def test_select_from_platform_ok(self):
-        publisher = PublisherManager.select_from_publication_platform(
-            PublicationPlatform(PLATFORM_PROTOCOL_FTP, PLATFORM_TYPE_NAVITIA, 'ftp://whatever'))
-        assert isinstance(publisher, AbstractPublisher)
-
-    def test_select_from_platform_ko(self):
-        with pytest.raises(PublisherManagerException) as excinfo:
-            PublisherManager.select_from_publication_platform(
-                PublicationPlatform(PLATFORM_PROTOCOL_FTP, 'wrong_type', 'ftp://whatever'))
-        assert excinfo.typename == 'PublisherManagerException'
-        assert str(excinfo.value) == 'unknown platform type "wrong_type"'
+from tartare.core.constants import PLATFORM_PROTOCOL_HTTP
+from tartare.core.models import Platform
+from tartare.core.publisher import ProtocolManager, AbstractProtocol
+from tartare.exceptions import ProtocolManagerException
 
 
 class TestUploader:
